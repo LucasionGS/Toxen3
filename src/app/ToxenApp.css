@@ -1,0 +1,10 @@
+.song-panel-toggle {
+  font-size: 48px;
+  transition: all 0.2s ease-in-out;
+}
+
+.song-panel-toggle:hover {
+  transform: translateY(-5%);
+  filter: drop-shadow(3px 3px 5px white);
+  cursor: pointer;
+}
