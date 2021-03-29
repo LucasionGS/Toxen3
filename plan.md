@@ -12,4 +12,5 @@
 - Playlists: Simplier creation, renaming, deleting, and general managing.
   - For god sake, store them separately. Not in the fucking song details individually.
 - Visualizer: Smooth out visuals
-- Storyboard: Drop the custom language concept entirely, make an editor immmediately using JSON storage
+- Storyboard: Drop the custom language concept entirely, make an editor immmediately using JSON storage.
+  - A light script based on the editors attributes might be a possibility.
