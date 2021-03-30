@@ -3,24 +3,23 @@
   background-color: #1976D2;
   border: none;
   padding: 1%;
+  &:hover {
+    cursor: pointer;
+  }
+  
+  &.tx-btn-success {
+    background-color: #01861d;
+  }
+  
+  &:focus {
+    outline: none;
+  }
+  
+  &:active {
+    filter: brightness(0.8);
+  }
 }
 
-.tx-btn:hover {
-  cursor: pointer;
-}
-
-.tx-btn.tx-btn-success {
-  background-color: #01861d;
-}
-
-.tx-btn:focus {
-  outline: none;
-}
-
-.tx-btn:active {
-  /* outline: none; */
-  filter: brightness(0.8);
-}
 
 /* Input fields */
 .tx-form-field {

@@ -1,7 +1,9 @@
 import React from "react";
-import { resolve } from "node:path";
+import { resolve } from "path";
 import Settings from "./Settings";
 import fsp from "fs/promises";
+import { Dirent } from "fs";
+import { Toxen } from "../ToxenApp";
 
 export default class Song implements ISong {
   public id: number;
@@ -29,7 +31,7 @@ export default class Song implements ISong {
    */
   public Element() {
     return (
-      <div>
+      <div key={this.id}>
         {this.artist} - {this.title}
       </div>
     );
@@ -42,6 +44,8 @@ export default class Song implements ISong {
     song.coArtists = data.coArtists;
     song.title = data.title;
     song.paths = data.paths;
+
+    return song;
   }
 
   private static generateId() {
@@ -56,13 +60,39 @@ export default class Song implements ISong {
 
   public static songList: Song[] = [];
 
-  public static async getSongs(): Promise<Song[]> {
-    return Promise.resolve().then(() => {
-      let songs: Song[];
-
-      let dir = fsp.opendir(Settings.get("libraryDirectory"));
+  public static async getSongs(reload?: boolean, forEach?: (song: Song) => void): Promise<Song[]> {
+    return Promise.resolve().then(async () => {
+      if ((reload ?? false) && Toxen.songList) {
+        return Toxen.songList;
+      }
+      let songs: Song[] = [];
+      let dirName = Settings.get("libraryDirectory");
+      if (!dirName) {
+        return [];
+      }
+      let dir = await fsp.opendir(dirName);
       
-      return songs;
+      let ent: Dirent;
+      while (ent = await dir.read()) {
+        if (ent.isDirectory()) { // Is music folder
+          let songFolder = resolve(dirName, ent.name);
+          
+          try {
+            var info: ISong = JSON.parse(await fsp.readFile(resolve(songFolder, "info.json"), "utf8"));
+          } catch (error) {
+            console.error("Failed to load info.json file in song: " + songFolder);
+            
+            continue;
+          }
+          
+          let song = Song.create(info);
+          songs.push(song);
+          if (typeof forEach === "function") forEach(song);
+        }
+      }
+
+      await dir.close();
+      return songs.sort((a, b) => a.id - b.id);
     });
   }
 }

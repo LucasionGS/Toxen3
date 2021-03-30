@@ -1,0 +1,15 @@
+.toxen-loading-screen {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  background-color: rgba(0, 0, 0, 0.50);
+  opacity: 0;
+  
+  &.toxen-loading-screen-show {
+    opacity: 1;
+    pointer-events: all;
+  }
+}

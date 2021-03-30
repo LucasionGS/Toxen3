@@ -6,23 +6,25 @@ import SettingsInputCheckbox from './SettingsInputCheckbox';
 
 
 type Props = [
-  PropsText,
-  PropsCheckbox
+  PropsTypeText,
+  PropsTypeFile,
+  PropsTypeFolder,
+  PropsTypeCheckbox,
 ][number];
 
-interface PropsTemplate {
+interface PropsTemplate<T extends string> {
   name: string;
-  type: "text" | "checkbox";
+  type: T;
   displayName?: string;
 }
 
-interface PropsText extends PropsTemplate {
-  type: "text";
-}
+interface PropsTypeText extends PropsTemplate<"text"> { }
 
-interface PropsCheckbox extends PropsTemplate {
-  type: "checkbox";
-}
+interface PropsTypeFile extends PropsTemplate<"file"> { }
+
+interface PropsTypeFolder extends PropsTemplate<"folder"> { }
+
+interface PropsTypeCheckbox extends PropsTemplate<"checkbox"> { }
 
 export default class SettingsInput extends React.Component<Props> {
 
@@ -36,6 +38,7 @@ export default class SettingsInput extends React.Component<Props> {
       type
     };
   }
+
   public static getValue(type: string, value: any): any {
     switch (type) {
       case "number":
@@ -50,6 +53,7 @@ export default class SettingsInput extends React.Component<Props> {
         return String(value);
     }
   }
+
   render() {
     let { name } = SettingsInput.getNameAndType(this.props.name);
     let value: any = "";
@@ -64,6 +68,54 @@ export default class SettingsInput extends React.Component<Props> {
             {label}
             <br />
             <input className="tx-form-field" type="text" name={this.props.name} defaultValue={value} />
+            <br />
+            <br />
+          </>
+        )
+      }
+      
+      case "file": {
+        const ref = React.createRef<HTMLInputElement>();
+        return (
+          <>
+            {label}
+            <br />
+            <input ref={ref} className="tx-form-field" type="text" readOnly name={this.props.name} defaultValue={value} onClick={
+              () => {
+                let value = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
+                  properties: [
+                    'openFile'
+                  ]
+                });
+                if (value) {
+                  ref.current.value = value[0];
+                }
+              }
+            }/>
+            <br />
+            <br />
+          </>
+        )
+      }
+      
+      case "folder": {
+        const ref = React.createRef<HTMLInputElement>();
+        return (
+          <>
+            {label}
+            <br />
+            <input ref={ref} className="tx-form-field" type="text" readOnly name={this.props.name} defaultValue={value} onClick={
+              () => {
+                let value = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
+                  properties: [
+                    'openDirectory'
+                  ]
+                });
+                if (value) {
+                  ref.current.value = value[0];
+                }
+              }
+            }/>
             <br />
             <br />
           </>

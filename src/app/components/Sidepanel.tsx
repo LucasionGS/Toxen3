@@ -1,62 +1,99 @@
 import React, { useState } from 'react';
-import "./Sidepanel.css";
+import "./Sidepanel.scss";
 import SidepanelSection from './SidepanelSection';
 
 interface Props {
   direction: "left" | "right";
   children: React.ReactElement<SidepanelSection> | React.ReactElement<SidepanelSection>[];
-  toggle?: boolean | ((setShow: React.Dispatch<React.SetStateAction<boolean>>) => void);
+  show?: boolean;
+  getRef?: (sidepanel: Sidepanel) => void;
   /**
    * Initial value to show on the menu.
    */
   sectionId?: any;
-  setSectionId?: ((setSectionId: React.Dispatch<any>) => void);
-  onClose?: (() => void);
   vertical?: boolean;
-  setVertical?: ((setVertical: React.Dispatch<React.SetStateAction<boolean>>) => void);
+  onClose?: (() => void);
 }
 
-export default function Sidepanel(props: Props) {
-  const sections: SidepanelSection[] = (Array.isArray(props.children) ? props.children : [props.children]) as any[];
-  const [show, setShow] = useState(typeof props.toggle === "boolean" ? props.toggle : false);
-  const [sectionId, setSectionId] = useState(props.sectionId ?? sections[0]?.props?.id);
-  const [vertical, setVertical] = useState(props.vertical ?? false);
-  const classList: string[] = [
-    "sidepanel",
-    `sidepanel-${props.direction}`
-  ];
+interface State {
+  show: boolean;
+  sectionId: any;
+  vertical: boolean;
+}
 
-  if (vertical) classList.push("vertical");
-  if (show) classList.push("show");
+export default class Sidepanel extends React.Component<Props, State> {
+  constructor(props: Props) {
+    super(props);
+    this.state = {
+      show: (typeof this.props.show === "boolean" ? this.props.show : false),
+      sectionId: (this.props.sectionId ?? this.sections[0]?.props?.id),
+      vertical: (this.props.vertical ?? false),
+    }
+  }
 
-  if (typeof props.toggle === "function") props.toggle(setShow);
-  if (typeof props.setSectionId === "function") props.setSectionId(setSectionId);
-  if (typeof props.setVertical === "function") props.setVertical(setVertical);
+  componentDidMount() {
 
-  let sec = sections.find(sec => sec?.props?.id == sectionId);
-  return (
-    <div className={classList.join(" ")}>
-      <div className="sidepanel-icons">
-        <div className="sidepanel-icon sidepanel-icon-close" onClick={
-          typeof props.onClose === "function" ? props.onClose : null
-        }>
-          <i className="far fa-times-circle"></i>
-          <span className="sidepanel-icon-title">&nbsp;Close</span>
+  }
+
+  private sections: SidepanelSection[] = (Array.isArray(this.props.children) ? this.props.children : [this.props.children]) as any[];
+
+  public toggle(force?: boolean) {
+    let value = force ?? !this.state.show;
+    this.setState({
+      show: value
+    });
+
+    return value;
+  }
+
+  public setSectionId(sectionId: any) {
+    this.setState({
+      sectionId
+    });
+  }
+
+  public setVertical(vertical: boolean) {
+    this.setState({
+      vertical
+    });
+  }
+
+  render() {
+    if (typeof this.props.getRef === "function") this.props.getRef(this);
+    const classList: string[] = [
+      "sidepanel",
+      `sidepanel-${this.props.direction}`
+    ];
+
+    if (this.state.vertical) classList.push("vertical");
+    if (this.state.show) classList.push("show");
+
+
+    let sec = this.sections.find(sec => sec?.props?.id == this.state.sectionId);
+    return (
+      <div className={classList.join(" ")}>
+        <div className="sidepanel-icons">
+          <div className="sidepanel-icon sidepanel-icon-close" onClick={
+            typeof this.props.onClose === "function" ? this.props.onClose : null
+          }>
+            <i className="far fa-times-circle"></i>
+            <span className="sidepanel-icon-title">&nbsp;Close</span>
+          </div>
+          {this.sections.map(s => (s.props.icon || s.props.title) && (
+            <div key={String(s.props.id)}>
+              {s.props.separator === true ? (<hr />) : ""}
+              <div className="sidepanel-icon" onClick={() => this.setSectionId(s.props.id)}>
+                {s.props.icon}
+                {s.props.title && (<span className="sidepanel-icon-title">&nbsp;{s.props.title}</span>)}
+              </div>
+            </div>))}
         </div>
-        {sections.map((s, i) => (s.props.icon || s.props.title) && (
+        {sec ?
           <>
-            {s.props.separator === true ? (<hr />) : ""}
-            <div key={i} className="sidepanel-icon" onClick={() => setSectionId(s.props.id)}>
-              {s.props.icon}
-              {s.props.title && (<span className="sidepanel-icon-title">&nbsp;{s.props.title}</span>)}
-            </div>
-          </>))}
+            <div className="sidepanel-content">{sec}</div>
+          </>
+          : ""}
       </div>
-      {sec ?
-        <>
-          <div className="sidepanel-content">{sec}</div>
-        </>
-        : ""}
-    </div>
-  )
+    )
+  }
 }
