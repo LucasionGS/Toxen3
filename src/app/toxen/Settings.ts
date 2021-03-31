@@ -2,6 +2,7 @@ import fs from "fs";
 import fsp from "fs/promises";
 import Path from "path";
 import CrossPlatform from "./CrossPlatform";
+import { PanelDirection } from "../components/Sidepanel"
 
 export default class Settings {
   /**
@@ -100,4 +101,5 @@ export interface ISettings {
   libraryDirectory: string;
   isRemote: boolean;
   panelVerticalTransition: boolean;
+  panelDirection: PanelDirection
 }

@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import "./Sidepanel.scss";
 import SidepanelSection from './SidepanelSection';
 
+export type PanelDirection = "left" | "right";
+
 interface Props {
-  direction: "left" | "right";
   children: React.ReactElement<SidepanelSection> | React.ReactElement<SidepanelSection>[];
+  direction?: PanelDirection;
   show?: boolean;
   getRef?: (sidepanel: Sidepanel) => void;
   /**
@@ -19,6 +21,7 @@ interface State {
   show: boolean;
   sectionId: any;
   vertical: boolean;
+  direction: PanelDirection;
 }
 
 export default class Sidepanel extends React.Component<Props, State> {
@@ -28,11 +31,12 @@ export default class Sidepanel extends React.Component<Props, State> {
       show: (typeof this.props.show === "boolean" ? this.props.show : false),
       sectionId: (this.props.sectionId ?? this.sections[0]?.props?.id),
       vertical: (this.props.vertical ?? false),
+      direction: (this.props.direction ?? "left"),
     }
   }
 
   componentDidMount() {
-
+    if (typeof this.props.getRef === "function") this.props.getRef(this);
   }
 
   private sections: SidepanelSection[] = (Array.isArray(this.props.children) ? this.props.children : [this.props.children]) as any[];
@@ -58,11 +62,16 @@ export default class Sidepanel extends React.Component<Props, State> {
     });
   }
 
+  public setDirection(direction: PanelDirection) {
+    this.setState({
+      direction
+    });
+  }
+
   render() {
-    if (typeof this.props.getRef === "function") this.props.getRef(this);
     const classList: string[] = [
       "sidepanel",
-      `sidepanel-${this.props.direction}`
+      `sidepanel-${this.state.direction}`
     ];
 
     if (this.state.vertical) classList.push("vertical");

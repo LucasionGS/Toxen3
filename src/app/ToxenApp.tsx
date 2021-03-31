@@ -31,12 +31,13 @@ export class Toxen {
    */
   public static updateSettings() {
     Toxen.sidePanel.setVertical(Settings.get("panelVerticalTransition") ?? false);
+    Toxen.sidePanel.setDirection(Settings.get("panelDirection") ?? "left");
   }
   
   public static loadingScreen: LoadingScreen;
 
-
   public static songList: Song[];
+  
   public static setSongList(songList: Song[]) {
     Toxen.songList = songList;
     Toxen.songPanel.update();
@@ -68,7 +69,7 @@ export default class ToxenApp extends React.Component {
         <span className="song-panel-toggle-title">Menu</span>
       </div>
       <Sidepanel sectionId="songPanel" // Default panel
-      direction="left"
+      direction="right"
       show={true}
       getRef={sidePanel => Toxen.sidePanel = sidePanel}
       onClose={() => Toxen.sidePanel.toggle()}

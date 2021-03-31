@@ -2,7 +2,7 @@ import React from 'react';
 import Settings from '../../toxen/Settings';
 import { remote } from "electron";
 import "./SettingsInput.css";
-import SettingsInputCheckbox from './SettingsInputCheckbox';
+import SettingsInputCheckbox from './SettingsInputFields/SettingsInputCheckbox';
 
 
 type Props = [
@@ -10,6 +10,7 @@ type Props = [
   PropsTypeFile,
   PropsTypeFolder,
   PropsTypeCheckbox,
+  PropsTypeSelect,
 ][number];
 
 interface PropsTemplate<T extends string> {
@@ -19,12 +20,10 @@ interface PropsTemplate<T extends string> {
 }
 
 interface PropsTypeText extends PropsTemplate<"text"> { }
-
 interface PropsTypeFile extends PropsTemplate<"file"> { }
-
 interface PropsTypeFolder extends PropsTemplate<"folder"> { }
-
 interface PropsTypeCheckbox extends PropsTemplate<"checkbox"> { }
+interface PropsTypeSelect extends PropsTemplate<"select"> { }
 
 export default class SettingsInput extends React.Component<Props> {
 
@@ -49,6 +48,7 @@ export default class SettingsInput extends React.Component<Props> {
         if (value === "0") return false;
         return Boolean(value);
 
+      case "select":
       case "string":
         return String(value);
     }
@@ -122,6 +122,17 @@ export default class SettingsInput extends React.Component<Props> {
         )
       }
 
+      case "checkbox": {
+        return (
+          <>
+            <SettingsInputCheckbox name={this.props.name} defaultChecked={value} >
+              {label}
+            </SettingsInputCheckbox>
+            <br />
+          </>
+        )
+      }
+      
       case "checkbox": {
         return (
           <>
