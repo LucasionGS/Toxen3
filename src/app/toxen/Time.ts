@@ -17,6 +17,15 @@ export default class Time {
     }
   }
 
+  public static now() {
+    let date = new Date(Date.now());
+    let time = new Time(date.getMilliseconds());
+    time.addSeconds(date.getSeconds());
+    time.addMinutes(date.getMinutes());
+    time.addHours(date.getHours());
+    return time;
+  }
+
   
   private milliseconds: number = 0;
   public getMilliseconds() { return this.milliseconds; }

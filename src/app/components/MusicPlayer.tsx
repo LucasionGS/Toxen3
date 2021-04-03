@@ -1,9 +1,11 @@
 import React, { Component } from 'react'
+import Song from '../toxen/Song';
+import { Toxen } from '../ToxenApp';
 
 export type MediaSourceInfo = string;
 
 interface MusicPlayerProps {
-  
+  getRef?: ((ref: MusicPlayer) => void),
 }
 
 interface MusicPlayerState {
@@ -19,22 +21,58 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
     }
   }
 
-  public setSource(src: MediaSourceInfo) {
+  componentDidMount() {
+    if (typeof this.props.getRef === "function") this.props.getRef(this);
+
+    setInterval(() => {
+      try {
+        Toxen.musicControls.setProgressValue(this.media.currentTime);
+      } catch {
+        // Nothing
+      }
+    }, 50);
+  }
+
+  public setSource(src: MediaSourceInfo, playWhenReady: boolean = false) {
     this.setState({
       src
-    }, () => this.media.load());
+    }, () => playWhenReady ? this.play() : this.media.load());
+  }
+
+  public get paused() {
+    return this.media.paused;
   }
 
   public play() {
     this.media.play();
+  }
+  
+  public pause() {
+    this.media.pause();
+  }
+
+  public onFinished() {
+    let songCount = Toxen.songList.length;
+    console.log("Loading!", songCount);
+    if (songCount === 0) {
+      console.error("No songs available.");
+      
+      return;
+    }
+    let randomSongIndex: number;
+    let song: Song;
+    do {
+      randomSongIndex = Math.floor(Math.random() * songCount);
+      song = Toxen.songList[randomSongIndex];
+    } while (song == null);
+    song.play();
   }
 
   public media: HTMLMediaElement;
   
   render() {
     return (
-      <audio ref={ref => this.media = ref} hidden src={this.state.src} />
+      <audio onCanPlay={e => Toxen.musicControls.setProgressMax(this.media.duration)} ref={ref => this.media = ref} hidden src={this.state.src} onEnded={this.onFinished.bind(this)} />
     )
   }
 }
-

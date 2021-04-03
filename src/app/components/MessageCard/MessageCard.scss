@@ -1,0 +1,10 @@
+.message-card {
+  display: inline-flex;
+  width: 10em;
+  min-height: 10em;
+  flex-direction: column;
+
+  & .message-card-title {
+    width: 2em;
+  }
+}

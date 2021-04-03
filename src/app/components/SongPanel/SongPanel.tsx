@@ -3,7 +3,7 @@ import { Toxen } from '../../ToxenApp';
 import Song from '../../toxen/Song';
 
 interface SongPanelProps {
-  getRef: ((songPanel: SongPanel) => void)
+  getRef?: ((songPanel: SongPanel) => void)
   songs: Song[];
 }
 
@@ -24,10 +24,6 @@ export default class SongPanel extends Component<SongPanelProps, SongPanelState>
   }
   
   render() {
-    return (
-      <div>
-        {(Toxen.songList ?? []).map(s => s.Element())}
-      </div>
-    )
+    return (Toxen.songList ?? []).map(s => s.Element());
   }
 }

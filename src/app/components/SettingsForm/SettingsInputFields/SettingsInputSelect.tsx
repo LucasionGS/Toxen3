@@ -4,14 +4,14 @@ import React, { useState } from 'react';
 interface Props {
   name: string;
   defaultValue?: string;
-  children?: JSX.IntrinsicClassAttributes<"option">;
+  children?: React.ReactNode;
 }
 
 export default function SettingsInputSelect(props: Props) {
   const [value, setValue] = useState(props.defaultValue ?? null);
 
   return (
-    <select value={value} onChange={e => setValue(e.target.value)}>
+    <select name={props.name} className="tx-form-field" value={value} onChange={e => setValue(e.target.value)}>
       {props.children}
     </select>
   );

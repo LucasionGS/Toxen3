@@ -1,0 +1,17 @@
+.toxen-progress-bar-container {
+  display: flex;
+  width: 100%;
+  .toxen-progress-bar {
+    margin: auto;
+    width: 90%;
+    height: 2em;
+    border: white 2px solid;
+    border-radius: 10px;
+    overflow: hidden;
+    .toxen-progress-bar-fill {
+      height: 100%;
+      border-bottom-right-radius: inherit;
+      border-top-right-radius: inherit;
+    }
+  }
+}

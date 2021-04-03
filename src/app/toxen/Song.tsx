@@ -2,9 +2,11 @@ import React from "react";
 import { resolve } from "path";
 import Settings from "./Settings";
 import fsp from "fs/promises";
-import { Dirent } from "fs";
+import { Dir, Dirent } from "fs";
 import { Toxen } from "../ToxenApp";
 import Path from "path";
+import SongElement from "../components/SongPanel/SongElement";
+import Legacy from "./Legacy";
 
 export default class Song implements ISong {
   public uid: string;
@@ -17,24 +19,39 @@ export default class Song implements ISong {
    * Return the full path of the song folder.
    */
   public dirname() {
-    return resolve(this.paths.dirname);
+    return this.paths && this.paths.dirname ? resolve(this.paths.dirname): null;
   }
 
   /**
    * Return the full path of the media file.
    */
   public mediaFile() {
-    return resolve(this.dirname(), this.paths.media);
+    return this.paths && this.paths.media ? resolve(this.dirname(), this.paths.media): null;
+  }
+  
+  /**
+   * Return the full path of the media file.
+   */
+  public backgroundFile() {
+    return this.paths && this.paths.background ? resolve(this.dirname(), this.paths.background): "";
+  }
+
+  public getDisplayName() {
+    return (
+      ((this.artist ?? ((this.coArtists && this.coArtists[0]) ? this.coArtists[0] : null)) ?? "Unknown Artist") // Artist
+      + " - " +
+      (this.title ?? "Unknown Title") // Title
+    );
   }
 
   /**
    * React element of Song.
    */
-  public Element() {
+  public Element(): JSX.Element;
+  public Element(getRef: (ref: SongElement) => void): JSX.Element;
+  public Element(getRef?: (ref: SongElement) => void) {
     return (
-      <div key={this.uid}>
-        {this.artist} - {this.title}
-      </div>
+      <SongElement key={this.uid} song={this} getRef={getRef} />
     );
   }
 
@@ -49,7 +66,7 @@ export default class Song implements ISong {
     return song;
   }
 
-  public static async buildInfoFromFolder(path: string) {
+  public static async buildInfo(path: string) {
     return Promise.resolve().then(async () => {
       let info: ISong = {
         uid: Song.generateUID(),
@@ -62,7 +79,7 @@ export default class Song implements ISong {
           media: null
         },
       };
-      let dir = await fsp.opendir(path);
+      var dir = await fsp.opendir(path);
       let ent: Dirent;
       while (ent = await dir.read()) {
         if (ent.isFile()) {
@@ -70,6 +87,19 @@ export default class Song implements ISong {
             case ".mp3":
             case ".mp4":
               if (!info.paths.media) info.paths.media = ent.name;
+              if (!info.title && !info.artist) {
+                const name = Path.basename(ent.name, Path.extname(ent.name))
+                if (ent.name.indexOf(" - ") > -1) {
+                  let [artist, title] = name.split(" - ");
+
+                  info.artist = artist;
+                  info.title = title;
+                }
+                else {
+                  info.title = name;
+                }
+              }
+
               break;
 
             case ".png":
@@ -82,6 +112,17 @@ export default class Song implements ISong {
             default:
               break;
           }
+        }
+
+        // Toxen2 backwards compatibility.
+        try {
+          if (await fsp.stat(Path.resolve(info.paths.dirname, "details.json")).then(() => true).catch(() => false)) {
+            let path = Path.resolve(info.paths.dirname, "details.json");
+            info = await Legacy.toxen2SongDetailsToInfo(JSON.parse(await fsp.readFile(path, "utf8")), info)
+          }
+        } catch (error) {
+          console.error("There was an error trying to convert details.json into info.json");
+          
         }
       }
 
@@ -102,7 +143,24 @@ export default class Song implements ISong {
     return uid;
   }
 
-  public static songList: Song[] = [];
+  public play() {
+    // let src = "file:///" + this.mediaFile();
+    let src = this.mediaFile();
+    if (Toxen.musicPlayer.state.src != src) {
+      Toxen.musicPlayer.setSource(src, true);
+      Toxen.background.setBackground(this.backgroundFile())
+    }
+
+    Toxen.musicPlayer.media.volume = 0.01;
+  }
+
+  public static async getSongCount() {
+    let dirName = Settings.get("libraryDirectory");
+    if (!dirName) {
+      return 0;
+    }
+    return (await fsp.readdir(dirName, { withFileTypes: true })).filter(ent => ent.isDirectory()).length;
+  }
 
   public static async getSongs(reload?: boolean, forEach?: (song: Song) => void): Promise<Song[]> {
     return Promise.resolve().then(async () => {
@@ -114,7 +172,14 @@ export default class Song implements ISong {
       if (!dirName) {
         return [];
       }
-      let dir = await fsp.opendir(dirName);
+      let dir: Dir;
+      try {
+        dir = await fsp.opendir(dirName);
+      } catch (error) {
+        console.error(error);
+        
+        return [];
+      }
       let ent: Dirent;
       while (ent = await dir.read()) {
         if (ent.isDirectory()) { // Is music folder
@@ -124,11 +189,9 @@ export default class Song implements ISong {
             var info: ISong = JSON.parse(await fsp.readFile(resolve(songFolder, "info.json"), "utf8"));
           } catch (error) {
             console.error("Failed to load info.json file in song: " + songFolder);
-            let info = await Song.buildInfoFromFolder(songFolder)
+            info = await Song.buildInfo(songFolder);
             let s = Song.create(info);
             await s.saveInfo();
-
-            continue;
           }
 
           info.paths ?? ((info.paths as any) = {})
@@ -141,8 +204,7 @@ export default class Song implements ISong {
       }
 
       await dir.close();
-      return songs.sort();
-      // return songs.sort((a, b) => a.artist.localeCompare(b.artist));
+      return songs.sort((a, b) => a.artist && b.artist ? a.artist.localeCompare(b.artist): -1);
     });
   }
 

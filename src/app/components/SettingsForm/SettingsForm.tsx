@@ -2,7 +2,8 @@ import React, { Component } from 'react';
 import SettingsInput from './SettingsInput';
 
 interface Props {
-  onSubmit: (event: React.FormEvent<HTMLFormElement>, formValues: { [key: string]: FormDataEntryValue }) => void
+  onSubmit: (event: React.FormEvent<HTMLFormElement>, formValues: { [key: string]: FormDataEntryValue }) => void,
+  saveButtonText?: string;
 }
 
 export default class SettingsForm extends Component<Props> {
@@ -25,7 +26,7 @@ export default class SettingsForm extends Component<Props> {
           type = _d.type;
           value = SettingsInput.getValue(type, value);
 
-
+          
           params[key] = value;
         }
 
@@ -35,7 +36,7 @@ export default class SettingsForm extends Component<Props> {
         <button type="submit" className="tx-btn tx-btn-success">
           <i className="fas fa-save"></i>
           &nbsp;
-          Save settings
+          {this.props.saveButtonText ?? "Submit"}
         </button>
       </form>
     )

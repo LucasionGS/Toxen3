@@ -1,5 +1,7 @@
 import React, { Component } from 'react'
+import Time from '../toxen/Time';
 import "./LoadingScreen.scss";
+import MessageCard from './MessageCard/MessageCard';
 
 interface LoadingScreenProps {
   initialShow?: boolean;
@@ -8,6 +10,7 @@ interface LoadingScreenProps {
 
 interface LoadingScreenState {
   show: boolean;
+  content: React.ReactNode;
 }
 
 export default class LoadingScreen extends Component<LoadingScreenProps, LoadingScreenState> {
@@ -15,7 +18,13 @@ export default class LoadingScreen extends Component<LoadingScreenProps, Loading
     super(props);
 
     this.state = {
-      show: false
+      show: false,
+      // content: (<p className="center">Loading...</p>)
+      content: (
+        <MessageCard title="Title">
+          Test content
+        </MessageCard>
+      )
     }
   }
 
@@ -29,11 +38,19 @@ export default class LoadingScreen extends Component<LoadingScreenProps, Loading
       show: force ?? !this.state.show
     })
   }
-  
+
+  public setContent(content: React.ReactNode) {
+    this.setState({
+      content
+    });
+  }
+
   render() {
     return (
       <div className={"toxen-loading-screen" + (this.state.show ? " toxen-loading-screen-show" : "")}>
-        Now loading...
+        <div className="toxen-loading-screen-content">
+          {this.state.content}
+        </div>
       </div>
     )
   }

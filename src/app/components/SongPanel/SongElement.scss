@@ -1,0 +1,16 @@
+.songElement {
+  width: 95%;
+  border: solid 1px;
+  box-sizing: border-box;
+  height: min-content;
+  transition: all 0.1s ease-in-out;
+  border-top-right-radius: 0px;
+  border-bottom-right-radius: 0px;
+
+  &:hover {
+    width: 100%;
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+    cursor: pointer;
+  }
+}

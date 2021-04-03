@@ -1,8 +1,10 @@
 import React from 'react';
 import Settings from '../../toxen/Settings';
 import { remote } from "electron";
-import "./SettingsInput.css";
+import "./SettingsInput.scss";
 import SettingsInputCheckbox from './SettingsInputFields/SettingsInputCheckbox';
+import SettingsInputSelect from './SettingsInputFields/SettingsInputSelect';
+import JSONX from '../../toxen/JSONX';
 
 
 type Props = [
@@ -17,15 +19,27 @@ interface PropsTemplate<T extends string> {
   name: string;
   type: T;
   displayName?: string;
+  /**
+   * If not defined, will use settings default value.
+   */
+  getValueTemplateCallback?: () => any;
 }
 
 interface PropsTypeText extends PropsTemplate<"text"> { }
-interface PropsTypeFile extends PropsTemplate<"file"> { }
-interface PropsTypeFolder extends PropsTemplate<"folder"> { }
+interface PropsTypeFile extends PropsTemplate<"file"> {
+  parseOutput?: (value: string) => string
+}
+interface PropsTypeFolder extends PropsTemplate<"folder"> {
+  parseOutput?: (value: string) => string
+}
 interface PropsTypeCheckbox extends PropsTemplate<"checkbox"> { }
 interface PropsTypeSelect extends PropsTemplate<"select"> { }
 
 export default class SettingsInput extends React.Component<Props> {
+
+  constructor(props: Props) {
+    super(props);
+  }
 
   public static getNameAndType(nameAndType: string) {
     let type: string = null;
@@ -53,13 +67,27 @@ export default class SettingsInput extends React.Component<Props> {
         return String(value);
     }
   }
+  
+  public static toStringValue(type: string, value: any): string {
+    switch (type) {
+      case "number":
+        return String(value);
+
+      case "boolean":
+        return value ? "1" :"0";
+
+      default:
+        return value;
+    }
+  }
 
   render() {
     let { name } = SettingsInput.getNameAndType(this.props.name);
     let value: any = "";
-    if (Settings.data) {
-      value = (Settings.data as any)[name] ?? "";
-    }
+    let dataTemplate = (typeof this.props.getValueTemplateCallback == "function" ? this.props.getValueTemplateCallback() : Settings.data);
+    
+    value = JSONX.getObjectValue(dataTemplate, name) ?? "";
+    
     let label = (<label htmlFor={this.props.name}>{this.props.displayName ? this.props.displayName : name}</label>);
     switch (this.props.type) {
       case "text": {
@@ -88,7 +116,8 @@ export default class SettingsInput extends React.Component<Props> {
                   ]
                 });
                 if (value) {
-                  ref.current.value = value[0];
+                  const parseOutput = (this.props as PropsTypeFile).parseOutput;
+                  ref.current.value = typeof parseOutput === "function" ? parseOutput(value[0]) : value[0];
                 }
               }
             }/>
@@ -112,7 +141,8 @@ export default class SettingsInput extends React.Component<Props> {
                   ]
                 });
                 if (value) {
-                  ref.current.value = value[0];
+                  const parseOutput = (this.props as PropsTypeFile).parseOutput;
+                  ref.current.value = typeof parseOutput === "function" ? parseOutput(value[0]) : value[0];
                 }
               }
             }/>
@@ -133,12 +163,14 @@ export default class SettingsInput extends React.Component<Props> {
         )
       }
       
-      case "checkbox": {
+      case "select": {
         return (
           <>
-            <SettingsInputCheckbox name={this.props.name} defaultChecked={value} >
-              {label}
-            </SettingsInputCheckbox>
+            {label}
+            <br/>
+            <SettingsInputSelect name={this.props.name} defaultValue={value} >
+              {this.props.children}
+            </SettingsInputSelect>
             <br />
           </>
         )

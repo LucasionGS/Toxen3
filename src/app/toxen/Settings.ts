@@ -3,6 +3,8 @@ import fsp from "fs/promises";
 import Path from "path";
 import CrossPlatform from "./CrossPlatform";
 import { PanelDirection } from "../components/Sidepanel"
+import JSONX from "./JSONX";
+import { Toxen } from "../ToxenApp";
 
 export default class Settings {
   /**
@@ -80,19 +82,31 @@ export default class Settings {
     for (const key in data) {
       if (Object.prototype.hasOwnProperty.call(data, key)) {
         const value = (data as any)[key];
-        (Settings.data as any)[key] = value;
+        const preValue = JSONX.getObjectValue(Settings.data, key);
+        
+        JSONX.setObjectValue(Settings.data, key, value);
+
+        // Special cases
+        if (value !== preValue) {
+          if (key === "libraryDirectory") Toxen.loadSongs();
+        }
       }
     }
   }
   
 
+  public static get<T extends keyof ISettings>(key: T): ISettings[T];
+  public static get<T extends string, ValueType = any>(key: T): ValueType;
   public static get<T extends keyof ISettings>(key: T): ISettings[T] {
-    if (Settings.data && Settings.data.hasOwnProperty(key)) return Settings.data[key];
-    return null;
+    // if (Settings.data && Settings.data.hasOwnProperty(key)) return Settings.data[key];
+    return JSONX.getObjectValue(Settings.data, key);
   }
   
+  public static set<T extends keyof ISettings>(key: T, value: ISettings[T]): ISettings[T];
+  public static set<T extends string, ValueType = any>(key: T, value:ValueType): ValueType;
   public static set<T extends keyof ISettings>(key: T, value: ISettings[T]): ISettings[T] {
-    if (Settings.data && Settings.data.hasOwnProperty(key)) return Settings.data[key] = value;
+    // if (Settings.data && Settings.data.hasOwnProperty(key)) return Settings.data[key] = value;
+    JSONX.setObjectValue(Settings.data, key, value);
     return null;
   }
 }

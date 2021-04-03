@@ -1,4 +1,5 @@
 .toxen-loading-screen {
+  display: flex;
   position: fixed;
   left: 0;
   top: 0;
@@ -11,5 +12,15 @@
   &.toxen-loading-screen-show {
     opacity: 1;
     pointer-events: all;
+  }
+
+  .toxen-loading-screen-content {
+    max-width: 50vw;
+    max-height: 50vw;
+    margin: auto;
+
+    .center {
+      text-align: center;
+    }
   }
 }
