@@ -1,3 +1,10 @@
+body {
+  position: fixed;
+  z-index: -10;
+  left: 0;
+  top: 0;
+}
+
 .song-panel-toggle {
   font-size: 48px;
   transition: all 0.2s ease-in-out;

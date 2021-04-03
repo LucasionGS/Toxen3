@@ -123,3 +123,19 @@
   overflow-y: auto;
   overflow-x: hidden;
 }
+
+.sidepanel .sidepanel-backdrop {
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: -1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.sidepanel.show .sidepanel-backdrop {
+  pointer-events: all;
+  opacity: 1;
+}

@@ -64,17 +64,16 @@ export class Toxen {
       let ref: ProgressBar;
       let content = (
         <>
-          <p>Loading songs...<br />{++songCount} loaded</p>
+          <p>Loading songs...<br/>{++songCount} loaded</p>
           <div>
             <ProgressBar ref={_ref => ref = _ref} max={totalSongCount} />
           </div>
         </>
       );
 
-      
+
       Toxen.loadingScreen.setContent(content);
       ref.setValue(songCount);
-
     }));
     Toxen.loadingScreen.toggleShow(false);
   }
@@ -99,6 +98,7 @@ export default class ToxenApp extends React.Component {
         Toxen.songPanel.update();
         Toxen.sidePanel.toggle(true);
         Toxen.loadingScreen.toggleShow(false);
+        Toxen.musicPlayer.onFinished();
       })
       .then(() => Toxen._resolveWhenReady())
   }
@@ -122,6 +122,10 @@ export default class ToxenApp extends React.Component {
         {/* Song Panel */}
         <SidepanelSection id="songPanel" title="Songs" icon={<i className="fas fa-music"></i>}>
           <h1>Songs</h1>
+          <button className="tx-btn" onClick={async () => {
+            await Toxen.loadSongs();
+            Toxen.songPanel.update();
+          }}><i className="fas fa-redo"></i>&nbsp;Reload</button>
           <SongPanel ref={s => Toxen.songPanel = s} songs={Toxen.songList} />
         </SidepanelSection>
 
@@ -172,10 +176,9 @@ export default class ToxenApp extends React.Component {
 
             Toxen._editingSong.saveInfo();
           }}>
+            <SettingsInput displayName="Location" name="dirname*string" getValueTemplateCallback={() => Toxen._editingSong} type="text" readOnly />
             <SettingsInput displayName="Artist" name="artist*string" getValueTemplateCallback={() => Toxen._editingSong} type="text" />
             <SettingsInput displayName="Title" name="title*string" getValueTemplateCallback={() => Toxen._editingSong} type="text" />
-            {/* <SettingsInput displayName="Background image" name="paths.background*string" getValueTemplateCallback={() => Toxen._editingSong} type="text" />
-            <SettingsInput displayName="Media file" name="paths.media*string" getValueTemplateCallback={() => Toxen._editingSong} type="text" /> */}
           </SettingsForm>
           <hr />
         </SidepanelSection>

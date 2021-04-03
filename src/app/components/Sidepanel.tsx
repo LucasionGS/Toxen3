@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Toxen } from '../ToxenApp';
 import "./Sidepanel.scss";
 import SidepanelSection from './SidepanelSection';
 
@@ -46,7 +47,6 @@ export default class Sidepanel extends React.Component<Props, State> {
     this.setState({
       show: value
     });
-
     return value;
   }
 
@@ -81,6 +81,7 @@ export default class Sidepanel extends React.Component<Props, State> {
     let sec = this.sections.find(sec => sec?.props?.id == this.state.sectionId);
     return (
       <div className={classList.join(" ")}>
+        <div className="sidepanel-backdrop" onClick={() => this.toggle(false)}></div>
         <div className="sidepanel-icons">
           <div className="sidepanel-icon sidepanel-icon-close" onClick={
             typeof this.props.onClose === "function" ? this.props.onClose : null

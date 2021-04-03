@@ -25,7 +25,9 @@ interface PropsTemplate<T extends string> {
   getValueTemplateCallback?: () => any;
 }
 
-interface PropsTypeText extends PropsTemplate<"text"> { }
+interface PropsTypeText extends PropsTemplate<"text"> {
+  readOnly?: boolean;
+}
 interface PropsTypeFile extends PropsTemplate<"file"> {
   parseOutput?: (value: string) => string
 }
@@ -95,7 +97,7 @@ export default class SettingsInput extends React.Component<Props> {
           <>
             {label}
             <br />
-            <input className="tx-form-field" type="text" name={this.props.name} defaultValue={value} />
+            <input className="tx-form-field" type="text" name={this.props.name} defaultValue={value} readOnly={this.props.readOnly} />
             <br />
             <br />
           </>

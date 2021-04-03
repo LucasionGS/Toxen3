@@ -1,7 +1,7 @@
 import Converter from "./Converter";
 
 export default class Time {
-  constructor(ms: number) {
+  constructor(ms: number = 0) {
     this.milliseconds = ms;
     while (this.milliseconds >= 1000) {
       this.milliseconds -= 1000;

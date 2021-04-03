@@ -164,9 +164,12 @@ export default class Song implements ISong {
 
   public static async getSongs(reload?: boolean, forEach?: (song: Song) => void): Promise<Song[]> {
     return Promise.resolve().then(async () => {
-      if ((reload ?? false) && Toxen.songList) {
+      console.log("Test1");
+      if (reload !== true && Toxen.songList) {
         return Toxen.songList;
       }
+      console.log("Test2");
+      
       let songs: Song[] = [];
       let dirName = Settings.get("libraryDirectory");
       if (!dirName) {
@@ -181,7 +184,7 @@ export default class Song implements ISong {
         return [];
       }
       let ent: Dirent;
-      while (ent = await dir.read()) {
+      while (ent = await dir.read()) { 
         if (ent.isDirectory()) { // Is music folder
           let songFolder = resolve(dirName, ent.name);
 

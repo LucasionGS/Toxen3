@@ -1,11 +1,34 @@
 .toxen-music-controls {
+  
   display: block;
   width: 90%;
-  border: solid 2px;
+  // border: solid 2px;
   box-sizing: border-box;
   padding: 8px;
   position: fixed;
   bottom: 3vh;
   left: 50vw;
   transform: translateX(-50%);
+
+  .toxen-music-controls-time {
+    display: flex;
+    justify-content: space-between;
+
+    .toxen-music-controls-time-start {
+      margin-left: 5%;
+    }
+    
+    .toxen-music-controls-time-end {
+      margin-right: 5%;
+    }
+  }
+
+  .toxen-music-controls-buttons {
+    display: flex;
+    justify-content: center;
+    .ctrl-btn * {
+      margin: 8px;
+      font-size: 32px;
+    }
+  }
 }

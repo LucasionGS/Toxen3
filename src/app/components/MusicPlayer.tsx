@@ -26,7 +26,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
 
     setInterval(() => {
       try {
-        Toxen.musicControls.setProgressValue(this.media.currentTime);
+        Toxen.musicControls.setValue(this.media.currentTime);
       } catch {
         // Nothing
       }
@@ -51,6 +51,11 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
     this.media.pause();
   }
 
+  public toggle() {
+    if (this.media.paused) this.media.play();
+    else this.media.pause();
+  }
+
   public onFinished() {
     let songCount = Toxen.songList.length;
     console.log("Loading!", songCount);
@@ -72,7 +77,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
   
   render() {
     return (
-      <audio onCanPlay={e => Toxen.musicControls.setProgressMax(this.media.duration)} ref={ref => this.media = ref} hidden src={this.state.src} onEnded={this.onFinished.bind(this)} />
+      <audio onCanPlay={e => Toxen.musicControls.setMax(this.media.duration)} ref={ref => this.media = ref} hidden src={this.state.src} onEnded={this.onFinished.bind(this)} />
     )
   }
 }
