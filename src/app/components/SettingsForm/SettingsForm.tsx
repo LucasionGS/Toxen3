@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import SettingsInput from './SettingsInput';
+import SettingsInput from './SettingsInputFields/SettingsInput';
 
 interface Props {
   onSubmit: (event: React.FormEvent<HTMLFormElement>, formValues: { [key: string]: FormDataEntryValue }) => void,

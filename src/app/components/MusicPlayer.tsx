@@ -56,12 +56,10 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
     else this.media.pause();
   }
 
-  public onFinished() {
+  public playRandom() {
     let songCount = Toxen.songList.length;
-    console.log("Loading!", songCount);
     if (songCount === 0) {
       console.error("No songs available.");
-      
       return;
     }
     let randomSongIndex: number;
@@ -77,7 +75,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
   
   render() {
     return (
-      <audio onCanPlay={e => Toxen.musicControls.setMax(this.media.duration)} ref={ref => this.media = ref} hidden src={this.state.src} onEnded={this.onFinished.bind(this)} />
+      <audio onCanPlay={e => Toxen.musicControls.setMax(this.media.duration)} ref={ref => this.media = ref} hidden src={this.state.src} onEnded={this.playRandom.bind(this)} />
     )
   }
 }

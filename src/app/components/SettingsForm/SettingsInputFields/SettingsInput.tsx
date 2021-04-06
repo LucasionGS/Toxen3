@@ -1,10 +1,10 @@
 import React from 'react';
-import Settings from '../../toxen/Settings';
+import Settings from '../../../toxen/Settings';
 import { remote } from "electron";
 import "./SettingsInput.scss";
-import SettingsInputCheckbox from './SettingsInputFields/SettingsInputCheckbox';
-import SettingsInputSelect from './SettingsInputFields/SettingsInputSelect';
-import JSONX from '../../toxen/JSONX';
+import SettingsInputCheckbox from './SettingsInputCheckbox';
+import SettingsInputSelect from './SettingsInputSelect';
+import JSONX from '../../../toxen/JSONX';
 
 
 type Props = [

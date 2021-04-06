@@ -5,7 +5,7 @@ import MusicControls from "./components/MusicControls";
 import MusicPlayer from "./components/MusicPlayer";
 import ProgressBar from "./components/ProgressBar";
 import SettingsForm from "./components/SettingsForm/SettingsForm";
-import SettingsInput from "./components/SettingsForm/SettingsInput";
+import SettingsInput from "./components/SettingsForm/SettingsInputFields/SettingsInput";
 import Sidepanel from "./components/Sidepanel";
 import SidepanelSection from "./components/SidepanelSection";
 import SongPanel from "./components/SongPanel/SongPanel";
@@ -64,7 +64,7 @@ export class Toxen {
       let ref: ProgressBar;
       let content = (
         <>
-          <p>Loading songs...<br/>{++songCount} loaded</p>
+          <p>Loading songs...<br/>{++songCount}/{totalSongCount}</p>
           <div>
             <ProgressBar ref={_ref => ref = _ref} max={totalSongCount} />
           </div>
@@ -98,7 +98,7 @@ export default class ToxenApp extends React.Component {
         Toxen.songPanel.update();
         Toxen.sidePanel.toggle(true);
         Toxen.loadingScreen.toggleShow(false);
-        Toxen.musicPlayer.onFinished();
+        Toxen.musicPlayer.playRandom();
       })
       .then(() => Toxen._resolveWhenReady())
   }
@@ -110,6 +110,7 @@ export default class ToxenApp extends React.Component {
       <MusicControls ref={ref => Toxen.musicControls = ref} />
       <LoadingScreen ref={ls => Toxen.loadingScreen = ls} initialShow={true} />
       <div className="song-panel-toggle" onClick={() => Toxen.sidePanel.toggle()}>
+        &nbsp;
         <i className="fas fa-bars"></i>
         <span className="song-panel-toggle-title">Menu</span>
       </div>
@@ -176,7 +177,7 @@ export default class ToxenApp extends React.Component {
 
             Toxen._editingSong.saveInfo();
           }}>
-            <SettingsInput displayName="Location" name="dirname*string" getValueTemplateCallback={() => Toxen._editingSong} type="text" readOnly />
+            <SettingsInput displayName="Location" name="paths.dirname*string" getValueTemplateCallback={() => Toxen._editingSong} type="text" readOnly />
             <SettingsInput displayName="Artist" name="artist*string" getValueTemplateCallback={() => Toxen._editingSong} type="text" />
             <SettingsInput displayName="Title" name="title*string" getValueTemplateCallback={() => Toxen._editingSong} type="text" />
           </SettingsForm>

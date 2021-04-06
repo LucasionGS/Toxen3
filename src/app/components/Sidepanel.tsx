@@ -13,14 +13,14 @@ interface Props {
   /**
    * Initial value to show on the menu.
    */
-  sectionId?: any;
+  sectionId?: string;
   vertical?: boolean;
   onClose?: (() => void);
 }
 
 interface State {
   show: boolean;
-  sectionId: any;
+  sectionId: string;
   vertical: boolean;
   direction: PanelDirection;
 }
@@ -50,7 +50,7 @@ export default class Sidepanel extends React.Component<Props, State> {
     return value;
   }
 
-  public setSectionId(sectionId: any) {
+  public setSectionId(sectionId: string) {
     this.setState({
       sectionId
     });
@@ -67,6 +67,13 @@ export default class Sidepanel extends React.Component<Props, State> {
       direction
     });
   }
+
+  public storeScroll(scrollY: number) {
+    let id = this.state.sectionId;
+    this.scrollStorage[id] = scrollY;
+  }
+
+  public scrollStorage: {[sectionId: string]: number} = {};
 
   render() {
     const classList: string[] = [
@@ -100,7 +107,15 @@ export default class Sidepanel extends React.Component<Props, State> {
         </div>
         {sec ?
           <>
-            <div className="sidepanel-content">{sec}</div>
+            <div
+            className="sidepanel-content"
+            onScroll={e => this.scrollStorage[this.state.sectionId] = e.currentTarget.scrollTop}
+            ref={ref => {
+              if (ref) {
+                ref.scrollTo(0, this.scrollStorage[this.state.sectionId] ?? 0);
+              }
+            }}
+            >{sec}</div>
           </>
           : ""}
       </div>

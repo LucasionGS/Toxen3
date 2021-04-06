@@ -16,7 +16,8 @@ const createWindow = (): void => {
       contextIsolation: false,
       enableRemoteModule: true,
       webSecurity: false
-    }
+    },
+    autoHideMenuBar: true,
   });
 
   // and load the index.html of the app.

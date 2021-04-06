@@ -56,7 +56,7 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
             <span hidden={Toxen.musicPlayer && Toxen.musicPlayer.media && !Toxen.musicPlayer.media.paused}><i className="fas fa-play"></i></span>
             <span hidden={Toxen.musicPlayer && Toxen.musicPlayer.media && Toxen.musicPlayer.media.paused}><i className="fas fa-pause"></i></span>
           </div>
-          <div className="ctrl-btn">
+          <div className="ctrl-btn" onClick={() => Toxen.musicPlayer.playRandom()}>
             <i className="fas fa-angle-double-right"></i>
           </div>
           <div className="ctrl-btn">

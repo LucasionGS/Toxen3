@@ -7,6 +7,7 @@ import { Toxen } from "../ToxenApp";
 import Path from "path";
 import SongElement from "../components/SongPanel/SongElement";
 import Legacy from "./Legacy";
+import Debug from "./Debug";
 
 export default class Song implements ISong {
   public uid: string;
@@ -151,6 +152,7 @@ export default class Song implements ISong {
       Toxen.background.setBackground(this.backgroundFile())
     }
 
+    console.log(this);
     Toxen.musicPlayer.media.volume = 0.01;
   }
 
@@ -164,11 +166,9 @@ export default class Song implements ISong {
 
   public static async getSongs(reload?: boolean, forEach?: (song: Song) => void): Promise<Song[]> {
     return Promise.resolve().then(async () => {
-      console.log("Test1");
       if (reload !== true && Toxen.songList) {
         return Toxen.songList;
       }
-      console.log("Test2");
       
       let songs: Song[] = [];
       let dirName = Settings.get("libraryDirectory");
@@ -200,9 +200,15 @@ export default class Song implements ISong {
           info.paths ?? ((info.paths as any) = {})
           info.paths.dirname = songFolder;
 
-          let song = Song.create(info);
-          songs.push(song);
-          if (typeof forEach === "function") forEach(song);
+          if (info.paths.media) {
+            let song = Song.create(info);
+            songs.push(song);
+            if (typeof forEach === "function") forEach(song);
+          }
+          else {
+            console.error(`Song "${songFolder}" is missing a media file.`);
+          }
+          // if (song.artist == null) await Debug.wait(500);
         }
       }
 
