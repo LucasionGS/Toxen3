@@ -1,14 +1,19 @@
 /* Buttons */
 .tx-btn {
-  background-color: #1976D2;
+  background-color: #1976D2; // Default color
   border: none;
-  padding: 1%;
+  padding: 0.35em;
   &:hover {
     cursor: pointer;
   }
   
-  &.tx-btn-success {
-    background-color: #01861d;
+  // Colors
+  &.tx-btn-action {
+    background-color: #01861d; // Action color
+  }
+  
+  &.tx-btn-next {
+    background-color: #707070; // Next step color
   }
   
   &:focus {

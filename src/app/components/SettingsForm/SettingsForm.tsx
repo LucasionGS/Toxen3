@@ -33,7 +33,7 @@ export default class SettingsForm extends Component<Props> {
         this.props.onSubmit(e, params);
       }} method="post">
         {this.props.children}
-        <button type="submit" className="tx-btn tx-btn-success">
+        <button type="submit" className="tx-btn tx-btn-action">
           <i className="fas fa-save"></i>
           &nbsp;
           {this.props.saveButtonText ?? "Submit"}
