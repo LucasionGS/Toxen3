@@ -5,7 +5,7 @@ import "./SettingsInput.scss";
 import SettingsInputCheckbox from './SettingsInputCheckbox';
 import SettingsInputSelect from './SettingsInputSelect';
 import JSONX from '../../../toxen/JSONX';
-
+import SelectAsync from 'react-select/async';
 
 type Props = [
   PropsTypeText,
@@ -13,6 +13,7 @@ type Props = [
   PropsTypeFolder,
   PropsTypeCheckbox,
   PropsTypeSelect,
+  PropsTypeSelectAsync
 ][number];
 
 interface PropsTemplate<T extends string> {
@@ -36,11 +37,16 @@ interface PropsTypeFolder extends PropsTemplate<"folder"> {
 }
 interface PropsTypeCheckbox extends PropsTemplate<"checkbox"> { }
 interface PropsTypeSelect extends PropsTemplate<"select"> { }
+interface PropsTypeSelectAsync extends PropsTemplate<"selectAsync"> {
+  values: Promise<{ [displayText: string]: string }>
+}
 
 export default class SettingsInput extends React.Component<Props> {
 
   constructor(props: Props) {
     super(props);
+
+    this.state = {};
   }
 
   public static getNameAndType(nameAndType: string) {
@@ -69,14 +75,14 @@ export default class SettingsInput extends React.Component<Props> {
         return String(value);
     }
   }
-  
+
   public static toStringValue(type: string, value: any): string {
     switch (type) {
       case "number":
         return String(value);
 
       case "boolean":
-        return value ? "1" :"0";
+        return value ? "1" : "0";
 
       default:
         return value;
@@ -87,9 +93,9 @@ export default class SettingsInput extends React.Component<Props> {
     let { name } = SettingsInput.getNameAndType(this.props.name);
     let value: any = "";
     let dataTemplate = (typeof this.props.getValueTemplateCallback == "function" ? this.props.getValueTemplateCallback() : Settings.data);
-    
+
     value = JSONX.getObjectValue(dataTemplate, name) ?? "";
-    
+
     let label = (<label htmlFor={this.props.name}>{this.props.displayName ? this.props.displayName : name}</label>);
     switch (this.props.type) {
       case "text": {
@@ -103,7 +109,7 @@ export default class SettingsInput extends React.Component<Props> {
           </>
         )
       }
-      
+
       case "file": {
         const ref = React.createRef<HTMLInputElement>();
         return (
@@ -122,13 +128,13 @@ export default class SettingsInput extends React.Component<Props> {
                   ref.current.value = typeof parseOutput === "function" ? parseOutput(value[0]) : value[0];
                 }
               }
-            }/>
+            } />
             <br />
             <br />
           </>
         )
       }
-      
+
       case "folder": {
         const ref = React.createRef<HTMLInputElement>();
         return (
@@ -147,7 +153,7 @@ export default class SettingsInput extends React.Component<Props> {
                   ref.current.value = typeof parseOutput === "function" ? parseOutput(value[0]) : value[0];
                 }
               }
-            }/>
+            } />
             <br />
             <br />
           </>
@@ -164,15 +170,27 @@ export default class SettingsInput extends React.Component<Props> {
           </>
         )
       }
-      
+
       case "select": {
         return (
           <>
             {label}
-            <br/>
+            <br />
             <SettingsInputSelect name={this.props.name} defaultValue={value} >
               {this.props.children}
             </SettingsInputSelect>
+            <br />
+          </>
+        )
+      }
+      
+      // broken asf
+      case "selectAsync": {
+        return (
+          <>
+            {label}
+            <br />
+            <SelectAsync name={this.props.name} defaultValue={value} />
             <br />
           </>
         )

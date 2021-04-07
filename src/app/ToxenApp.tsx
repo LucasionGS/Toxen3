@@ -1,5 +1,7 @@
 import { remote } from "electron";
 import React from "react";
+import fsp from "fs/promises";
+import Path from "path";
 import Background from "./components/Background/Background";
 import LoadingScreen from "./components/LoadingScreen";
 import MusicControls from "./components/MusicControls";
@@ -31,6 +33,18 @@ export class Toxen {
 
   public static _resolveWhenReady: () => void;
 
+  public static supportedAudioFiles = [
+    ".mp3"
+  ];
+  
+  public static supportedVideoFiles = [
+    ".mp4"
+  ];
+
+  public static getSupportedFiles() {
+    return Toxen.supportedAudioFiles.concat(Toxen.supportedVideoFiles);
+  }
+  
   public static sidepanelSetSectionId(sectionId: any) {
     this.sidePanel.setSectionId(sectionId);
   }
@@ -108,7 +122,6 @@ export default class ToxenApp extends React.Component {
   render = () => (
     <div>
       <Background ref={ref => Toxen.background = ref} />
-      <MusicPlayer ref={ref => Toxen.musicPlayer = ref} />
       <MusicControls ref={ref => Toxen.musicControls = ref} />
       <LoadingScreen ref={ls => Toxen.loadingScreen = ls} initialShow={true} />
       <div className="song-panel-toggle" onClick={() => Toxen.sidePanel.toggle()}>
@@ -123,9 +136,9 @@ export default class ToxenApp extends React.Component {
         onClose={() => Toxen.sidePanel.toggle()}
       >
         {/* Song Panel */}
-        <SidepanelSection id="songPanel" title="Songs" icon={<i className="fas fa-music"></i>}>
+        <SidepanelSection id="songPanel" title="Music" icon={<i className="fas fa-music"></i>}>
           <h1>Songs</h1>
-          <button className="tx-btn" onClick={async () => {
+          <button className="tx-btn tx-whitespace-nowrap" onClick={async () => {
             await Toxen.loadSongs();
             Toxen.songPanel.update();
           }}><i className="fas fa-redo"></i>&nbsp;Reload Library</button>
@@ -195,6 +208,27 @@ export default class ToxenApp extends React.Component {
             <br/>
             <SettingsInput displayName="Artist" name="artist*string" getValueTemplateCallback={() => Toxen._editingSong} type="text" />
             <SettingsInput displayName="Title" name="title*string" getValueTemplateCallback={() => Toxen._editingSong} type="text" />
+            <SettingsInput displayName="Media File" name="media*string" getValueTemplateCallback={() => Toxen._editingSong} type="selectAsync"
+            values={(async () => {
+              let song = Toxen._editingSong;
+              let values: {[displayText: string]: string} = {};
+              if (!song) return values;
+              let path = song.dirname();
+
+              let supported = Toxen.getSupportedFiles();
+              (await fsp.readdir(path))
+              .forEach(f => {
+                console.log(f);
+                let ext = Path.extname(f);
+                if (supported.includes(ext)) {
+                  values[f] = f;
+                };
+              });
+              
+              return values;
+            })()}
+            >
+            </SettingsInput>
           </SettingsForm>
           <hr />
         </SidepanelSection>

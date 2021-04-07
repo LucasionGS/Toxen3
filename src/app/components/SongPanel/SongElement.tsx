@@ -46,7 +46,7 @@ export default class SongElement extends Component<SongElementProps, SongElement
   render() {
     let song = this.props.song;
     return (
-      <div className="songElement" style={{
+      <div className="song-element" style={{
         background: `linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0)) 0% 0% / cover, url("file:///${song.backgroundFile().replace(/\\/g, "/")}")`
       }}
       onClick={this.play.bind(this)}
@@ -54,7 +54,7 @@ export default class SongElement extends Component<SongElementProps, SongElement
         this.contextMenu();
       }}
       >
-        <p>{song.getDisplayName()}</p>
+        <p className="song-title" >{song.getDisplayName()}</p>
       </div>
     )
   }

@@ -1,6 +1,7 @@
 import React, { Component } from 'react'
 import Song from '../toxen/Song';
 import { Toxen } from '../ToxenApp';
+import Path from "path";
 
 export type MediaSourceInfo = string;
 
@@ -39,6 +40,17 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
     }, () => playWhenReady ? this.play() : this.media.load());
   }
 
+  public isVideo(src: string) {
+    if (!src) return false;
+    switch (Path.extname(src)) {
+      // Video formats
+      case ".mp4":
+        return true;
+    
+      default: return false;
+    }
+  }
+
   public get paused() {
     return this.media.paused;
   }
@@ -74,8 +86,25 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
   public media: HTMLMediaElement;
   
   render() {
-    return (
-      <audio onCanPlay={e => Toxen.musicControls.setMax(this.media.duration)} ref={ref => this.media = ref} hidden src={this.state.src} onEnded={this.playRandom.bind(this)} />
-    )
+    let isVideo = this.isVideo(this.state.src);
+    // Audio
+    if (!isVideo) return (
+      <audio
+      onCanPlay={e => Toxen.musicControls.setMax(this.media.duration)}
+      ref={ref => this.media = ref}
+      hidden
+      src={this.state.src}
+      onEnded={this.playRandom.bind(this)}
+      />
+    );
+    // Video
+    else return (
+      <video
+      onCanPlay={e => Toxen.musicControls.setMax(this.media.duration)}
+      ref={ref => this.media = ref}
+      src={this.state.src}
+      onEnded={this.playRandom.bind(this)}
+      />
+    );
   }
 }

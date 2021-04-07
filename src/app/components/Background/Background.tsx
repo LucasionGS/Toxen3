@@ -1,5 +1,6 @@
 import React, { Component } from 'react'
 import { Toxen } from '../../ToxenApp';
+import MusicPlayer from '../MusicPlayer';
 import "./Background.scss";
 
 interface BackgroundProps {
@@ -29,11 +30,14 @@ export default class Background extends Component<BackgroundProps, BackgroundSta
       image: source
     })
   }
+
+  public musicPlayer: MusicPlayer
   
   render() {
     return (
       <div className="toxen-background" onClick={() => Toxen.musicPlayer.toggle()}>
         <img className="toxen-background-image" src={this.state.image} alt="background"/>
+        <MusicPlayer ref={ref => Toxen.musicPlayer = ref} />
       </div>
     )
   }
