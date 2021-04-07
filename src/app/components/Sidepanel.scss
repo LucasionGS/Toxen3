@@ -1,7 +1,7 @@
 :root {
   --sidebar-transition-in: all 0.5s cubic-bezier(.98,-0.03,.67,.77);
   --sidebar-transition-out: all 0.5s cubic-bezier(.64,.32,.54,1.03);
-  --panel-width: 50vw;
+  --panel-width: 40vw;
   --panel-icons-width: 128px;
 }
 
@@ -9,7 +9,7 @@
   display: flex;
   position: fixed;
   transition: var(--sidebar-transition-out);
-  top: 0;
+  bottom: 0;
   background-color: #252525;
   overflow: hidden;
   border: solid white 0px;
@@ -18,8 +18,15 @@
 
 /* For sideways transition */
 .sidepanel:not(.vertical) {
-  width: 0px;
   height: 100vh;
+  
+  &:not(.expose-icons) {
+    width: 0px;
+  }
+  &:is(.expose-icons) {
+    // width: var(--panel-icons-width); // this will show icons instead of full hide on sidebar.
+    width: 3.6em; // this will show icons instead of full hide on sidebar.
+  }
 }
 
 /* For vertical transition */
@@ -31,7 +38,6 @@
 
 .sidepanel.show {
   transition: var(--sidebar-transition-in);
-  border: solid white 1px;
 }
 
 /* For sideways transition */
@@ -42,24 +48,25 @@
 
 /* For vertical transition */
 .sidepanel.show.vertical {
+  border-top: solid white 1px;
   height: 100vh;
 }
 
-
-.sidepanel-left {
+.sidepanel.sidepanel-left {
   left: 0;
 }
 
-.sidepanel-right {
+.sidepanel.sidepanel-right {
   right: 0;
 }
 
 .sidepanel.show.sidepanel-left {
   border-left: none;
-  
+  border-right: solid white 1px;
 }
 .sidepanel.show.sidepanel-right {
   border-right: none;
+  border-left: solid white 1px;
 }
 
 .sidepanel-icons {
@@ -85,43 +92,65 @@
   cursor: pointer;
 }
 
-.sidepanel-icon-title {
-  font-size: 20px !important;
-  line-height: 32px;
-  vertical-align: 6px;
+.sidepanel {
+  .sidepanel-icon-title {
+    display: none;
+    font-size: 20px !important;
+    line-height: 32px;
+    vertical-align: 6px;
+  }
 }
 
-.sidepanel-icon-close * {
-  font-size: 32px;
-  transition: all 0.2s ease-in-out;
-  color: rgb(255, 150, 150);
+.sidepanel.show {
+  .sidepanel-icon-title {
+    display: inline;
+  }
 }
 
-.sidepanel-icon-close:hover * {
-  color: rgb(182, 0, 0);
+
+.sidepanel {
+  .sidepanel-icon-toggle {
+    * {
+      transform: rotate(112.5deg);
+      transition: all 0.3s ease-in-out;
+      transform-origin: center;
+      font-size: 32px;
+      color: rgb(150, 255, 159);
+    }
+    
+    &:hover * {
+      color: rgb(0, 182, 9);
+    }
+  }
 }
 
-.sidepanel.show .sidepanel-icon-close * {
-  transition: transform 0s ease-in-out,
-              color 0.3s ease-in-out;
-  transform: rotate(0);
-}
 
-.sidepanel .sidepanel-icon-close * {
-  transition: all 0.3s ease-in-out;
-  transform: rotate(90deg);
-  transform-origin: center;
+.sidepanel.show {
+  .sidepanel-icon-toggle {
+    * {
+      transform: rotate(0);
+      color: rgb(255, 150, 150);
+    }
+    
+    &:hover * {
+      color: rgb(182, 0, 0);
+    }
+  }
 }
 
 .sidepanel-content {
+  transition: all 0.3s ease-in-out;
+  opacity: 0;
   padding: 16px;
   overflow: hidden;
+  box-sizing: border-box;
   width: calc(var(--panel-width) - var(--panel-icons-width));
 }
 
 .sidepanel.show .sidepanel-content {
-  overflow-y: auto;
+  opacity: 1;
   overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .sidepanel .sidepanel-backdrop {

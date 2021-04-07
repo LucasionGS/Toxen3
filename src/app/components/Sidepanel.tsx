@@ -9,6 +9,7 @@ interface Props {
   children: React.ReactElement<SidepanelSection> | React.ReactElement<SidepanelSection>[];
   direction?: PanelDirection;
   show?: boolean;
+  exposeIcons?: boolean;
   getRef?: (sidepanel: Sidepanel) => void;
   /**
    * Initial value to show on the menu.
@@ -23,6 +24,7 @@ interface State {
   sectionId: string;
   vertical: boolean;
   direction: PanelDirection;
+  exposeIcons: boolean;
 }
 
 export default class Sidepanel extends React.Component<Props, State> {
@@ -33,6 +35,7 @@ export default class Sidepanel extends React.Component<Props, State> {
       sectionId: (this.props.sectionId ?? this.sections[0]?.props?.id),
       vertical: (this.props.vertical ?? false),
       direction: (this.props.direction ?? "left"),
+      exposeIcons: (this.props.exposeIcons ?? false),
     }
   }
 
@@ -68,12 +71,18 @@ export default class Sidepanel extends React.Component<Props, State> {
     });
   }
 
+  public setExposeIcons(exposeIcons: boolean) {
+    this.setState({
+      exposeIcons
+    });
+  }
+
   public storeScroll(scrollY: number) {
     let id = this.state.sectionId;
     this.scrollStorage[id] = scrollY;
   }
 
-  public scrollStorage: {[sectionId: string]: number} = {};
+  public scrollStorage: { [sectionId: string]: number } = {};
 
   render() {
     const classList: string[] = [
@@ -83,6 +92,7 @@ export default class Sidepanel extends React.Component<Props, State> {
 
     if (this.state.vertical) classList.push("vertical");
     if (this.state.show) classList.push("show");
+    if (this.state.exposeIcons) classList.push("expose-icons");
 
 
     let sec = this.sections.find(sec => sec?.props?.id == this.state.sectionId);
@@ -90,16 +100,23 @@ export default class Sidepanel extends React.Component<Props, State> {
       <div className={classList.join(" ")}>
         <div className="sidepanel-backdrop" onClick={() => this.toggle(false)}></div>
         <div className="sidepanel-icons">
-          <div className="sidepanel-icon sidepanel-icon-close" onClick={
+          <div className="sidepanel-icon sidepanel-icon-toggle" onClick={
             typeof this.props.onClose === "function" ? this.props.onClose : null
           }>
             <i className="far fa-times-circle"></i>
-            <span className="sidepanel-icon-title">&nbsp;Close</span>
+            {
+              this.state.show ?
+                <span className="sidepanel-icon-title">&nbsp;Close</span>
+                : <span className="sidepanel-icon-title">&nbsp;Show</span>
+            }
           </div>
           {this.sections.map(s => (s.props.icon || s.props.title) && (
             <div key={String(s.props.id)}>
               {s.props.separator === true ? (<hr />) : ""}
-              <div className="sidepanel-icon" onClick={() => this.setSectionId(s.props.id)}>
+              <div className="sidepanel-icon" title={s.props.title} onClick={() => {
+                this.setSectionId(s.props.id);
+                if (this.state.exposeIcons) this.state.show || this.toggle(true);
+              }}>
                 {s.props.icon}
                 {s.props.title && (<span className="sidepanel-icon-title">&nbsp;{s.props.title}</span>)}
               </div>
@@ -108,13 +125,13 @@ export default class Sidepanel extends React.Component<Props, State> {
         {sec ?
           <>
             <div
-            className="sidepanel-content"
-            onScroll={e => this.scrollStorage[this.state.sectionId] = e.currentTarget.scrollTop}
-            ref={ref => {
-              if (ref) {
-                ref.scrollTo(0, this.scrollStorage[this.state.sectionId] ?? 0);
-              }
-            }}
+              className="sidepanel-content"
+              onScroll={e => this.scrollStorage[this.state.sectionId] = e.currentTarget.scrollTop}
+              ref={ref => {
+                if (ref) {
+                  ref.scrollTo(0, this.scrollStorage[this.state.sectionId] ?? 0);
+                }
+              }}
             >{sec}</div>
           </>
           : ""}

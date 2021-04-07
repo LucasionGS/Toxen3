@@ -20,21 +20,24 @@ export default class Song implements ISong {
    * Return the full path of the song folder.
    */
   public dirname() {
-    return this.paths && this.paths.dirname ? resolve(this.paths.dirname): null;
+    if (Settings.isRemote()) `${Settings.get("libraryDirectory")}/${this.paths.dirname}`;
+    else return this.paths && this.paths.dirname ? resolve(Settings.get("libraryDirectory"), this.paths.dirname): null;
   }
 
   /**
    * Return the full path of the media file.
    */
   public mediaFile() {
-    return this.paths && this.paths.media ? resolve(this.dirname(), this.paths.media): null;
+    if (Settings.isRemote()) `${this.dirname()}/${this.paths.media}`;
+    else return this.paths && this.paths.media ? resolve(this.dirname(), this.paths.media): null;
   }
   
   /**
    * Return the full path of the media file.
    */
   public backgroundFile() {
-    return this.paths && this.paths.background ? resolve(this.dirname(), this.paths.background): "";
+    if (Settings.isRemote()) `${this.dirname()}/${this.paths.background}`;
+    else return this.paths && this.paths.background ? resolve(this.dirname(), this.paths.background): "";
   }
 
   public getDisplayName() {
@@ -67,7 +70,7 @@ export default class Song implements ISong {
     return song;
   }
 
-  public static async buildInfo(path: string) {
+  public static async buildInfo(fullPath: string) {
     return Promise.resolve().then(async () => {
       let info: ISong = {
         uid: Song.generateUID(),
@@ -75,12 +78,12 @@ export default class Song implements ISong {
         title: null,
         coArtists: null,
         paths: {
-          dirname: Path.resolve(path),
+          dirname: null,
           background: null,
           media: null
         },
       };
-      var dir = await fsp.opendir(path);
+      var dir = await fsp.opendir(fullPath);
       let ent: Dirent;
       while (ent = await dir.read()) {
         if (ent.isFile()) {
@@ -117,13 +120,12 @@ export default class Song implements ISong {
 
         // Toxen2 backwards compatibility.
         try {
-          if (await fsp.stat(Path.resolve(info.paths.dirname, "details.json")).then(() => true).catch(() => false)) {
-            let path = Path.resolve(info.paths.dirname, "details.json");
+          if (await fsp.stat(Path.resolve(fullPath, "details.json")).then(() => true).catch(() => false)) {
+            let path = Path.resolve(fullPath, "details.json");
             info = await Legacy.toxen2SongDetailsToInfo(JSON.parse(await fsp.readFile(path, "utf8")), info)
           }
         } catch (error) {
           console.error("There was an error trying to convert details.json into info.json");
-          
         }
       }
 
@@ -133,7 +135,7 @@ export default class Song implements ISong {
   }
 
   private static generateUID() {
-    let items = "QWERTYUIOPASDFGHJKLZXCVBNM";
+    let items = "QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm1234567890";
     let uid: string = "";
     do {
       for (let i = 0; i < items.length; i++) {
@@ -165,7 +167,10 @@ export default class Song implements ISong {
   }
 
   public static async getSongs(reload?: boolean, forEach?: (song: Song) => void): Promise<Song[]> {
-    return Promise.resolve().then(async () => {
+    if (Settings.isRemote()) {
+
+    }
+    else return Promise.resolve().then(async () => {
       if (reload !== true && Toxen.songList) {
         return Toxen.songList;
       }
@@ -198,11 +203,14 @@ export default class Song implements ISong {
           }
 
           info.paths ?? ((info.paths as any) = {})
-          info.paths.dirname = songFolder;
-
+          let isDifferent = info.paths.dirname !== ent.name;
+          if (isDifferent) info.paths.dirname = ent.name;
+          
+          
           if (info.paths.media) {
             let song = Song.create(info);
             songs.push(song);
+            if (isDifferent) song.saveInfo();
             if (typeof forEach === "function") forEach(song);
           }
           else {
@@ -229,7 +237,7 @@ export default class Song implements ISong {
 
   public async saveInfo() {
     if (!this.paths || !this.paths.dirname) return null;
-    return fsp.writeFile(Path.resolve(this.paths.dirname, "info.json"), JSON.stringify(this.toISong()));
+    return fsp.writeFile(Path.resolve(this.dirname(), "info.json"), JSON.stringify(this.toISong()));
   }
 }
 
@@ -243,7 +251,7 @@ export interface ISong {
 
 interface ISongPaths {
   /**
-   * Full directory Path.
+   * Directory basename.
    */
   dirname: string;
   media: string;

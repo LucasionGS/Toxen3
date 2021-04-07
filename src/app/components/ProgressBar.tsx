@@ -6,12 +6,15 @@ interface ProgressBarProps {
   min?: number;
   max?: number;
   fillColor?: React.HTMLAttributes<HTMLDivElement>["style"]["backgroundColor"];
+  borderColor?: React.HTMLAttributes<HTMLDivElement>["style"]["backgroundColor"];
 }
 
 interface ProgressBarState {
   value: number;
   min: number;
   max: number;
+  fillColor: React.HTMLAttributes<HTMLDivElement>["style"]["backgroundColor"];
+  borderColor: React.HTMLAttributes<HTMLDivElement>["style"]["backgroundColor"];
 }
 
 export default class ProgressBar extends Component<ProgressBarProps, ProgressBarState> {
@@ -22,6 +25,8 @@ export default class ProgressBar extends Component<ProgressBarProps, ProgressBar
       value: this.props.initialValue ?? 0,
       min: this.props.min ?? 0,
       max: this.props.max ?? 100,
+      fillColor: this.props.fillColor,
+      borderColor: this.props.borderColor,
     }
   }
   
@@ -48,13 +53,17 @@ export default class ProgressBar extends Component<ProgressBarProps, ProgressBar
     } = this.state;
     let percent = (100 / (max - min)) * (value - min);
     
+    let borderStyle: React.HTMLAttributes<HTMLDivElement>["style"] = {
+      borderColor: this.state.borderColor ?? "#fff"
+    };
+
     let fillStyle: React.HTMLAttributes<HTMLDivElement>["style"] = {
       width: `${percent}%`,
-      backgroundColor: this.props.fillColor ?? "#fff"
+      backgroundColor: this.state.fillColor ?? "#fff"
     };
     return (
       <div className="toxen-progress-bar-container">
-        <div className="toxen-progress-bar">
+        <div className="toxen-progress-bar" style={borderStyle}>
           <div className="toxen-progress-bar-fill" style={fillStyle}></div>
         </div>
       </div>

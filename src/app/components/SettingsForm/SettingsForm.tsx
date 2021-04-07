@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import SettingsInput from './SettingsInputFields/SettingsInput';
+import "./SettingsForm.scss";
 
 interface Props {
   onSubmit: (event: React.FormEvent<HTMLFormElement>, formValues: { [key: string]: FormDataEntryValue }) => void,

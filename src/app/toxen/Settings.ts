@@ -63,7 +63,13 @@ export default class Settings {
   }
 
   public static isRemote() {
-    return Boolean(Settings.data && Settings.data.isRemote);
+    return Boolean(
+      Settings.data
+      && Settings.data.libraryDirectory
+      && (
+        Settings.data.libraryDirectory.toLowerCase().startsWith("http://") || 
+        Settings.data.libraryDirectory.toLowerCase().startsWith("https://")
+      ));
   }
 
   public static data: ISettings;
@@ -112,8 +118,12 @@ export default class Settings {
 }
 
 export interface ISettings {
+  // General settings
   libraryDirectory: string;
   isRemote: boolean;
+
+  // Panel settings
   panelVerticalTransition: boolean;
-  panelDirection: PanelDirection
+  panelDirection: PanelDirection;
+  exposePanelIcons: boolean;
 }

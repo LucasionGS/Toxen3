@@ -45,6 +45,7 @@ export class Toxen {
   public static updateSettings() {
     Toxen.sidePanel.setVertical(Settings.get("panelVerticalTransition") ?? false);
     Toxen.sidePanel.setDirection(Settings.get("panelDirection") ?? "left");
+    Toxen.sidePanel.setExposeIcons(Settings.get("exposePanelIcons") ?? false);
   }
 
   public static loadingScreen: LoadingScreen;
@@ -126,7 +127,7 @@ export default class ToxenApp extends React.Component {
           <button className="tx-btn" onClick={async () => {
             await Toxen.loadSongs();
             Toxen.songPanel.update();
-          }}><i className="fas fa-redo"></i>&nbsp;Reload</button>
+          }}><i className="fas fa-redo"></i>&nbsp;Reload Library</button>
           <SongPanel ref={s => Toxen.songPanel = s} songs={Toxen.songList} />
         </SidepanelSection>
 
@@ -154,13 +155,23 @@ export default class ToxenApp extends React.Component {
             Settings.save();
             Toxen.updateSettings();
           }}>
+            <h2>General</h2>
             <SettingsInput type="folder" name="libraryDirectory*string" displayName="Music Library" />
+            <sup>Music Library to fetch songs from.</sup>
+            <hr/>
+            <h2>Sidepanel</h2>
             <SettingsInput type="checkbox" name="panelVerticalTransition*boolean" displayName="Vertical Transition" />
+            <sup>Makes the Sidepanel appear from the bottom instead of the side.</sup>
+            
+            <SettingsInput type="checkbox" name="exposePanelIcons*boolean" displayName="Expose Panel Icons" />
+            <sup>Exposes the icons when the panel is hidden. Only applies when Vertical Transition is off.</sup>
+
             <SettingsInput type="select" name="panelDirection*string" displayName="Panel Direction" >
               <option className="tx-form-field" value="left">Left</option>
               <option className="tx-form-field" value="right">Right</option>
             </SettingsInput>
             <br />
+            <sup>Choose which side the sidepanel should appear on.</sup>
           </SettingsForm>
         </SidepanelSection>
 
