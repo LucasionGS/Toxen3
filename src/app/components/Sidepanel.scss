@@ -36,9 +36,9 @@
   width: var(--panel-width);
 }
 
-.sidepanel.show {
-  transition: var(--sidebar-transition-in);
-}
+// .sidepanel.show {
+//   transition: var(--sidebar-transition-in);
+// }
 
 /* For sideways transition */
 .sidepanel.show:not(.vertical) {

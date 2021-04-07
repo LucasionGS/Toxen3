@@ -1,20 +1,22 @@
 import React, { Component } from 'react'
 import "./ProgressBar.scss";
 
+type Color = React.HTMLAttributes<HTMLDivElement>["style"]["backgroundColor"];
+
 interface ProgressBarProps {
   initialValue?: number;
   min?: number;
   max?: number;
-  fillColor?: React.HTMLAttributes<HTMLDivElement>["style"]["backgroundColor"];
-  borderColor?: React.HTMLAttributes<HTMLDivElement>["style"]["backgroundColor"];
+  fillColor?: Color;
+  borderColor?: Color;
 }
 
 interface ProgressBarState {
   value: number;
   min: number;
   max: number;
-  fillColor: React.HTMLAttributes<HTMLDivElement>["style"]["backgroundColor"];
-  borderColor: React.HTMLAttributes<HTMLDivElement>["style"]["backgroundColor"];
+  fillColor: Color;
+  borderColor: Color;
 }
 
 export default class ProgressBar extends Component<ProgressBarProps, ProgressBarState> {
@@ -31,6 +33,29 @@ export default class ProgressBar extends Component<ProgressBarProps, ProgressBar
   }
   
   componentDidMount() {
+  }
+
+  /**
+   * Set both fillColor and borderColor to the same color.
+   */
+  setColor(color: Color): void;
+  /**
+   * Set fillColor and borderColor with 2 different colors at the same time. Prevents a double state update.
+   */
+  setColor(fillColor: Color, borderColor: Color): void;
+  setColor(fillColor: Color, borderColor?: Color) {
+    this.setState({
+      fillColor: fillColor,
+      borderColor: borderColor ?? fillColor
+    });
+  }
+
+  setFillColor(fillColor: Color) {
+    this.setState({fillColor});
+  }
+  
+  setBorderColor(borderColor: Color) {
+    this.setState({borderColor});
   }
 
   setValue(value: number) {

@@ -64,7 +64,7 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
           </div>
         </div>
 
-        <ProgressBar ref={ref => this.progressBar = ref} fillColor={"ButtonShadow"} />
+        <ProgressBar ref={ref => this.progressBar = ref} fillColor={"greenyellow"} />
         
         <div className="toxen-music-controls-time">
           <div className="toxen-music-controls-time-start">{this.currentTime.toTimestamp("hh?:mm:ss")}</div>

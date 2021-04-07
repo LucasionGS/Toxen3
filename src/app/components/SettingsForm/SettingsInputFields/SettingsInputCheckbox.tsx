@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-
+import "./SettingsInputCheckbox.scss";
 
 interface Props {
   name: string;
@@ -11,9 +11,7 @@ export default function SettingsInputCheckbox(props: Props) {
   const [value, setValue] = useState(props.defaultChecked ?? false);
 
   return (
-    <div onClick={() => {
-      console.log(value);
-
+    <div className="settings-input-checkbox" onClick={() => {
       setValue(!value);
     }}>
       <input type="hidden" name={props.name} value={value ? "1" : "0"} />

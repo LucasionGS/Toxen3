@@ -1,3 +1,4 @@
+import { remote } from "electron";
 import React from "react";
 import Background from "./components/Background/Background";
 import LoadingScreen from "./components/LoadingScreen";
@@ -189,6 +190,9 @@ export default class ToxenApp extends React.Component {
             Toxen._editingSong.saveInfo();
           }}>
             <SettingsInput displayName="Location" name="paths.dirname*string" getValueTemplateCallback={() => Toxen._editingSong} type="text" readOnly />
+            <button className="tx-btn" onClick={() => remote.shell.openPath(Toxen._editingSong.dirname())}>Open song folder</button>
+            <br/>
+            <br/>
             <SettingsInput displayName="Artist" name="artist*string" getValueTemplateCallback={() => Toxen._editingSong} type="text" />
             <SettingsInput displayName="Title" name="title*string" getValueTemplateCallback={() => Toxen._editingSong} type="text" />
           </SettingsForm>
