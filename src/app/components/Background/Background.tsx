@@ -1,3 +1,4 @@
+import { remote } from 'electron';
 import React, { Component } from 'react'
 import { Toxen } from '../../ToxenApp';
 import MusicPlayer from '../MusicPlayer';
@@ -35,8 +36,11 @@ export default class Background extends Component<BackgroundProps, BackgroundSta
   
   render() {
     return (
-      <div className="toxen-background" onClick={() => Toxen.musicPlayer.toggle()}>
-        <img className="toxen-background-image" src={this.state.image} alt="background"/>
+      <div className="toxen-background" onClick={() => Toxen.musicPlayer.toggle()} onDoubleClick={() => {
+        let w = remote.getCurrentWindow();
+        w.setFullScreen(!w.isFullScreen());
+      }} >
+        <img className="toxen-background-image" src={this.state.image} alt="background" />
         <MusicPlayer ref={ref => Toxen.musicPlayer = ref} />
       </div>
     )

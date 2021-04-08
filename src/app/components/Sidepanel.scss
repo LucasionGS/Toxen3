@@ -1,8 +1,18 @@
+$sidePanelColor: #252525;
+
 :root {
-  --sidebar-transition-in: all 0.5s cubic-bezier(.98,-0.03,.67,.77);
-  --sidebar-transition-out: all 0.5s cubic-bezier(.64,.32,.54,1.03);
+  --sidebar-transition-in: width 0.5s cubic-bezier(.98,-0.03,.67,.77),
+                           height 0.5s cubic-bezier(.98,-0.03,.67,.77);
+  --sidebar-transition-out: width 0.5s cubic-bezier(.64,.32,.54,1.03),
+                           height 0.5s cubic-bezier(.64,.32,.54,1.03);
   --panel-width: 40vw;
   --panel-icons-width: 128px;
+}
+
+// Inactivity
+body.inactive .sidepanel:not(.show) {
+  transition: opacity 0.3s ease-in-out;
+  opacity: 0;
 }
 
 .sidepanel {
@@ -10,7 +20,7 @@
   position: fixed;
   transition: var(--sidebar-transition-out);
   bottom: 0;
-  background-color: #252525;
+  background-color: $sidePanelColor;
   overflow: hidden;
   border: solid white 0px;
   box-sizing: border-box;
@@ -162,7 +172,7 @@
   height: 100vh;
   left: 0;
   top: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  // background-color: #000;
   z-index: -1;
   opacity: 0;
   pointer-events: none;
@@ -171,5 +181,10 @@
 
 .sidepanel.show .sidepanel-backdrop {
   pointer-events: all;
-  opacity: 1;
+  opacity: 0.5;
+}
+
+.sidepanel.show .sidepanel-backdrop {
+  pointer-events: all;
+  opacity: 0.5;
 }

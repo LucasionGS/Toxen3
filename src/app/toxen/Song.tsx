@@ -55,7 +55,7 @@ export default class Song implements ISong {
   public Element(getRef: (ref: SongElement) => void): JSX.Element;
   public Element(getRef?: (ref: SongElement) => void) {
     return (
-      <SongElement key={this.uid} song={this} getRef={getRef} />
+      <SongElement playing={this.isPlaying()} key={this.uid} song={this} getRef={getRef} ref={ref => this.currentElement = ref}/>
     );
   }
 
@@ -154,9 +154,37 @@ export default class Song implements ISong {
       Toxen.background.setBackground(this.backgroundFile())
     }
 
-    console.log(this);
-    Toxen.musicPlayer.media.volume = 0.01;
+    this.setCurrent();
   }
+
+  public currentElement: SongElement;
+
+  public setCurrent(): void;
+  public setCurrent(force: boolean): void;
+  public setCurrent(force?: boolean) {
+    const mode = force ?? true;
+    if (!this._isPlaying && mode) {
+      let cur = Song.getCurrent();
+      if (cur) cur.setCurrent(false);
+    }
+    this._isPlaying = mode;
+    if (this.currentElement) this.currentElement.setState({playing: mode});
+  }
+
+  public scrollTo() {
+    if (this.currentElement) (this.currentElement.divElement as any).scrollIntoViewIfNeeded();
+  }
+
+  public static getCurrent() {
+    let songs = (Toxen.songList || []);
+    return songs.find(s => s.isPlaying());
+  }
+
+  public isPlaying() {
+    return this._isPlaying;
+  }
+
+  private _isPlaying = false;
 
   public static async getSongCount() {
     let dirName = Settings.get("libraryDirectory");

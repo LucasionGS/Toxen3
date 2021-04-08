@@ -1,3 +1,7 @@
+@import "../root.scss";
+@import "./components/Sidepanel.scss";
+
+
 body {
   position: fixed;
   z-index: -10;
@@ -24,4 +28,14 @@ body {
     vertical-align: 10px;
     padding: 8px;
   }
+}
+
+.song-panel-header {
+  position: sticky;
+  height: min-content;
+  top: -16px;
+  width: 110%;
+  background-color: $sidePanelColor;
+  padding-bottom: 16px;
+  border-bottom: solid 1px white;
 }

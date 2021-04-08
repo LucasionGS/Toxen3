@@ -12,6 +12,12 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+
+  &.playing {
+    width: 95%;
+    z-index: 10;
+    box-shadow: 30px 0px 5px white;
+  }
   
   &:hover {
     width: 100%;

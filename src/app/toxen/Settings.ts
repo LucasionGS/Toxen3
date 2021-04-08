@@ -126,4 +126,5 @@ export interface ISettings {
   panelVerticalTransition: boolean;
   panelDirection: PanelDirection;
   exposePanelIcons: boolean;
+  volume: number;
 }

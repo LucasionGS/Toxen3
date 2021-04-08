@@ -2,6 +2,7 @@ import React, { Component } from 'react'
 import Song from '../toxen/Song';
 import { Toxen } from '../ToxenApp';
 import Path from "path";
+import Settings from '../toxen/Settings';
 
 export type MediaSourceInfo = string;
 
@@ -32,6 +33,21 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
         // Nothing
       }
     }, 50);
+  }
+
+  componentDidUpdate() {
+    this.setVolume(Settings.get("volume"));
+  }
+
+  /**
+   * @param vol From 0 to 100
+   */
+  public setVolume(vol: number) {
+    this.media.volume = vol / 100;
+  }
+
+  public setPosition(seconds: number) {
+    this.media.currentTime = seconds;
   }
 
   public setSource(src: MediaSourceInfo, playWhenReady: boolean = false) {

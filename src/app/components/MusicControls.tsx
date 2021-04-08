@@ -1,4 +1,5 @@
 import React, { Component } from 'react'
+import Settings from '../toxen/Settings';
 import Time from '../toxen/Time';
 import { Toxen } from '../ToxenApp';
 import "./MusicControls.scss";
@@ -40,6 +41,13 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
     this.progressBar.setMax(max);
   }
 
+  public setVolume(vol: number) {
+    Toxen.musicPlayer.setVolume(vol);
+    this.volSlider.setValue(vol);
+  }
+
+  private volSlider: ProgressBar;
+
   private progressBar: ProgressBar;
 
   render() {
@@ -64,10 +72,32 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
           </div>
         </div>
 
-        <ProgressBar ref={ref => this.progressBar = ref} fillColor={"greenyellow"} />
-        
+        <ProgressBar
+          ref={ref => this.progressBar = ref}
+          fillColor={"greenyellow"}
+          onClick={(e, v) => Toxen.musicPlayer.setPosition(v)}
+          onDragging={(e, v) => Toxen.musicPlayer.setPosition(v)}
+        />
+
         <div className="toxen-music-controls-time">
           <div className="toxen-music-controls-time-start">{this.currentTime.toTimestamp("hh?:mm:ss")}</div>
+          <div className="toxen-music-controls-volume">
+            Volume
+            <ProgressBar ref={ref => this.volSlider = ref} max={100} min={0} initialValue={Settings.get("volume") ?? 50} onDragging={(_, v, ref) => {
+              this.setVolume(v);
+              Settings.set("volume", v);
+            }}
+            onClick={(_, v, ref) => {
+              this.setVolume(v);
+              Settings.set("volume", v);
+            }}
+            onClickRelease={(_, v, ref) => {
+              this.setVolume(v);
+              Settings.set("volume", v);
+              Settings.save();
+            }}
+            />
+          </div>
           <div className="toxen-music-controls-time-end">{this.duration.toTimestamp("hh?:mm:ss")}</div>
         </div>
       </div>

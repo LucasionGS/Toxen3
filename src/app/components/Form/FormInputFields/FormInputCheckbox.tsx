@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import "./SettingsInputCheckbox.scss";
+import "./FormInputCheckbox.scss";
 
 interface Props {
   name: string;
@@ -7,7 +7,7 @@ interface Props {
   children?: React.ReactNode;
 }
 
-export default function SettingsInputCheckbox(props: Props) {
+export default function FormInputCheckbox(props: Props) {
   const [value, setValue] = useState(props.defaultChecked ?? false);
 
   return (

@@ -6,7 +6,8 @@ import "./SongElement.scss";
 
 interface SongElementProps {
   getRef?: ((ref: SongElement) => void),
-  song: Song
+  song: Song;
+  playing?: boolean,
 }
 
 interface SongElementState {
@@ -20,7 +21,7 @@ export default class SongElement extends Component<SongElementProps, SongElement
 
     this.state = {
       selected: false,
-      playing: false
+      playing: this.props.playing ?? false
     }
   }
   
@@ -42,12 +43,16 @@ export default class SongElement extends Component<SongElementProps, SongElement
       }
     ]).popup();
   }
+
+  public divElement: HTMLDivElement;
   
   render() {
     let song = this.props.song;
+    let classes = ["song-element"];
+    if (this.state.playing) classes.push("playing");
     return (
-      <div className="song-element" style={{
-        background: `linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0)) 0% 0% / cover, url("file:///${song.backgroundFile().replace(/\\/g, "/")}")`
+      <div ref={ref => this.divElement = ref} className={classes.join(" ")} style={{
+        background: `linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0)) 0% 0% / cover, url("${song.backgroundFile().replace(/\\/g, "/")}")`
       }}
       onClick={this.play.bind(this)}
       onContextMenu={e => {

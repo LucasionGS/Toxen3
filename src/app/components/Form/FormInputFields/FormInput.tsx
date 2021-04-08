@@ -1,11 +1,11 @@
 import React from 'react';
 import Settings from '../../../toxen/Settings';
 import { remote } from "electron";
-import "./SettingsInput.scss";
-import SettingsInputCheckbox from './SettingsInputCheckbox';
-import SettingsInputSelect from './SettingsInputSelect';
+import "./FormInput.scss";
+import FormInputCheckbox from './FormInputCheckbox';
+import FormInputSelect from './FormInputSelect';
 import JSONX from '../../../toxen/JSONX';
-import SelectAsync from 'react-select/async';
+import { OptionValues } from "./FormInputSelect";
 
 type Props = [
   PropsTypeText,
@@ -38,10 +38,10 @@ interface PropsTypeFolder extends PropsTemplate<"folder"> {
 interface PropsTypeCheckbox extends PropsTemplate<"checkbox"> { }
 interface PropsTypeSelect extends PropsTemplate<"select"> { }
 interface PropsTypeSelectAsync extends PropsTemplate<"selectAsync"> {
-  values: Promise<{ [displayText: string]: string }>
+  values: Promise<OptionValues> | (() => Promise<OptionValues>);
 }
 
-export default class SettingsInput extends React.Component<Props> {
+export default class FormInput extends React.Component<Props> {
 
   constructor(props: Props) {
     super(props);
@@ -90,7 +90,7 @@ export default class SettingsInput extends React.Component<Props> {
   }
 
   render() {
-    let { name } = SettingsInput.getNameAndType(this.props.name);
+    let { name } = FormInput.getNameAndType(this.props.name);
     let value: any = "";
     let dataTemplate = (typeof this.props.getValueTemplateCallback == "function" ? this.props.getValueTemplateCallback() : Settings.data);
 
@@ -163,9 +163,9 @@ export default class SettingsInput extends React.Component<Props> {
       case "checkbox": {
         return (
           <>
-            <SettingsInputCheckbox name={this.props.name} defaultChecked={value} >
+            <FormInputCheckbox name={this.props.name} defaultChecked={value} >
               {label}
-            </SettingsInputCheckbox>
+            </FormInputCheckbox>
             <br />
           </>
         )
@@ -176,21 +176,20 @@ export default class SettingsInput extends React.Component<Props> {
           <>
             {label}
             <br />
-            <SettingsInputSelect name={this.props.name} defaultValue={value} >
+            <FormInputSelect name={this.props.name} defaultValue={value} >
               {this.props.children}
-            </SettingsInputSelect>
+            </FormInputSelect>
             <br />
           </>
         )
       }
       
-      // broken asf
       case "selectAsync": {
         return (
           <>
             {label}
             <br />
-            <SelectAsync name={this.props.name} defaultValue={value} />
+            <FormInputSelect name={this.props.name} defaultValue={value} asyncValues={typeof this.props.values === "function" ? this.props.values() : this.props.values} />
             <br />
           </>
         )

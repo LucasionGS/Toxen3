@@ -67,6 +67,22 @@ remote.Menu.setApplicationMenu(
   ])
 );
 
+// Inactivity functionality
+let inactivityCounter = 3;
+setInterval(() => {
+  if (inactivityCounter > 0) {
+    inactivityCounter--;
+  }
+  else if (inactivityCounter === 0) {
+    inactivityCounter = -1;
+    document.body.classList.add("inactive");
+  }
+}, 1000)
+document.body.addEventListener("mousemove", () => {
+  document.body.classList.remove("inactive");
+  inactivityCounter = 3;
+});
+
 // Render app
 const toxenApp = <ToxenApp /> as React.ClassicElement<ToxenApp>;
 ReactDOM.render(toxenApp, document.querySelector("app-root"));

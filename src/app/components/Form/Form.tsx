@@ -1,13 +1,13 @@
 import React, { Component } from 'react';
-import SettingsInput from './SettingsInputFields/SettingsInput';
-import "./SettingsForm.scss";
+import FormInput from './FormInputFields/FormInput';
+import "./Form.scss";
 
 interface Props {
   onSubmit: (event: React.FormEvent<HTMLFormElement>, formValues: { [key: string]: FormDataEntryValue }) => void,
   saveButtonText?: string;
 }
 
-export default class SettingsForm extends Component<Props> {
+export default class Form extends Component<Props> {
   constructor(props: Props) {
     super(props);
   }
@@ -22,10 +22,10 @@ export default class SettingsForm extends Component<Props> {
         for (let i = 0; i < entries.length; i++) {
           let [key, value] = entries[i];
           let type = "string";
-          let _d = SettingsInput.getNameAndType(key);
+          let _d = FormInput.getNameAndType(key);
           key = _d.name;
           type = _d.type;
-          value = SettingsInput.getValue(type, value);
+          value = FormInput.getValue(type, value);
 
           
           params[key] = value;

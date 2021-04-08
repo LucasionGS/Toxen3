@@ -1,5 +1,4 @@
 .toxen-music-controls {
-  
   display: block;
   width: 90%;
   // border: solid 2px;
@@ -21,6 +20,11 @@
     .toxen-music-controls-time-end {
       margin-right: 5%;
     }
+
+    .toxen-music-controls-volume {
+      width: 20%;
+      text-align: center;
+    }
   }
 
   .toxen-music-controls-buttons {
@@ -35,5 +39,12 @@
         cursor: pointer;
       }
     }
+  }
+}
+
+body.inactive {
+  .toxen-music-controls {
+    transition: opacity 0.3s ease-in-out;
+    opacity: 0;
   }
 }
