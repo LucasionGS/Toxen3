@@ -12,6 +12,10 @@ body {
   color: white;
 }
 
+body.inactive *.hide-on-inactive {
+  opacity: 0 !important;
+}
+
 *:not(
   h1,
   h2,

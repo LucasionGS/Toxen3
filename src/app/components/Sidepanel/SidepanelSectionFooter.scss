@@ -1,0 +1,12 @@
+@import "Sidepanel.scss";
+
+.sidepanel-section-footer {
+  position: sticky;
+  height: min-content;
+  bottom: -16px;
+  width: 110%;
+  background-color: $sidePanelColor;
+  padding-top: 16px;
+  z-index: 1;
+  border-top: solid 1px white;
+}

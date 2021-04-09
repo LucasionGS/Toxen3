@@ -6,14 +6,17 @@ import FormInputCheckbox from './FormInputCheckbox';
 import FormInputSelect from './FormInputSelect';
 import JSONX from '../../../toxen/JSONX';
 import { OptionValues } from "./FormInputSelect";
+import FormInputList from './FormInputList';
 
 type Props = [
   PropsTypeText,
+  PropsTypeNumber,
   PropsTypeFile,
   PropsTypeFolder,
   PropsTypeCheckbox,
   PropsTypeSelect,
-  PropsTypeSelectAsync
+  PropsTypeSelectAsync,
+  PropsTypeList,
 ][number];
 
 interface PropsTemplate<T extends string> {
@@ -29,6 +32,11 @@ interface PropsTemplate<T extends string> {
 interface PropsTypeText extends PropsTemplate<"text"> {
   readOnly?: boolean;
 }
+interface PropsTypeNumber extends PropsTemplate<"number"> {
+  readOnly?: boolean;
+  min?: number;
+  max?: number;
+}
 interface PropsTypeFile extends PropsTemplate<"file"> {
   parseOutput?: (value: string) => string
 }
@@ -39,7 +47,9 @@ interface PropsTypeCheckbox extends PropsTemplate<"checkbox"> { }
 interface PropsTypeSelect extends PropsTemplate<"select"> { }
 interface PropsTypeSelectAsync extends PropsTemplate<"selectAsync"> {
   values: Promise<OptionValues> | (() => Promise<OptionValues>);
+  nullable?: boolean;
 }
+interface PropsTypeList extends PropsTemplate<"list"> { }
 
 export default class FormInput extends React.Component<Props> {
 
@@ -64,6 +74,10 @@ export default class FormInput extends React.Component<Props> {
     switch (type) {
       case "number":
         return Number(value);
+      
+      case "array":
+      case "list":
+        return JSON.parse(String(value));
 
       case "boolean":
         if (value === "1") return true;
@@ -104,6 +118,18 @@ export default class FormInput extends React.Component<Props> {
             {label}
             <br />
             <input className="tx-form-field" type="text" name={this.props.name} defaultValue={value} readOnly={this.props.readOnly} />
+            <br />
+            <br />
+          </>
+        )
+      }
+      
+      case "number": {
+        return (
+          <>
+            {label}
+            <br />
+            <input className="tx-form-field" type="number" name={this.props.name} defaultValue={value} readOnly={this.props.readOnly} max={this.props.max} min={this.props.min} />
             <br />
             <br />
           </>
@@ -189,7 +215,18 @@ export default class FormInput extends React.Component<Props> {
           <>
             {label}
             <br />
-            <FormInputSelect name={this.props.name} defaultValue={value} asyncValues={typeof this.props.values === "function" ? this.props.values() : this.props.values} />
+            <FormInputSelect nullable={this.props.nullable} name={this.props.name} defaultValue={value} asyncValues={typeof this.props.values === "function" ? this.props.values() : this.props.values} />
+            <br />
+          </>
+        )
+      }
+      
+      case "list": {
+        return (
+          <>
+            {label}
+            <br />
+            <FormInputList name={this.props.name} defaultValue={value} />
             <br />
           </>
         )

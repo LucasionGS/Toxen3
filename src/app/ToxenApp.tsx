@@ -9,14 +9,17 @@ import MusicPlayer from "./components/MusicPlayer";
 import ProgressBar from "./components/ProgressBar";
 import Form from "./components/Form/Form";
 import FormInput from "./components/Form/FormInputFields/FormInput";
-import Sidepanel from "./components/Sidepanel";
-import SidepanelSection from "./components/SidepanelSection";
+import Sidepanel from "./components/Sidepanel/Sidepanel";
+import SidepanelSection from "./components/Sidepanel/SidepanelSection";
 import SongPanel from "./components/SongPanel/SongPanel";
 import JSONX from "./toxen/JSONX";
 import Settings from "./toxen/Settings";
 import Song from "./toxen/Song";
 import "./ToxenApp.scss";
 import "./tx.scss";
+import System from "./toxen/System";
+import SidepanelSectionHeader from "./components/Sidepanel/SidepanelSectionHeader";
+import SearchField from "./components/SongPanel/SearchField";
 
 //#region Define variables used all over the ToxenApp process.
 /**
@@ -35,13 +38,13 @@ export class Toxen {
     return [
       ".mp3"
     ];
-  };
+  }
 
   public static getSupportedVideoFiles() {
     return [
       ".mp4"
     ];
-  };
+  }
 
   public static getSupportedMediaFiles() {
     return Toxen.getSupportedAudioFiles().concat(Toxen.getSupportedVideoFiles());
@@ -55,7 +58,19 @@ export class Toxen {
       ".gif",
       ".webm",
     ];
-  };
+  }
+
+  public static getSupportedSubtitleFiles() {
+    return [
+      ".srt",
+    ];
+  }
+
+  public static getSupportedStoryboardFiles() {
+    return [
+      ".tsb",
+    ];
+  }
 
   public static showCurrentSong() {
     let song = Song.getCurrent();
@@ -72,6 +87,9 @@ export class Toxen {
   public static musicPlayer: MusicPlayer;
   public static musicControls: MusicControls;
 
+  // Forms
+  public static settingsForm: Form;
+
   /**
    * Applies the current GUI settings to the GUI.
    */
@@ -86,8 +104,8 @@ export class Toxen {
   public static loadingScreen: LoadingScreen;
   public static background: Background;
 
+  public static songSearch = "";
   public static songList: Song[];
-
   public static setSongList(songList: Song[]) {
     Toxen.songList = songList;
   }
@@ -130,6 +148,23 @@ export default class ToxenApp extends React.Component {
       .then(Settings.load) // Load settings and apply them.
       .then(async () => {
         Toxen.updateSettings();
+        
+        if (Settings.get("restoreWindowSize")) {
+          let win = remote.getCurrentWindow();
+          // Window initial size
+          win.setSize(
+            Settings.set("windowWidth", Settings.get("windowWidth") ?? 1280),
+            Settings.set("windowHeight", Settings.get("windowHeight") ?? 768)
+          );
+
+          let display = remote.screen.getPrimaryDisplay();
+          let [winSizeWidth, winSizeheight] = win.getSize();
+          win.setPosition(
+            Math.floor(display.size.width / 2) - Math.floor(winSizeWidth / 2),
+            Math.floor(display.size.height / 2) - Math.floor(winSizeheight / 2),
+          );
+        }
+
         await Toxen.loadSongs();
         Toxen.songPanel.update();
         Toxen.sidePanel.toggle(true);
@@ -144,7 +179,7 @@ export default class ToxenApp extends React.Component {
       <Background ref={ref => Toxen.background = ref} />
       <MusicControls ref={ref => Toxen.musicControls = ref} />
       <LoadingScreen ref={ls => Toxen.loadingScreen = ls} initialShow={true} />
-      <div className="song-panel-toggle" onClick={() => Toxen.sidePanel.toggle()}>
+      <div className="song-panel-toggle hide-on-inactive" onClick={() => Toxen.sidePanel.toggle()}>
         &nbsp;
         <i className="fas fa-bars"></i>
         <span className="song-panel-toggle-title">Menu</span>
@@ -156,8 +191,8 @@ export default class ToxenApp extends React.Component {
         onClose={() => Toxen.sidePanel.toggle()}
       >
         {/* Song Panel */}
-        <SidepanelSection id="songPanel" title="Music" icon={<i className="fas fa-music"></i>}>
-          <div className="song-panel-header">
+        <SidepanelSection key="songPanel" id="songPanel" title="Music" icon={<i className="fas fa-music"></i>}>
+          <SidepanelSectionHeader>
             <h1>Songs</h1>
             <button className="tx-btn tx-whitespace-nowrap" onClick={async () => {
               await Toxen.loadSongs();
@@ -166,37 +201,48 @@ export default class ToxenApp extends React.Component {
             <button className="tx-btn tx-whitespace-nowrap" onClick={async () => {
               Toxen.showCurrentSong();
             }}><i className="fas fa-search"></i>&nbsp;Show playing</button>
-          </div>
+            <br/>
+            <SearchField />
+          </SidepanelSectionHeader>
           <SongPanel ref={s => Toxen.songPanel = s} songs={Toxen.songList} />
         </SidepanelSection>
 
         {/* Import Panel */}
-        <SidepanelSection id="importSong" title="Import" icon={<i className="fas fa-file-import"></i>}>
+        <SidepanelSection key="importSong" id="importSong" title="Import" icon={<i className="fas fa-file-import"></i>}>
           <h1>Import song</h1>
           <button className="tx-btn"><i className="fas fa-file-import"></i>&nbsp;Import song from Files</button>
         </SidepanelSection>
 
         {/* Playlist Management Panel */}
-        <SidepanelSection id="playlist" title="Playlist" icon={<i className="fas fa-th-list"></i>}>
+        <SidepanelSection key="playlist" id="playlist" title="Playlist" icon={<i className="fas fa-th-list"></i>}>
           <h1>Playlists</h1>
         </SidepanelSection>
 
         {/* Playlist Management Panel */}
-        <SidepanelSection id="adjust" title="Adjust" icon={<i className="fas fa-sliders-h"></i>}>
+        <SidepanelSection key="adjust" id="adjust" title="Adjust" icon={<i className="fas fa-sliders-h"></i>}>
           <h1>Audio Adjustments</h1>
         </SidepanelSection>
 
         {/* Keep settings tab at the bottom */}
-        <SidepanelSection id="settings" title="Settings" icon={<i className="fas fa-cog"></i>} separator>
-          <h1>Settings</h1>
-          <Form saveButtonText="Save settings" onSubmit={(_, params) => {
+        <SidepanelSection key="settings" id="settings" title="Settings" icon={<i className="fas fa-cog"></i>} separator>
+          <SidepanelSectionHeader>
+            <h1>Settings</h1>
+            <button className="tx-btn tx-btn-action" onClick={() => Toxen.settingsForm.submit()}>
+              <i className="fas fa-save"></i>
+              &nbsp;Save settings
+            </button>
+          </SidepanelSectionHeader>
+          <Form hideSubmit ref={ref => Toxen.settingsForm = ref} saveButtonText="Save settings" onSubmit={(_, params) => {
             Settings.apply(params);
             Settings.save();
             Toxen.updateSettings();
           }}>
+            {/* General settings */}
             <h2>General</h2>
             <FormInput type="folder" name="libraryDirectory*string" displayName="Music Library" />
             <sup>Music Library to fetch songs from.</sup>
+
+            {/* Sidepanel settings */}
             <hr />
             <h2>Sidepanel</h2>
             <FormInput type="checkbox" name="panelVerticalTransition*boolean" displayName="Vertical Transition" />
@@ -211,11 +257,18 @@ export default class ToxenApp extends React.Component {
             </FormInput>
             <br />
             <sup>Choose which side the sidepanel should appear on.</sup>
+
+            {/* Window settings */}
+            <hr />
+            <h2>Window</h2>
+            <FormInput type="checkbox" name="restoreWindowSize*boolean" displayName="Restore Window Size On Startup" />
+            <sup>Saves and restores the window size from last session.</sup>
           </Form>
         </SidepanelSection>
 
         {/* No-icon panels. Doesn't appear as a clickable panel, instead only accessible by custom action */}
-        <SidepanelSection id="editSong">
+        {/* Edit song Panel */}
+        <SidepanelSection key="editSong" id="editSong">
           <h1>Edit Song</h1>
           <Form saveButtonText="Save song" onSubmit={(_, formValues) => {
             let current = Song.getCurrent();
@@ -255,7 +308,11 @@ export default class ToxenApp extends React.Component {
             <br />
             <br />
             <FormInput displayName="Artist" name="artist*string" getValueTemplateCallback={() => Toxen.editingSong} type="text" />
+            <FormInput displayName="Co-Artists" name="coArtists*array" getValueTemplateCallback={() => Toxen.editingSong} type="list" />
             <FormInput displayName="Title" name="title*string" getValueTemplateCallback={() => Toxen.editingSong} type="text" />
+            <FormInput displayName="Source" name="source*string" getValueTemplateCallback={() => Toxen.editingSong} type="text" />
+            <FormInput displayName="Tags" name="tags*array" getValueTemplateCallback={() => Toxen.editingSong} type="list" />
+            <hr/>
             <FormInput displayName="Media File" name="paths.media*string" getValueTemplateCallback={() => Toxen.editingSong} type="selectAsync"
               values={(async () => {
                 let song = Toxen.editingSong;
@@ -263,13 +320,12 @@ export default class ToxenApp extends React.Component {
                 let path = song.dirname();
 
                 let supported = Toxen.getSupportedMediaFiles();
-                return (await fsp.readdir(path))
+
+                return (await System.recursive(path))
                   .filter(f => {
-                    let ext = Path.extname(f);
-                    if (supported.includes(ext)) {
-                      return f;
-                    };
-                  });
+                    let ext = Path.extname(f.name);
+                    return supported.includes(ext);
+                  }).map(f => f.name);
               })}
             />
             <br />
@@ -280,13 +336,39 @@ export default class ToxenApp extends React.Component {
                 let path = song.dirname();
 
                 let supported = Toxen.getSupportedImageFiles();
-                return (await fsp.readdir(path))
+                return (await System.recursive(path))
                   .filter(f => {
-                    let ext = Path.extname(f);
-                    if (supported.includes(ext)) {
-                      return f;
-                    };
-                  });
+                    let ext = Path.extname(f.name);
+                    return supported.includes(ext);
+                  }).map(f => f.name);
+              })}
+            />
+            <FormInput nullable displayName="Subtitle file" name="paths.subtitles*string" getValueTemplateCallback={() => Toxen.editingSong} type="selectAsync"
+              values={(async () => {
+                let song = Toxen.editingSong;
+                if (!song) return [];
+                let path = song.dirname();
+
+                let supported = Toxen.getSupportedSubtitleFiles();
+                return (await System.recursive(path))
+                  .filter(f => {
+                    let ext = Path.extname(f.name);
+                    return supported.includes(ext);
+                  }).map(f => f.name);
+              })}
+            />
+            <FormInput nullable displayName="Storyboard file" name="paths.storyboard*string" getValueTemplateCallback={() => Toxen.editingSong} type="selectAsync"
+              values={(async () => {
+                let song = Toxen.editingSong;
+                if (!song) return [];
+                let path = song.dirname();
+
+                let supported = Toxen.getSupportedStoryboardFiles();
+                return (await System.recursive(path))
+                  .filter(f => {
+                    let ext = Path.extname(f.name);
+                    return supported.includes(ext);
+                  }).map(f => f.name);
               })}
             />
           </Form>

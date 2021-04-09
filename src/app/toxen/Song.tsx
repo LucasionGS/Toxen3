@@ -14,6 +14,8 @@ export default class Song implements ISong {
   public artist: string;
   public coArtists: string[];
   public title: string;
+  public source: string;
+  public tags: string[];
   public paths: ISongPaths;
 
   /**
@@ -66,6 +68,7 @@ export default class Song implements ISong {
     song.coArtists = data.coArtists;
     song.title = data.title;
     song.paths = data.paths;
+    song.tags = data.tags;
 
     return song;
   }
@@ -77,17 +80,22 @@ export default class Song implements ISong {
         artist: null,
         title: null,
         coArtists: null,
+        source: null,
+        tags: null,
         paths: {
           dirname: null,
           background: null,
-          media: null
+          media: null,
+          subtitles: null,
+          storyboard: null,
         },
       };
       var dir = await fsp.opendir(fullPath);
       let ent: Dirent;
       while (ent = await dir.read()) {
         if (ent.isFile()) {
-          switch (Path.extname(ent.name).toLowerCase()) {
+          let ext = Path.extname(ent.name).toLowerCase();
+          switch (ext) {
             case ".mp3":
             case ".mp4":
               if (!info.paths.media) info.paths.media = ent.name;
@@ -242,7 +250,7 @@ export default class Song implements ISong {
             if (typeof forEach === "function") forEach(song);
           }
           else {
-            console.error(`Song "${songFolder}" is missing a media file.`);
+            console.warn(`Song "${songFolder}" is missing a media file. Excluding from song list.`);
           }
           // if (song.artist == null) await Debug.wait(500);
         }
@@ -260,6 +268,8 @@ export default class Song implements ISong {
       title: this.title,
       coArtists: this.coArtists,
       paths: this.paths,
+      source: this.source,
+      tags: this.tags
     }
   }
 
@@ -274,6 +284,8 @@ export interface ISong {
   artist: string;
   coArtists: string[];
   title: string;
+  source: string;
+  tags: string[];
   paths: ISongPaths;
 }
 
@@ -282,6 +294,20 @@ interface ISongPaths {
    * Directory basename.
    */
   dirname: string;
+  /**
+   * A supported audio/video file.
+   */
   media: string;
+  /**
+   * A supported image file.
+   */
   background: string;
+  /**
+   * A supported subtitle file.
+   */
+  subtitles: string;
+  /**
+   * A *.tsb (Toxen Storyboard) file. Actual format is JSON data.
+   */
+  storyboard: string;
 }

@@ -3073,6 +3073,14 @@
   dependencies:
     "flat-cache" "^3.0.4"
 
+"file-loader@^6.2.0":
+  "integrity" "sha512-qo3glqyTa61Ytg4u73GultjHGjdRyig3tG6lPtyX/jOEJvHif9uB0/OCI2Kif6ctF3caQTW2G5gym21oAsI4pw=="
+  "resolved" "https://registry.npmjs.org/file-loader/-/file-loader-6.2.0.tgz"
+  "version" "6.2.0"
+  dependencies:
+    "loader-utils" "^2.0.0"
+    "schema-utils" "^3.0.0"
+
 "filename-reserved-regex@^2.0.0":
   "integrity" "sha1-q/c9+rc10EVECr/qLZHzieu/oik="
   "resolved" "https://registry.npmjs.org/filename-reserved-regex/-/filename-reserved-regex-2.0.0.tgz"

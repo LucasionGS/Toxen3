@@ -11,7 +11,7 @@ export default function FormInputCheckbox(props: Props) {
   const [value, setValue] = useState(props.defaultChecked ?? false);
 
   return (
-    <div className="settings-input-checkbox" onClick={() => {
+    <div className="form-input-checkbox" onClick={() => {
       setValue(!value);
     }}>
       <input type="hidden" name={props.name} value={value ? "1" : "0"} />

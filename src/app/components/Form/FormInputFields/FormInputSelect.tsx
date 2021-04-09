@@ -7,6 +7,7 @@ interface Props {
   defaultValue?: string;
   children?: React.ReactNode;
   asyncValues?: Promise<OptionValues>;
+  nullable?: boolean;
 }
 
 export default function FormInputSelect(props: Props) {
@@ -15,6 +16,11 @@ export default function FormInputSelect(props: Props) {
   
   if (props.asyncValues instanceof Promise) props.asyncValues.then(ov => {
     // props.asyncValues = null;
+    let obj: [string, string] = ["<None>", ""];
+    let [firstKey, firstVal] = ov[0] ?? [];
+    if (props.nullable && (
+      firstKey != obj[0] || firstVal != obj[1]
+    )) ov.unshift(obj);
     setOptions(ov);
   })
   

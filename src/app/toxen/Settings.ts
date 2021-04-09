@@ -2,7 +2,7 @@ import fs from "fs";
 import fsp from "fs/promises";
 import Path from "path";
 import CrossPlatform from "./CrossPlatform";
-import { PanelDirection } from "../components/Sidepanel"
+import { PanelDirection } from "../components/Sidepanel/Sidepanel"
 import JSONX from "./JSONX";
 import { Toxen } from "../ToxenApp";
 
@@ -78,7 +78,7 @@ export default class Settings {
    * Returns a stringified version of `ISettings`.
    */
   public static toString() {
-    return JSON.stringify(Settings.data ?? {});
+    return JSON.stringify(Settings.data ?? {}, null, 2);
   }
 
   /**
@@ -113,7 +113,7 @@ export default class Settings {
   public static set<T extends keyof ISettings>(key: T, value: ISettings[T]): ISettings[T] {
     // if (Settings.data && Settings.data.hasOwnProperty(key)) return Settings.data[key] = value;
     JSONX.setObjectValue(Settings.data, key, value);
-    return null;
+    return value;
   }
 }
 
@@ -127,4 +127,9 @@ export interface ISettings {
   panelDirection: PanelDirection;
   exposePanelIcons: boolean;
   volume: number;
+
+  // Window
+  restoreWindowSize: boolean;
+  windowWidth: number;
+  windowHeight: number;
 }

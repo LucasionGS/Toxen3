@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Toxen } from '../ToxenApp';
+import { Toxen } from '../../ToxenApp';
 import "./Sidepanel.scss";
 import SidepanelSection from './SidepanelSection';
 
