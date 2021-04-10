@@ -43,6 +43,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
    * @param vol From 0 to 100
    */
   public setVolume(vol: number) {
+    if (isNaN(vol) || typeof vol !== "number") vol = 50;
     this.media.volume = vol / 100;
   }
 

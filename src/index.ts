@@ -22,6 +22,7 @@ const createWindow = (): void => {
       webSecurity: false
     },
     autoHideMenuBar: true,
+    icon: "./icons/toxen.ico"
   });
 
   // and load the index.html of the app.
