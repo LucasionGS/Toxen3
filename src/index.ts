@@ -1,4 +1,8 @@
 import { app, BrowserWindow, protocol } from 'electron';
+import updateElectronApp from "update-electron-app";
+updateElectronApp({
+  repo: "LucasionGS/Toxen3"
+});
 declare const MAIN_WINDOW_WEBPACK_ENTRY: any;
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.

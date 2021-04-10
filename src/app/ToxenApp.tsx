@@ -271,6 +271,10 @@ export default class ToxenApp extends React.Component {
             <h2>General</h2>
             <FormInput type="folder" name="libraryDirectory*string" displayName="Music Library" />
             <sup>Music Library to fetch songs from.</sup>
+            <button className="tx-btn tx-btn-action" onClick={() => remote.shell.openPath(Settings.get("libraryDirectory"))}>
+              <i className="fas fa-save"></i>
+              &nbsp;Open library folder
+            </button>
 
             {/* Sidepanel settings */}
             <hr />

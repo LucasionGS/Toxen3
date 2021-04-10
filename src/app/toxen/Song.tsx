@@ -46,7 +46,7 @@ export default class Song implements ISong {
    * Return the full path of the media file.
    */
   public backgroundFile() {
-    if (Settings.isRemote()) `${this.dirname()}/${this.paths.background}`;
+    if (Settings.isRemote())`${this.dirname()}/${this.paths.background}`;
     else return this.paths && this.paths.background ? resolve(this.dirname(), this.paths.background) : "";
   }
 
@@ -328,7 +328,7 @@ export default class Song implements ISong {
       let supported = Toxen.getSupportedMediaFiles();
       if (supported.some(s => Path.extname(file.name) === s)) return null;
 
-      // Import song below here using details from the File object
+      // TODO: Import song below here using details from the File object
       file.name // File name
       file.path // Full file path
     });

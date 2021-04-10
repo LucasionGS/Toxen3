@@ -12,8 +12,18 @@ export default class Legacy {
     info ?? (info = {} as ISong)
 
     info.uid = null;
-    info.artist = details.artist;
-    info.title = details.title;
+    if (details.artist) info.artist = details.artist;
+    if (details.title) info.title = details.title;
+    if (details.source) info.source = details.source;
+    if (details.album) info.album = details.album;
+    if (details.tags) info.tags = details.tags;
+    if (details.visualizerColor) {
+      // Convert from format RGB -> HEX
+      const {red: r, green: g, blue: b} = details.visualizerColor;
+      const ctx = document.createElement("canvas").getContext("2d");
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      info.visualizerColor = ctx.fillStyle;
+    }
 
     return info;
   }
@@ -39,4 +49,9 @@ export interface Toxen2SongDetails {
   "playlists": string[];
   "songLength": number;
   "customGroup": string;
+  "visualizerColor"?: {
+    "red": number;
+    "green": number;
+    "blue": number;
+  }
 }
