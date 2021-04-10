@@ -45,12 +45,16 @@ export default class Sidepanel extends React.Component<Props, State> {
 
   private sections: SidepanelSection[] = (Array.isArray(this.props.children) ? this.props.children : [this.props.children]) as any[];
 
-  public toggle(force?: boolean) {
+  public show(force?: boolean) {
     let value = force ?? !this.state.show;
     this.setState({
       show: value
     });
     return value;
+  }
+
+  public isShowing() {
+    return this.state.show;
   }
 
   public setSectionId(sectionId: string) {
@@ -98,7 +102,7 @@ export default class Sidepanel extends React.Component<Props, State> {
     let sec = this.sections.find(sec => sec?.props?.id == this.state.sectionId);
     return (
       <div className={classList.join(" ")}>
-        <div className="sidepanel-backdrop" onClick={() => this.toggle(false)}></div>
+        <div className="sidepanel-backdrop" onClick={() => this.show(false)}></div>
         <div className="sidepanel-icons">
           <div className="sidepanel-icon sidepanel-icon-toggle" onClick={
             typeof this.props.onClose === "function" ? this.props.onClose : null
@@ -115,7 +119,7 @@ export default class Sidepanel extends React.Component<Props, State> {
               {s.props.separator === true ? (<hr />) : ""}
               <div className="sidepanel-icon" title={s.props.title} onClick={() => {
                 this.setSectionId(s.props.id);
-                if (this.state.exposeIcons) this.state.show || this.toggle(true);
+                if (this.state.exposeIcons) this.state.show || this.show(true);
               }}>
                 {s.props.icon}
                 {s.props.title && (<span className="sidepanel-icon-title">&nbsp;{s.props.title}</span>)}

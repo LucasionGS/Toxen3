@@ -38,11 +38,16 @@
   &:is([type="text"], [type="password"]) {
     min-width: 256px;
   }
+
+  &:focus {
+    outline: none;
+  }
+
+  &.read-only {
+    color: gray;
+  }
 }
 
-.tx-form-field:focus {
-  outline: none;
-}
 
 .tx-whitespace-nowrap {
   white-space: nowrap;

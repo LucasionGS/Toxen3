@@ -6,6 +6,7 @@ import "@fortawesome/fontawesome-free/js/all"; // Import FA
 import "@fortawesome/fontawesome-free/scss/regular.scss";
 import "@fortawesome/fontawesome-free/scss/solid.scss";
 import Settings from "./app/toxen/Settings";
+import Song from "./app/toxen/Song";
 
 // Setup
 // Create menu actions/shortcuts
@@ -18,7 +19,7 @@ remote.Menu.setApplicationMenu(
           label: "Toggle menu panel",
           accelerator: "ESC",
           click() {
-            Toxen.sidePanel.toggle();
+            Toxen.sidePanel.show();
             (document.activeElement as any)?.blur();
           }
         },
@@ -102,6 +103,14 @@ document.body.addEventListener("mousemove", () => {
 
 window.addEventListener("resize", () => {
   resizing = 1;
+});
+
+navigator.mediaSession.setActionHandler('previoustrack', () => {
+  Toxen.musicPlayer.playPrev();
+});
+
+navigator.mediaSession.setActionHandler('nexttrack', () => {
+  Toxen.musicPlayer.playNext();
 });
 
 //#endregion

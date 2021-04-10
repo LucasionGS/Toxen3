@@ -34,14 +34,7 @@ export default class SongElement extends Component<SongElementProps, SongElement
   }
 
   public contextMenu() {
-    remote.Menu.buildFromTemplate([
-      {
-        label: "Edit info",
-        click: () => {
-          Toxen.editSong(this.props.song);
-        }
-      }
-    ]).popup();
+    this.props.song.contextMenu();
   }
 
   public divElement: HTMLDivElement;

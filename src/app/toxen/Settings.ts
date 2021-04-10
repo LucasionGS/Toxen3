@@ -132,4 +132,7 @@ export interface ISettings {
   restoreWindowSize: boolean;
   windowWidth: number;
   windowHeight: number;
+
+  // Visuals
+  visualizerColor: string;
 }

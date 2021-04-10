@@ -52,7 +52,7 @@ export default class ProgressBar extends Component<ProgressBarProps, ProgressBar
     if (typeof this.props.onDragging === "function") this.props.onDragging(event, this.offsetToValue(event.nativeEvent.offsetX), this);
   }
 
-  private progressBarObject: HTMLDivElement;
+  public progressBarObject: HTMLDivElement;
 
   private offsetToValue(xOffset: number) {
     let box = this.progressBarObject.getBoundingClientRect();

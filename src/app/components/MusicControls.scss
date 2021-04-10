@@ -8,6 +8,7 @@
   bottom: 3vh;
   left: 50vw;
   transform: translateX(-50%);
+  transition: width 0.3s ease-in-out;
 
   .toxen-music-controls-time {
     display: flex;
@@ -27,10 +28,16 @@
     }
   }
 
+  .toxen-music-controls-progress-bar > * {
+    transform: translateY(0);
+    transition: transform 0.3s ease-in-out;
+  }
+
   .toxen-music-controls-buttons {
     display: flex;
     justify-content: center;
     .ctrl-btn * {
+      filter: drop-shadow(1px 1px 1px black);
       margin: 8px;
       font-size: 32px;
       transition: all 0.2s ease-in-out;
@@ -44,7 +51,8 @@
 
 body.inactive {
   .toxen-music-controls {
-    transition: opacity 0.3s ease-in-out;
-    opacity: 0;
+    .toxen-music-controls-progress-bar > * {
+      transform: translateY(5vh);
+    }
   }
 }

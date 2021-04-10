@@ -2,11 +2,12 @@ import React from 'react';
 import Settings from '../../../toxen/Settings';
 import { remote } from "electron";
 import "./FormInput.scss";
-import FormInputCheckbox from './FormInputCheckbox';
+import FormInputColorPicker from './FormInputColorPicker';
 import FormInputSelect from './FormInputSelect';
 import JSONX from '../../../toxen/JSONX';
 import { OptionValues } from "./FormInputSelect";
 import FormInputList from './FormInputList';
+import FormInputCheckbox from './FormInputCheckbox';
 
 type Props = [
   PropsTypeText,
@@ -17,6 +18,7 @@ type Props = [
   PropsTypeSelect,
   PropsTypeSelectAsync,
   PropsTypeList,
+  PropsTypeColor,
 ][number];
 
 interface PropsTemplate<T extends string> {
@@ -50,6 +52,10 @@ interface PropsTypeSelectAsync extends PropsTemplate<"selectAsync"> {
   nullable?: boolean;
 }
 interface PropsTypeList extends PropsTemplate<"list"> { }
+interface PropsTypeColor extends PropsTemplate<"color"> {
+  onChange?: (value: string) => void;
+  nullable?: boolean;
+}
 
 export default class FormInput extends React.Component<Props> {
 
@@ -117,7 +123,7 @@ export default class FormInput extends React.Component<Props> {
           <>
             {label}
             <br />
-            <input className="tx-form-field" type="text" name={this.props.name} defaultValue={value} readOnly={this.props.readOnly} />
+            <input className={"tx-form-field" + (this.props.readOnly ? " read-only" : "")} type="text" name={this.props.name} defaultValue={value} readOnly={this.props.readOnly} />
             <br />
             <br />
           </>
@@ -129,7 +135,7 @@ export default class FormInput extends React.Component<Props> {
           <>
             {label}
             <br />
-            <input className="tx-form-field" type="number" name={this.props.name} defaultValue={value} readOnly={this.props.readOnly} max={this.props.max} min={this.props.min} />
+            <input className={"tx-form-field" + (this.props.readOnly ? " read-only" : "")} type="number" name={this.props.name} defaultValue={value} readOnly={this.props.readOnly} max={this.props.max} min={this.props.min} />
             <br />
             <br />
           </>
@@ -227,6 +233,17 @@ export default class FormInput extends React.Component<Props> {
             {label}
             <br />
             <FormInputList name={this.props.name} defaultValue={value} />
+            <br />
+          </>
+        )
+      }
+      
+      case "color": {
+        return (
+          <>
+            {label}
+            <br />
+            <FormInputColorPicker nullable={this.props.nullable} onChange={this.props.onChange} name={this.props.name} defaultValue={value} />
             <br />
           </>
         )

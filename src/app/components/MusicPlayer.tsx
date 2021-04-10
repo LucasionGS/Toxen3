@@ -84,6 +84,14 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
     else this.media.pause();
   }
 
+  public playNext() {
+    this.playRandom();
+  }
+  
+  public playPrev() {
+    this.playRandom();
+  }
+
   public playRandom() {
     let songCount = Toxen.songList.length;
     if (songCount === 0) {
@@ -105,12 +113,12 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
     let isVideo = this.isVideo(this.state.src);
     // Audio
     if (!isVideo) return (
-      <audio
+      <video
       onCanPlay={e => Toxen.musicControls.setMax(this.media.duration)}
       ref={ref => this.media = ref}
       hidden
       src={this.state.src}
-      onEnded={this.playRandom.bind(this)}
+      onEnded={this.playNext.bind(this)}
       />
     );
     // Video
@@ -119,7 +127,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
       onCanPlay={e => Toxen.musicControls.setMax(this.media.duration)}
       ref={ref => this.media = ref}
       src={this.state.src}
-      onEnded={this.playRandom.bind(this)}
+      onEnded={this.playNext.bind(this)}
       />
     );
   }

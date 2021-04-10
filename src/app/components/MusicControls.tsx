@@ -48,12 +48,12 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
 
   private volSlider: ProgressBar;
 
-  private progressBar: ProgressBar;
+  public progressBar: ProgressBar;
 
   render() {
     return (
       <div className="toxen-music-controls">
-        <div className="toxen-music-controls-buttons">
+        <div className="toxen-music-controls-buttons hide-on-inactive">
           <div className="ctrl-btn">
             <i className="fas fa-random"></i>
           </div>
@@ -64,7 +64,7 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
             <span hidden={Toxen.musicPlayer && Toxen.musicPlayer.media && !Toxen.musicPlayer.media.paused}><i className="fas fa-play"></i></span>
             <span hidden={Toxen.musicPlayer && Toxen.musicPlayer.media && Toxen.musicPlayer.media.paused}><i className="fas fa-pause"></i></span>
           </div>
-          <div className="ctrl-btn" onClick={() => Toxen.musicPlayer.playRandom()}>
+          <div className="ctrl-btn" onClick={() => Toxen.musicPlayer.playNext()}>
             <i className="fas fa-angle-double-right"></i>
           </div>
           <div className="ctrl-btn">
@@ -72,14 +72,16 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
           </div>
         </div>
 
-        <ProgressBar
-          ref={ref => this.progressBar = ref}
-          fillColor={"greenyellow"}
-          onClick={(e, v) => Toxen.musicPlayer.setPosition(v)}
-          onDragging={(e, v) => Toxen.musicPlayer.setPosition(v)}
-        />
+        <span className="toxen-music-controls-progress-bar">
+          <ProgressBar
+            ref={ref => this.progressBar = ref}
+            fillColor={"greenyellow"}
+            onClick={(e, v) => Toxen.musicPlayer.setPosition(v)}
+            onDragging={(e, v) => Toxen.musicPlayer.setPosition(v)}
+          />
+        </span>
 
-        <div className="toxen-music-controls-time">
+        <div className="toxen-music-controls-time hide-on-inactive">
           <div className="toxen-music-controls-time-start">{this.currentTime.toTimestamp("hh?:mm:ss")}</div>
           <div className="toxen-music-controls-volume">
             Volume

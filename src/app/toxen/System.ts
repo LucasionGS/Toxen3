@@ -22,4 +22,11 @@ export default class System {
     
     return files;
   }
+
+  public static async handleDroppedFiles(files: FileList | File[]) {
+    Promise.resolve().then(() => {
+      if (files instanceof FileList) files = [...files];
+      files
+    });
+  }
 }

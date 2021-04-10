@@ -78,9 +78,9 @@ export class Toxen {
     if (song) song.scrollTo();
   }
 
-  public static sidepanelSetSectionId(sectionId: any) {
-    this.sidePanel.setSectionId(sectionId);
-  }
+  // public static sidePanel.setSectionId(sectionId: any) {
+  //   this.sidePanel.setSectionId(sectionId);
+  // }
 
   public static sidePanel: Sidepanel;
   public static songPanel: SongPanel;
@@ -89,6 +89,7 @@ export class Toxen {
 
   // Forms
   public static settingsForm: Form;
+  public static editSongForm: Form;
 
   /**
    * Applies the current GUI settings to the GUI.
@@ -114,7 +115,7 @@ export class Toxen {
     Toxen.loadingScreen.toggleShow(true);
     let songCount = 0;
     let totalSongCount = await Song.getSongCount();
-    Toxen.setSongList(await Song.getSongs(true, s => {
+    Toxen.setSongList(await Song.getSongs(true, () => {
       let ref: ProgressBar;
       let content = (
         <>
@@ -128,15 +129,40 @@ export class Toxen {
 
       Toxen.loadingScreen.setContent(content);
       ref.setValue(songCount);
+      ref.setMin(0);
+      ref.setMax(totalSongCount);
     }));
     Toxen.loadingScreen.toggleShow(false);
   }
 
   public static editingSong: Song = null;
   public static editSong(song: Song) {
+    if (Toxen.editingSong == song) {
+      Toxen.sidePanel.show(true);
+      Toxen.sidePanel.setSectionId("editSong");
+      return;
+    }
     Toxen.editingSong = song;
-    Toxen.sidepanelSetSectionId("editSong");
+    if (!Toxen.sidePanel.isShowing()) Toxen.sidePanel.show(true);
+    if (Toxen.sidePanel.state.sectionId === "editSong") Toxen.reloadSection();
+    else Toxen.sidePanel.setSectionId("editSong");
   }
+
+  public static reloadSection() {
+    let id = Toxen.sidePanel.state.sectionId;
+    Toxen.sidePanel.setSectionId("$empty");
+    setTimeout(() => {
+      Toxen.sidePanel.setSectionId(id);
+    }, 0);
+  }
+
+  /**
+   * Applies the same color to all visual UI elements. Things like Audio visualizer, and song progress bar.
+   */
+  public static setAllVisualColors(color: React.StyleHTMLAttributes<HTMLElement>["style"]["backgroundColor"]) {
+    Toxen.background.visualizer.setColor(color);
+    Toxen.musicControls.progressBar.setFillColor(color);
+  };
 }
 
 //#endregion
@@ -148,7 +174,7 @@ export default class ToxenApp extends React.Component {
       .then(Settings.load) // Load settings and apply them.
       .then(async () => {
         Toxen.updateSettings();
-        
+
         if (Settings.get("restoreWindowSize")) {
           let win = remote.getCurrentWindow();
           // Window initial size
@@ -167,9 +193,10 @@ export default class ToxenApp extends React.Component {
 
         await Toxen.loadSongs();
         Toxen.songPanel.update();
-        Toxen.sidePanel.toggle(true);
+        Toxen.sidePanel.show(true);
         Toxen.loadingScreen.toggleShow(false);
         Toxen.musicPlayer.playRandom();
+        Toxen.background.visualizer.start();
       })
       .then(() => Toxen._resolveWhenReady())
   }
@@ -179,7 +206,7 @@ export default class ToxenApp extends React.Component {
       <Background ref={ref => Toxen.background = ref} />
       <MusicControls ref={ref => Toxen.musicControls = ref} />
       <LoadingScreen ref={ls => Toxen.loadingScreen = ls} initialShow={true} />
-      <div className="song-panel-toggle hide-on-inactive" onClick={() => Toxen.sidePanel.toggle()}>
+      <div className="song-panel-toggle hide-on-inactive" onClick={() => Toxen.sidePanel.show()}>
         &nbsp;
         <i className="fas fa-bars"></i>
         <span className="song-panel-toggle-title">Menu</span>
@@ -188,8 +215,10 @@ export default class ToxenApp extends React.Component {
         direction="right"
         show={false}
         ref={sidePanel => Toxen.sidePanel = sidePanel}
-        onClose={() => Toxen.sidePanel.toggle()}
+        onClose={() => Toxen.sidePanel.show()}
       >
+        {/* Empty object for refreshing */}
+        <SidepanelSection key="$empty" id="$empty"/>
         {/* Song Panel */}
         <SidepanelSection key="songPanel" id="songPanel" title="Music" icon={<i className="fas fa-music"></i>}>
           <SidepanelSectionHeader>
@@ -198,10 +227,11 @@ export default class ToxenApp extends React.Component {
               await Toxen.loadSongs();
               Toxen.songPanel.update();
             }}><i className="fas fa-redo"></i>&nbsp;Reload Library</button>
+            &nbsp;
             <button className="tx-btn tx-whitespace-nowrap" onClick={async () => {
               Toxen.showCurrentSong();
             }}><i className="fas fa-search"></i>&nbsp;Show playing</button>
-            <br/>
+            <br />
             <SearchField />
           </SidepanelSectionHeader>
           <SongPanel ref={s => Toxen.songPanel = s} songs={Toxen.songList} />
@@ -263,17 +293,38 @@ export default class ToxenApp extends React.Component {
             <h2>Window</h2>
             <FormInput type="checkbox" name="restoreWindowSize*boolean" displayName="Restore Window Size On Startup" />
             <sup>Saves and restores the window size from last session.</sup>
+            
+            {/* Visuals settings */}
+            <hr />
+            <h2>Visuals</h2>
+            <FormInput nullable displayName="Visualizer Color" name="visualizerColor*string" type="color"
+            // onChange={v => Toxen.setAllVisualColors(v)}
+            />
+            <sup>Default color for the visualizer if a song specific isn't set.</sup>
           </Form>
         </SidepanelSection>
 
         {/* No-icon panels. Doesn't appear as a clickable panel, instead only accessible by custom action */}
         {/* Edit song Panel */}
         <SidepanelSection key="editSong" id="editSong">
-          <h1>Edit Song</h1>
-          <Form saveButtonText="Save song" onSubmit={(_, formValues) => {
+          <SidepanelSectionHeader>
+            <h1>Edit music details</h1>
+            <button className="tx-btn tx-btn-action" onClick={() => Toxen.editSongForm.submit()}>
+              <i className="fas fa-save"></i>
+              &nbsp;Save
+            </button>
+            &nbsp;
+            <button className="tx-btn" onClick={() => remote.shell.openPath(Toxen.editingSong.dirname())}>Open music folder</button>
+            &nbsp;
+            <button className="tx-btn" onClick={() => Toxen.reloadSection()}>Reload data</button>
+          </SidepanelSectionHeader>
+          <Form hideSubmit ref={ref => Toxen.editSongForm = ref} saveButtonText="Save song" onSubmit={(_, formValues) => {
             let current = Song.getCurrent();
             let preBackground = Toxen.editingSong.paths.background;
             let preMedia = Toxen.editingSong.paths.media;
+            let preSubtitles = Toxen.editingSong.paths.subtitles;
+            let preStoryboard = Toxen.editingSong.paths.storyboard;
+            let preVisualizerColor = Toxen.editingSong.visualizerColor;
             for (const key in formValues) {
               if (Object.prototype.hasOwnProperty.call(formValues, key)) {
                 const value = formValues[key];
@@ -281,6 +332,12 @@ export default class ToxenApp extends React.Component {
 
                 // Special cases
                 switch (key) {
+                  case "visualizerColor":
+                    if (Toxen.editingSong == current && current.visualizerColor !== preVisualizerColor) {
+                      Toxen.setAllVisualColors(current.visualizerColor || Settings.get("visualizerColor"));
+                    }
+                    break;
+
                   case "paths.background":
                     if (Toxen.editingSong == current && current.paths.background !== preBackground) {
                       Toxen.background.setBackground(current.backgroundFile());
@@ -288,10 +345,22 @@ export default class ToxenApp extends React.Component {
                     break;
 
                   case "paths.media":
-                    console.log(current.paths.media, preMedia);
-
                     if (Toxen.editingSong == current && current.paths.media !== preMedia) {
                       Toxen.musicPlayer.setSource(current.mediaFile(), true);
+                    }
+                    break;
+
+                  case "paths.subtitles":
+                    // Update subtitles
+                    if (Toxen.editingSong == current && current.paths.subtitles !== preSubtitles) {
+                      // Toxen.musicPlayer.setSubtitles(current.subtitlesFile(), true); // Not yet implemented
+                    }
+                    break;
+
+                  case "paths.storyboard":
+                    // Update storyboard
+                    if (Toxen.editingSong == current && current.paths.storyboard !== preStoryboard) {
+                      // Toxen.musicPlayer.setStoryboard(current.storyboardFile(), true); // Not yet implemented
                     }
                     break;
 
@@ -303,16 +372,21 @@ export default class ToxenApp extends React.Component {
 
             Toxen.editingSong.saveInfo();
           }}>
-            <FormInput displayName="Location" name="paths.dirname*string" getValueTemplateCallback={() => Toxen.editingSong} type="text" readOnly />
-            <button className="tx-btn" onClick={() => remote.shell.openPath(Toxen.editingSong.dirname())}>Open song folder</button>
-            <br />
-            <br />
+            <h2>General information</h2>
+            {/* <FormInput displayName="Location" name="paths.dirname*string" getValueTemplateCallback={() => Toxen.editingSong} type="text" readOnly /> */}
             <FormInput displayName="Artist" name="artist*string" getValueTemplateCallback={() => Toxen.editingSong} type="text" />
-            <FormInput displayName="Co-Artists" name="coArtists*array" getValueTemplateCallback={() => Toxen.editingSong} type="list" />
             <FormInput displayName="Title" name="title*string" getValueTemplateCallback={() => Toxen.editingSong} type="text" />
+            <FormInput displayName="Co-Artists" name="coArtists*array" getValueTemplateCallback={() => Toxen.editingSong} type="list" />
+            <FormInput displayName="Album" name="album*string" getValueTemplateCallback={() => Toxen.editingSong} type="text" />
             <FormInput displayName="Source" name="source*string" getValueTemplateCallback={() => Toxen.editingSong} type="text" />
             <FormInput displayName="Tags" name="tags*array" getValueTemplateCallback={() => Toxen.editingSong} type="list" />
-            <hr/>
+            <hr />
+            <h2>Song-specific visuals</h2>
+            <FormInput nullable displayName="Visualizer Color" name="visualizerColor*string" getValueTemplateCallback={() => Toxen.editingSong} type="color"
+            onChange={v => Toxen.setAllVisualColors(v || Settings.get("visualizerColor"))}
+            />
+            <hr />
+            <h2></h2>
             <FormInput displayName="Media File" name="paths.media*string" getValueTemplateCallback={() => Toxen.editingSong} type="selectAsync"
               values={(async () => {
                 let song = Toxen.editingSong;
