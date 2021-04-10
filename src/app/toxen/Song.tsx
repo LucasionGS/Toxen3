@@ -186,7 +186,7 @@ export default class Song implements ISong {
     if (Toxen.musicPlayer.state.src != src) {
       Toxen.musicPlayer.setSource(src, true);
       Toxen.background.setBackground(bg);
-      Toxen.setAllVisualColors(this.visualizerColor || Settings.get("visualizerColor"));
+      Toxen.setAllVisualColors(this.visualizerColor);
       Toxen.background.visualizer.update();
       let img = new Image();
       img.src = bg;

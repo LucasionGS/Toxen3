@@ -160,6 +160,8 @@ export class Toxen {
    * Applies the same color to all visual UI elements. Things like Audio visualizer, and song progress bar.
    */
   public static setAllVisualColors(color: React.StyleHTMLAttributes<HTMLElement>["style"]["backgroundColor"]) {
+    debugger;
+    color = color || Settings.get("visualizerColor");
     Toxen.background.visualizer.setColor(color);
     Toxen.musicControls.progressBar.setFillColor(color);
   };
@@ -338,7 +340,7 @@ export default class ToxenApp extends React.Component {
                 switch (key) {
                   case "visualizerColor":
                     if (Toxen.editingSong == current && current.visualizerColor !== preVisualizerColor) {
-                      Toxen.setAllVisualColors(current.visualizerColor || Settings.get("visualizerColor"));
+                      Toxen.setAllVisualColors(current.visualizerColor);
                     }
                     break;
 
@@ -387,7 +389,7 @@ export default class ToxenApp extends React.Component {
             <hr />
             <h2>Song-specific visuals</h2>
             <FormInput nullable displayName="Visualizer Color" name="visualizerColor*string" getValueTemplateCallback={() => Toxen.editingSong} type="color"
-            onChange={v => Toxen.setAllVisualColors(v || Settings.get("visualizerColor"))}
+            onChange={v => Toxen.setAllVisualColors(v)}
             />
             <hr />
             <h2></h2>

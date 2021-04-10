@@ -50,10 +50,9 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
         unitW,
         h
       ];
-      let oldAlpha = ctx.globalAlpha;
-      ctx.globalAlpha = 0.8;
-      ctx.fillRect(x, y, _width, _height); // Draw basic visualizer
-      ctx.globalAlpha = oldAlpha;
+      this.ctxAlpha(0.8, ctx => {
+        ctx.fillRect(x, y, _width, _height); // Draw basic visualizer
+      })
     }
   }
 
@@ -104,7 +103,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     this.loop(0);
   }
 
-  private static readonly DEFAULTCOLOR: CanvasRenderingContext2D["fillStyle"] = "rgba(255, 255, 255, 0.3)";
+  public static readonly DEFAULTCOLOR: string = "rgba(255, 255, 255, 1)";
   public color: CanvasRenderingContext2D["fillStyle"] = Visualizer.DEFAULTCOLOR;
   public setColor(color: CanvasRenderingContext2D["fillStyle"]) {
     this.color = color || Visualizer.DEFAULTCOLOR;

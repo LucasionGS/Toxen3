@@ -1,4 +1,5 @@
 import React, { Component } from 'react'
+import Visualizer from './Background/Visualizer';
 import "./ProgressBar.scss";
 
 type Color = React.HTMLAttributes<HTMLDivElement>["style"]["backgroundColor"];
@@ -82,11 +83,11 @@ export default class ProgressBar extends Component<ProgressBarProps, ProgressBar
   }
 
   setFillColor(fillColor: Color) {
-    this.setState({ fillColor });
+    this.setState({ fillColor: fillColor || Visualizer.DEFAULTCOLOR });
   }
 
   setBorderColor(borderColor: Color) {
-    this.setState({ borderColor });
+    this.setState({ borderColor: borderColor || Visualizer.DEFAULTCOLOR });
   }
 
   setValue(value: number) {
