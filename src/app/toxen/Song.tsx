@@ -1,6 +1,6 @@
 import React from "react";
 import { resolve } from "path";
-import Settings from "./Settings";
+import Settings, { VisualizerStyle } from "./Settings";
 import fsp from "fs/promises";
 import { Dir, Dirent } from "fs";
 import { Toxen } from "../ToxenApp";
@@ -25,6 +25,8 @@ export default class Song implements ISong {
   public tags: string[];
   public paths: ISongPaths;
   public visualizerColor: string;
+  public visualizerStyle: VisualizerStyle;
+
 
   /**
    * Return the full path of the song folder.
@@ -69,16 +71,16 @@ export default class Song implements ISong {
     );
   }
 
-  public static create(data: ISong) {
+  public static create(data: Partial<ISong>) {
     let song = new Song();
+    
+    for (const key in data) {
+      if (key in data) {
+        const v = (data as any)[key];
+        (song as any)[key] = v;
+      }
+    }
     song.uid = data.uid ?? Song.generateUID();
-    song.artist = data.artist;
-    song.coArtists = data.coArtists;
-    song.title = data.title;
-    song.paths = data.paths;
-    song.tags = data.tags;
-    song.album = data.album;
-    song.visualizerColor = data.visualizerColor;
 
     return song;
   }
@@ -94,6 +96,7 @@ export default class Song implements ISong {
       tags: this.tags,
       album: this.album,
       visualizerColor: this.visualizerColor,
+      visualizerStyle: this.visualizerStyle,
     }
   }
 
@@ -108,6 +111,7 @@ export default class Song implements ISong {
         source: null,
         tags: null,
         visualizerColor: null,
+        visualizerStyle: null,
         paths: {
           dirname: null,
           background: null,
@@ -187,6 +191,7 @@ export default class Song implements ISong {
       Toxen.musicPlayer.setSource(src, true);
       Toxen.background.setBackground(bg);
       Toxen.setAllVisualColors(this.visualizerColor);
+      Toxen.background.visualizer.setStyle(this.visualizerStyle);
       Toxen.background.visualizer.update();
       let img = new Image();
       img.src = bg;
@@ -344,6 +349,7 @@ export interface ISong {
   source: string;
   tags: string[];
   visualizerColor: string;
+  visualizerStyle: VisualizerStyle;
   paths: ISongPaths;
 }
 

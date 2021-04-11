@@ -13,4 +13,11 @@ export default class Converter {
     while (s.length < size) {s = "0" + s;}
     return s;
   }
+
+  public static camelCaseToSpacing(text: string) {
+    let reg = /(?<=[\w])([A-Z][a-z]*)/g;
+    return text.replace(reg, (_, g1: string) => {
+      return " " + g1.toLowerCase();
+    });
+  }
 }

@@ -13,13 +13,14 @@ import Sidepanel from "./components/Sidepanel/Sidepanel";
 import SidepanelSection from "./components/Sidepanel/SidepanelSection";
 import SongPanel from "./components/SongPanel/SongPanel";
 import JSONX from "./toxen/JSONX";
-import Settings from "./toxen/Settings";
+import Settings, { VisualizerStyle } from "./toxen/Settings";
 import Song from "./toxen/Song";
 import "./ToxenApp.scss";
 import "./tx.scss";
 import System from "./toxen/System";
 import SidepanelSectionHeader from "./components/Sidepanel/SidepanelSectionHeader";
 import SearchField from "./components/SongPanel/SearchField";
+import Converter from "./toxen/Converter";
 
 //#region Define variables used all over the ToxenApp process.
 /**
@@ -95,11 +96,15 @@ export class Toxen {
    * Applies the current GUI settings to the GUI.
    */
   public static updateSettings() {
+    let curSong = Song.getCurrent();
     Toxen.sidePanel.setVertical(Settings.get("panelVerticalTransition") ?? false);
     Toxen.sidePanel.setDirection(Settings.get("panelDirection") ?? "left");
     Toxen.sidePanel.setExposeIcons(Settings.get("exposePanelIcons") ?? false);
-
-    Toxen.musicControls.setVolume(Settings.get("volume") ?? 50)
+    
+    (Settings.get("visualizerStyle") || Settings.set("visualizerStyle", VisualizerStyle.ProgressBar /* Default */));
+    Toxen.background.visualizer.setStyle(curSong ? curSong.visualizerStyle : null);
+    
+    Toxen.musicControls.setVolume(Settings.get("volume") ?? 50);
   }
 
   public static loadingScreen: LoadingScreen;
@@ -160,7 +165,6 @@ export class Toxen {
    * Applies the same color to all visual UI elements. Things like Audio visualizer, and song progress bar.
    */
   public static setAllVisualColors(color: React.StyleHTMLAttributes<HTMLElement>["style"]["backgroundColor"]) {
-    debugger;
     color = color || Settings.get("visualizerColor");
     Toxen.background.visualizer.setColor(color);
     Toxen.musicControls.progressBar.setFillColor(color);
@@ -307,6 +311,21 @@ export default class ToxenApp extends React.Component {
             // onChange={v => Toxen.setAllVisualColors(v)}
             />
             <sup>Default color for the visualizer if a song specific isn't set.</sup>
+            <br/>
+            <FormInput type="select" name="visualizerStyle*string" displayName="VisualizerStyle" >
+              {(() => {
+                let objs: JSX.Element[] = [];
+                for (const key in VisualizerStyle) {
+                  if (Object.prototype.hasOwnProperty.call(VisualizerStyle, key)) {
+                    const v = (VisualizerStyle as any)[key];
+                    objs.push(<option key={key} className="tx-form-field" value={v}>{Converter.camelCaseToSpacing(key)}</option>)
+                  }
+                }
+                return objs;
+              })()}
+            </FormInput>
+            <br />
+            <sup>Select which style for the visualizer to use</sup>
           </Form>
         </SidepanelSection>
 
@@ -373,6 +392,8 @@ export default class ToxenApp extends React.Component {
                   default:
                     break;
                 }
+
+                Toxen.background.visualizer.setStyle(current ? current.visualizerStyle : null);
               }
             }
 
@@ -409,7 +430,7 @@ export default class ToxenApp extends React.Component {
               })}
             />
             <br />
-            <FormInput displayName="Background file" name="paths.background*string" getValueTemplateCallback={() => Toxen.editingSong} type="selectAsync"
+            <FormInput nullable displayName="Background file" name="paths.background*string" getValueTemplateCallback={() => Toxen.editingSong} type="selectAsync"
               values={(async () => {
                 let song = Toxen.editingSong;
                 if (!song) return [];
@@ -451,6 +472,23 @@ export default class ToxenApp extends React.Component {
                   }).map(f => f.name);
               })}
             />
+
+            <FormInput type="select" name="visualizerStyle*string" displayName="VisualizerStyle" getValueTemplateCallback={() => Toxen.editingSong}>
+              {(() => {
+                let objs: JSX.Element[] = [
+                  <option key={null} className="tx-form-field" value={""}>{"<Default>"}</option>
+                ];
+                for (const key in VisualizerStyle) {
+                  if (Object.prototype.hasOwnProperty.call(VisualizerStyle, key)) {
+                    const v = (VisualizerStyle as any)[key];
+                    objs.push(<option key={key} className="tx-form-field" value={v}>{Converter.camelCaseToSpacing(key)}</option>)
+                  }
+                }
+                return objs;
+              })()}
+            </FormInput>
+            <br />
+            <sup>Select which style for the visualizer to use for this song.</sup>
           </Form>
           <hr />
         </SidepanelSection>

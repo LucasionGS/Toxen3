@@ -10,6 +10,10 @@
   transform: translateX(-50%);
   transition: width 0.3s ease-in-out;
 
+  & > * {
+    filter: drop-shadow(1px 1px 1px black);
+  }
+
   .toxen-music-controls-time {
     display: flex;
     justify-content: space-between;
@@ -29,6 +33,7 @@
   }
 
   .toxen-music-controls-progress-bar > * {
+    filter: drop-shadow(1px 1px 1px black);
     transform: translateY(0);
     transition: transform 0.3s ease-in-out;
   }
@@ -37,7 +42,6 @@
     display: flex;
     justify-content: center;
     .ctrl-btn * {
-      filter: drop-shadow(1px 1px 1px black);
       margin: 8px;
       font-size: 32px;
       transition: all 0.2s ease-in-out;

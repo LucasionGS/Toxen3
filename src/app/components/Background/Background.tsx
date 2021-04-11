@@ -59,7 +59,7 @@ export default class Background extends Component<BackgroundProps, BackgroundSta
       onDragEnter={e => e.preventDefault()}
       onDragLeave={e => e.preventDefault()}
       >
-        <img className="toxen-background-image" src={this.state.image} alt="background" />
+        <img hidden={this.state.image ? false : true} className="toxen-background-image" src={this.state.image} alt="background" />
         <MusicPlayer ref={ref => Toxen.musicPlayer = ref} />
         <Visualizer ref={ref => this.visualizer = ref}/>
       </div>

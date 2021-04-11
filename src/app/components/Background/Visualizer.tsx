@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import Settings, { VisualizerStyle } from '../../toxen/Settings';
 import { Toxen } from '../../ToxenApp';
 import MusicPlayer from '../MusicPlayer';
 import "./Visualizer.scss";
@@ -17,42 +18,139 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
   private loop(time: number) {
     if (!this.stopped) requestAnimationFrame(this.loop.bind(this));
     if (!this.ctx) return console.log("No ctx exist!");
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     if (!Toxen.musicPlayer || !Toxen.musicPlayer.media) return console.log("Player or media missing");
-
-
+    
+    let style = this.style ?? VisualizerStyle.ProgressBar; // Default
+    if (style === VisualizerStyle.None) return;
+    
     let ctx = this.ctx;
     ctx.fillStyle = this.color;
     ctx.strokeStyle = this.color;
-    const [W, H, L, T] = [
-      this.width,
-      // this.height,
-      Toxen.musicControls.progressBar.progressBarObject.getBoundingClientRect().top, // 
+    let [vWidth, vHeight, vLeft, vTop] = [
+      this.canvas.width,
+      this.canvas.height,
       this.left,
       this.top
     ];
 
-    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    const dataArray = this.getFrequencyData();
-    const curDataArray = dataArray;
-    const len = curDataArray.length * 0.75;
+    const dataSize = 255;
 
-    const maxHeight = H * 0.30;
-    const unitW = (W) / (len);
-    const unitH = maxHeight / 255;
+    let dataArray = this.getFrequencyData(
+      // Settings.get("") ?? Visualizer.DEFAULT_FFTSIZE
+    ).reverse();
+    dataArray = dataArray.filter((_, i) => i >= (dataArray.length / 2));
+    const len = dataArray.length;
 
+    switch (style) {
+      default:
+      case VisualizerStyle.ProgressBar: { // Progress bar is default.
+        vHeight = Toxen.musicControls.progressBar.progressBarObject.getBoundingClientRect().top;
+        vLeft = Toxen.musicControls.progressBar.progressBarObject.getBoundingClientRect().left;
+        const maxHeight = vHeight * 0.30;
+        const unitW = ((vWidth - 20 /* Progress bar curve */) - (vLeft * 2)) / len;
+        const unitH = maxHeight / dataSize;
+        for (let i = 0; i < len; i++) {
+          const data = dataArray[i];
+          const _barHeight = (data * unitH);
+          // Position and size
+          const [barX, barY, barWidth, barHeight] = [
+            (i * unitW) + vLeft + 10 /* Progress bar curve */, // barX
+            vHeight - _barHeight + vTop, // barY
+            unitW, // barWidth
+            _barHeight // barHeight
+          ];
+          this.ctxAlpha(0.8, ctx => {
+            ctx.fillRect(barX, barY, barWidth, barHeight); // Draw basic visualizer
+          });
+        }
+        break;
+      }
+      
+      case VisualizerStyle.Bottom: {
+        const maxHeight = vHeight * 0.30;
+        const unitW = vWidth / len;
+        const unitH = maxHeight / dataSize;
+        for (let i = 0; i < len; i++) {
+          const data = dataArray[i];
+          const _barHeight = (data * unitH);
+          // Position and size
+          const [barX, barY, barWidth, barHeight] = [
+            (i * unitW), // barX
+            vHeight - _barHeight, // barY
+            unitW, // barWidth
+            _barHeight // barHeight
+          ];
+          this.ctxAlpha(0.8, ctx => {
+            ctx.fillRect(barX, barY, barWidth, barHeight); // Bottom visuals
+          });
+        }
+        break;
+      }
+      
+      case VisualizerStyle.Top: {
+        const maxHeight = vHeight * 0.30;
+        const unitW = vWidth / len;
+        const unitH = maxHeight / dataSize;
+        for (let i = 0; i < len; i++) {
+          const data = dataArray[i];
+          const _barHeight = (data * unitH);
+          // Position and size
+          const [barX, barY, barWidth, barHeight] = [
+            (i * unitW), // barX
+            0, // barY
+            unitW, // barWidth
+            _barHeight // barHeight
+          ];
+          this.ctxAlpha(0.8, ctx => {
+            ctx.fillRect(barX, barY, barWidth, barHeight); // Top visuals
+          });
+        }
+        break;
+      }
 
-    for (let i = 0; i < len; i++) {
-      let data = curDataArray[i];
-      let h = (data * unitH);
-      const [x, y, _width, _height] = [
-        (i * unitW) + L,
-        H - h + T,
-        unitW,
-        h
-      ];
-      this.ctxAlpha(0.8, ctx => {
-        ctx.fillRect(x, y, _width, _height); // Draw basic visualizer
-      })
+      case VisualizerStyle.TopAndBottom: {
+        const maxHeight = vHeight * 0.30;
+        const unitW = vWidth / len;
+        const unitH = maxHeight / dataSize;
+        for (let i = 0; i < len; i++) {
+          const data = dataArray[i];
+          const _barHeight = (data * unitH);
+          // Position and size
+          const [barX, barY, barWidth, barHeight] = [
+            (i * unitW), // barX
+            vHeight - _barHeight, // barY
+            unitW, // barWidth
+            _barHeight // barHeight
+          ];
+          this.ctxAlpha(0.8, ctx => {
+            ctx.fillRect(barX, 0, barWidth, barHeight); // Top visuals
+            ctx.fillRect(barX, barY, barWidth, barHeight); // Bottom visuals
+          });
+        }
+        break;
+      }
+      
+      case VisualizerStyle.Center: {
+        const maxHeight = vHeight * 0.25;
+        const unitW = vWidth / len;
+        const unitH = maxHeight / dataSize;
+        for (let i = 0; i < len; i++) {
+          const data = dataArray[i];
+          const _barHeight = (data * unitH);
+          // Position and size
+          const [barX, barY, barWidth, barHeight] = [
+            (i * unitW), // barX
+            (vHeight / 2) - _barHeight, // barY
+            unitW, // barWidth
+            _barHeight * 2 // barHeight
+          ];
+          this.ctxAlpha(0.8, ctx => {
+            ctx.fillRect(barX, barY, barWidth, barHeight); // Draw basic visualizer
+          });
+        }
+        break;
+      }
     }
   }
 
@@ -64,7 +162,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
    */
   private ctxAlpha(alpha: number, callback: (ctx: CanvasRenderingContext2D) => void, ctx: CanvasRenderingContext2D = this.ctx) {
     let oldAlpha = ctx.globalAlpha;
-    ctx.globalAlpha = 0.8;
+    ctx.globalAlpha = alpha;
     callback(ctx);
     ctx.globalAlpha = oldAlpha;
   }
@@ -74,14 +172,15 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     const audioContext = new AudioContext();
     const source = audioContext.createMediaElementSource(audioFile);
     const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 1024;
-    // analyser.fftSize = 128;
+    analyser.fftSize = Visualizer.DEFAULT_FFTSIZE;
     source.connect(audioContext.destination);
     source.connect(analyser);
     this.audioData = analyser;
   }
 
-  private getFrequencyData() {
+  public static readonly DEFAULT_FFTSIZE = 1024;
+  private getFrequencyData(fftSize?: number) {
+    if (fftSize && this.audioData.fftSize != fftSize) this.audioData.fftSize = fftSize;
     const bufferLength = this.audioData.frequencyBinCount;
     const amplitudeArray = new Uint8Array(bufferLength);
     this.audioData.getByteFrequencyData(amplitudeArray);
@@ -103,10 +202,10 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     this.loop(0);
   }
 
-  public static readonly DEFAULTCOLOR: string = "rgba(255, 255, 255, 1)";
-  public color: CanvasRenderingContext2D["fillStyle"] = Visualizer.DEFAULTCOLOR;
-  public setColor(color: CanvasRenderingContext2D["fillStyle"]) {
-    this.color = color || Visualizer.DEFAULTCOLOR;
+  public static readonly DEFAULT_COLOR: string = "rgba(255, 255, 255, 1)";
+  public color: string = Visualizer.DEFAULT_COLOR;
+  public setColor(color: string) {
+    this.color = color || Visualizer.DEFAULT_COLOR;
   }
 
   public canvas: HTMLCanvasElement;
@@ -118,13 +217,16 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
 
   public length: Uint8Array;
 
+  private style: VisualizerStyle = VisualizerStyle.ProgressBar;
+  public setStyle(style: VisualizerStyle) {
+    this.style = style || (Settings.get("visualizerStyle") || VisualizerStyle.ProgressBar); // Default
+  }
+
   componentDidMount() {
     window.addEventListener("resize", this.updateThis);
   }
 
-  componentDidUpdate() {
-    // this.start();
-  }
+  componentDidUpdate() { }
 
   componentWillUnmount() {
     this.stop();
@@ -135,7 +237,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     this.setState({});
   }
 
-  updateThis: typeof Visualizer["prototype"]["update"] = this.update.bind(this);
+  updateThis: Visualizer["update"] = this.update.bind(this);
 
   render() {
     return (
@@ -145,14 +247,12 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           if (ref && Toxen.musicControls && Toxen.musicControls.progressBar && Toxen.musicControls.progressBar.progressBarObject) {
             this.ctx = ref.getContext("2d");
             let box = ref.getBoundingClientRect();
-            let progressLine = Toxen.musicControls.progressBar.progressBarObject.getBoundingClientRect();
 
-            this.width = progressLine.width * 0.98;
-            ref.width = box.width;
+            this.width = ref.width = box.width;
+            this.height = ref.height = box.height;
 
-            this.height = progressLine.top;
-            this.left = progressLine.left + (progressLine.width * 0.01);
-            ref.height = box.height;
+            this.left = box.left;
+            this.top = box.top;
           }
         }}>
 

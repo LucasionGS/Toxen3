@@ -83,11 +83,11 @@ export default class ProgressBar extends Component<ProgressBarProps, ProgressBar
   }
 
   setFillColor(fillColor: Color) {
-    this.setState({ fillColor: fillColor || Visualizer.DEFAULTCOLOR });
+    this.setState({ fillColor: fillColor || Visualizer.DEFAULT_COLOR });
   }
 
   setBorderColor(borderColor: Color) {
-    this.setState({ borderColor: borderColor || Visualizer.DEFAULTCOLOR });
+    this.setState({ borderColor: borderColor || Visualizer.DEFAULT_COLOR });
   }
 
   setValue(value: number) {

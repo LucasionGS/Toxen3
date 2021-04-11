@@ -20,7 +20,7 @@ export default class Settings {
    */
   public static async save() {
     console.log("Saving...");
-    
+
     if (Settings.isRemote()) {
       // Remote server
       throw "Saving remotely not yet implemented";
@@ -67,7 +67,7 @@ export default class Settings {
       Settings.data
       && Settings.data.libraryDirectory
       && (
-        Settings.data.libraryDirectory.toLowerCase().startsWith("http://") || 
+        Settings.data.libraryDirectory.toLowerCase().startsWith("http://") ||
         Settings.data.libraryDirectory.toLowerCase().startsWith("https://")
       ));
   }
@@ -89,7 +89,7 @@ export default class Settings {
       if (Object.prototype.hasOwnProperty.call(data, key)) {
         const value = (data as any)[key];
         const preValue = JSONX.getObjectValue(Settings.data, key);
-        
+
         JSONX.setObjectValue(Settings.data, key, value);
 
         // Special cases
@@ -99,7 +99,7 @@ export default class Settings {
       }
     }
   }
-  
+
 
   public static get<T extends keyof ISettings>(key: T): ISettings[T];
   public static get<T extends string, ValueType = any>(key: T): ValueType;
@@ -107,9 +107,9 @@ export default class Settings {
     // if (Settings.data && Settings.data.hasOwnProperty(key)) return Settings.data[key];
     return JSONX.getObjectValue(Settings.data, key);
   }
-  
+
   public static set<T extends keyof ISettings>(key: T, value: ISettings[T]): ISettings[T];
-  public static set<T extends string, ValueType = any>(key: T, value:ValueType): ValueType;
+  public static set<T extends string, ValueType = any>(key: T, value: ValueType): ValueType;
   public static set<T extends keyof ISettings>(key: T, value: ISettings[T]): ISettings[T] {
     // if (Settings.data && Settings.data.hasOwnProperty(key)) return Settings.data[key] = value;
     JSONX.setObjectValue(Settings.data, key, value);
@@ -135,4 +135,14 @@ export interface ISettings {
 
   // Visuals
   visualizerColor: string;
+  visualizerStyle: VisualizerStyle;
 }
+
+export enum VisualizerStyle {
+  None = "none",
+  ProgressBar = "progressbar",
+  Bottom = "bottom",
+  Top = "top",
+  TopAndBottom = "topbottom",
+  Center = "center",
+};
