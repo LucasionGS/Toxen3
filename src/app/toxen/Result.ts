@@ -13,13 +13,13 @@ export class Result<T = unknown> {
   }
 }
 
-export class Success<T> extends Result {
-  constructor(public data: T) {
+export class Success<T> extends Result<T> {
+  constructor(public data?: T) {
     super(true);
   }
 }
 
-export class Failure extends Result {
+export class Failure extends Result<any> {
   constructor(public message: string) {
     super(false);
   }

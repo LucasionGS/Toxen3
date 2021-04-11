@@ -223,6 +223,7 @@ export default class FormInput extends React.Component<Props> {
             <br />
             <FormInputSelect nullable={this.props.nullable} name={this.props.name} defaultValue={value} asyncValues={typeof this.props.values === "function" ? this.props.values() : this.props.values} />
             <br />
+            <br />
           </>
         )
       }
@@ -234,6 +235,7 @@ export default class FormInput extends React.Component<Props> {
             <br />
             <FormInputList name={this.props.name} defaultValue={value} />
             <br />
+            <br />
           </>
         )
       }
@@ -244,6 +246,7 @@ export default class FormInput extends React.Component<Props> {
             {label}
             <br />
             <FormInputColorPicker nullable={this.props.nullable} onChange={this.props.onChange} name={this.props.name} defaultValue={value} />
+            <br />
             <br />
           </>
         )

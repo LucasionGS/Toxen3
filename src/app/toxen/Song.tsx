@@ -9,7 +9,7 @@ import SongElement from "../components/SongPanel/SongElement";
 import Legacy from "./Legacy";
 import Debug from "./Debug";
 import { remote } from "electron";
-import { Result } from "./Result";
+import { Failure, Result, Success } from "./Result";
 
 declare class MediaMetadata {
   constructor(object: object);
@@ -31,9 +31,10 @@ export default class Song implements ISong {
   /**
    * Return the full path of the song folder.
    */
-  public dirname() {
-    if (Settings.isRemote())`${Settings.get("libraryDirectory")}/${this.paths.dirname}`;
-    else return this.paths && this.paths.dirname ? resolve(Settings.get("libraryDirectory"), this.paths.dirname) : null;
+  public dirname(relativePath?: string) {
+    // if (Settings.isRemote()) `${Settings.get("libraryDirectory")}/${this.paths.dirname}`;
+    // else
+    return this.paths && this.paths.dirname ? resolve(Settings.get("libraryDirectory"), this.paths.dirname, relativePath ?? ".") : null;
   }
 
   /**
@@ -120,7 +121,7 @@ export default class Song implements ISong {
           storyboard: null,
         },
       };
-      var dir = await fsp.opendir(fullPath);
+      const dir = await fsp.opendir(fullPath);
       let ent: Dirent;
       while (ent = await dir.read()) {
         if (ent.isFile()) {
@@ -128,7 +129,7 @@ export default class Song implements ISong {
           switch (ext) {
             case ".mp3":
             case ".mp4":
-              if (!info.paths.media) info.paths.media = ent.name;
+              if (!info.paths.media || info.paths.media.toLowerCase().endsWith(".mp3")) info.paths.media = ent.name;
               if (!info.title && !info.artist) {
                 const name = Path.basename(ent.name, Path.extname(ent.name))
                 if (ent.name.indexOf(" - ") > -1) {
@@ -151,7 +152,13 @@ export default class Song implements ISong {
             case ".webm":
               if (!info.paths.background) info.paths.background = ent.name;
               break;
-            default:
+            
+            case ".srt":
+              if (!info.paths.subtitles) info.paths.subtitles = ent.name;
+              break;
+            
+            case ".tsb":
+              if (!info.paths.storyboard) info.paths.storyboard = ent.name;
               break;
           }
         }
@@ -172,7 +179,7 @@ export default class Song implements ISong {
     });
   }
 
-  private static generateUID() {
+  public static generateUID(skipCheck = false) {
     let items = "QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm1234567890";
     let uid: string = "";
     do {
@@ -180,7 +187,7 @@ export default class Song implements ISong {
         uid += items[Math.floor(Math.random() * items.length)];
       }
     }
-    while (Toxen.songList && !Toxen.songList.some(s => s.uid));
+    while (!skipCheck && Toxen.songList && !Toxen.songList.some(s => s.uid));
     return uid;
   }
 
@@ -191,7 +198,7 @@ export default class Song implements ISong {
       Toxen.musicPlayer.setSource(src, true);
       Toxen.background.setBackground(bg);
       Toxen.setAllVisualColors(this.visualizerColor);
-      Toxen.background.visualizer.setStyle(this.visualizerStyle);
+      Toxen.background.storyboard.setSong(this);
       Toxen.background.visualizer.update();
       let img = new Image();
       img.src = bg;
@@ -331,11 +338,16 @@ export default class Song implements ISong {
   public static async importSong(file: File): Promise<Result<Song>> {
     return Promise.resolve().then(() => {
       let supported = Toxen.getSupportedMediaFiles();
-      if (supported.some(s => Path.extname(file.name) === s)) return null;
+      if (!supported.some(s => Path.extname(file.name) === s)) return new Failure(file.name + " isn't a valid file");
 
       // TODO: Import song below here using details from the File object
       file.name // File name
       file.path // Full file path
+
+      const song = new Song();
+      song.title = file.name;
+      
+      return new Success(song);
     });
   }
 }

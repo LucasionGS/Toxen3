@@ -21,12 +21,11 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     if (!Toxen.musicPlayer || !Toxen.musicPlayer.media) return console.log("Player or media missing");
     
-    let style = this.style ?? VisualizerStyle.ProgressBar; // Default
+    let style = Toxen.background.storyboard.getVisualizerStyle();
     if (style === VisualizerStyle.None) return;
     
     let ctx = this.ctx;
-    ctx.fillStyle = this.color;
-    ctx.strokeStyle = this.color;
+    ctx.fillStyle = ctx.strokeStyle = Toxen.background.storyboard.getVisualizerColor();
     let [vWidth, vHeight, vLeft, vTop] = [
       this.canvas.width,
       this.canvas.height,
@@ -41,7 +40,8 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     ).reverse();
     dataArray = dataArray.filter((_, i) => i >= (dataArray.length / 2));
     const len = dataArray.length;
-
+    let opacity = 0.7;
+    
     switch (style) {
       default:
       case VisualizerStyle.ProgressBar: { // Progress bar is default.
@@ -60,7 +60,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
             unitW, // barWidth
             _barHeight // barHeight
           ];
-          this.ctxAlpha(0.8, ctx => {
+          this.ctxAlpha(opacity, ctx => {
             ctx.fillRect(barX, barY, barWidth, barHeight); // Draw basic visualizer
           });
         }
@@ -81,7 +81,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
             unitW, // barWidth
             _barHeight // barHeight
           ];
-          this.ctxAlpha(0.8, ctx => {
+          this.ctxAlpha(opacity, ctx => {
             ctx.fillRect(barX, barY, barWidth, barHeight); // Bottom visuals
           });
         }
@@ -102,7 +102,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
             unitW, // barWidth
             _barHeight // barHeight
           ];
-          this.ctxAlpha(0.8, ctx => {
+          this.ctxAlpha(opacity, ctx => {
             ctx.fillRect(barX, barY, barWidth, barHeight); // Top visuals
           });
         }
@@ -123,7 +123,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
             unitW, // barWidth
             _barHeight // barHeight
           ];
-          this.ctxAlpha(0.8, ctx => {
+          this.ctxAlpha(opacity, ctx => {
             ctx.fillRect(barX, 0, barWidth, barHeight); // Top visuals
             ctx.fillRect(barX, barY, barWidth, barHeight); // Bottom visuals
           });
@@ -145,7 +145,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
             unitW, // barWidth
             _barHeight * 2 // barHeight
           ];
-          this.ctxAlpha(0.8, ctx => {
+          this.ctxAlpha(opacity, ctx => {
             ctx.fillRect(barX, barY, barWidth, barHeight); // Draw basic visualizer
           });
         }
@@ -203,10 +203,10 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
   }
 
   public static readonly DEFAULT_COLOR: string = "rgba(255, 255, 255, 1)";
-  public color: string = Visualizer.DEFAULT_COLOR;
-  public setColor(color: string) {
-    this.color = color || Visualizer.DEFAULT_COLOR;
-  }
+  // public color: string = Visualizer.DEFAULT_COLOR;
+  // public setColor(color: string) {
+  //   this.color = color || Visualizer.DEFAULT_COLOR;
+  // }
 
   public canvas: HTMLCanvasElement;
   public width: number = 0;
@@ -216,11 +216,6 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
   public ctx: CanvasRenderingContext2D;
 
   public length: Uint8Array;
-
-  private style: VisualizerStyle = VisualizerStyle.ProgressBar;
-  public setStyle(style: VisualizerStyle) {
-    this.style = style || (Settings.get("visualizerStyle") || VisualizerStyle.ProgressBar); // Default
-  }
 
   componentDidMount() {
     window.addEventListener("resize", this.updateThis);

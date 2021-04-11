@@ -2,7 +2,7 @@ import React, { Component } from 'react'
 import Visualizer from './Background/Visualizer';
 import "./ProgressBar.scss";
 
-type Color = React.HTMLAttributes<HTMLDivElement>["style"]["backgroundColor"];
+type Color = string;
 
 interface ProgressBarProps {
   initialValue?: number;

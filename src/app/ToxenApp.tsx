@@ -35,6 +35,10 @@ export class Toxen {
 
   public static _resolveWhenReady: () => void;
 
+  public static log(message: any) { console.log(message); }
+  public static warn(message: any) { console.warn(message); }
+  public static error(message: any) { console.error(message); }
+
   public static getSupportedAudioFiles() {
     return [
       ".mp3"
@@ -102,7 +106,6 @@ export class Toxen {
     Toxen.sidePanel.setExposeIcons(Settings.get("exposePanelIcons") ?? false);
     
     (Settings.get("visualizerStyle") || Settings.set("visualizerStyle", VisualizerStyle.ProgressBar /* Default */));
-    Toxen.background.visualizer.setStyle(curSong ? curSong.visualizerStyle : null);
     
     Toxen.musicControls.setVolume(Settings.get("volume") ?? 50);
   }
@@ -117,7 +120,7 @@ export class Toxen {
   }
 
   public static async loadSongs() {
-    Toxen.loadingScreen.toggleShow(true);
+    Toxen.loadingScreen.show(true);
     let songCount = 0;
     let totalSongCount = await Song.getSongCount();
     Toxen.setSongList(await Song.getSongs(true, () => {
@@ -137,7 +140,7 @@ export class Toxen {
       ref.setMin(0);
       ref.setMax(totalSongCount);
     }));
-    Toxen.loadingScreen.toggleShow(false);
+    Toxen.loadingScreen.show(false);
   }
 
   public static editingSong: Song = null;
@@ -164,9 +167,8 @@ export class Toxen {
   /**
    * Applies the same color to all visual UI elements. Things like Audio visualizer, and song progress bar.
    */
-  public static setAllVisualColors(color: React.StyleHTMLAttributes<HTMLElement>["style"]["backgroundColor"]) {
+  public static setAllVisualColors(color: string) {
     color = color || Settings.get("visualizerColor");
-    Toxen.background.visualizer.setColor(color);
     Toxen.musicControls.progressBar.setFillColor(color);
   };
 }
@@ -200,7 +202,7 @@ export default class ToxenApp extends React.Component {
         await Toxen.loadSongs();
         Toxen.songPanel.update();
         Toxen.sidePanel.show(true);
-        Toxen.loadingScreen.toggleShow(false);
+        Toxen.loadingScreen.show(false);
         Toxen.musicPlayer.playRandom();
         Toxen.background.visualizer.start();
       })
@@ -393,7 +395,7 @@ export default class ToxenApp extends React.Component {
                     break;
                 }
 
-                Toxen.background.visualizer.setStyle(current ? current.visualizerStyle : null);
+                Toxen.background.storyboard.setSong(current);
               }
             }
 
@@ -429,7 +431,6 @@ export default class ToxenApp extends React.Component {
                   }).map(f => f.name);
               })}
             />
-            <br />
             <FormInput nullable displayName="Background file" name="paths.background*string" getValueTemplateCallback={() => Toxen.editingSong} type="selectAsync"
               values={(async () => {
                 let song = Toxen.editingSong;
