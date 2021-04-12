@@ -55,7 +55,7 @@ export default class Background extends Component<BackgroundProps, BackgroundSta
         // Background will also act as a dropzone
         onDrop={e => {
           e.preventDefault();
-          System.handleDroppedFiles(e.dataTransfer.files);
+          System.handleImportedFiles(e.dataTransfer.files);
         }}
         onDragOver={e => e.preventDefault()}
         onDragEnter={e => e.preventDefault()}

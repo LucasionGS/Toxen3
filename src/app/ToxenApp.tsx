@@ -83,10 +83,7 @@ export class Toxen {
     if (song) song.scrollTo();
   }
 
-  // public static sidePanel.setSectionId(sectionId: any) {
-  //   this.sidePanel.setSectionId(sectionId);
-  // }
-
+  // Objects
   public static sidePanel: Sidepanel;
   public static songPanel: SongPanel;
   public static musicPlayer: MusicPlayer;
@@ -100,11 +97,11 @@ export class Toxen {
    * Applies the current GUI settings to the GUI.
    */
   public static updateSettings() {
-    let curSong = Song.getCurrent();
+    // let curSong = Song.getCurrent();
     Toxen.sidePanel.setVertical(Settings.get("panelVerticalTransition") ?? false);
     Toxen.sidePanel.setDirection(Settings.get("panelDirection") ?? "left");
     Toxen.sidePanel.setExposeIcons(Settings.get("exposePanelIcons") ?? false);
-    
+    Toxen.setAllVisualColors(Toxen.background.storyboard.getVisualizerColor());
     (Settings.get("visualizerStyle") || Settings.set("visualizerStyle", VisualizerStyle.ProgressBar /* Default */));
     
     Toxen.musicControls.setVolume(Settings.get("volume") ?? 50);
@@ -170,6 +167,7 @@ export class Toxen {
   public static setAllVisualColors(color: string) {
     color = color || Settings.get("visualizerColor");
     Toxen.musicControls.progressBar.setFillColor(color);
+    if (Toxen.editingSong) Toxen.editingSong.visualizerColor = color;
   };
 }
 

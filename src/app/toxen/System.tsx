@@ -1,4 +1,5 @@
 import React from "react";
+import fs from "fs";
 import fsp from "fs/promises";
 import { Dirent } from "fs";
 import Path from "path";
@@ -29,13 +30,12 @@ export default class System {
     return files;
   }
 
-  public static async handleDroppedFiles(files: FileList | File[]) {
+  public static async handleImportedFiles(files: FileList | File[]) {
     Promise.resolve().then(async () => {
       if (files instanceof FileList) files = [...files];
       let sMedia = Toxen.getSupportedMediaFiles();
       let sImage = Toxen.getSupportedImageFiles();
       let sSubtitle = Toxen.getSupportedSubtitleFiles();
-
       
       const Content = (props: { children?: React.ReactNode }) => (
         <>
@@ -47,29 +47,32 @@ export default class System {
       Toxen.loadingScreen.show(true);
       Toxen.loadingScreen.setContent(
         <Content>
-          Loading files...
+          Preparing...
         </Content>
       );
-
+      
       let mediaPack = false;
       var i = 0;
       for (i = 0; i < files.length; i++) {
         const file = files[i];
         if (sMedia.some(ext => file.name.endsWith(ext))) {
           mediaPack = true;
+          Toxen.loadingScreen.setContent(
+            <Content>
+              Importing {file.name}...
+            </Content>
+          );
           await Song.importSong(file).then(res => {
             if (res.isSuccess()) {
               Toxen.log(file.name + "\n" + file.path);
               Toxen.loadingScreen.setContent(
                 <Content>
-                  {file.name}
-                  <br />
-                  {file.path}
+                  Imported {file.name}
                 </Content>
               );
             }
             else if (res.isFailure()) {
-              Toxen.log(res.message);
+              Toxen.error(res.message);
               Toxen.loadingScreen.setContent(
                 <Content>
                   Unable to load {file.name}
@@ -85,19 +88,32 @@ export default class System {
           if (mediaPack) {
             Toxen.warn("Unable to mix media and images. Skipping image file.");
             continue;
-          };
+          }
 
           let song = Song.getCurrent();
           if (!song) break;
-          let dest = song.backgroundFile() || song.dirname(file.name);
-          await fsp.copyFile(file.path, dest);
-          song.paths.background = Path.basename(dest);
+          let imageName = song.paths.background || file.name; // name with extension
+          let ext = Path.extname(imageName); // getting extension
+          imageName = Path.basename(imageName, ext); // Removing extension for path testing
+          imageName = imageName.replace(/^(.*?)(?:_\$tx(\d+))?$/, (_, $1: string, $2: string) => {
+            return `${$1}_$tx${(+$2 || 0) + 1}`;
+          });
+          imageName += ext; // Readding the extension
 
-          // This makes sure the image changes when you just change it... but it will keep cache for the rest of the program until restart.
-          let dataUrl = remote.nativeImage.createFromPath(dest).toDataURL();
-          Toxen.background.setBackground(dataUrl);
+          let dest = song.dirname(imageName);
+          let prePic = song.backgroundFile() || null;
+          await fsp.copyFile(file.path, dest).then(async () => {
+            if (prePic !== dest && await fsp.stat(prePic).then(() => true).catch(() => false)) await fsp.rm(prePic);
+            song.paths.background = Path.basename(dest);
+            Toxen.background.setBackground(dest);
+            song.saveInfo();
+          })
+          .catch((reason) => {
+            Toxen.error("Unable to change background");
+            Toxen.error(reason);
+          });
 
-          song.saveInfo();
+          break;
         }
 
 
@@ -106,10 +122,15 @@ export default class System {
           Toxen.log(file.name + " is unsupported.");
         }
       }
-
       Toxen.loadingScreen.show(false);
-      // if (handled >= files.length) {
-      // }
+
+      if (mediaPack) {
+        Toxen.loadSongs();
+      }
     });
+  }
+
+  public static async pathExists(path: string) {
+    return fsp.stat(path).then(() => true).catch(() => false);
   }
 }

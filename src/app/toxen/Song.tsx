@@ -10,9 +10,15 @@ import Legacy from "./Legacy";
 import Debug from "./Debug";
 import { remote } from "electron";
 import { Failure, Result, Success } from "./Result";
+import System from "./System";
 
 declare class MediaMetadata {
-  constructor(object: object);
+  constructor(object: {
+    title: string;
+    artist: string;
+    album: string;
+    artwork: { src: string, sizes: string, type: string }[];
+  });
 }
 
 export default class Song implements ISong {
@@ -191,7 +197,10 @@ export default class Song implements ISong {
     return uid;
   }
 
+  private lastBlobUrl: string;
+
   public play() {
+    if (this.lastBlobUrl) URL.revokeObjectURL(this.lastBlobUrl);
     let src = this.mediaFile();
     let bg = this.backgroundFile();
     if (Toxen.musicPlayer.state.src != src) {
@@ -208,14 +217,15 @@ export default class Song implements ISong {
         canvas.width = img.naturalWidth;
         canvas.height = img.naturalHeight;
         ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
-        let dataUrl = canvas.toDataURL();
-        navigator.mediaSession.metadata = new MediaMetadata({
-          title: this.title ?? "Unknown Title",
-          artist: this.artist ?? "Unknown Artist",
-          album: this.album ?? "",
-          artwork: [
-            { src: dataUrl, sizes: `${img.naturalWidth}x${img.naturalHeight}`, type: "image/png" }
-          ]
+        canvas.toBlob(blob => {
+          navigator.mediaSession.metadata = new MediaMetadata({
+            title: this.title ?? "Unknown Title",
+            artist: this.artist ?? "Unknown Artist",
+            album: this.album ?? "",
+            artwork: [
+              { src: (this.lastBlobUrl = URL.createObjectURL(blob)), sizes: `${img.naturalWidth}x${img.naturalHeight}`, type: "image/png" }
+            ]
+          });
         });
       });
     }
@@ -335,19 +345,24 @@ export default class Song implements ISong {
     return fsp.writeFile(Path.resolve(this.dirname(), "info.json"), JSON.stringify(this.toISong()));
   }
 
-  public static async importSong(file: File): Promise<Result<Song>> {
-    return Promise.resolve().then(() => {
+  public static async importSong(file: File): Promise<Result<void>> {
+    return Promise.resolve().then(async () => {
       let supported = Toxen.getSupportedMediaFiles();
       if (!supported.some(s => Path.extname(file.name) === s)) return new Failure(file.name + " isn't a valid file");
 
-      // TODO: Import song below here using details from the File object
-      file.name // File name
-      file.path // Full file path
+      let libDir = Settings.get("libraryDirectory");
+      let nameNoExt = Path.basename(file.name, Path.extname(file.name));
+      let newFolder = Path.resolve(libDir, nameNoExt);
+      let increment = 0;
+      debugger;
+      while (await System.pathExists(newFolder)) {
+        newFolder = Path.resolve(libDir, nameNoExt + ` (${++increment})`);
+      }
 
-      const song = new Song();
-      song.title = file.name;
+      await fsp.mkdir(newFolder, { recursive: true });
+      await fsp.copyFile(file.path, Path.resolve(newFolder, file.name));
       
-      return new Success(song);
+      return new Success();
     });
   }
 }
