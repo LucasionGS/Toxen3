@@ -167,7 +167,7 @@ export class Toxen {
   public static setAllVisualColors(color: string) {
     color = color || Settings.get("visualizerColor");
     Toxen.musicControls.progressBar.setFillColor(color);
-    if (Toxen.editingSong) Toxen.editingSong.visualizerColor = color;
+    // if (Toxen.editingSong) Toxen.editingSong.visualizerColor = color;g
   };
 }
 

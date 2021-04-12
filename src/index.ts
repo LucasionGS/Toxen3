@@ -1,4 +1,4 @@
-import { app, BrowserWindow, protocol } from 'electron';
+import { app, BrowserWindow, nativeImage, protocol } from 'electron';
 import updateElectronApp from "update-electron-app";
 updateElectronApp({
   repo: "LucasionGS/Toxen3"
@@ -22,8 +22,13 @@ const createWindow = (): void => {
       webSecurity: false
     },
     autoHideMenuBar: true,
-    icon: "./icons/toxen.ico"
+    center: true,
+    icon: "./src/icons/toxen.ico",
+    darkTheme: true
   });
+
+  console.log(process.cwd());
+  
 
   // and load the index.html of the app.
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
