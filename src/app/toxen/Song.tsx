@@ -11,6 +11,7 @@ import Debug from "./Debug";
 import { remote } from "electron";
 import { Failure, Result, Success } from "./Result";
 import System from "./System";
+import Converter from "./Converter";
 
 declare class MediaMetadata {
   constructor(object: {
@@ -351,7 +352,7 @@ export default class Song implements ISong {
       if (!supported.some(s => Path.extname(file.name) === s)) return new Failure(file.name + " isn't a valid file");
 
       let libDir = Settings.get("libraryDirectory");
-      let nameNoExt = Path.basename(file.name, Path.extname(file.name));
+      let nameNoExt = Converter.trimChar(Path.basename(file.name, Path.extname(file.name)), ".");
       let newFolder = Path.resolve(libDir, nameNoExt);
       let increment = 0;
       debugger;

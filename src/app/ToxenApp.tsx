@@ -21,6 +21,8 @@ import System from "./toxen/System";
 import SidepanelSectionHeader from "./components/Sidepanel/SidepanelSectionHeader";
 import SearchField from "./components/SongPanel/SearchField";
 import Converter from "./toxen/Converter";
+import Stats from "./toxen/Statistics";
+import Time from "./toxen/Time";
 
 //#region Define variables used all over the ToxenApp process.
 /**
@@ -100,10 +102,12 @@ export class Toxen {
     // let curSong = Song.getCurrent();
     Toxen.sidePanel.setVertical(Settings.get("panelVerticalTransition") ?? false);
     Toxen.sidePanel.setDirection(Settings.get("panelDirection") ?? "left");
-    Toxen.sidePanel.setExposeIcons(Settings.get("exposePanelIcons") ?? false);
+    Toxen.sidePanel.setExposeIcons(
+      document.body.classList.toggle("exposed-icons", Settings.get("exposePanelIcons") ?? false)
+    );
     Toxen.setAllVisualColors(Toxen.background.storyboard.getVisualizerColor());
     (Settings.get("visualizerStyle") || Settings.set("visualizerStyle", VisualizerStyle.ProgressBar /* Default */));
-    
+
     Toxen.musicControls.setVolume(Settings.get("volume") ?? 50);
   }
 
@@ -167,7 +171,6 @@ export class Toxen {
   public static setAllVisualColors(color: string) {
     color = color || Settings.get("visualizerColor");
     Toxen.musicControls.progressBar.setFillColor(color);
-    // if (Toxen.editingSong) Toxen.editingSong.visualizerColor = color;g
   };
 }
 
@@ -180,7 +183,7 @@ export default class ToxenApp extends React.Component {
       .then(Settings.load) // Load settings and apply them.
       .then(async () => {
         Toxen.updateSettings();
-
+        Stats.load();
         if (Settings.get("restoreWindowSize")) {
           let win = remote.getCurrentWindow();
           // Window initial size
@@ -224,7 +227,7 @@ export default class ToxenApp extends React.Component {
         onClose={() => Toxen.sidePanel.show()}
       >
         {/* Empty object for refreshing */}
-        <SidepanelSection key="$empty" id="$empty"/>
+        <SidepanelSection key="$empty" id="$empty" />
         {/* Song Panel */}
         <SidepanelSection key="songPanel" id="songPanel" title="Music" icon={<i className="fas fa-music"></i>}>
           <SidepanelSectionHeader>
@@ -303,7 +306,7 @@ export default class ToxenApp extends React.Component {
             <h2>Window</h2>
             <FormInput type="checkbox" name="restoreWindowSize*boolean" displayName="Restore Window Size On Startup" />
             <sup>Saves and restores the window size from last session.</sup>
-            
+
             {/* Visuals settings */}
             <hr />
             <h2>Visuals</h2>
@@ -311,7 +314,7 @@ export default class ToxenApp extends React.Component {
             // onChange={v => Toxen.setAllVisualColors(v)}
             />
             <sup>Default color for the visualizer if a song specific isn't set.</sup>
-            <br/>
+            <br />
             <FormInput type="select" name="visualizerStyle*string" displayName="VisualizerStyle" >
               {(() => {
                 let objs: JSX.Element[] = [];
@@ -328,6 +331,21 @@ export default class ToxenApp extends React.Component {
             <sup>Select which style for the visualizer to use</sup>
           </Form>
         </SidepanelSection>
+
+        {/* Statistics Panel */}
+        <SidepanelSection key="stats" id="stats" title="Stats" icon={<i className="fas fa-info-circle"></i>}
+          dynamicContent={section => {
+            return (
+              <>
+                <SidepanelSectionHeader>
+                  Toxen Statistics (Experimental)
+                </SidepanelSectionHeader>
+                <p>Songs played: {Stats.get("songsPlayed")}</p>
+                <p>Time played: {new Time(Stats.get("secondsPlayed") * 1000).toTimestamp()}</p>
+              </>
+            );
+          }}
+        ></SidepanelSection>
 
         {/* No-icon panels. Doesn't appear as a clickable panel, instead only accessible by custom action */}
         {/* Edit song Panel */}
@@ -410,7 +428,7 @@ export default class ToxenApp extends React.Component {
             <hr />
             <h2>Song-specific visuals</h2>
             <FormInput nullable displayName="Visualizer Color" name="visualizerColor*string" getValueTemplateCallback={() => Toxen.editingSong} type="color"
-            onChange={v => Toxen.setAllVisualColors(v)}
+              onChange={v => Toxen.setAllVisualColors(v)}
             />
             <hr />
             <h2></h2>

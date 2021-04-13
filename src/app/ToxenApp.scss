@@ -30,3 +30,9 @@ body {
     padding: 8px;
   }
 }
+
+body.exposed-icons {
+  .song-panel-toggle {
+    display: none;
+  }
+}

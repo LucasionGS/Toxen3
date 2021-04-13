@@ -39,7 +39,7 @@ export default class Settings {
     }
   }
   /**
-   * Save Toxen's settings from `filePath`.
+   * Load Toxen's settings from `filePath`.
    */
   public static async load(): Promise<ISettings> {
     return Promise.resolve().then(async () => {

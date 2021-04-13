@@ -7,6 +7,7 @@ import "@fortawesome/fontawesome-free/scss/regular.scss";
 import "@fortawesome/fontawesome-free/scss/solid.scss";
 import Settings from "./app/toxen/Settings";
 import Song from "./app/toxen/Song";
+import Converter from "./app/toxen/Converter";
 
 // Setup
 // Create menu actions/shortcuts
