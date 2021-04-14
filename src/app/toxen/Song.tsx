@@ -12,6 +12,7 @@ import { remote } from "electron";
 import { Failure, Result, Success } from "./Result";
 import System from "./System";
 import Converter from "./Converter";
+import Stats from "./Statistics";
 
 declare class MediaMetadata {
   constructor(object: {
@@ -207,6 +208,7 @@ export default class Song implements ISong {
     if (Toxen.musicPlayer.state.src != src) {
       Toxen.musicPlayer.setSource(src, true);
       Toxen.background.setBackground(bg);
+      Stats.set("songsPlayed", (Stats.get("songsPlayed") ?? 0) + 1)
       Toxen.setAllVisualColors(this.visualizerColor);
       Toxen.background.storyboard.setSong(this);
       Toxen.background.visualizer.update();

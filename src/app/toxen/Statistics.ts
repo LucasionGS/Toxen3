@@ -7,8 +7,11 @@ import JSONX from "./JSONX";
 import { Toxen } from "../ToxenApp";
 import Settings from "./Settings";
 import Legacy, { Toxen2Stats } from "./Legacy";
+import EventEmitter from "events";
 
-export default class Stats {
+export class StatsEventEmitter extends EventEmitter { }
+
+export default class Stats extends EventEmitter {
   /**
    * Path for the statistics file.
    */
@@ -17,7 +20,7 @@ export default class Stats {
    * Save Toxen's current statistics.
    */
   public static async save() {
-    console.log("Saving...");
+    console.log("Saving stats...");
 
     if (Settings.isRemote()) {
       // Remote server
@@ -31,6 +34,9 @@ export default class Stats {
         let ws = fs.createWriteStream(Stats.filePath);
         ws.write(Buffer.from(Stats.toString()));
         ws.close();
+        Stats.events.emit("saved", {
+          savedAt: Date.now()
+        });
       } catch (error) {
         console.error(error);
       }
@@ -76,6 +82,8 @@ export default class Stats {
 
   public static data: IStatistics;
 
+  public static events: StatsEventEmitter = new StatsEventEmitter({});
+
   /**
    * Returns a stringified version of `IStatistics`.
    */
@@ -93,6 +101,7 @@ export default class Stats {
         JSONX.setObjectValue(Stats.data, key, value);
       }
     }
+    Stats.events.emit("changed", {});
   }
 
 
@@ -106,8 +115,30 @@ export default class Stats {
   public static set<T extends string, ValueType = any>(key: T, value: ValueType): ValueType;
   public static set<T extends keyof IStatistics>(key: T, value: IStatistics[T]): IStatistics[T] {
     JSONX.setObjectValue(Stats.data, key, value);
+    Stats.events.emit("changed", {});
     return value;
   }
+}
+
+export interface StatsEventEmitter extends EventEmitter {
+  addListener<TEvent extends keyof StatsEvents>(event: TEvent, listener: (args: StatsEvents[TEvent]) => void): this;
+  on<TEvent extends keyof StatsEvents>(event: TEvent, listener: (args: StatsEvents[TEvent]) => void): this;
+  once<TEvent extends keyof StatsEvents>(event: TEvent, listener: (args: StatsEvents[TEvent]) => void): this;
+  removeListener<TEvent extends keyof StatsEvents>(event: TEvent, listener: (args: StatsEvents[TEvent]) => void): this;
+  off<TEvent extends keyof StatsEvents>(event: TEvent, listener: (args: StatsEvents[TEvent]) => void): this;
+  removeAllListeners<TEvent extends keyof StatsEvents>(event?: TEvent): this;
+  listeners<TEvent extends keyof StatsEvents>(event: TEvent): Function[];
+  rawListeners<TEvent extends keyof StatsEvents>(event: TEvent): Function[];
+  emit<TEvent extends keyof StatsEvents>(event: TEvent, args: StatsEvents[TEvent]): boolean;
+  listenerCount<TEvent extends keyof StatsEvents>(event: TEvent): number;
+  prependListener<TEvent extends keyof StatsEvents>(event: TEvent, listener: (args: StatsEvents[TEvent]) => void): this;
+  prependOnceListener<TEvent extends keyof StatsEvents>(event: TEvent, listener: (args: StatsEvents[TEvent]) => void): this;
+}
+
+interface StatsEvents {
+  "changed": {};
+  "saved": {savedAt: number};
+  "loaded": [number, string];
 }
 
 export interface IStatistics {

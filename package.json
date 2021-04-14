@@ -1,7 +1,7 @@
 {
   "name": "toxen3",
   "productName": "Toxen",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Toxen Music Player",
   "main": ".webpack/main",
   "scripts": {

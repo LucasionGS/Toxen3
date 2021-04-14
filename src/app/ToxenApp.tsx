@@ -206,6 +206,14 @@ export default class ToxenApp extends React.Component {
         Toxen.loadingScreen.show(false);
         Toxen.musicPlayer.playRandom();
         Toxen.background.visualizer.start();
+
+        Stats.events.on("changed", () => {
+          if (Toxen.sidePanel.state.sectionId === "stats" && Toxen.sidePanel.isShowing()) {
+            console.log("Updated Stats");
+            
+            Toxen.reloadSection();
+          }
+        });
       })
       .then(() => Toxen._resolveWhenReady())
   }

@@ -8,6 +8,7 @@ import "@fortawesome/fontawesome-free/scss/solid.scss";
 import Settings from "./app/toxen/Settings";
 import Song from "./app/toxen/Song";
 import Converter from "./app/toxen/Converter";
+import Stats from "./app/toxen/Statistics";
 
 // Setup
 // Create menu actions/shortcuts
@@ -112,6 +113,17 @@ navigator.mediaSession.setActionHandler('previoustrack', () => {
 
 navigator.mediaSession.setActionHandler('nexttrack', () => {
   Toxen.musicPlayer.playNext();
+});
+
+Toxen.whenReady().then(() => {
+  // Interval actions
+  // Store seconds played
+  setInterval(() => {
+    if (!Toxen.musicPlayer.media.paused) Stats.set("secondsPlayed", (Stats.data.secondsPlayed ?? 0) + 1);
+  }, 1000);
+
+  // Save Stats
+  setInterval(() => Stats.save(), 30000);
 });
 
 //#endregion
