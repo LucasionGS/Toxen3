@@ -10,13 +10,14 @@ interface Props {
   direction?: PanelDirection;
   show?: boolean;
   exposeIcons?: boolean;
-  getRef?: (sidepanel: Sidepanel) => void;
   /**
    * Initial value to show on the menu.
    */
   sectionId?: string;
   vertical?: boolean;
+  width?: number;
   onClose?: (() => void);
+  onResizeFinished?: ((width: number) => void);
 }
 
 interface State {
@@ -25,6 +26,7 @@ interface State {
   vertical: boolean;
   direction: PanelDirection;
   exposeIcons: boolean;
+  width: number;
 }
 
 export default class Sidepanel extends React.Component<Props, State> {
@@ -36,12 +38,10 @@ export default class Sidepanel extends React.Component<Props, State> {
       vertical: (this.props.vertical ?? false),
       direction: (this.props.direction ?? "left"),
       exposeIcons: (this.props.exposeIcons ?? false),
+      width: (this.props.width ?? 600),
     }
   }
 
-  componentDidMount() {
-    if (typeof this.props.getRef === "function") this.props.getRef(this);
-  }
 
   private sections: SidepanelSection[] = (Array.isArray(this.props.children) ? this.props.children : [this.props.children]) as any[];
 
@@ -80,6 +80,12 @@ export default class Sidepanel extends React.Component<Props, State> {
       exposeIcons
     });
   }
+  
+  public setWidth(width: number) {
+    this.setState({
+      width
+    });
+  }
 
   public storeScroll(scrollY: number) {
     let id = this.state.sectionId;
@@ -98,10 +104,28 @@ export default class Sidepanel extends React.Component<Props, State> {
     if (this.state.show) classList.push("show");
     if (this.state.exposeIcons) classList.push("expose-icons");
 
+    let panelWidth: string;
+    let panelIconsWidth: string = "168px";
+
+    if (this.state.show) {
+      panelWidth = (Math.max(200, this.state.width)) + "px";
+    }
+    else {
+      if (!this.state.exposeIcons) {
+        panelWidth = "0px";
+      }
+      else {
+        panelWidth = "3.7em" // this will show icons instead of full hide on sidebar.
+      }
+    }
 
     let sec = this.sections.find(sec => sec?.props?.id == this.state.sectionId);
     return (
-      <div className={classList.join(" ")}>
+      <div className={classList.join(" ")}
+      style={{
+        width: panelWidth,
+        maxWidth: "100vw"
+      }}>
         <div className="sidepanel-backdrop" onClick={() => this.show(false)}></div>
         <div className="sidepanel-icons">
           <div className="sidepanel-icon sidepanel-icon-toggle" onClick={
@@ -120,6 +144,9 @@ export default class Sidepanel extends React.Component<Props, State> {
               <div className="sidepanel-icon" title={s.props.title} onClick={() => {
                 this.setSectionId(s.props.id);
                 if (this.state.exposeIcons) this.state.show || this.show(true);
+              }}
+              style={{
+                width: panelIconsWidth
               }}>
                 {s.props.icon}
                 {s.props.title && (<span className="sidepanel-icon-title">&nbsp;{s.props.title}</span>)}
@@ -127,18 +154,41 @@ export default class Sidepanel extends React.Component<Props, State> {
             </div>))}
         </div>
         {sec ?
-          <>
-            <div
-              className="sidepanel-content"
-              onScroll={e => this.scrollStorage[this.state.sectionId] = e.currentTarget.scrollTop}
-              ref={ref => {
-                if (ref) {
-                  ref.scrollTo(0, this.scrollStorage[this.state.sectionId] ?? 0);
-                }
-              }}
-            >{sec}</div>
-          </>
+          <div
+            className="sidepanel-content"
+            onScroll={e => this.scrollStorage[this.state.sectionId] = e.currentTarget.scrollTop}
+            ref={ref => {
+              if (ref) {
+                ref.scrollTo(0, this.scrollStorage[this.state.sectionId] ?? 0);
+              }
+            }}
+            style={{
+              width: this.state.show ? "100%" : "0px"
+            }}
+          >{sec}</div>
           : ""}
+          {(() => {
+            let holding = false;
+
+            const upHandler = () => {
+              window.removeEventListener("mousemove", moveHandler);
+              window.removeEventListener("mouseup", upHandler);
+              holding = false;
+              if (typeof this.props.onResizeFinished === "function") this.props.onResizeFinished(this.state.width);
+            }
+            
+            const moveHandler = (e: MouseEvent) => {
+              this.setWidth(e.clientX + 4);
+            }
+            
+            return (<div className="sidepanel-resizer" onMouseDown={e => {
+              e.preventDefault();
+              holding = true;
+              window.addEventListener("mousemove", moveHandler);
+              window.addEventListener("mouseup", upHandler);
+            }}
+            />);
+          })()}
       </div>
     )
   }

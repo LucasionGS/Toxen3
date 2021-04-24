@@ -116,6 +116,10 @@ navigator.mediaSession.setActionHandler('nexttrack', () => {
 });
 
 Toxen.whenReady().then(() => {
+  // Count toxen times opened
+  Stats.set("timesOpened", (Stats.get("timesOpened") ?? 0) + 1);
+  Stats.save(); // Store when ready
+  
   // Interval actions
   // Store seconds played
   setInterval(() => {

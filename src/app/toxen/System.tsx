@@ -30,7 +30,7 @@ export default class System {
     return files;
   }
 
-  public static async handleImportedFiles(files: FileList | File[]) {
+  public static async handleImportedFiles(files: FileList | (File | ToxenFile)[]) {
     Promise.resolve().then(async () => {
       if (files instanceof FileList) files = [...files];
       let sMedia = Toxen.getSupportedMediaFiles();
@@ -133,4 +133,9 @@ export default class System {
   public static async pathExists(path: string) {
     return fsp.stat(path).then(() => true).catch(() => false);
   }
+}
+
+export interface ToxenFile {
+  readonly name: string;
+  readonly path: string;
 }

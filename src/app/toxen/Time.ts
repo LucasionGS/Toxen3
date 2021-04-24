@@ -67,7 +67,7 @@ export default class Time {
   }
 
   public toTimestampLiteral() {
-    
+    return `${this.hours} hours, ${this.minutes} min, ${this.seconds} sec`;
   }
 
   public fromFormat(format: string) {

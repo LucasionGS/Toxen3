@@ -121,12 +121,13 @@ export interface ISettings {
   // General settings
   libraryDirectory: string;
   isRemote: boolean;
+  volume: number;
 
   // Panel settings
   panelVerticalTransition: boolean;
   panelDirection: PanelDirection;
   exposePanelIcons: boolean;
-  volume: number;
+  panelWidth: number;
 
   // Window
   restoreWindowSize: boolean;
@@ -141,6 +142,7 @@ export interface ISettings {
 export enum VisualizerStyle {
   None = "none",
   ProgressBar = "progressbar",
+  ProgressBarRainbow = "progressbarR",
   Bottom = "bottom",
   Top = "top",
   TopAndBottom = "topbottom",

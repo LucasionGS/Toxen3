@@ -67,6 +67,31 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
         break;
       }
       
+      case VisualizerStyle.ProgressBarRainbow: {
+        let cycleIncrementer = 360 / len;
+        vHeight = Toxen.musicControls.progressBar.progressBarObject.getBoundingClientRect().top;
+        vLeft = Toxen.musicControls.progressBar.progressBarObject.getBoundingClientRect().left;
+        const maxHeight = vHeight * 0.30;
+        const unitW = ((vWidth - 20 /* Progress bar curve */) - (vLeft * 2)) / len;
+        const unitH = maxHeight / dataSize;
+        for (let i = 0; i < len; i++) {
+          ctx.fillStyle = ctx.strokeStyle = `hsl(${cycleIncrementer * i + (Toxen.musicPlayer.media.currentTime * 100)}, 100%, 50%)`;
+          const data = dataArray[i];
+          const _barHeight = (data * unitH);
+          // Position and size
+          const [barX, barY, barWidth, barHeight] = [
+            (i * unitW) + vLeft + 10 /* Progress bar curve */, // barX
+            vHeight - _barHeight + vTop, // barY
+            unitW, // barWidth
+            _barHeight // barHeight
+          ];
+          this.ctxAlpha(opacity, ctx => {
+            ctx.fillRect(barX, barY, barWidth, barHeight); // Draw basic visualizer
+          });
+        }
+        break;
+      }
+      
       case VisualizerStyle.Bottom: {
         const maxHeight = vHeight * 0.30;
         const unitW = vWidth / len;

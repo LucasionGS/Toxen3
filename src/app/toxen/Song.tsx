@@ -10,7 +10,7 @@ import Legacy from "./Legacy";
 import Debug from "./Debug";
 import { remote } from "electron";
 import { Failure, Result, Success } from "./Result";
-import System from "./System";
+import System, { ToxenFile } from "./System";
 import Converter from "./Converter";
 import Stats from "./Statistics";
 
@@ -348,7 +348,7 @@ export default class Song implements ISong {
     return fsp.writeFile(Path.resolve(this.dirname(), "info.json"), JSON.stringify(this.toISong()));
   }
 
-  public static async importSong(file: File): Promise<Result<void>> {
+  public static async importSong(file: File | ToxenFile): Promise<Result<void>> {
     return Promise.resolve().then(async () => {
       let supported = Toxen.getSupportedMediaFiles();
       if (!supported.some(s => Path.extname(file.name) === s)) return new Failure(file.name + " isn't a valid file");

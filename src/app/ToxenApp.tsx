@@ -17,7 +17,7 @@ import Settings, { VisualizerStyle } from "./toxen/Settings";
 import Song from "./toxen/Song";
 import "./ToxenApp.scss";
 import "./tx.scss";
-import System from "./toxen/System";
+import System, { ToxenFile } from "./toxen/System";
 import SidepanelSectionHeader from "./components/Sidepanel/SidepanelSectionHeader";
 import SearchField from "./components/SongPanel/SearchField";
 import Converter from "./toxen/Converter";
@@ -203,17 +203,18 @@ export default class ToxenApp extends React.Component {
         await Toxen.loadSongs();
         Toxen.songPanel.update();
         Toxen.sidePanel.show(true);
+        Toxen.sidePanel.setWidth(Settings.get("panelWidth"));
         Toxen.loadingScreen.show(false);
         Toxen.musicPlayer.playRandom();
         Toxen.background.visualizer.start();
 
-        Stats.events.on("changed", () => {
-          if (Toxen.sidePanel.state.sectionId === "stats" && Toxen.sidePanel.isShowing()) {
-            console.log("Updated Stats");
+        // Stats.events.on("changed", () => {
+        //   if (Toxen.sidePanel.state.sectionId === "stats" && Toxen.sidePanel.isShowing()) {
+        //     console.log("Updated Stats");
             
-            Toxen.reloadSection();
-          }
-        });
+        //     Toxen.reloadSection();
+        //   }
+        // });
       })
       .then(() => Toxen._resolveWhenReady())
   }
@@ -233,6 +234,11 @@ export default class ToxenApp extends React.Component {
         show={false}
         ref={sidePanel => Toxen.sidePanel = sidePanel}
         onClose={() => Toxen.sidePanel.show()}
+
+        onResizeFinished={w => {
+          Settings.set("panelWidth", w);
+          Settings.save();
+        }}
       >
         {/* Empty object for refreshing */}
         <SidepanelSection key="$empty" id="$empty" />
@@ -257,7 +263,33 @@ export default class ToxenApp extends React.Component {
         {/* Import Panel */}
         <SidepanelSection key="importSong" id="importSong" title="Import" icon={<i className="fas fa-file-import"></i>}>
           <h1>Import song</h1>
-          <button className="tx-btn"><i className="fas fa-file-import"></i>&nbsp;Import song from Files</button>
+          <button className="tx-btn"
+          onClick={() => {
+            let paths = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
+              properties: [
+                "multiSelections",
+                "openFile"
+              ],
+              filters: [
+                {
+                  name: "Media files",
+                  extensions: Toxen.getSupportedMediaFiles().map(ext => ext.replace(".", ""))
+                },
+              ],
+
+            });
+
+            if (!paths || paths.length == 0) return;
+            
+            const promisedFiles: ToxenFile[] = paths.map(p => ({
+              name: Path.basename(p),
+              path: p
+            }));
+            Promise.all(promisedFiles).then(files => {
+              System.handleImportedFiles(files);
+            });
+          }}
+          ><i className="fas fa-file-import"></i>&nbsp;Import song from Files</button>
         </SidepanelSection>
 
         {/* Playlist Management Panel */}
@@ -348,8 +380,13 @@ export default class ToxenApp extends React.Component {
                 <SidepanelSectionHeader>
                   Toxen Statistics (Experimental)
                 </SidepanelSectionHeader>
-                <p>Songs played: {Stats.get("songsPlayed")}</p>
-                <p>Time played: {new Time(Stats.get("secondsPlayed") * 1000).toTimestamp()}</p>
+                <h2>General</h2>
+                <p>Toxen launched {Stats.get("timesOpened")} times</p>
+                <hr/>
+                <h2>Audio Stats</h2>
+                <p>{Toxen.songList.length} total songs</p>
+                <p>{Stats.get("songsPlayed")} songs played</p>
+                <p>{new Time(Stats.get("secondsPlayed") * 1000).toTimestamp()} Time played</p>
               </>
             );
           }}
@@ -423,7 +460,7 @@ export default class ToxenApp extends React.Component {
               }
             }
 
-            Toxen.editingSong.saveInfo();
+            Toxen.editingSong.saveInfo().then(() => Toxen.reloadSection());
           }}>
             <h2>General information</h2>
             {/* <FormInput displayName="Location" name="paths.dirname*string" getValueTemplateCallback={() => Toxen.editingSong} type="text" readOnly /> */}
