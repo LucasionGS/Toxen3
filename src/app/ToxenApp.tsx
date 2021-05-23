@@ -355,7 +355,7 @@ export default class ToxenApp extends React.Component {
             />
             <sup>Default color for the visualizer if a song specific isn't set.</sup>
             <br />
-            <FormInput type="select" name="visualizerStyle*string" displayName="VisualizerStyle" >
+            <FormInput type="select" name="visualizerStyle*string" displayName="Visualizer Style" >
               {(() => {
                 let objs: JSX.Element[] = [];
                 for (const key in VisualizerStyle) {
@@ -535,7 +535,7 @@ export default class ToxenApp extends React.Component {
               })}
             />
 
-            <FormInput type="select" name="visualizerStyle*string" displayName="VisualizerStyle" getValueTemplateCallback={() => Toxen.editingSong}>
+            <FormInput type="select" name="visualizerStyle*string" displayName="Visualizer Style" getValueTemplateCallback={() => Toxen.editingSong}>
               {(() => {
                 let objs: JSX.Element[] = [
                   <option key={null} className="tx-form-field" value={""}>{"<Default>"}</option>
