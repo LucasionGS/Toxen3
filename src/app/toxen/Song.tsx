@@ -13,15 +13,9 @@ import { Failure, Result, Success } from "./Result";
 import System, { ToxenFile } from "./System";
 import Converter from "./Converter";
 import Stats from "./Statistics";
+import navigator, { MediaMetadata } from "../../navigator";
 
-declare class MediaMetadata {
-  constructor(object: {
-    title: string;
-    artist: string;
-    album: string;
-    artwork: { src: string, sizes: string, type: string }[];
-  });
-}
+console.log(MediaMetadata);
 
 export default class Song implements ISong {
   public uid: string;

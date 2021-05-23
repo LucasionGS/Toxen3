@@ -9,6 +9,7 @@ import Settings from "./app/toxen/Settings";
 import Song from "./app/toxen/Song";
 import Converter from "./app/toxen/Converter";
 import Stats from "./app/toxen/Statistics";
+import navigator from "./navigator";
 
 // Setup
 // Create menu actions/shortcuts
