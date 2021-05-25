@@ -24,6 +24,10 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
     this.setState({ song });
   }
 
+  public getSong() {
+    return this.state.song;
+  };
+
   render() {
     return (
       <div className="toxen-storyboard">

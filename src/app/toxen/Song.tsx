@@ -28,6 +28,7 @@ export default class Song implements ISong {
   public paths: ISongPaths;
   public visualizerColor: string;
   public visualizerStyle: VisualizerStyle;
+  public visualizerForceRainbowMode: boolean;
 
 
   /**
@@ -100,21 +101,15 @@ export default class Song implements ISong {
       album: this.album,
       visualizerColor: this.visualizerColor,
       visualizerStyle: this.visualizerStyle,
+      visualizerForceRainbowMode: this.visualizerForceRainbowMode,
     }
   }
 
   public static async buildInfo(fullPath: string) {
     return Promise.resolve().then(async () => {
-      let info: ISong = {
+      let info: Partial<ISong> = {
         uid: Song.generateUID(),
-        artist: null,
-        title: null,
-        album: null,
-        coArtists: null,
-        source: null,
-        tags: null,
-        visualizerColor: null,
-        visualizerStyle: null,
+        // Other settings...
         paths: {
           dirname: null,
           background: null,
@@ -169,7 +164,7 @@ export default class Song implements ISong {
         try {
           if (await fsp.stat(Path.resolve(fullPath, "details.json")).then(() => true).catch(() => false)) {
             let path = Path.resolve(fullPath, "details.json");
-            info = await Legacy.toxen2SongDetailsToInfo(JSON.parse(await fsp.readFile(path, "utf8")), info)
+            info = await Legacy.toxen2SongDetailsToInfo(JSON.parse(await fsp.readFile(path, "utf8")), info as ISong)
           }
         } catch (error) {
           console.error("There was an error trying to convert details.json into info.json");
@@ -177,7 +172,7 @@ export default class Song implements ISong {
       }
 
       await dir.close();
-      return info;
+      return info as ISong;
     });
   }
 
@@ -374,6 +369,7 @@ export interface ISong {
   tags: string[];
   visualizerColor: string;
   visualizerStyle: VisualizerStyle;
+  visualizerForceRainbowMode: boolean;
   paths: ISongPaths;
 }
 

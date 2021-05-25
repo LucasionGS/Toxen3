@@ -211,7 +211,7 @@ export default class ToxenApp extends React.Component {
         // Stats.events.on("changed", () => {
         //   if (Toxen.sidePanel.state.sectionId === "stats" && Toxen.sidePanel.isShowing()) {
         //     console.log("Updated Stats");
-            
+
         //     Toxen.reloadSection();
         //   }
         // });
@@ -264,31 +264,31 @@ export default class ToxenApp extends React.Component {
         <SidepanelSection key="importSong" id="importSong" title="Import" icon={<i className="fas fa-file-import"></i>}>
           <h1>Import song</h1>
           <button className="tx-btn"
-          onClick={() => {
-            let paths = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
-              properties: [
-                "multiSelections",
-                "openFile"
-              ],
-              filters: [
-                {
-                  name: "Media files",
-                  extensions: Toxen.getSupportedMediaFiles().map(ext => ext.replace(".", ""))
-                },
-              ],
+            onClick={() => {
+              let paths = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
+                properties: [
+                  "multiSelections",
+                  "openFile"
+                ],
+                filters: [
+                  {
+                    name: "Media files",
+                    extensions: Toxen.getSupportedMediaFiles().map(ext => ext.replace(".", ""))
+                  },
+                ],
 
-            });
+              });
 
-            if (!paths || paths.length == 0) return;
-            
-            const promisedFiles: ToxenFile[] = paths.map(p => ({
-              name: Path.basename(p),
-              path: p
-            }));
-            Promise.all(promisedFiles).then(files => {
-              System.handleImportedFiles(files);
-            });
-          }}
+              if (!paths || paths.length == 0) return;
+
+              const promisedFiles: ToxenFile[] = paths.map(p => ({
+                name: Path.basename(p),
+                path: p
+              }));
+              Promise.all(promisedFiles).then(files => {
+                System.handleImportedFiles(files);
+              });
+            }}
           ><i className="fas fa-file-import"></i>&nbsp;Import song from Files</button>
         </SidepanelSection>
 
@@ -355,20 +355,26 @@ export default class ToxenApp extends React.Component {
             />
             <sup>Default color for the visualizer if a song specific isn't set.</sup>
             <br />
+
+            <FormInput type="checkbox" name="visualizerRainbowMode*boolean" displayName="Rainbow Mode" />
+            <sup>Override the visualizer color to show a colorful rainbow visualizer.</sup>
+            <br />
+
             <FormInput type="select" name="visualizerStyle*string" displayName="Visualizer Style" >
-              {(() => {
-                let objs: JSX.Element[] = [];
-                for (const key in VisualizerStyle) {
-                  if (Object.prototype.hasOwnProperty.call(VisualizerStyle, key)) {
-                    const v = (VisualizerStyle as any)[key];
-                    objs.push(<option key={key} className="tx-form-field" value={v}>{Converter.camelCaseToSpacing(key)}</option>)
-                  }
+            {(() => {
+              let objs: JSX.Element[] = [];
+              for (const key in VisualizerStyle) {
+                if (Object.prototype.hasOwnProperty.call(VisualizerStyle, key)) {
+                  const v = (VisualizerStyle as any)[key];
+                  objs.push(<option key={key} className="tx-form-field" value={v}>{Converter.camelCaseToSpacing(key)}</option>)
                 }
-                return objs;
-              })()}
+              }
+              return objs;
+            })()}
             </FormInput>
             <br />
-            <sup>Select which style for the visualizer to use</sup>
+            <sup>Select which style for the visualizer to use.</sup>
+            <br />
           </Form>
         </SidepanelSection>
 
@@ -382,7 +388,7 @@ export default class ToxenApp extends React.Component {
                 </SidepanelSectionHeader>
                 <h2>General</h2>
                 <p>Toxen launched {Stats.get("timesOpened")} times</p>
-                <hr/>
+                <hr />
                 <h2>Audio Stats</h2>
                 <p>{Toxen.songList.length} total songs</p>
                 <p>{Stats.get("songsPlayed")} songs played</p>
@@ -475,6 +481,10 @@ export default class ToxenApp extends React.Component {
             <FormInput nullable displayName="Visualizer Color" name="visualizerColor*string" getValueTemplateCallback={() => Toxen.editingSong} type="color"
               onChange={v => Toxen.setAllVisualColors(v)}
             />
+
+            <FormInput type="checkbox" name="visualizerForceRainbowMode*boolean" displayName="Force Visualizer Rainbow Mode" getValueTemplateCallback={() => Toxen.editingSong} />
+            <br />
+            <sup>Enable to force Rainbow mode onto this song. If disabled, but the global settings have it enabled, this will also be enabled.</sup>
             <hr />
             <h2></h2>
             <FormInput displayName="Media File" name="paths.media*string" getValueTemplateCallback={() => Toxen.editingSong} type="selectAsync"

@@ -137,14 +137,15 @@ export interface ISettings {
   // Visuals
   visualizerColor: string;
   visualizerStyle: VisualizerStyle;
+  visualizerRainbowMode: boolean;
 }
 
 export enum VisualizerStyle {
   None = "none",
   ProgressBar = "progressbar",
-  ProgressBarRainbow = "progressbarR",
   Bottom = "bottom",
   Top = "top",
   TopAndBottom = "topbottom",
   Center = "center",
+  Circle = "circle",
 };
