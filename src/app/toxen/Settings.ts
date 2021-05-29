@@ -147,5 +147,5 @@ export enum VisualizerStyle {
   Top = "top",
   TopAndBottom = "topbottom",
   Center = "center",
-  Circle = "circle",
+  Singularity = "circle",
 };

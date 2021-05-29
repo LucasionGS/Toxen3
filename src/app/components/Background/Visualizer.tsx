@@ -1,8 +1,14 @@
 import React, { Component } from 'react';
 import Settings, { VisualizerStyle } from '../../toxen/Settings';
 import { Toxen } from '../../ToxenApp';
-import MusicPlayer from '../MusicPlayer';
+import Path from "path";
 import "./Visualizer.scss";
+
+const imgSize = 256;
+const toxenLogo = new Image(imgSize, imgSize);
+toxenLogo.src = Path.resolve("./src/icons/toxen.png");
+console.log(toxenLogo.src);
+
 
 interface VisualizerProps { }
 
@@ -44,12 +50,15 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     const len = this.curLen = dataArray.length;
     let opacity = 0.7;
 
+    const power = (1 / (Settings.get("volume") / 100));
+    const getMaxHeight = (multipler?: number) => (vHeight * (multipler ?? 1)) ^ power ^ power
+
     switch (style) {
       default:
       case VisualizerStyle.ProgressBar: { // Progress bar is default.
         vHeight = Toxen.musicControls.progressBar.progressBarObject.getBoundingClientRect().top;
         vLeft = Toxen.musicControls.progressBar.progressBarObject.getBoundingClientRect().left;
-        const maxHeight = vHeight * 0.30;
+        const maxHeight = getMaxHeight(0.30);
         const unitW = ((vWidth - 20 /* Progress bar curve */) - (vLeft * 2)) / len;
         const unitH = maxHeight / dataSize;
         for (let i = 0; i < len; i++) {
@@ -68,7 +77,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
             top: false,
             bottom: true
           });
-          
+
           this.ctxAlpha(opacity, ctx => {
             ctx.fillRect(barX, barY, barWidth, barHeight); // Draw basic visualizer
           });
@@ -77,7 +86,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
       }
 
       case VisualizerStyle.Bottom: {
-        const maxHeight = vHeight * 0.30;
+        const maxHeight = getMaxHeight(0.30);
         const unitW = vWidth / len;
         const unitH = maxHeight / dataSize;
         for (let i = 0; i < len; i++) {
@@ -96,7 +105,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
             top: false,
             bottom: true
           });
-          
+
           this.ctxAlpha(opacity, ctx => {
             ctx.fillRect(barX, barY, barWidth, barHeight); // Bottom visuals
           });
@@ -105,7 +114,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
       }
 
       case VisualizerStyle.Top: {
-        const maxHeight = vHeight * 0.30;
+        const maxHeight = getMaxHeight(0.30);
         const unitW = vWidth / len;
         const unitH = maxHeight / dataSize;
         for (let i = 0; i < len; i++) {
@@ -118,13 +127,13 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
             unitW, // barWidth
             _barHeight // barHeight
           ];
-          
+
           // If rainbow:
           this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, null, {
             top: true,
             bottom: false
           });
-          
+
           this.ctxAlpha(opacity, ctx => {
             ctx.fillRect(barX, barY, barWidth, barHeight); // Top visuals
           });
@@ -133,7 +142,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
       }
 
       case VisualizerStyle.TopAndBottom: {
-        const maxHeight = vHeight * 0.30;
+        const maxHeight = getMaxHeight(0.30);
         const unitW = vWidth / len;
         const unitH = maxHeight / dataSize;
         for (let i = 0; i < len; i++) {
@@ -146,17 +155,17 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
             unitW, // barWidth
             _barHeight // barHeight
           ];
-          
+
           this.ctxAlpha(opacity, ctx => {
             this.setRainbowIfEnabled(ctx, barX, 0, barWidth, barHeight, i, null, {
-            top: true,
-            bottom: false
-          });
+              top: true,
+              bottom: false
+            });
             ctx.fillRect(barX, 0, barWidth, barHeight); // Top visuals
             this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, null, {
               top: false,
               bottom: true
-          });
+            });
             ctx.fillRect(barX, barY, barWidth, barHeight); // Bottom visuals
           });
         }
@@ -164,7 +173,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
       }
 
       case VisualizerStyle.Center: {
-        const maxHeight = vHeight * 0.25;
+        const maxHeight = getMaxHeight(0.25);
         const unitW = vWidth / len;
         const unitH = maxHeight / dataSize;
         for (let i = 0; i < len; i++) {
@@ -177,11 +186,11 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
             unitW, // barWidth
             _barHeight * 2 // barHeight
           ];
-          
+
           // If rainbow:
           this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i);
-          
-          
+
+
           this.ctxAlpha(opacity, ctx => {
             ctx.fillRect(barX, barY, barWidth, barHeight); // Draw basic visualizer
           });
@@ -189,10 +198,11 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
         break;
       }
 
-      case VisualizerStyle.Circle: {
+      case VisualizerStyle.Singularity: {
         let cycleIncrementer = 360 / len;
-        
-        const maxHeight = vHeight * 0.50;
+        const maxHeight = getMaxHeight(0.50);
+        // let smallestHeight = maxHeight;
+        let smallestHeight = 0;
         const unitH = maxHeight / dataSize;
         // const unitW = (vWidth * 1.25 + unitH) / len;
         const unitW = unitH * 5;
@@ -207,9 +217,11 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
             _barHeight // barHeight
           );
 
+          // if (smallestHeight > barHeight) smallestHeight = barHeight;
+          smallestHeight += barHeight;
           // If rainbow:
           this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, cycleIncrementer);
-          
+
           this.ctxAlpha(opacity, ctx => {
             ctx.save();
             ctx.setTransform(1, 0, 0, 1, barX, barY);
@@ -218,9 +230,27 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
             ctx.restore();
           });
         }
+
+        smallestHeight /= len;
+        smallestHeight *= 1.5;
+        // smallestHeight += 128;
+        this.ctxAlpha(opacity, ctx => {
+          if (toxenLogo.complete) {
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, (vWidth / 2) - imgSize, (vHeight / 2) - imgSize);
+            ctx.drawImage(toxenLogo,
+              0, 0,
+              imgSize, imgSize,
+              imgSize - smallestHeight / 2, imgSize - smallestHeight / 2,
+              smallestHeight, smallestHeight
+            );
+            ctx.restore();
+          }
+          // console.log(smallestHeight);
+        })
         break;
       }
-      
+
     }
   }
 
@@ -245,7 +275,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     bottom?: boolean;
   }) {
     const rainbowColor = `hsl(${(cycleIncrementer ?? this.getCycleIncrementer()) * i + (Toxen.musicPlayer.media.currentTime * 100)}, 100%, 50%)`;
-    
+
     const grd = ctx.createLinearGradient(barX, barY, barX + barWidth, barY + barHeight);
     if (!options) {
       grd.addColorStop(0, rainbowColor);
@@ -269,7 +299,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     ctx.fillStyle = grd;
     ctx.strokeStyle = grd;
   }
-  
+
   /**
    * Toggles on Rainbow colors only if `Settings.get("visualizerRainbowMode")` is `true`
    */
@@ -303,7 +333,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     source.connect(analyser);
     this.audioData = analyser;
   }
-  
+
 
   public static readonly DEFAULT_FFTSIZE = 1024;
   private getFrequencyData(fftSize?: number) {

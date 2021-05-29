@@ -1,10 +1,10 @@
 export default class ArrayX<T> extends Array<T> {
-  constructor(arrayLength?: number);
-  constructor(arrayLength: number);
-  constructor(...items: T[]);
-  constructor() {
-    super();
-  }
+  // constructor(arrayLength?: number);
+  // constructor(arrayLength: number);
+  // constructor(...items: T[]);
+  // constructor() {
+  //   super();
+  // }
 
   /**
    * Remove the elements from the array that the filter finds and returns it in a new array.
