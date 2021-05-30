@@ -3,12 +3,14 @@ import Settings, { VisualizerStyle } from '../../toxen/Settings';
 import { Toxen } from '../../ToxenApp';
 import Path from "path";
 import "./Visualizer.scss";
+import System from '../../toxen/System';
+//@ts-expect-error 
+import txnLogo from "../../../icons/toxen.png";
 
 const imgSize = 256;
 const toxenLogo = new Image(imgSize, imgSize);
-toxenLogo.src = Path.resolve("./src/icons/toxen.png");
-console.log(toxenLogo.src);
-
+toxenLogo.src = txnLogo;
+console.log(toxenLogo.src, txnLogo);
 
 interface VisualizerProps { }
 
@@ -17,7 +19,6 @@ interface VisualizerState { }
 export default class Visualizer extends Component<VisualizerProps, VisualizerState> {
   constructor(props: VisualizerProps) {
     super(props);
-
     this.state = {};
   }
 
@@ -52,7 +53,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
 
     const power = (1 / (Settings.get("volume") / 100));
     const getMaxHeight = (multipler?: number) => (vHeight * (multipler ?? 1)) ^ power ^ power
-
+    let useLogo = false;
     switch (style) {
       default:
       case VisualizerStyle.ProgressBar: { // Progress bar is default.
@@ -198,6 +199,9 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
         break;
       }
 
+      case VisualizerStyle.SingularityWithLogo:
+        // Use logo if SingularityWithLogo is selected, and fall through into the regular Singularity.
+        useLogo = true;
       case VisualizerStyle.Singularity: {
         let cycleIncrementer = 360 / len;
         const maxHeight = getMaxHeight(0.50);
@@ -217,7 +221,6 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
             _barHeight // barHeight
           );
 
-          // if (smallestHeight > barHeight) smallestHeight = barHeight;
           smallestHeight += barHeight;
           // If rainbow:
           this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, cycleIncrementer);
@@ -231,23 +234,31 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           });
         }
 
-        smallestHeight /= len;
-        smallestHeight *= 1.5;
-        // smallestHeight += 128;
-        this.ctxAlpha(opacity, ctx => {
-          if (toxenLogo.complete) {
-            ctx.save();
-            ctx.setTransform(1, 0, 0, 1, (vWidth / 2) - imgSize, (vHeight / 2) - imgSize);
-            ctx.drawImage(toxenLogo,
-              0, 0,
-              imgSize, imgSize,
-              imgSize - smallestHeight / 2, imgSize - smallestHeight / 2,
-              smallestHeight, smallestHeight
-            );
-            ctx.restore();
-          }
-          // console.log(smallestHeight);
-        })
+        if (useLogo) {
+          smallestHeight /= len;
+          smallestHeight *= 1.5;
+          // smallestHeight += 128;
+          this.ctxAlpha(opacity, ctx => {
+            if (toxenLogo.complete) {
+              ctx.save();
+              ctx.setTransform(1, 0, 0, 1, (vWidth / 2) - imgSize, (vHeight / 2) - imgSize);
+              ctx.drawImage(toxenLogo,
+                0,
+                0,
+
+                imgSize,
+                imgSize,
+
+                imgSize - smallestHeight / 2,
+                imgSize - smallestHeight / 2,
+                
+                smallestHeight,
+                smallestHeight
+              );
+              ctx.restore();
+            }
+          })
+        }
         break;
       }
 

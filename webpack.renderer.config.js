@@ -22,13 +22,21 @@ rules.push(
     use: [
       {
         loader: 'file-loader',
-        // options: {
-        //   name: '[name].[ext]',
-        //   outputPath: 'fonts/'
-        // }
       }
     ]
-  }
+  },
+  {
+    test: /\.(png|jpg|jpeg)$/,
+    use: [
+      {
+        loader: 'file-loader',
+        options: {
+          publicPath: '../', // Needs this to correctly locate files, for some reason...
+          
+        }
+      }
+    ]
+  },
 );
 
 module.exports = {

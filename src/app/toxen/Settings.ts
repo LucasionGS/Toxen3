@@ -148,4 +148,5 @@ export enum VisualizerStyle {
   TopAndBottom = "topbottom",
   Center = "center",
   Singularity = "circle",
+  SingularityWithLogo = "circlelogo",
 };
