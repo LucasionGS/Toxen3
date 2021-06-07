@@ -1,7 +1,6 @@
 export default class JSONX {
   private constructor() { }
   public static getObjectValue<T = any>(object: object, key: string): T {
-    // debugger;
     const parts = key.split(".");
     let dest: any = object;
     parts.forEach((keyPart, i) => {
@@ -17,7 +16,6 @@ export default class JSONX {
   }
   
   public static setObjectValue<T = any>(object: object, key: string, value: T) {
-    // debugger;
     const parts = key.split(".");
     let dest: any = object;
     parts.forEach((keyPart, i) => {

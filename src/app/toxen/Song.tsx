@@ -1,6 +1,6 @@
 import React from "react";
 import { resolve } from "path";
-import Settings from "./Settings";
+import Settings, { VisualizerStyle } from "./Settings";
 import fsp from "fs/promises";
 import { Dir, Dirent } from "fs";
 import { Toxen } from "../ToxenApp";
@@ -8,33 +8,52 @@ import Path from "path";
 import SongElement from "../components/SongPanel/SongElement";
 import Legacy from "./Legacy";
 import Debug from "./Debug";
+import { remote } from "electron";
+import { Failure, Result, Success } from "./Result";
+import System, { ToxenFile } from "./System";
+import Converter from "./Converter";
+import Stats from "./Statistics";
+import navigator, { MediaMetadata } from "../../navigator";
+
+console.log(MediaMetadata);
 
 export default class Song implements ISong {
   public uid: string;
   public artist: string;
   public coArtists: string[];
   public title: string;
+  public album: string;
+  public source: string;
+  public tags: string[];
   public paths: ISongPaths;
+  public visualizerColor: string;
+  public visualizerStyle: VisualizerStyle;
+  public visualizerForceRainbowMode: boolean;
+
 
   /**
    * Return the full path of the song folder.
    */
-  public dirname() {
-    return this.paths && this.paths.dirname ? resolve(this.paths.dirname): null;
+  public dirname(relativePath?: string) {
+    // if (Settings.isRemote()) `${Settings.get("libraryDirectory")}/${this.paths.dirname}`;
+    // else
+    return this.paths && this.paths.dirname ? resolve(Settings.get("libraryDirectory"), this.paths.dirname, relativePath ?? ".") : null;
   }
 
   /**
    * Return the full path of the media file.
    */
   public mediaFile() {
-    return this.paths && this.paths.media ? resolve(this.dirname(), this.paths.media): null;
+    if (Settings.isRemote())`${this.dirname()}/${this.paths.media}`;
+    else return this.paths && this.paths.media ? resolve(this.dirname(), this.paths.media) : null;
   }
-  
+
   /**
    * Return the full path of the media file.
    */
   public backgroundFile() {
-    return this.paths && this.paths.background ? resolve(this.dirname(), this.paths.background): "";
+    if (Settings.isRemote())`${this.dirname()}/${this.paths.background}`;
+    else return this.paths && this.paths.background ? resolve(this.dirname(), this.paths.background) : "";
   }
 
   public getDisplayName() {
@@ -52,42 +71,62 @@ export default class Song implements ISong {
   public Element(getRef: (ref: SongElement) => void): JSX.Element;
   public Element(getRef?: (ref: SongElement) => void) {
     return (
-      <SongElement key={this.uid} song={this} getRef={getRef} />
+      <SongElement playing={this.isPlaying()} key={this.uid} song={this} getRef={getRef} ref={ref => this.currentElement = ref} />
     );
   }
 
-  public static create(data: ISong) {
+  public static create(data: Partial<ISong>) {
     let song = new Song();
+    
+    for (const key in data) {
+      if (key in data) {
+        const v = (data as any)[key];
+        (song as any)[key] = v;
+      }
+    }
     song.uid = data.uid ?? Song.generateUID();
-    song.artist = data.artist;
-    song.coArtists = data.coArtists;
-    song.title = data.title;
-    song.paths = data.paths;
 
     return song;
   }
 
-  public static async buildInfo(path: string) {
+  public toISong(): ISong {
+    return {
+      uid: this.uid,
+      artist: this.artist,
+      title: this.title,
+      coArtists: this.coArtists,
+      paths: this.paths,
+      source: this.source,
+      tags: this.tags,
+      album: this.album,
+      visualizerColor: this.visualizerColor,
+      visualizerStyle: this.visualizerStyle,
+      visualizerForceRainbowMode: this.visualizerForceRainbowMode,
+    }
+  }
+
+  public static async buildInfo(fullPath: string) {
     return Promise.resolve().then(async () => {
-      let info: ISong = {
+      let info: Partial<ISong> = {
         uid: Song.generateUID(),
-        artist: null,
-        title: null,
-        coArtists: null,
+        // Other settings...
         paths: {
-          dirname: Path.resolve(path),
+          dirname: null,
           background: null,
-          media: null
+          media: null,
+          subtitles: null,
+          storyboard: null,
         },
       };
-      var dir = await fsp.opendir(path);
+      const dir = await fsp.opendir(fullPath);
       let ent: Dirent;
       while (ent = await dir.read()) {
         if (ent.isFile()) {
-          switch (Path.extname(ent.name).toLowerCase()) {
+          let ext = Path.extname(ent.name).toLowerCase();
+          switch (ext) {
             case ".mp3":
             case ".mp4":
-              if (!info.paths.media) info.paths.media = ent.name;
+              if (!info.paths.media || info.paths.media.toLowerCase().endsWith(".mp3")) info.paths.media = ent.name;
               if (!info.title && !info.artist) {
                 const name = Path.basename(ent.name, Path.extname(ent.name))
                 if (ent.name.indexOf(" - ") > -1) {
@@ -110,51 +149,121 @@ export default class Song implements ISong {
             case ".webm":
               if (!info.paths.background) info.paths.background = ent.name;
               break;
-            default:
+            
+            case ".srt":
+              if (!info.paths.subtitles) info.paths.subtitles = ent.name;
+              break;
+            
+            case ".tsb":
+              if (!info.paths.storyboard) info.paths.storyboard = ent.name;
               break;
           }
         }
 
         // Toxen2 backwards compatibility.
         try {
-          if (await fsp.stat(Path.resolve(info.paths.dirname, "details.json")).then(() => true).catch(() => false)) {
-            let path = Path.resolve(info.paths.dirname, "details.json");
-            info = await Legacy.toxen2SongDetailsToInfo(JSON.parse(await fsp.readFile(path, "utf8")), info)
+          if (await fsp.stat(Path.resolve(fullPath, "details.json")).then(() => true).catch(() => false)) {
+            let path = Path.resolve(fullPath, "details.json");
+            info = await Legacy.toxen2SongDetailsToInfo(JSON.parse(await fsp.readFile(path, "utf8")), info as ISong)
           }
         } catch (error) {
           console.error("There was an error trying to convert details.json into info.json");
-          
         }
       }
 
       await dir.close();
-      return info;
+      return info as ISong;
     });
   }
 
-  private static generateUID() {
-    let items = "QWERTYUIOPASDFGHJKLZXCVBNM";
+  public static generateUID(skipCheck = false) {
+    let items = "QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm1234567890";
     let uid: string = "";
     do {
       for (let i = 0; i < items.length; i++) {
         uid += items[Math.floor(Math.random() * items.length)];
       }
     }
-    while (Toxen.songList && !Toxen.songList.some(s => s.uid));
+    while (!skipCheck && Toxen.songList && !Toxen.songList.some(s => s.uid));
     return uid;
   }
 
+  private lastBlobUrl: string;
+
   public play() {
-    // let src = "file:///" + this.mediaFile();
+    if (this.lastBlobUrl) URL.revokeObjectURL(this.lastBlobUrl);
     let src = this.mediaFile();
+    let bg = this.backgroundFile();
     if (Toxen.musicPlayer.state.src != src) {
       Toxen.musicPlayer.setSource(src, true);
-      Toxen.background.setBackground(this.backgroundFile())
+      Toxen.background.setBackground(bg);
+      Stats.set("songsPlayed", (Stats.get("songsPlayed") ?? 0) + 1)
+      Toxen.setAllVisualColors(this.visualizerColor);
+      Toxen.background.storyboard.setSong(this);
+      Toxen.background.visualizer.update();
+      let img = new Image();
+      img.src = bg;
+      img.addEventListener("load", () => {
+        let canvas = document.createElement("canvas");
+        let ctx = canvas.getContext("2d");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
+        canvas.toBlob(blob => {
+          navigator.mediaSession.metadata = new MediaMetadata({
+            title: this.title ?? "Unknown Title",
+            artist: this.artist ?? "Unknown Artist",
+            album: this.album ?? "",
+            artwork: [
+              { src: (this.lastBlobUrl = URL.createObjectURL(blob)), sizes: `${img.naturalWidth}x${img.naturalHeight}`, type: "image/png" }
+            ]
+          });
+        });
+      });
     }
 
-    console.log(this);
-    Toxen.musicPlayer.media.volume = 0.01;
+    this.setCurrent();
   }
+
+  public contextMenu() {
+    remote.Menu.buildFromTemplate([
+      {
+        label: "Edit info",
+        click: () => {
+          Toxen.editSong(this);
+        }
+      }
+    ]).popup();
+  }
+
+  public currentElement: SongElement;
+
+  public setCurrent(): void;
+  public setCurrent(force: boolean): void;
+  public setCurrent(force?: boolean) {
+    const mode = force ?? true;
+    if (!this._isPlaying && mode) {
+      let cur = Song.getCurrent();
+      if (cur) cur.setCurrent(false);
+    }
+    this._isPlaying = mode;
+    if (this.currentElement) this.currentElement.setState({ playing: mode });
+  }
+
+  public scrollTo() {
+    if (this.currentElement) (this.currentElement.divElement as any).scrollIntoViewIfNeeded();
+  }
+
+  public static getCurrent() {
+    let songs = (Toxen.songList || []);
+    return songs.find(s => s.isPlaying());
+  }
+
+  public isPlaying() {
+    return this._isPlaying;
+  }
+
+  private _isPlaying = false;
 
   public static async getSongCount() {
     let dirName = Settings.get("libraryDirectory");
@@ -165,11 +274,14 @@ export default class Song implements ISong {
   }
 
   public static async getSongs(reload?: boolean, forEach?: (song: Song) => void): Promise<Song[]> {
-    return Promise.resolve().then(async () => {
+    if (Settings.isRemote()) {
+
+    }
+    else return Promise.resolve().then(async () => {
       if (reload !== true && Toxen.songList) {
         return Toxen.songList;
       }
-      
+
       let songs: Song[] = [];
       let dirName = Settings.get("libraryDirectory");
       if (!dirName) {
@@ -180,11 +292,11 @@ export default class Song implements ISong {
         dir = await fsp.opendir(dirName);
       } catch (error) {
         console.error(error);
-        
+
         return [];
       }
       let ent: Dirent;
-      while (ent = await dir.read()) { 
+      while (ent = await dir.read()) {
         if (ent.isDirectory()) { // Is music folder
           let songFolder = resolve(dirName, ent.name);
 
@@ -198,38 +310,52 @@ export default class Song implements ISong {
           }
 
           info.paths ?? ((info.paths as any) = {})
-          info.paths.dirname = songFolder;
+          let isDifferent = info.paths.dirname !== ent.name;
+          if (isDifferent) info.paths.dirname = ent.name;
+
 
           if (info.paths.media) {
             let song = Song.create(info);
             songs.push(song);
+            if (isDifferent) song.saveInfo();
             if (typeof forEach === "function") forEach(song);
           }
           else {
-            console.error(`Song "${songFolder}" is missing a media file.`);
+            if (typeof forEach === "function") forEach(null);
+            console.warn(`Song "${songFolder}" is missing a media file. Excluding from song list.`);
           }
-          // if (song.artist == null) await Debug.wait(500);
         }
       }
 
       await dir.close();
-      return songs.sort((a, b) => a.artist && b.artist ? a.artist.localeCompare(b.artist): -1);
+      return songs.sort((a, b) => a.artist && b.artist ? a.artist.localeCompare(b.artist) : -1);
     });
-  }
-
-  public toISong(): ISong {
-    return {
-      uid: this.uid,
-      artist: this.artist,
-      title: this.title,
-      coArtists: this.coArtists,
-      paths: this.paths,
-    }
   }
 
   public async saveInfo() {
     if (!this.paths || !this.paths.dirname) return null;
-    return fsp.writeFile(Path.resolve(this.paths.dirname, "info.json"), JSON.stringify(this.toISong()));
+    return fsp.writeFile(Path.resolve(this.dirname(), "info.json"), JSON.stringify(this.toISong()));
+  }
+
+  public static async importSong(file: File | ToxenFile): Promise<Result<void>> {
+    return Promise.resolve().then(async () => {
+      let supported = Toxen.getSupportedMediaFiles();
+      if (!supported.some(s => Path.extname(file.name) === s)) return new Failure(file.name + " isn't a valid file");
+
+      let libDir = Settings.get("libraryDirectory");
+      let nameNoExt = Converter.trimChar(Path.basename(file.name, Path.extname(file.name)), ".");
+      let newFolder = Path.resolve(libDir, nameNoExt);
+      let increment = 0;
+      debugger;
+      while (await System.pathExists(newFolder)) {
+        newFolder = Path.resolve(libDir, nameNoExt + ` (${++increment})`);
+      }
+
+      await fsp.mkdir(newFolder, { recursive: true });
+      await fsp.copyFile(file.path, Path.resolve(newFolder, file.name));
+      
+      return new Success();
+    });
   }
 }
 
@@ -238,14 +364,34 @@ export interface ISong {
   artist: string;
   coArtists: string[];
   title: string;
+  album: string;
+  source: string;
+  tags: string[];
+  visualizerColor: string;
+  visualizerStyle: VisualizerStyle;
+  visualizerForceRainbowMode: boolean;
   paths: ISongPaths;
 }
 
 interface ISongPaths {
   /**
-   * Full directory Path.
+   * Directory basename.
    */
   dirname: string;
+  /**
+   * A supported audio/video file.
+   */
   media: string;
+  /**
+   * A supported image file.
+   */
   background: string;
+  /**
+   * A supported subtitle file.
+   */
+  subtitles: string;
+  /**
+   * A *.tsb (Toxen Storyboard) file. Actual format is JSON data.
+   */
+  storyboard: string;
 }

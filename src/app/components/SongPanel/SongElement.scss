@@ -1,5 +1,5 @@
-.songElement {
-  width: 95%;
+.song-element {
+  width: 90%;
   border: solid 1px;
   box-sizing: border-box;
   height: min-content;
@@ -7,10 +7,36 @@
   border-top-right-radius: 0px;
   border-bottom-right-radius: 0px;
 
+  .song-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &.playing {
+    width: 95%;
+    z-index: 10;
+    box-shadow: 30px 0px 5px white;
+  }
+  
   &:hover {
     width: 100%;
     border-top-right-radius: 10px;
     border-bottom-right-radius: 10px;
     cursor: pointer;
+    // Animation
+    & + * {
+      width: 98%;
+      border-bottom-right-radius: 10px;
+      & + * {
+        width: 94%;
+        border-bottom-right-radius: 10px;
+      }
+    }
+
+    .song-title {
+      // word-break: keep-all;
+      white-space: initial;
+    }
   }
 }

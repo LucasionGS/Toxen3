@@ -1,6 +1,8 @@
 import React, { Component } from 'react'
 import Song from '../toxen/Song';
 import { Toxen } from '../ToxenApp';
+import Path from "path";
+import Settings from '../toxen/Settings';
 
 export type MediaSourceInfo = string;
 
@@ -33,10 +35,37 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
     }, 50);
   }
 
+  componentDidUpdate() {
+    this.setVolume(Settings.get("volume"));
+  }
+
+  /**
+   * @param vol From 0 to 100
+   */
+  public setVolume(vol: number) {
+    if (isNaN(vol) || typeof vol !== "number") vol = 50;
+    this.media.volume = vol / 100;
+  }
+
+  public setPosition(seconds: number) {
+    this.media.currentTime = seconds;
+  }
+
   public setSource(src: MediaSourceInfo, playWhenReady: boolean = false) {
     this.setState({
       src
     }, () => playWhenReady ? this.play() : this.media.load());
+  }
+
+  public isVideo(src: string) {
+    if (!src) return false;
+    switch (Path.extname(src)) {
+      // Video formats
+      case ".mp4":
+        return true;
+    
+      default: return false;
+    }
   }
 
   public get paused() {
@@ -54,6 +83,14 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
   public toggle() {
     if (this.media.paused) this.media.play();
     else this.media.pause();
+  }
+
+  public playNext() {
+    this.playRandom();
+  }
+  
+  public playPrev() {
+    this.playRandom();
   }
 
   public playRandom() {
@@ -74,8 +111,25 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
   public media: HTMLMediaElement;
   
   render() {
-    return (
-      <audio onCanPlay={e => Toxen.musicControls.setMax(this.media.duration)} ref={ref => this.media = ref} hidden src={this.state.src} onEnded={this.playRandom.bind(this)} />
-    )
+    let isVideo = this.isVideo(this.state.src);
+    // Audio
+    if (!isVideo) return (
+      <video
+      onCanPlay={e => Toxen.musicControls.setMax(this.media.duration)}
+      ref={ref => this.media = ref}
+      hidden
+      src={this.state.src}
+      onEnded={this.playNext.bind(this)}
+      />
+    );
+    // Video
+    else return (
+      <video
+      onCanPlay={e => Toxen.musicControls.setMax(this.media.duration)}
+      ref={ref => this.media = ref}
+      src={this.state.src}
+      onEnded={this.playNext.bind(this)}
+      />
+    );
   }
 }

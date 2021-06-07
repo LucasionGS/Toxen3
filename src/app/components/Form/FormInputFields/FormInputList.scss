@@ -1,0 +1,30 @@
+.form-input-list-items {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.form-input-list-item {
+  position: relative;
+  display: inline;
+  padding: 4px;
+  margin: 4px;
+  background-color: #414141;
+  
+  &:hover {
+    cursor: pointer;
+    background-color: #442727;
+  }
+
+  & .form-input-list-item-remove {
+    position: absolute;
+    top: -0.5em;
+    right: -0.5em;
+    color: red;
+    display: none;
+  }
+
+  &:hover .form-input-list-item-remove {
+    display: block;
+  }
+  
+}

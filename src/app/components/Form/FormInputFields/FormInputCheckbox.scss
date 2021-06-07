@@ -1,0 +1,10 @@
+.form-input-checkbox {
+  :is(&, & *):hover {
+    cursor: pointer;
+  }
+
+  .toggle-icon * {
+    font-size: 1.5em;
+    transform: translateY(0.125em);
+  }
+}

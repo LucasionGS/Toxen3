@@ -16,7 +16,27 @@ rules.push(
       { loader: 'css-loader' },
       { loader: 'sass-loader' },
     ],
-  }
+  },
+  {
+    test: /\.(woff(2)?|ttf|eot|svg)(\?v=\d+\.\d+\.\d+)?$/,
+    use: [
+      {
+        loader: 'file-loader',
+      }
+    ]
+  },
+  {
+    test: /\.(png|jpg|jpeg)$/,
+    use: [
+      {
+        loader: 'file-loader',
+        options: {
+          publicPath: '../', // Needs this to correctly locate files, for some reason...
+          
+        }
+      }
+    ]
+  },
 );
 
 module.exports = {

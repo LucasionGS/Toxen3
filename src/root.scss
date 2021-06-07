@@ -1,14 +1,19 @@
+$bgColor: #202124;
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   margin: 0;
   width: 100vw;
   height: 100vh;
   padding: 0;
-  background-color: #202124;
+  background-color: $bgColor;
 }
 
 * {
   color: white;
+}
+
+body.inactive *.hide-on-inactive {
+  opacity: 0 !important;
 }
 
 *:not(

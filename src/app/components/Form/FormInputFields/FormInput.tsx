@@ -1,18 +1,24 @@
 import React from 'react';
 import Settings from '../../../toxen/Settings';
 import { remote } from "electron";
-import "./SettingsInput.scss";
-import SettingsInputCheckbox from './SettingsInputCheckbox';
-import SettingsInputSelect from './SettingsInputSelect';
+import "./FormInput.scss";
+import FormInputColorPicker from './FormInputColorPicker';
+import FormInputSelect from './FormInputSelect';
 import JSONX from '../../../toxen/JSONX';
-
+import { OptionValues } from "./FormInputSelect";
+import FormInputList from './FormInputList';
+import FormInputCheckbox from './FormInputCheckbox';
 
 type Props = [
   PropsTypeText,
+  PropsTypeNumber,
   PropsTypeFile,
   PropsTypeFolder,
   PropsTypeCheckbox,
   PropsTypeSelect,
+  PropsTypeSelectAsync,
+  PropsTypeList,
+  PropsTypeColor,
 ][number];
 
 interface PropsTemplate<T extends string> {
@@ -28,6 +34,11 @@ interface PropsTemplate<T extends string> {
 interface PropsTypeText extends PropsTemplate<"text"> {
   readOnly?: boolean;
 }
+interface PropsTypeNumber extends PropsTemplate<"number"> {
+  readOnly?: boolean;
+  min?: number;
+  max?: number;
+}
 interface PropsTypeFile extends PropsTemplate<"file"> {
   parseOutput?: (value: string) => string
 }
@@ -36,11 +47,22 @@ interface PropsTypeFolder extends PropsTemplate<"folder"> {
 }
 interface PropsTypeCheckbox extends PropsTemplate<"checkbox"> { }
 interface PropsTypeSelect extends PropsTemplate<"select"> { }
+interface PropsTypeSelectAsync extends PropsTemplate<"selectAsync"> {
+  values: Promise<OptionValues> | (() => Promise<OptionValues>);
+  nullable?: boolean;
+}
+interface PropsTypeList extends PropsTemplate<"list"> { }
+interface PropsTypeColor extends PropsTemplate<"color"> {
+  onChange?: (value: string) => void;
+  nullable?: boolean;
+}
 
-export default class SettingsInput extends React.Component<Props> {
+export default class FormInput extends React.Component<Props> {
 
   constructor(props: Props) {
     super(props);
+
+    this.state = {};
   }
 
   public static getNameAndType(nameAndType: string) {
@@ -58,6 +80,10 @@ export default class SettingsInput extends React.Component<Props> {
     switch (type) {
       case "number":
         return Number(value);
+      
+      case "array":
+      case "list":
+        return JSON.parse(String(value));
 
       case "boolean":
         if (value === "1") return true;
@@ -69,14 +95,14 @@ export default class SettingsInput extends React.Component<Props> {
         return String(value);
     }
   }
-  
+
   public static toStringValue(type: string, value: any): string {
     switch (type) {
       case "number":
         return String(value);
 
       case "boolean":
-        return value ? "1" :"0";
+        return value ? "1" : "0";
 
       default:
         return value;
@@ -84,12 +110,12 @@ export default class SettingsInput extends React.Component<Props> {
   }
 
   render() {
-    let { name } = SettingsInput.getNameAndType(this.props.name);
+    let { name } = FormInput.getNameAndType(this.props.name);
     let value: any = "";
     let dataTemplate = (typeof this.props.getValueTemplateCallback == "function" ? this.props.getValueTemplateCallback() : Settings.data);
-    
+
     value = JSONX.getObjectValue(dataTemplate, name) ?? "";
-    
+
     let label = (<label htmlFor={this.props.name}>{this.props.displayName ? this.props.displayName : name}</label>);
     switch (this.props.type) {
       case "text": {
@@ -97,13 +123,25 @@ export default class SettingsInput extends React.Component<Props> {
           <>
             {label}
             <br />
-            <input className="tx-form-field" type="text" name={this.props.name} defaultValue={value} readOnly={this.props.readOnly} />
+            <input className={"tx-form-field" + (this.props.readOnly ? " read-only" : "")} type="text" name={this.props.name} defaultValue={value} readOnly={this.props.readOnly} />
             <br />
             <br />
           </>
         )
       }
       
+      case "number": {
+        return (
+          <>
+            {label}
+            <br />
+            <input className={"tx-form-field" + (this.props.readOnly ? " read-only" : "")} type="number" name={this.props.name} defaultValue={value} readOnly={this.props.readOnly} max={this.props.max} min={this.props.min} />
+            <br />
+            <br />
+          </>
+        )
+      }
+
       case "file": {
         const ref = React.createRef<HTMLInputElement>();
         return (
@@ -122,13 +160,13 @@ export default class SettingsInput extends React.Component<Props> {
                   ref.current.value = typeof parseOutput === "function" ? parseOutput(value[0]) : value[0];
                 }
               }
-            }/>
+            } />
             <br />
             <br />
           </>
         )
       }
-      
+
       case "folder": {
         const ref = React.createRef<HTMLInputElement>();
         return (
@@ -147,7 +185,7 @@ export default class SettingsInput extends React.Component<Props> {
                   ref.current.value = typeof parseOutput === "function" ? parseOutput(value[0]) : value[0];
                 }
               }
-            }/>
+            } />
             <br />
             <br />
           </>
@@ -157,22 +195,58 @@ export default class SettingsInput extends React.Component<Props> {
       case "checkbox": {
         return (
           <>
-            <SettingsInputCheckbox name={this.props.name} defaultChecked={value} >
+            <FormInputCheckbox name={this.props.name} defaultChecked={value} >
               {label}
-            </SettingsInputCheckbox>
+            </FormInputCheckbox>
+            <br />
+          </>
+        )
+      }
+
+      case "select": {
+        return (
+          <>
+            {label}
+            <br />
+            <FormInputSelect name={this.props.name} defaultValue={value} >
+              {this.props.children}
+            </FormInputSelect>
             <br />
           </>
         )
       }
       
-      case "select": {
+      case "selectAsync": {
         return (
           <>
             {label}
-            <br/>
-            <SettingsInputSelect name={this.props.name} defaultValue={value} >
-              {this.props.children}
-            </SettingsInputSelect>
+            <br />
+            <FormInputSelect nullable={this.props.nullable} name={this.props.name} defaultValue={value} asyncValues={typeof this.props.values === "function" ? this.props.values() : this.props.values} />
+            <br />
+            <br />
+          </>
+        )
+      }
+      
+      case "list": {
+        return (
+          <>
+            {label}
+            <br />
+            <FormInputList name={this.props.name} defaultValue={value} />
+            <br />
+            <br />
+          </>
+        )
+      }
+      
+      case "color": {
+        return (
+          <>
+            {label}
+            <br />
+            <FormInputColorPicker nullable={this.props.nullable} onChange={this.props.onChange} name={this.props.name} defaultValue={value} />
+            <br />
             <br />
           </>
         )

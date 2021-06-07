@@ -1,0 +1,219 @@
+$sidePanelColor: #252525;
+
+:root {
+  --sidebar-transition-in: width 0.5s cubic-bezier(.98,-0.03,.67,.77),
+                           height 0.5s cubic-bezier(.98,-0.03,.67,.77);
+  --sidebar-transition-out: width 0.5s cubic-bezier(.64,.32,.54,1.03),
+                           height 0.5s cubic-bezier(.64,.32,.54,1.03);
+  --panel-width: 40vw;
+  --panel-icons-width: 128px;
+}
+
+// Inactivity
+body.inactive .sidepanel:not(.show) {
+  transition: opacity 0.3s ease-in-out;
+  opacity: 0;
+}
+
+.sidepanel {
+  display: flex;
+  position: fixed;
+  transition: var(--sidebar-transition-out);
+  bottom: 0;
+  background-color: $sidePanelColor;
+  overflow: hidden;
+  border: solid white 0px;
+  box-sizing: border-box;
+  white-space: nowrap;
+  opacity: 1;
+}
+
+/* For sideways transition */
+.sidepanel:not(.vertical) {
+  height: 100vh;
+  
+  // &:not(.expose-icons) {
+  //   width: 0px;
+  // }
+  // &:is(.expose-icons) {
+  //   // width: var(--panel-icons-width); // this will show icons instead of full hide on sidebar.
+  //   width: 3.7em; // this will show icons instead of full hide on sidebar.
+  // }
+}
+
+/* For vertical transition */
+.sidepanel.vertical {
+  max-height: 100vh;
+  height: 0px;
+  // width: var(--panel-width);
+}
+
+// .sidepanel.show {
+//   transition: var(--sidebar-transition-in);
+// }
+
+/* For sideways transition */
+.sidepanel.show:not(.vertical) {
+  // width: var(--panel-width);
+  height: 100vh;
+}
+
+/* For vertical transition */
+.sidepanel.show.vertical {
+  border-top: solid white 1px;
+  height: 100vh;
+}
+
+.sidepanel.sidepanel-left {
+  left: 0;
+}
+
+.sidepanel.sidepanel-right {
+  right: 0;
+}
+
+.sidepanel.show.sidepanel-left {
+  border-left: none;
+  border-right: solid white 1px;
+}
+.sidepanel.show.sidepanel-right {
+  border-right: none;
+  border-left: solid white 1px;
+}
+
+.sidepanel-icons {
+  padding: 16px;
+  border-left: white 1px solid;
+  border-right: white 1px solid;
+  // width: var(--panel-icons-width);
+  user-select: none;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidepanel-icon {
+  font-size: 32px;
+  transition: all 0.2s ease-in-out;
+}
+
+.sidepanel-icon * {
+  margin: auto;
+  margin-top: 8px;
+}
+
+.sidepanel-icon:hover {
+  transform: translate(-5%, -5%);
+  filter: drop-shadow(3px 3px 5px white);
+  cursor: pointer;
+}
+
+.sidepanel {
+  .sidepanel-icon-title {
+    display: none;
+    font-size: 20px !important;
+    line-height: 32px;
+    vertical-align: 6px;
+  }
+}
+
+.sidepanel.show {
+  .sidepanel-icon-title {
+    display: inline;
+  }
+}
+
+
+.sidepanel {
+  .sidepanel-icon-toggle {
+    * {
+      transform: rotate(112.5deg);
+      transition: all 0.3s ease-in-out;
+      transform-origin: center;
+      font-size: 32px;
+      color: rgb(150, 255, 159);
+    }
+    
+    &:hover * {
+      color: rgb(0, 182, 9);
+    }
+  }
+}
+
+
+.sidepanel.show {
+  .sidepanel-icon-toggle {
+    * {
+      transform: rotate(0);
+      color: rgb(255, 150, 150);
+    }
+    
+    &:hover * {
+      color: rgb(182, 0, 0);
+    }
+  }
+}
+
+.sidepanel-content {
+  transition: all 0.3s ease-in-out;
+  opacity: 0;
+  padding: 0px;
+  overflow: hidden;
+  box-sizing: border-box;
+  // width: calc(var(--panel-width) - var(--panel-icons-width));
+  // $content: fit-content;
+  // min-width: calc($content + var(--panel-icons-width));
+}
+
+.sidepanel.show .sidepanel-content {
+  padding: 16px;
+  opacity: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.sidepanel .sidepanel-backdrop {
+  position: fixed;
+  width: 100vw;
+  height: 100vh;
+  left: 0;
+  top: 0;
+  // background-color: #000;
+  z-index: -1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.sidepanel.show .sidepanel-backdrop {
+  pointer-events: all;
+  opacity: 0.5;
+}
+
+.sidepanel.show .sidepanel-backdrop {
+  pointer-events: all;
+  opacity: 0.5;
+}
+
+.sidepanel {
+  .sidepanel-resizer {
+    display: block;
+    // background-color: aqua;
+    width: 0px;
+  }
+}
+
+.sidepanel.show {
+  .sidepanel-resizer {
+    width: 8px;
+    height: 100vh;
+    transition: all 0.3s ease-in-out;
+
+    &:hover {
+      cursor: col-resize;
+    }
+    
+    &:active {
+      background-color: aqua;
+    }
+  }
+}

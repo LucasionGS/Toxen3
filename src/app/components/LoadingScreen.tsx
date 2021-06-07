@@ -20,20 +20,16 @@ export default class LoadingScreen extends Component<LoadingScreenProps, Loading
     this.state = {
       show: false,
       // content: (<p className="center">Loading...</p>)
-      content: (
-        <MessageCard title="Title">
-          Test content
-        </MessageCard>
-      )
+      content: null
     }
   }
 
   componentDidMount() {
-    if (typeof this.props.initialShow === "boolean") this.toggleShow(this.props.initialShow);
+    if (typeof this.props.initialShow === "boolean") this.show(this.props.initialShow);
     if (typeof this.props.getRef === "function") this.props.getRef(this);
   }
 
-  toggleShow(force?: boolean) {
+  show(force?: boolean) {
     this.setState({
       show: force ?? !this.state.show
     })

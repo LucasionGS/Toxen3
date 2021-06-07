@@ -1,7 +1,7 @@
 {
   "name": "toxen3",
   "productName": "Toxen",
-  "version": "1.0.0",
+  "version": "1.0.12",
   "description": "Toxen Music Player",
   "main": ".webpack/main",
   "scripts": {
@@ -16,10 +16,16 @@
     "name": "Lucasion",
     "email": "lucasion@hotmail.com"
   },
+  "repository": {
+    "type": "Github",
+    "url": "https://github.com/LucasionGS/Toxen3"
+  },
   "license": "MIT",
   "config": {
     "forge": {
-      "packagerConfig": {},
+      "packagerConfig": {
+        "icon": "./src/icons/toxen.ico"
+      },
       "makers": [
         {
           "name": "@electron-forge/maker-squirrel",
@@ -59,6 +65,19 @@
             }
           }
         ]
+      ],
+      "publishers": [
+        {
+          "name": "@electron-forge/publisher-github",
+          "config": {
+            "repository": {
+              "owner": "LucasionGS",
+              "name": "Toxen3"
+            },
+            "draft": false,
+            "prerelease": false
+          }
+        }
       ]
     }
   },
@@ -69,15 +88,18 @@
     "@electron-forge/maker-squirrel": "^6.0.0-beta.54",
     "@electron-forge/maker-zip": "^6.0.0-beta.54",
     "@electron-forge/plugin-webpack": "6.0.0-beta.54",
+    "@electron-forge/publisher-github": "^6.0.0-beta.54",
     "@marshallofsound/webpack-asset-relocator-loader": "^0.5.0",
     "@types/react": "^17.0.3",
     "@types/react-dom": "^17.0.3",
+    "@types/react-select": "^4.0.14",
     "@typescript-eslint/eslint-plugin": "^4.0.1",
     "@typescript-eslint/parser": "^4.0.1",
     "css-loader": "^4.2.1",
     "electron": "12.0.2",
     "eslint": "^7.6.0",
     "eslint-plugin-import": "^2.20.0",
+    "file-loader": "^6.2.0",
     "fork-ts-checker-webpack-plugin": "^5.0.14",
     "node-loader": "^1.0.1",
     "node-sass": "^5.0.0",
@@ -92,6 +114,8 @@
     "electron-squirrel-startup": "^1.0.0",
     "react": "^17.0.2",
     "react-bootstrap": "^1.5.2",
-    "react-dom": "^17.0.2"
+    "react-dom": "^17.0.2",
+    "react-select": "^4.3.0",
+    "update-electron-app": "^2.0.1"
   }
 }

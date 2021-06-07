@@ -5,6 +5,7 @@
   padding: 0.35em;
   &:hover {
     cursor: pointer;
+    filter: brightness(0.9);
   }
   
   // Colors
@@ -28,12 +29,26 @@
 
 /* Input fields */
 .tx-form-field {
+  position: relative;
   background-color: #202020;
   color: white;
   border: 1px white solid;
   padding: 1%;
+
+  &:is([type="text"], [type="password"]) {
+    min-width: 256px;
+  }
+
+  &:focus {
+    outline: none;
+  }
+
+  &.read-only {
+    color: gray;
+  }
 }
 
-.tx-form-field:focus {
-  outline: none;
+
+.tx-whitespace-nowrap {
+  white-space: nowrap;
 }

@@ -22,8 +22,23 @@ export default class SongPanel extends Component<SongPanelProps, SongPanelState>
   public update() {
     return this.setState({});
   }
-  
+
   render() {
-    return (Toxen.songList ?? []).map(s => s.Element());
+    let songs = (Toxen.songList ?? []);
+
+    if (Toxen.songSearch) {
+      let items = Toxen.songSearch.toLowerCase().replace(/_/g, " ").split(" ");
+      songs = songs.filter(s => {
+        let sortItems = [
+          s.artist ?? "", // Artist
+          s.title ?? "", // Title
+          ...(s.coArtists ?? []), // Co-Artists
+          s.source ?? "",
+          ...(s.tags ?? []),
+        ].join(" ").replace(/_/g, " ").trim().toLowerCase();
+        return items.every(item => sortItems.includes(item));
+      })
+    }
+    return songs.map(s => s.Element());
   }
 }

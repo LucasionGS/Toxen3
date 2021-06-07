@@ -1,7 +1,6 @@
 .toxen-music-controls {
-  
   display: block;
-  width: 90%;
+  width: calc(95% - 128px);
   // border: solid 2px;
   box-sizing: border-box;
   padding: 8px;
@@ -9,6 +8,11 @@
   bottom: 3vh;
   left: 50vw;
   transform: translateX(-50%);
+  transition: width 0.3s ease-in-out;
+
+  & > * {
+    filter: drop-shadow(1px 1px 1px black);
+  }
 
   .toxen-music-controls-time {
     display: flex;
@@ -21,6 +25,17 @@
     .toxen-music-controls-time-end {
       margin-right: 5%;
     }
+
+    .toxen-music-controls-volume {
+      width: 20%;
+      text-align: center;
+    }
+  }
+
+  .toxen-music-controls-progress-bar > * {
+    filter: drop-shadow(1px 1px 1px black);
+    transform: translateY(0);
+    transition: transform 0.3s ease-in-out;
   }
 
   .toxen-music-controls-buttons {
@@ -34,6 +49,14 @@
         transform: translateY(-0.1em);
         cursor: pointer;
       }
+    }
+  }
+}
+
+body.inactive {
+  .toxen-music-controls {
+    .toxen-music-controls-progress-bar > * {
+      transform: translateY(5vh);
     }
   }
 }

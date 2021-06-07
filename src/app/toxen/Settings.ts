@@ -2,7 +2,7 @@ import fs from "fs";
 import fsp from "fs/promises";
 import Path from "path";
 import CrossPlatform from "./CrossPlatform";
-import { PanelDirection } from "../components/Sidepanel"
+import { PanelDirection } from "../components/Sidepanel/Sidepanel"
 import JSONX from "./JSONX";
 import { Toxen } from "../ToxenApp";
 
@@ -20,7 +20,7 @@ export default class Settings {
    */
   public static async save() {
     console.log("Saving...");
-    
+
     if (Settings.isRemote()) {
       // Remote server
       throw "Saving remotely not yet implemented";
@@ -39,7 +39,7 @@ export default class Settings {
     }
   }
   /**
-   * Save Toxen's settings from `filePath`.
+   * Load Toxen's settings from `filePath`.
    */
   public static async load(): Promise<ISettings> {
     return Promise.resolve().then(async () => {
@@ -63,7 +63,13 @@ export default class Settings {
   }
 
   public static isRemote() {
-    return Boolean(Settings.data && Settings.data.isRemote);
+    return Boolean(
+      Settings.data
+      && Settings.data.libraryDirectory
+      && (
+        Settings.data.libraryDirectory.toLowerCase().startsWith("http://") ||
+        Settings.data.libraryDirectory.toLowerCase().startsWith("https://")
+      ));
   }
 
   public static data: ISettings;
@@ -72,7 +78,7 @@ export default class Settings {
    * Returns a stringified version of `ISettings`.
    */
   public static toString() {
-    return JSON.stringify(Settings.data ?? {});
+    return JSON.stringify(Settings.data ?? {}, null, 2);
   }
 
   /**
@@ -83,7 +89,7 @@ export default class Settings {
       if (Object.prototype.hasOwnProperty.call(data, key)) {
         const value = (data as any)[key];
         const preValue = JSONX.getObjectValue(Settings.data, key);
-        
+
         JSONX.setObjectValue(Settings.data, key, value);
 
         // Special cases
@@ -93,7 +99,7 @@ export default class Settings {
       }
     }
   }
-  
+
 
   public static get<T extends keyof ISettings>(key: T): ISettings[T];
   public static get<T extends string, ValueType = any>(key: T): ValueType;
@@ -101,19 +107,46 @@ export default class Settings {
     // if (Settings.data && Settings.data.hasOwnProperty(key)) return Settings.data[key];
     return JSONX.getObjectValue(Settings.data, key);
   }
-  
+
   public static set<T extends keyof ISettings>(key: T, value: ISettings[T]): ISettings[T];
-  public static set<T extends string, ValueType = any>(key: T, value:ValueType): ValueType;
+  public static set<T extends string, ValueType = any>(key: T, value: ValueType): ValueType;
   public static set<T extends keyof ISettings>(key: T, value: ISettings[T]): ISettings[T] {
     // if (Settings.data && Settings.data.hasOwnProperty(key)) return Settings.data[key] = value;
     JSONX.setObjectValue(Settings.data, key, value);
-    return null;
+    return value;
   }
 }
 
 export interface ISettings {
+  // General settings
   libraryDirectory: string;
   isRemote: boolean;
+  volume: number;
+
+  // Panel settings
   panelVerticalTransition: boolean;
-  panelDirection: PanelDirection
+  panelDirection: PanelDirection;
+  exposePanelIcons: boolean;
+  panelWidth: number;
+
+  // Window
+  restoreWindowSize: boolean;
+  windowWidth: number;
+  windowHeight: number;
+
+  // Visuals
+  visualizerColor: string;
+  visualizerStyle: VisualizerStyle;
+  visualizerRainbowMode: boolean;
 }
+
+export enum VisualizerStyle {
+  None = "none",
+  ProgressBar = "progressbar",
+  Bottom = "bottom",
+  Top = "top",
+  TopAndBottom = "topbottom",
+  Center = "center",
+  Singularity = "circle",
+  SingularityWithLogo = "circlelogo",
+};

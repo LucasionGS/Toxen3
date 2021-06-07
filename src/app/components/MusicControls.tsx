@@ -1,4 +1,5 @@
 import React, { Component } from 'react'
+import Settings from '../toxen/Settings';
 import Time from '../toxen/Time';
 import { Toxen } from '../ToxenApp';
 import "./MusicControls.scss";
@@ -40,12 +41,19 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
     this.progressBar.setMax(max);
   }
 
-  private progressBar: ProgressBar;
+  public setVolume(vol: number) {
+    Toxen.musicPlayer.setVolume(vol);
+    this.volSlider.setValue(vol);
+  }
+
+  private volSlider: ProgressBar;
+
+  public progressBar: ProgressBar;
 
   render() {
     return (
       <div className="toxen-music-controls">
-        <div className="toxen-music-controls-buttons">
+        <div className="toxen-music-controls-buttons hide-on-inactive">
           <div className="ctrl-btn">
             <i className="fas fa-random"></i>
           </div>
@@ -56,7 +64,7 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
             <span hidden={Toxen.musicPlayer && Toxen.musicPlayer.media && !Toxen.musicPlayer.media.paused}><i className="fas fa-play"></i></span>
             <span hidden={Toxen.musicPlayer && Toxen.musicPlayer.media && Toxen.musicPlayer.media.paused}><i className="fas fa-pause"></i></span>
           </div>
-          <div className="ctrl-btn" onClick={() => Toxen.musicPlayer.playRandom()}>
+          <div className="ctrl-btn" onClick={() => Toxen.musicPlayer.playNext()}>
             <i className="fas fa-angle-double-right"></i>
           </div>
           <div className="ctrl-btn">
@@ -64,10 +72,34 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
           </div>
         </div>
 
-        <ProgressBar ref={ref => this.progressBar = ref} />
-        
-        <div className="toxen-music-controls-time">
+        <span className="toxen-music-controls-progress-bar">
+          <ProgressBar
+            ref={ref => this.progressBar = ref}
+            fillColor={"greenyellow"}
+            onClick={(e, v) => Toxen.musicPlayer.setPosition(v)}
+            onDragging={(e, v) => Toxen.musicPlayer.setPosition(v)}
+          />
+        </span>
+
+        <div className="toxen-music-controls-time hide-on-inactive">
           <div className="toxen-music-controls-time-start">{this.currentTime.toTimestamp("hh?:mm:ss")}</div>
+          <div className="toxen-music-controls-volume">
+            Volume
+            <ProgressBar ref={ref => this.volSlider = ref} max={100} min={0} initialValue={Settings.get("volume") ?? 50} onDragging={(_, v, ref) => {
+              this.setVolume(v);
+              Settings.set("volume", v);
+            }}
+            onClick={(_, v, ref) => {
+              this.setVolume(v);
+              Settings.set("volume", v);
+            }}
+            onClickRelease={(_, v, ref) => {
+              this.setVolume(v);
+              Settings.set("volume", v);
+              Settings.save();
+            }}
+            />
+          </div>
           <div className="toxen-music-controls-time-end">{this.duration.toTimestamp("hh?:mm:ss")}</div>
         </div>
       </div>

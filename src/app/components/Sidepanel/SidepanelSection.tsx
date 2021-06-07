@@ -7,14 +7,14 @@ interface Props {
   title?: string;
   separator?: boolean;
   scrollY?: number;
+  dynamicContent?: (section: SidepanelSection) => React.ReactNode;
 }
 
 class SidepanelSection extends React.Component<Props> {
-
   render() {
     return (
       <div>
-        {this.props.children}
+        {typeof this.props.dynamicContent === "function" ? this.props.dynamicContent(this) : this.props.children}
       </div>
     )
   }
