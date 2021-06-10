@@ -6,10 +6,10 @@ export default class CrossPlatform {
       return Path.resolve(process.env.APPDATA)
     }
     else if (process.platform == "darwin") {
-      return Path.resolve(process.env.HOME + "Library/Preferences");
+      return Path.resolve(process.env.HOME, "Library/Preferences");
     }
     else {
-      return Path.resolve(process.env.HOME + ".local/share");
+      return Path.resolve(process.env.HOME, ".local/share");
     }
   }
 
