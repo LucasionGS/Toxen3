@@ -41,7 +41,8 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
   public resetData() {
     this.data = {
       visualizerColor: null,
-      visualizerStyle: null
+      visualizerStyle: null,
+      visualizerIntensity: null
     }
   }
 
@@ -57,13 +58,25 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
   // VisualizerStyle
   public getVisualizerStyle() {
     return this.data.visualizerStyle
-    || (this.state.song && this.state.song.visualizerStyle)
-    || Settings.get("visualizerStyle")
-    || VisualizerStyle.ProgressBar;
+    ?? (
+      (this.state.song && this.state.song.visualizerStyle)
+      || Settings.get("visualizerStyle")
+      || VisualizerStyle.ProgressBar
+    );
+  }
+  // VisualizerIntensity
+  public getVisualizerIntensity() {
+    return this.data.visualizerIntensity
+    ?? (
+      (this.state.song && this.state.song.visualizerIntensity)
+      || Settings.get("visualizerIntensity")
+      || 1
+    );
   }
 }
 
 interface StoryboardData {
-  visualizerColor: string
-  visualizerStyle: VisualizerStyle
+  visualizerColor: string;
+  visualizerIntensity: number;
+  visualizerStyle: VisualizerStyle;
 }

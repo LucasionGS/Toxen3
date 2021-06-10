@@ -25,14 +25,24 @@ export default class LoadingScreen extends Component<LoadingScreenProps, Loading
   }
 
   componentDidMount() {
-    if (typeof this.props.initialShow === "boolean") this.show(this.props.initialShow);
+    if (typeof this.props.initialShow === "boolean") this.toggleVisible(this.props.initialShow);
     if (typeof this.props.getRef === "function") this.props.getRef(this);
   }
 
-  show(force?: boolean) {
+  toggleVisible(): void;
+  toggleVisible(force?: boolean): void;
+  toggleVisible(force?: boolean) {
     this.setState({
       show: force ?? !this.state.show
     })
+  }
+  
+  show() {
+    this.toggleVisible(true);
+  }
+  
+  hide() {
+    this.toggleVisible(false);
   }
 
   public setContent(content: React.ReactNode) {

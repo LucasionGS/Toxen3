@@ -137,6 +137,7 @@ export interface ISettings {
   // Visuals
   visualizerColor: string;
   visualizerStyle: VisualizerStyle;
+  visualizerIntensity: number;
   visualizerRainbowMode: boolean;
 }
 
@@ -149,4 +150,6 @@ export enum VisualizerStyle {
   Center = "center",
   Singularity = "circle",
   SingularityWithLogo = "circlelogo",
+  MirroredSingularity = "mirroredsingularity",
+  MirroredSingularityWithLogo = "mirroredsingularitywithlogo",
 };

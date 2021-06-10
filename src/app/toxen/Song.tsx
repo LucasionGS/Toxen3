@@ -28,6 +28,7 @@ export default class Song implements ISong {
   public paths: ISongPaths;
   public visualizerColor: string;
   public visualizerStyle: VisualizerStyle;
+  public visualizerIntensity: number;
   public visualizerForceRainbowMode: boolean;
 
 
@@ -90,18 +91,26 @@ export default class Song implements ISong {
   }
 
   public toISong(): ISong {
+    const keys: Exclude<keyof ISong, number>[] = [
+      "uid",
+      "artist",
+      "title",
+      "coArtists",
+      "paths",
+      "source",
+      "tags",
+      "album",
+      "visualizerColor",
+      "visualizerStyle",
+      "visualizerIntensity",
+      "visualizerForceRainbowMode",
+    ];
+    const obj = {} as any;
+    keys.forEach(key => {
+      obj[key] = this[key] as any;
+    })
     return {
-      uid: this.uid,
-      artist: this.artist,
-      title: this.title,
-      coArtists: this.coArtists,
-      paths: this.paths,
-      source: this.source,
-      tags: this.tags,
-      album: this.album,
-      visualizerColor: this.visualizerColor,
-      visualizerStyle: this.visualizerStyle,
-      visualizerForceRainbowMode: this.visualizerForceRainbowMode,
+      ...obj
     }
   }
 
@@ -369,6 +378,7 @@ export interface ISong {
   tags: string[];
   visualizerColor: string;
   visualizerStyle: VisualizerStyle;
+  visualizerIntensity: number;
   visualizerForceRainbowMode: boolean;
   paths: ISongPaths;
 }

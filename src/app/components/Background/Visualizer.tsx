@@ -47,7 +47,9 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     let dataArray = this.getFrequencyData(
       // Settings.get("") ?? Visualizer.DEFAULT_FFTSIZE
     ).reverse();
-    dataArray = dataArray.filter((_, i) => i >= (dataArray.length / 2));
+    // dataArray = dataArray.filter((_, i) => i >= (dataArray.length / 2));
+    dataArray = dataArray.slice(dataArray.length / 2);
+
     const len = this.curLen = dataArray.length;
     let opacity = 0.7;
 
@@ -229,6 +231,78 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
             ctx.save();
             ctx.setTransform(1, 0, 0, 1, barX, barY);
             ctx.rotate((cycleIncrementer * i + (time / 20000)) * Math.PI);
+            ctx.fillRect(-(unitW / 2), 0, barWidth, barHeight); // Draw basic visualizer
+            ctx.restore();
+          });
+        }
+
+        if (useLogo) {
+          smallestHeight /= len;
+          smallestHeight *= 1.5;
+          // smallestHeight += 128;
+          this.ctxAlpha(opacity, ctx => {
+            if (toxenLogo.complete) {
+              ctx.save();
+              ctx.setTransform(1, 0, 0, 1, (vWidth / 2) - imgSize, (vHeight / 2) - imgSize);
+              ctx.drawImage(toxenLogo,
+                0,
+                0,
+
+                imgSize,
+                imgSize,
+
+                imgSize - smallestHeight / 2,
+                imgSize - smallestHeight / 2,
+                
+                smallestHeight,
+                smallestHeight
+              );
+              ctx.restore();
+            }
+          })
+        }
+        break;
+      }
+
+      case VisualizerStyle.MirroredSingularityWithLogo:
+        // Use logo if MirroredSingularityWithLogo is selected, and fall through into the regular MirroredSingularity.
+        useLogo = true;
+      case VisualizerStyle.MirroredSingularity: {
+        let newData  = dataArray.filter(d => d > 0);
+        const len = newData.length;
+        let cycleIncrementer = 180 / len;
+        const maxHeight = getMaxHeight(0.50);
+        // let smallestHeight = maxHeight;
+        let smallestHeight = 0;
+        const unitH = maxHeight / dataSize;
+        // const unitW = (vWidth * 1.25 + unitH) / len;
+        const unitW = unitH * 5;
+        for (let i = 0; i < len; i++) {
+          const data = newData[i];
+          const _barHeight = (data * unitH);
+          // Position and size
+          const [barX, barY, barWidth, barHeight] = this.getBar(
+            (vWidth / 2) - (unitW / 2) /* Progress bar curve */, // barX
+            (vHeight / 2), // barY
+            unitW, // barWidth
+            _barHeight // barHeight
+          );
+
+          smallestHeight += barHeight;
+          // If rainbow:
+          this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, cycleIncrementer);
+
+          this.ctxAlpha(opacity, ctx => {
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, barX, barY);
+            ctx.rotate(((cycleIncrementer * (Math.PI / 180)) * i));
+            ctx.fillRect(-(unitW / 2), 0, barWidth, barHeight); // Draw basic visualizer
+            ctx.restore();
+          });
+          this.ctxAlpha(opacity, ctx => {
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, barX, barY);
+            ctx.rotate(0 - ((cycleIncrementer * (Math.PI / 180)) * i));
             ctx.fillRect(-(unitW / 2), 0, barWidth, barHeight); // Draw basic visualizer
             ctx.restore();
           });

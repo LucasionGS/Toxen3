@@ -44,7 +44,7 @@ export default class System {
         </>
       );
       
-      Toxen.loadingScreen.show(true);
+      Toxen.loadingScreen.toggleVisible(true);
       Toxen.loadingScreen.setContent(
         <Content>
           Preparing...
@@ -122,7 +122,7 @@ export default class System {
           Toxen.log(file.name + " is unsupported.");
         }
       }
-      Toxen.loadingScreen.show(false);
+      Toxen.loadingScreen.toggleVisible(false);
 
       if (mediaPack) {
         Toxen.loadSongs();

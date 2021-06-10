@@ -23,6 +23,7 @@ import SearchField from "./components/SongPanel/SearchField";
 import Converter from "./toxen/Converter";
 import Stats from "./toxen/Statistics";
 import Time from "./toxen/Time";
+import StoryboardEditorPanel from "./components/StoryboardEditorPanel/StoryboardEditorPanel";
 
 //#region Define variables used all over the ToxenApp process.
 /**
@@ -121,7 +122,7 @@ export class Toxen {
   }
 
   public static async loadSongs() {
-    Toxen.loadingScreen.show(true);
+    Toxen.loadingScreen.toggleVisible(true);
     let songCount = 0;
     let totalSongCount = await Song.getSongCount();
     Toxen.setSongList(await Song.getSongs(true, () => {
@@ -141,7 +142,7 @@ export class Toxen {
       ref.setMin(0);
       ref.setMax(totalSongCount);
     }));
-    Toxen.loadingScreen.show(false);
+    Toxen.loadingScreen.toggleVisible(false);
   }
 
   public static editingSong: Song = null;
@@ -204,7 +205,7 @@ export default class ToxenApp extends React.Component {
         Toxen.songPanel.update();
         Toxen.sidePanel.show(true);
         Toxen.sidePanel.setWidth(Settings.get("panelWidth"));
-        Toxen.loadingScreen.show(false);
+        Toxen.loadingScreen.toggleVisible(false);
         Toxen.musicPlayer.playRandom();
         Toxen.background.visualizer.start();
 
@@ -564,6 +565,9 @@ export default class ToxenApp extends React.Component {
           </Form>
           <hr />
         </SidepanelSection>
+
+        <StoryboardEditorPanel />
+        
       </Sidepanel>
     </div>
   )
