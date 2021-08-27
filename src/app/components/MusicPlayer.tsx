@@ -54,7 +54,8 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
   public setSource(src: MediaSourceInfo, playWhenReady: boolean = false) {
     this.setState({
       src
-    }, () => playWhenReady ? this.play() : this.media.load());
+    }, () => playWhenReady ? this.play() : this.load()
+    );
   }
 
   public isVideo(src: string) {
@@ -74,6 +75,10 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
 
   public play() {
     this.media.play();
+  }
+  
+  public load() {
+    this.media.load();
   }
   
   public pause() {
@@ -120,6 +125,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
       hidden
       src={this.state.src}
       onEnded={this.playNext.bind(this)}
+      preload="auto"
       />
     );
     // Video

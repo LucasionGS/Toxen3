@@ -10,6 +10,7 @@ if (require('electron-squirrel-startup')) { // eslint-disable-line global-requir
   app.quit();
 }
 
+
 const createWindow = (): void => {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -24,7 +25,7 @@ const createWindow = (): void => {
     autoHideMenuBar: true,
     center: true,
     icon: "./src/icons/toxen.ico",
-    darkTheme: true
+    darkTheme: true,
   });
 
   console.log(process.cwd());
@@ -42,6 +43,29 @@ const createWindow = (): void => {
 // Some APIs can only be used after this event occurs.
 app.on('ready', () => {
   createWindow();
+  
+  // Allow TX/HTTP and TX(S)/HTTP(S)
+  protocol.registerHttpProtocol('tx', (request, callback) => {
+    request.url = request.url.replace('tx://', 'http://');
+    // console.log(request);
+    callback({
+      headers: request.headers,
+      method: request.method,
+      referrer: request.referrer,
+      url: request.url,
+    });
+  });
+
+  protocol.registerHttpProtocol('txs', (request, callback) => {
+    request.url = request.url.replace('txs://', 'https://');
+    // console.log(request);
+    callback({
+      headers: request.headers,
+      method: request.method,
+      referrer: request.referrer,
+      url: request.url,
+    });
+  });
 
   // Register file protocol to access system files.
   protocol.registerFileProtocol('file', (request, callback) => {

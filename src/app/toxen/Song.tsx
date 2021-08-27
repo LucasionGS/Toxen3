@@ -36,8 +36,9 @@ export default class Song implements ISong {
    * Return the full path of the song folder.
    */
   public dirname(relativePath?: string) {
-    // if (Settings.isRemote()) `${Settings.get("libraryDirectory")}/${this.paths.dirname}`;
-    // else
+    let user = Settings.getUser();
+    if (!user) return null;
+    if (Settings.isRemote()) return `${user.getUserDirectoryCollection()}/${this.uid}${relativePath ? "/" + relativePath : ""}`;
     return this.paths && this.paths.dirname ? resolve(Settings.get("libraryDirectory"), this.paths.dirname, relativePath ?? ".") : null;
   }
 
@@ -45,16 +46,32 @@ export default class Song implements ISong {
    * Return the full path of the media file.
    */
   public mediaFile() {
-    if (Settings.isRemote())`${this.dirname()}/${this.paths.media}`;
+    if (Settings.isRemote()) return `${this.dirname()}/${this.paths.media}`;
     else return this.paths && this.paths.media ? resolve(this.dirname(), this.paths.media) : null;
   }
 
   /**
-   * Return the full path of the media file.
+   * Return the full path of the background file.
    */
   public backgroundFile() {
-    if (Settings.isRemote())`${this.dirname()}/${this.paths.background}`;
+    if (Settings.isRemote()) return `${this.dirname()}/${this.paths.background}`;
     else return this.paths && this.paths.background ? resolve(this.dirname(), this.paths.background) : "";
+  }
+
+  /**
+   * Return the full path of the subtitle file.
+   */
+   public subtitleFile() {
+    if (Settings.isRemote()) return `${this.dirname()}/${this.paths.subtitles}`;
+    else return this.paths && this.paths.subtitles ? resolve(this.dirname(), this.paths.subtitles) : "";
+  }
+  
+  /**
+   * Return the full path of the storyboard file.
+   */
+   public storyboardFile() {
+    if (Settings.isRemote()) return `${this.dirname()}/${this.paths.storyboard}`;
+    else return this.paths && this.paths.storyboard ? resolve(this.dirname(), this.paths.storyboard) : "";
   }
 
   public getDisplayName() {
@@ -109,9 +126,7 @@ export default class Song implements ISong {
     keys.forEach(key => {
       obj[key] = this[key] as any;
     })
-    return {
-      ...obj
-    }
+    return obj;
   }
 
   public static async buildInfo(fullPath: string) {
@@ -189,7 +204,7 @@ export default class Song implements ISong {
     let items = "QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm1234567890";
     let uid: string = "";
     do {
-      for (let i = 0; i < items.length; i++) {
+      for (let i = 0; i < 16; i++) {
         uid += items[Math.floor(Math.random() * items.length)];
       }
     }
@@ -212,12 +227,12 @@ export default class Song implements ISong {
       Toxen.background.visualizer.update();
       let img = new Image();
       img.src = bg;
-      img.addEventListener("load", () => {
+      const onLoad = () => {
         let canvas = document.createElement("canvas");
         let ctx = canvas.getContext("2d");
         canvas.width = img.naturalWidth;
         canvas.height = img.naturalHeight;
-        ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
+        try { ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight); } catch (error) { }
         canvas.toBlob(blob => {
           navigator.mediaSession.metadata = new MediaMetadata({
             title: this.title ?? "Unknown Title",
@@ -228,7 +243,8 @@ export default class Song implements ISong {
             ]
           });
         });
-      });
+      }
+      img.addEventListener("load", onLoad);
     }
 
     this.setCurrent();
@@ -279,12 +295,31 @@ export default class Song implements ISong {
     if (!dirName) {
       return 0;
     }
-    return (await fsp.readdir(dirName, { withFileTypes: true })).filter(ent => ent.isDirectory()).length;
+    if (Settings.isRemote()) {
+      let user = Settings.getUser();
+      if (!user) {
+        return 0;
+      }
+      let iSongs: ISong[] = await Toxen.fetch(user.getUserDirectoryCollection()).then(res => res.json());
+      return iSongs.length;
+    }
+    else {
+      return (await fsp.readdir(dirName, { withFileTypes: true })).filter(ent => ent.isDirectory()).length;
+    }
   }
 
   public static async getSongs(reload?: boolean, forEach?: (song: Song) => void): Promise<Song[]> {
     if (Settings.isRemote()) {
-
+      let user = Settings.getUser();
+      if (!user) {
+        return [];
+      }
+      let iSongs: ISong[] = await Toxen.fetch(user.getUserDirectoryCollection()).then(res => res.json());
+      const songs: Song[] = iSongs.map(iSong => Song.create(iSong));
+      if (forEach) {
+        songs.forEach(forEach);
+      }
+      return songs.sort((a, b) => a.artist && b.artist ? a.artist.localeCompare(b.artist) : -1);
     }
     else return Promise.resolve().then(async () => {
       if (reload !== true && Toxen.songList) {
@@ -335,14 +370,27 @@ export default class Song implements ISong {
           }
         }
       }
-
       await dir.close();
       return songs.sort((a, b) => a.artist && b.artist ? a.artist.localeCompare(b.artist) : -1);
     });
   }
 
-  public async saveInfo() {
-    if (!this.paths || !this.paths.dirname) return null;
+  public async saveInfo(): Promise<void> {
+    if (Settings.isRemote()) {
+      let info = this.toISong();
+      let user = Settings.getUser();
+      if (!user) {
+        return;
+      }
+      return await Toxen.fetch(user.getUserDirectoryCollection() + "/" + this.uid + "/info.json", {
+        method: "PUT",
+        body: JSON.stringify(info),
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }).then(() => void 0);
+    }
+    if (!this.paths || !this.paths.dirname) return;
     return fsp.writeFile(Path.resolve(this.dirname(), "info.json"), JSON.stringify(this.toISong()));
   }
 
@@ -355,7 +403,6 @@ export default class Song implements ISong {
       let nameNoExt = Converter.trimChar(Path.basename(file.name, Path.extname(file.name)), ".");
       let newFolder = Path.resolve(libDir, nameNoExt);
       let increment = 0;
-      debugger;
       while (await System.pathExists(newFolder)) {
         newFolder = Path.resolve(libDir, nameNoExt + ` (${++increment})`);
       }

@@ -42,10 +42,11 @@ export default class SongElement extends Component<SongElementProps, SongElement
   render() {
     let song = this.props.song;
     let classes = ["song-element"];
+    const bgFile = song.backgroundFile();
     if (this.state.playing) classes.push("playing");
     return (
       <div ref={ref => this.divElement = ref} className={classes.join(" ")} style={{
-        background: `linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0)) 0% 0% / cover, url("${song.backgroundFile().replace(/\\/g, "/")}")`
+        background: `linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0)) 0% 0% / cover, url("${bgFile.replace(/\\/g, "/")}")`
       }}
       onClick={this.play.bind(this)}
       onContextMenu={e => {

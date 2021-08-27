@@ -14,7 +14,6 @@ export default class System {
   public static async recursive(path: string, orgPath: string): Promise<Dirent[]>;
   public static async recursive(path: string, orgPath: string = path) {
     let files = await fsp.readdir(path, { withFileTypes: true });
-    let newFiles: string[] = [];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];

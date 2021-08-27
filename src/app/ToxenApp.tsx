@@ -24,12 +24,36 @@ import Converter from "./toxen/Converter";
 import Stats from "./toxen/Statistics";
 import Time from "./toxen/Time";
 import StoryboardEditorPanel from "./components/StoryboardEditorPanel/StoryboardEditorPanel";
+import { Dirent } from "fs";
+import User from "./toxen/User";
 
 //#region Define variables used all over the ToxenApp process.
 /**
  * Handler for events during runtime.
  */
 export class Toxen {
+
+  /**
+   * Used for fetching URLs and supports tx:// and txs:// URLs. (Gets converted to http(s)://)
+   */
+  public static fetch(input: string, init?: RequestInit) {
+    return fetch(Toxen.txToHttp(input), init);
+  }
+
+  /**
+   * Converts a http(s) URL to a tx(s) URL.
+   */
+  public static httpToTx(url: string) {
+    return url.replace(/^http(s)?:\/\//, (_: string, $1: string) => `tx${$1 || ""}://`);
+  }
+
+  /**
+   * Converts a tx(s) URL to a http(s) URL.
+   */
+  public static txToHttp(url: string) {
+    return url.replace(/^tx(s)?:\/\//, (_: string, $1: string) => `http${$1 || ""}://`);
+  }
+  
   public static whenReady() {
     return this.resolvedOnReady;
   }
@@ -41,6 +65,17 @@ export class Toxen {
   public static log(message: any) { console.log(message); }
   public static warn(message: any) { console.warn(message); }
   public static error(message: any) { console.error(message); }
+
+  public static async filterSupportedFiles(path: string, supported: string[]) {
+    return (
+     Settings.isRemote() ? await Toxen.fetch(path).then(res => res.json()) as Dirent[]
+     : await System.recursive(path)
+    )
+    .filter(f => {
+      let ext = Path.extname(f.name);
+      return supported.includes(ext);
+    }).map(f => f.name);
+  }
 
   public static getSupportedAudioFiles() {
     return [
@@ -201,6 +236,9 @@ export default class ToxenApp extends React.Component {
           );
         }
 
+        // User login (hardcoded for now...)
+        await User.login("85eurent5a84001j3e8tm89fuc0la216"); // Temporary local user token.
+
         await Toxen.loadSongs();
         Toxen.songPanel.update();
         Toxen.sidePanel.show(true);
@@ -216,8 +254,7 @@ export default class ToxenApp extends React.Component {
         //     Toxen.reloadSection();
         //   }
         // });
-      })
-      .then(() => Toxen._resolveWhenReady())
+      }).then(() => Toxen._resolveWhenReady())
   }
 
   render = () => (
@@ -362,16 +399,16 @@ export default class ToxenApp extends React.Component {
             <br />
 
             <FormInput type="select" name="visualizerStyle*string" displayName="Visualizer Style" >
-            {(() => {
-              let objs: JSX.Element[] = [];
-              for (const key in VisualizerStyle) {
-                if (Object.prototype.hasOwnProperty.call(VisualizerStyle, key)) {
-                  const v = (VisualizerStyle as any)[key];
-                  objs.push(<option key={key} className="tx-form-field" value={v}>{Converter.camelCaseToSpacing(key)}</option>)
+              {(() => {
+                let objs: JSX.Element[] = [];
+                for (const key in VisualizerStyle) {
+                  if (Object.prototype.hasOwnProperty.call(VisualizerStyle, key)) {
+                    const v = (VisualizerStyle as any)[key];
+                    objs.push(<option key={key} className="tx-form-field" value={v}>{Converter.camelCaseToSpacing(key)}</option>)
+                  }
                 }
-              }
-              return objs;
-            })()}
+                return objs;
+              })()}
             </FormInput>
             <br />
             <sup>Select which style for the visualizer to use.</sup>
@@ -495,12 +532,7 @@ export default class ToxenApp extends React.Component {
                 let path = song.dirname();
 
                 let supported = Toxen.getSupportedMediaFiles();
-
-                return (await System.recursive(path))
-                  .filter(f => {
-                    let ext = Path.extname(f.name);
-                    return supported.includes(ext);
-                  }).map(f => f.name);
+                return await Toxen.filterSupportedFiles(path, supported);
               })}
             />
             <FormInput nullable displayName="Background file" name="paths.background*string" getValueTemplateCallback={() => Toxen.editingSong} type="selectAsync"
@@ -510,11 +542,7 @@ export default class ToxenApp extends React.Component {
                 let path = song.dirname();
 
                 let supported = Toxen.getSupportedImageFiles();
-                return (await System.recursive(path))
-                  .filter(f => {
-                    let ext = Path.extname(f.name);
-                    return supported.includes(ext);
-                  }).map(f => f.name);
+                return await Toxen.filterSupportedFiles(path, supported);
               })}
             />
             <FormInput nullable displayName="Subtitle file" name="paths.subtitles*string" getValueTemplateCallback={() => Toxen.editingSong} type="selectAsync"
@@ -524,11 +552,7 @@ export default class ToxenApp extends React.Component {
                 let path = song.dirname();
 
                 let supported = Toxen.getSupportedSubtitleFiles();
-                return (await System.recursive(path))
-                  .filter(f => {
-                    let ext = Path.extname(f.name);
-                    return supported.includes(ext);
-                  }).map(f => f.name);
+                return await Toxen.filterSupportedFiles(path, supported);
               })}
             />
             <FormInput nullable displayName="Storyboard file" name="paths.storyboard*string" getValueTemplateCallback={() => Toxen.editingSong} type="selectAsync"
@@ -538,11 +562,7 @@ export default class ToxenApp extends React.Component {
                 let path = song.dirname();
 
                 let supported = Toxen.getSupportedStoryboardFiles();
-                return (await System.recursive(path))
-                  .filter(f => {
-                    let ext = Path.extname(f.name);
-                    return supported.includes(ext);
-                  }).map(f => f.name);
+                return await Toxen.filterSupportedFiles(path, supported);
               })}
             />
 
@@ -567,7 +587,7 @@ export default class ToxenApp extends React.Component {
         </SidepanelSection>
 
         <StoryboardEditorPanel />
-        
+
       </Sidepanel>
     </div>
   )

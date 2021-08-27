@@ -5,6 +5,7 @@ import CrossPlatform from "./CrossPlatform";
 import { PanelDirection } from "../components/Sidepanel/Sidepanel"
 import JSONX from "./JSONX";
 import { Toxen } from "../ToxenApp";
+import User from "./User";
 
 export default class Settings {
   /**
@@ -20,22 +21,15 @@ export default class Settings {
    */
   public static async save() {
     console.log("Saving...");
-
-    if (Settings.isRemote()) {
-      // Remote server
-      throw "Saving remotely not yet implemented";
+    if (!(await fsp.stat(Settings.toxenDataPath).then(() => true).catch(() => false))) {
+      await fsp.mkdir(Settings.toxenDataPath, { recursive: true });
     }
-    else {
-      if (!(await fsp.stat(Settings.toxenDataPath).then(() => true).catch(() => false))) {
-        await fsp.mkdir(Settings.toxenDataPath, { recursive: true });
-      }
-      try {
-        let ws = fs.createWriteStream(Settings.filePath);
-        ws.write(Buffer.from(Settings.toString()));
-        ws.close();
-      } catch (error) {
-        console.error(error);
-      }
+    try {
+      let ws = fs.createWriteStream(Settings.filePath);
+      ws.write(Buffer.from(Settings.toString()));
+      ws.close();
+    } catch (error) {
+      console.error(error);
     }
   }
   /**
@@ -43,21 +37,14 @@ export default class Settings {
    */
   public static async load(): Promise<ISettings> {
     return Promise.resolve().then(async () => {
-      if (Settings.isRemote()) {
-        // Remote server
-        throw "Loading remotely not yet implemented";
+      if (!(await fsp.stat(Settings.filePath).then(() => true).catch(() => false))) {
+        await Settings.save();
       }
-      else {
-        // Local
-        if (!(await fsp.stat(Settings.filePath).then(() => true).catch(() => false))) {
-          await Settings.save();
-        }
-        try {
-          let data = await fsp.readFile(Settings.filePath, "utf8");
-          return (Settings.data = JSON.parse(data));
-        } catch (error) {
-          throw "Unable to parse settings file.";
-        }
+      try {
+        let data = await fsp.readFile(Settings.filePath, "utf8");
+        return (Settings.data = JSON.parse(data));
+      } catch (error) {
+        throw "Unable to parse settings file.";
       }
     })
   }
@@ -67,8 +54,10 @@ export default class Settings {
       Settings.data
       && Settings.data.libraryDirectory
       && (
-        Settings.data.libraryDirectory.toLowerCase().startsWith("http://") ||
-        Settings.data.libraryDirectory.toLowerCase().startsWith("https://")
+        Settings.data.libraryDirectory.toLowerCase().startsWith("tx://") ||
+        Settings.data.libraryDirectory.toLowerCase().startsWith("txs://")
+        // Settings.data.libraryDirectory.toLowerCase().startsWith("http://") ||
+        // Settings.data.libraryDirectory.toLowerCase().startsWith("https://")
       ));
   }
 
@@ -114,6 +103,10 @@ export default class Settings {
     // if (Settings.data && Settings.data.hasOwnProperty(key)) return Settings.data[key] = value;
     JSONX.setObjectValue(Settings.data, key, value);
     return value;
+  }
+
+  public static getUser() {
+    return User.getCurrentUser();
   }
 }
 

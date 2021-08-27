@@ -21,25 +21,18 @@ export default class Stats extends EventEmitter {
    */
   public static async save() {
     console.log("Saving stats...");
-
-    if (Settings.isRemote()) {
-      // Remote server
-      throw "Saving remotely not yet implemented";
+    if (!(await fsp.stat(Settings.toxenDataPath).then(() => true).catch(() => false))) {
+      await fsp.mkdir(Settings.toxenDataPath, { recursive: true });
     }
-    else {
-      if (!(await fsp.stat(Settings.toxenDataPath).then(() => true).catch(() => false))) {
-        await fsp.mkdir(Settings.toxenDataPath, { recursive: true });
-      }
-      try {
-        let ws = fs.createWriteStream(Stats.filePath);
-        ws.write(Buffer.from(Stats.toString()));
-        ws.close();
-        Stats.events.emit("saved", {
-          savedAt: Date.now()
-        });
-      } catch (error) {
-        console.error(error);
-      }
+    try {
+      let ws = fs.createWriteStream(Stats.filePath);
+      ws.write(Buffer.from(Stats.toString()));
+      ws.close();
+      Stats.events.emit("saved", {
+        savedAt: Date.now()
+      });
+    } catch (error) {
+      console.error(error);
     }
   }
   /**
@@ -47,37 +40,29 @@ export default class Stats extends EventEmitter {
    */
   public static async load(): Promise<IStatistics> {
     return Promise.resolve().then(async () => {
-      if (Settings.isRemote()) {
-        // Remote server
-        throw "Loading remotely not yet implemented";
-      }
-      else {
-        // Local
-        if (!(await fsp.stat(Stats.filePath).then(() => true).catch(() => false))) {
-          // Backwards compatibility.
-          let oldStats = Legacy.toxen2StatisticsPath();
-          debugger;
-          if (oldStats) {
-            try {
-              let raw = await fsp.readFile(oldStats, "utf8");
-              let data = JSON.parse(raw) as Toxen2Stats;
-              Stats.data = {} as any;
-              Stats.apply(await Legacy.toxen2StatsToStatistics(data));
-            } catch (error) {
-              console.error(error);
-              Stats.data = {} as any;
-            }
+      if (!(await fsp.stat(Stats.filePath).then(() => true).catch(() => false))) {
+        // Backwards compatibility.
+        let oldStats = Legacy.toxen2StatisticsPath();
+        if (oldStats) {
+          try {
+            let raw = await fsp.readFile(oldStats, "utf8");
+            let data = JSON.parse(raw) as Toxen2Stats;
+            Stats.data = {} as any;
+            Stats.apply(await Legacy.toxen2StatsToStatistics(data));
+          } catch (error) {
+            console.error(error);
+            Stats.data = {} as any;
           }
-          await Stats.save();
         }
-        try {
-          let data = await fsp.readFile(Stats.filePath, "utf8");
-          return (Stats.data = JSON.parse(data));
-        } catch (error) {
-          throw "Unable to parse statistics file.";
-        }
+        await Stats.save();
       }
-    })
+      try {
+        let data = await fsp.readFile(Stats.filePath, "utf8");
+        return (Stats.data = JSON.parse(data));
+      } catch (error) {
+        throw "Unable to parse statistics file.";
+      }
+    });
   }
 
   public static data: IStatistics;
@@ -137,7 +122,7 @@ export interface StatsEventEmitter extends EventEmitter {
 
 interface StatsEvents {
   "changed": {};
-  "saved": {savedAt: number};
+  "saved": { savedAt: number };
   "loaded": [number, string];
 }
 

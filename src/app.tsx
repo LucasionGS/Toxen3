@@ -10,6 +10,7 @@ import Song from "./app/toxen/Song";
 import Converter from "./app/toxen/Converter";
 import Stats from "./app/toxen/Statistics";
 import navigator from "./navigator";
+import User from "./app/toxen/User";
 
 // Setup
 // Create menu actions/shortcuts
@@ -116,7 +117,7 @@ navigator.mediaSession.setActionHandler('nexttrack', () => {
   Toxen.musicPlayer.playNext();
 });
 
-Toxen.whenReady().then(() => {
+Toxen.whenReady().then(async () => {
   // Count toxen times opened
   Stats.set("timesOpened", (Stats.get("timesOpened") ?? 0) + 1);
   Stats.save(); // Store when ready
