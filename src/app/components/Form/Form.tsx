@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import FormInput from './FormInputFields/FormInput';
 import "./Form.scss";
 
-type FormValue = string | string[] | boolean | number;
+export type FormValue = string | string[] | boolean | number;
 
 interface Props {
   onSubmit: (event: React.FormEvent<HTMLFormElement>, formValues: { [key: string]: FormValue }) => void,

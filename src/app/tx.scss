@@ -3,6 +3,7 @@
   background-color: #1976D2; // Default color
   border: none;
   padding: 0.35em;
+  margin: 0.05em;
   &:hover {
     cursor: pointer;
     filter: brightness(0.9);
@@ -11,6 +12,10 @@
   // Colors
   &.tx-btn-action {
     background-color: #01861d; // Action color
+  }
+  
+  &.tx-btn-warning {
+    background-color: #ffb300; // Warning color
   }
   
   &.tx-btn-next {

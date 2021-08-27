@@ -26,6 +26,7 @@ import Time from "./toxen/Time";
 import StoryboardEditorPanel from "./components/StoryboardEditorPanel/StoryboardEditorPanel";
 import { Dirent } from "fs";
 import User from "./toxen/User";
+import LoginForm from "./components/LoginForm/LoginForm";
 
 //#region Define variables used all over the ToxenApp process.
 /**
@@ -53,7 +54,7 @@ export class Toxen {
   public static txToHttp(url: string) {
     return url.replace(/^tx(s)?:\/\//, (_: string, $1: string) => `http${$1 || ""}://`);
   }
-  
+
   public static whenReady() {
     return this.resolvedOnReady;
   }
@@ -68,13 +69,13 @@ export class Toxen {
 
   public static async filterSupportedFiles(path: string, supported: string[]) {
     return (
-     Settings.isRemote() ? await Toxen.fetch(path).then(res => res.json()) as Dirent[]
-     : await System.recursive(path)
+      Settings.isRemote() ? await Toxen.fetch(path).then(res => res.json()) as Dirent[]
+        : await System.recursive(path)
     )
-    .filter(f => {
-      let ext = Path.extname(f.name);
-      return supported.includes(ext);
-    }).map(f => f.name);
+      .filter(f => {
+        let ext = Path.extname(f.name);
+        return supported.includes(ext);
+      }).map(f => f.name);
   }
 
   public static getSupportedAudioFiles() {
@@ -236,9 +237,6 @@ export default class ToxenApp extends React.Component {
           );
         }
 
-        // User login (hardcoded for now...)
-        await User.login("85eurent5a84001j3e8tm89fuc0la216"); // Temporary local user token.
-
         await Toxen.loadSongs();
         Toxen.songPanel.update();
         Toxen.sidePanel.show(true);
@@ -287,8 +285,10 @@ export default class ToxenApp extends React.Component {
             <button className="tx-btn tx-whitespace-nowrap" onClick={async () => {
               await Toxen.loadSongs();
               Toxen.songPanel.update();
-            }}><i className="fas fa-redo"></i>&nbsp;Reload Library</button>
-            &nbsp;
+            }}>
+              <i className="fas fa-redo"></i>&nbsp;
+              Reload Library
+            </button>
             <button className="tx-btn tx-whitespace-nowrap" onClick={async () => {
               Toxen.showCurrentSong();
             }}><i className="fas fa-search"></i>&nbsp;Show playing</button>
@@ -344,11 +344,12 @@ export default class ToxenApp extends React.Component {
         <SidepanelSection key="settings" id="settings" title="Settings" icon={<i className="fas fa-cog"></i>} separator>
           <SidepanelSectionHeader>
             <h1>Settings</h1>
-            <button className="tx-btn tx-btn-action" onClick={() => Toxen.settingsForm.submit()}>
+            <button className="tx-btn tx-btn-action" onClick={() => {Toxen.settingsForm.submit(); Toxen.reloadSection()}}>
               <i className="fas fa-save"></i>
               &nbsp;Save settings
             </button>
           </SidepanelSectionHeader>
+          <LoginForm />
           <Form hideSubmit ref={ref => Toxen.settingsForm = ref} saveButtonText="Save settings" onSubmit={(_, params) => {
             Settings.apply(params);
             Settings.save();
@@ -356,12 +357,28 @@ export default class ToxenApp extends React.Component {
           }}>
             {/* General settings */}
             <h2>General</h2>
-            <FormInput type="folder" name="libraryDirectory*string" displayName="Music Library" />
-            <sup>Music Library to fetch songs from.</sup>
-            <button className="tx-btn tx-btn-action" onClick={() => remote.shell.openPath(Settings.get("libraryDirectory"))}>
-              <i className="fas fa-save"></i>
-              &nbsp;Open library folder
-            </button>
+            
+            {(() => {
+              let ref = React.createRef<FormInput>();
+              return (
+                <>
+                  <FormInput ref={ref} type="text" name="libraryDirectory*string" displayName="Music Library" />
+                  <sup>
+                    Music Library to fetch songs from.<br />
+                    You can use the Change Music Folder button to select a directory or write it in directly. <br />
+                    You can also insert a URL to a Toxen Streaming Server that you have an account on. Must begin with http:// or http://
+                  </sup>
+                  <button className="tx-btn tx-btn-action" onClick={() => ref.current.openFolder()}>
+                    <i className="fas fa-folder"></i>
+                    &nbsp;Change Music Folder
+                  </button>
+                  <button className="tx-btn tx-btn-action" onClick={() => remote.shell.openPath(Settings.get("libraryDirectory"))}>
+                    <i className="fas fa-folder-open"></i>
+                    &nbsp;Open Music Folder
+                  </button>
+                </>
+              );
+            })()}
 
             {/* Sidepanel settings */}
             <hr />
@@ -442,13 +459,17 @@ export default class ToxenApp extends React.Component {
           <SidepanelSectionHeader>
             <h1>Edit music details</h1>
             <button className="tx-btn tx-btn-action" onClick={() => Toxen.editSongForm.submit()}>
-              <i className="fas fa-save"></i>
-              &nbsp;Save
+              <i className="fas fa-save"></i>&nbsp;
+              Save
             </button>
-            &nbsp;
-            <button className="tx-btn" onClick={() => remote.shell.openPath(Toxen.editingSong.dirname())}>Open music folder</button>
-            &nbsp;
-            <button className="tx-btn" onClick={() => Toxen.reloadSection()}>Reload data</button>
+            <button className="tx-btn" onClick={() => remote.shell.openPath(Toxen.editingSong.dirname())}>
+              <i className="fas fa-folder-open"></i>&nbsp;
+              Open music folder
+            </button>
+            <button className="tx-btn" onClick={() => Toxen.reloadSection()}>
+              <i className="fas fa-redo"></i>&nbsp;
+              Reload data
+            </button>
           </SidepanelSectionHeader>
           <Form hideSubmit ref={ref => Toxen.editSongForm = ref} saveButtonText="Save song" onSubmit={(_, formValues) => {
             let current = Song.getCurrent();

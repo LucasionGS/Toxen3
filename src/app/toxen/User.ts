@@ -15,7 +15,11 @@ export default class User {
   public static async login(token: string): Promise<User>;
   public static async login(username: string, password: string): Promise<User>;
   public static async login(username: string, password?: string) {
-    if (!Settings.isRemote()) return null;
+    let loginUrl = Settings.isRemote() ? Settings.get("libraryDirectory") : "https://toxen.net/stream";
+    while (loginUrl.endsWith("/")) {
+      loginUrl = loginUrl.substring(0, loginUrl.length - 1);
+    }
+
     let data: any;
     if (username && password) data = {
       username: username,
@@ -24,7 +28,7 @@ export default class User {
     else if (username && !password) data = {
       token: username
     };
-    return await Toxen.fetch(Settings.get("libraryDirectory") + "/login", {
+    return await Toxen.fetch(loginUrl + "/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -34,6 +38,8 @@ export default class User {
       if (response.ok) {
         let user = User.create(await response.json() as IUser);
         User.setCurrentUser(user);
+        console.log(`Logged in as ${user.username}`);
+        
         return user;
       }
       return null;
@@ -58,19 +64,38 @@ export default class User {
   public static setCurrentUser(user: User) {
     window.localStorage.setItem("user", JSON.stringify(user));
   }
+  
+  public static removeCurrentUser() {
+    window.localStorage.removeItem("user");
+  }
 
   public static create(info: IUser) {
     let user = new User();
 
     // Assign properties
+    user.id = info.id;
+    user.username = info.username;
     user.token = info.token;
+    user.premium = info.premium;
+    user.premium_expire = (info.premium_expire ? new Date(info.premium_expire) : null);
+    user.remote_max_size = info.remote_max_size;
 
     return user;
   }
   
+  id: number;
+  username: string;
   token: string;
+  premium: boolean;
+  premium_expire: Date;
+  remote_max_size: number;
 }
 
 interface IUser {
+  id: number;
+  username: string;
   token: string;
+  premium: boolean;
+  premium_expire: string;
+  remote_max_size: number;
 }

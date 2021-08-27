@@ -37,7 +37,7 @@ export default class Song implements ISong {
    */
   public dirname(relativePath?: string) {
     let user = Settings.getUser();
-    if (!user) return null;
+    if (Settings.isRemote() && !user) return null;
     if (Settings.isRemote()) return `${user.getUserDirectoryCollection()}/${this.uid}${relativePath ? "/" + relativePath : ""}`;
     return this.paths && this.paths.dirname ? resolve(Settings.get("libraryDirectory"), this.paths.dirname, relativePath ?? ".") : null;
   }
@@ -47,7 +47,7 @@ export default class Song implements ISong {
    */
   public mediaFile() {
     if (Settings.isRemote()) return `${this.dirname()}/${this.paths.media}`;
-    else return this.paths && this.paths.media ? resolve(this.dirname(), this.paths.media) : null;
+    else return this.paths && this.paths.media ? resolve(this.dirname(), this.paths.media || "") : null;
   }
 
   /**
@@ -55,7 +55,7 @@ export default class Song implements ISong {
    */
   public backgroundFile() {
     if (Settings.isRemote()) return `${this.dirname()}/${this.paths.background}`;
-    else return this.paths && this.paths.background ? resolve(this.dirname(), this.paths.background) : "";
+    else return this.paths && this.paths.background ? resolve(this.dirname(), this.paths.background || "") : "";
   }
 
   /**
@@ -63,7 +63,7 @@ export default class Song implements ISong {
    */
    public subtitleFile() {
     if (Settings.isRemote()) return `${this.dirname()}/${this.paths.subtitles}`;
-    else return this.paths && this.paths.subtitles ? resolve(this.dirname(), this.paths.subtitles) : "";
+    else return this.paths && this.paths.subtitles ? resolve(this.dirname(), this.paths.subtitles || "") : "";
   }
   
   /**
@@ -300,11 +300,11 @@ export default class Song implements ISong {
       if (!user) {
         return 0;
       }
-      let iSongs: ISong[] = await Toxen.fetch(user.getUserDirectoryCollection()).then(res => res.json());
+      let iSongs: ISong[] = await Toxen.fetch(user.getUserDirectoryCollection()).then(res => res.json()).catch(() => []);
       return iSongs.length;
     }
     else {
-      return (await fsp.readdir(dirName, { withFileTypes: true })).filter(ent => ent.isDirectory()).length;
+      return fsp.readdir(dirName, { withFileTypes: true }).then(files => files.filter(ent => ent.isDirectory()).length).catch(() => 0);
     }
   }
 

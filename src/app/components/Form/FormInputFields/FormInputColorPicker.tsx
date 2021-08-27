@@ -9,15 +9,25 @@ interface Props {
 }
 
 export default function FormInputColorPicker(props: Props) {
-  const [value, setValue] = useState(props.defaultValue ?? "#000");
+  const [value, setValue] = useState(props.defaultValue ?? "#000000");
   let colorPicker: HTMLInputElement;
   return (
     <div style={{ position: "relative" }}>
-      <input defaultValue={value} style={{ pointerEvents: "none", opacity: 0, position: "absolute", top: 0, left: 0 }} ref={ref => colorPicker = ref} type="color" onChange={e => {
+      <input defaultValue={value}
+      style={{
+        pointerEvents: "none",
+        opacity: 0,
+        position: "absolute",
+        top: 0,
+        left: 0
+      }} ref={ref => colorPicker = ref} type="color" onChange={e => {
         setValue(e.currentTarget.value);
         if (typeof props.onChange === "function") props.onChange(e.currentTarget.value);
       }} />
-      <input className="tx-form-field" style={{ backgroundColor: value }} readOnly type="text" name={props.name} value={value} onClick={() => {
+      <input className="tx-form-field" style={{
+        backgroundColor: value,
+        color: rgbToGrayscale(hexToRgb(value)).r < 128 ? "#fff" : "#000",
+      }} readOnly type="text" name={props.name} value={value} onClick={() => {
         colorPicker.click();
       }} />
       {
@@ -44,4 +54,37 @@ export default function FormInputColorPicker(props: Props) {
       }
     </div>
   );
+}
+
+function hexToRgb(hex: string) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
+}
+
+function invertRgb(rgb: { r: number, g: number, b: number }) {
+  const { r, g, b } = rgb ?? { r: 0, g: 0, b: 0 };
+  return {
+    r: 255 - r,
+    g: 255 - g,
+    b: 255 - b
+  };
+}
+
+function rgbToGrayscale(rgb: { r: number, g: number, b: number }) {
+  const { r, g, b } = rgb ?? { r: 0, g: 0, b: 0 };
+  const avg = (r + g + b) / 3;
+  return {
+    r: avg,
+    g: avg,
+    b: avg
+  };
+}
+
+function rgbToHex(rgb: { r: number, g: number, b: number }) {
+  const { r, g, b } = rgb ?? { r: 0, g: 0, b: 0 };
+  return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
 }

@@ -11,6 +11,7 @@ import FormInputCheckbox from './FormInputCheckbox';
 
 type Props = [
   PropsTypeText,
+  PropsTypePassword,
   PropsTypeNumber,
   PropsTypeFile,
   PropsTypeFolder,
@@ -32,6 +33,10 @@ interface PropsTemplate<T extends string> {
 }
 
 interface PropsTypeText extends PropsTemplate<"text"> {
+  readOnly?: boolean;
+}
+
+interface PropsTypePassword extends PropsTemplate<"password"> {
   readOnly?: boolean;
 }
 interface PropsTypeNumber extends PropsTemplate<"number"> {
@@ -118,12 +123,15 @@ export default class FormInput extends React.Component<Props> {
 
     let label = (<label htmlFor={this.props.name}>{this.props.displayName ? this.props.displayName : name}</label>);
     switch (this.props.type) {
+      case "password":
       case "text": {
+        const ref = React.createRef<HTMLInputElement>();
+        this.openFolder = this.createOpenFolder(ref);
         return (
           <>
             {label}
             <br />
-            <input className={"tx-form-field" + (this.props.readOnly ? " read-only" : "")} type="text" name={this.props.name} defaultValue={value} readOnly={this.props.readOnly} />
+            <input ref={ref} className={"tx-form-field" + (this.props.readOnly ? " read-only" : "")} type={this.props.type} name={this.props.name} defaultValue={value} readOnly={this.props.readOnly} />
             <br />
             <br />
           </>
@@ -169,22 +177,13 @@ export default class FormInput extends React.Component<Props> {
 
       case "folder": {
         const ref = React.createRef<HTMLInputElement>();
+        this.openFolder = this.createOpenFolder(ref);
         return (
           <>
             {label}
             <br />
             <input ref={ref} className="tx-form-field" type="text" readOnly name={this.props.name} defaultValue={value} onClick={
-              () => {
-                let value = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
-                  properties: [
-                    'openDirectory'
-                  ]
-                });
-                if (value) {
-                  const parseOutput = (this.props as PropsTypeFile).parseOutput;
-                  ref.current.value = typeof parseOutput === "function" ? parseOutput(value[0]) : value[0];
-                }
-              }
+              this.openFolder
             } />
             <br />
             <br />
@@ -247,9 +246,26 @@ export default class FormInput extends React.Component<Props> {
             <br />
             <FormInputColorPicker nullable={this.props.nullable} onChange={this.props.onChange} name={this.props.name} defaultValue={value} />
             <br />
-            <br />
+            {/* <br /> */}
           </>
         )
+      }
+    }
+  }
+  public openFolder() {
+    throw new Error("Unable to open folder. Function not redefined.");
+  }
+
+  private createOpenFolder(ref: React.RefObject<HTMLInputElement>) {
+    return () => {
+      let value = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
+        properties: [
+          'openDirectory'
+        ]
+      });
+      if (value) {
+        const parseOutput = (this.props as PropsTypeFile).parseOutput;
+        ref.current.value = typeof parseOutput === "function" ? parseOutput(value[0]) : value[0];
       }
     }
   }
