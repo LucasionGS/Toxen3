@@ -54,10 +54,10 @@ export default class Settings {
       Settings.data
       && Settings.data.libraryDirectory
       && (
-        Settings.data.libraryDirectory.toLowerCase().startsWith("tx://") ||
-        Settings.data.libraryDirectory.toLowerCase().startsWith("txs://")
-        // Settings.data.libraryDirectory.toLowerCase().startsWith("http://") ||
-        // Settings.data.libraryDirectory.toLowerCase().startsWith("https://")
+        Settings.data.libraryDirectory.toLowerCase().startsWith("tx://")
+        || Settings.data.libraryDirectory.toLowerCase().startsWith("txs://")
+        || Settings.data.libraryDirectory.toLowerCase().startsWith("http://")
+        || Settings.data.libraryDirectory.toLowerCase().startsWith("https://")
       ));
   }
 

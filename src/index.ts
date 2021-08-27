@@ -43,34 +43,13 @@ const createWindow = (): void => {
 // Some APIs can only be used after this event occurs.
 app.on('ready', () => {
   createWindow();
-  
-  // Allow TX/HTTP and TX(S)/HTTP(S)
-  protocol.registerHttpProtocol('tx', (request, callback) => {
-    request.url = request.url.replace('tx://', 'http://');
-    // console.log(request);
-    callback({
-      headers: request.headers,
-      method: request.method,
-      referrer: request.referrer,
-      url: request.url,
-    });
-  });
-
-  protocol.registerHttpProtocol('txs', (request, callback) => {
-    request.url = request.url.replace('txs://', 'https://');
-    // console.log(request);
-    callback({
-      headers: request.headers,
-      method: request.method,
-      referrer: request.referrer,
-      url: request.url,
-    });
-  });
 
   // Register file protocol to access system files.
   protocol.registerFileProtocol('file', (request, callback) => {
-    const pathname = request.url.replace('file:///', '');
-    callback(decodeURI(pathname));
+    request.url = request.url.replace('tx://', 'http://');
+    request.url = request.url.replace('txs://', 'https://');
+    request.url = request.url.replace('file:///', '');
+    callback(decodeURI(request.url));
   });
 });
 
