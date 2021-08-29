@@ -15,8 +15,6 @@ import Converter from "./Converter";
 import Stats from "./Statistics";
 import navigator, { MediaMetadata } from "../../navigator";
 
-console.log(MediaMetadata);
-
 export default class Song implements ISong {
   public uid: string;
   public artist: string;
@@ -30,7 +28,34 @@ export default class Song implements ISong {
   public visualizerStyle: VisualizerStyle;
   public visualizerIntensity: number;
   public visualizerForceRainbowMode: boolean;
+  public year: number;
 
+
+  private static history: Song[] = [];
+  private static historyIndex = 0;
+  public static getHistory(): readonly Song[] {
+    return Song.history;
+  }
+  public static historyAdd(song: Song) {
+    Song.history.splice(Song.historyIndex + 1);
+    if (Song.history.length > 0 && Song.history[Song.history.length - 1] === song) return;
+    Song.history.push(song);
+    Song.historyIndex = Song.history.length - 1;
+  }
+  public static historyForward() {
+    if (Song.historyIndex < Song.history.length - 1) {
+      Song.historyIndex++;
+      return Song.history[Song.historyIndex];
+    }
+    return null;
+  }
+  public static historyBack() {
+    if (Song.historyIndex > 0) {
+      Song.historyIndex--;
+      return Song.history[Song.historyIndex];
+    }
+    return null;
+  }
 
   /**
    * Return the full path of the song folder.
@@ -46,15 +71,15 @@ export default class Song implements ISong {
    * Return the full path of the media file.
    */
   public mediaFile() {
-    if (Settings.isRemote()) return `${this.dirname()}/${this.paths.media}`;
-    else return this.paths && this.paths.media ? resolve(this.dirname(), this.paths.media || "") : null;
+    if (Settings.isRemote()) return this.paths.media ? `${this.dirname()}/${this.paths.media}` : "";
+    else return this.paths && this.paths.media ? resolve(this.dirname(), this.paths.media || "") : "";
   }
 
   /**
    * Return the full path of the background file.
    */
   public backgroundFile() {
-    if (Settings.isRemote()) return `${this.dirname()}/${this.paths.background}`;
+    if (Settings.isRemote()) return this.paths.background ? `${this.dirname()}/${this.paths.background}` : "";
     else return this.paths && this.paths.background ? resolve(this.dirname(), this.paths.background || "") : "";
   }
 
@@ -62,7 +87,7 @@ export default class Song implements ISong {
    * Return the full path of the subtitle file.
    */
    public subtitleFile() {
-    if (Settings.isRemote()) return `${this.dirname()}/${this.paths.subtitles}`;
+    if (Settings.isRemote()) return this.paths.subtitles ? `${this.dirname()}/${this.paths.subtitles}`: "";
     else return this.paths && this.paths.subtitles ? resolve(this.dirname(), this.paths.subtitles || "") : "";
   }
   
@@ -121,6 +146,7 @@ export default class Song implements ISong {
       "visualizerStyle",
       "visualizerIntensity",
       "visualizerForceRainbowMode",
+      "year",
     ];
     const obj = {} as any;
     keys.forEach(key => {
@@ -214,11 +240,25 @@ export default class Song implements ISong {
 
   private lastBlobUrl: string;
 
-  public play() {
+  public play(options?: {
+    /**
+     * Prevent this play from being added to the history
+     */
+    disableHistory?: boolean
+  }) {
+
+    Toxen.messageCards.addMessage({
+      content: "Playing " + this.getDisplayName(),
+      type: "normal",
+      expiresIn: 2000
+    });
+    
+    options ?? (options = {});
     if (this.lastBlobUrl) URL.revokeObjectURL(this.lastBlobUrl);
     let src = this.mediaFile();
-    let bg = this.backgroundFile();
     if (Toxen.musicPlayer.state.src != src) {
+      let bg = this.backgroundFile();
+      if (!options.disableHistory) Song.historyAdd(this);
       Toxen.musicPlayer.setSource(src, true);
       Toxen.background.setBackground(bg);
       Stats.set("songsPlayed", (Stats.get("songsPlayed") ?? 0) + 1)
@@ -227,24 +267,29 @@ export default class Song implements ISong {
       Toxen.background.visualizer.update();
       let img = new Image();
       img.src = bg;
-      const onLoad = () => {
-        let canvas = document.createElement("canvas");
-        let ctx = canvas.getContext("2d");
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        try { ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight); } catch (error) { }
-        canvas.toBlob(blob => {
-          navigator.mediaSession.metadata = new MediaMetadata({
-            title: this.title ?? "Unknown Title",
-            artist: this.artist ?? "Unknown Artist",
-            album: this.album ?? "",
-            artwork: [
-              { src: (this.lastBlobUrl = URL.createObjectURL(blob)), sizes: `${img.naturalWidth}x${img.naturalHeight}`, type: "image/png" }
-            ]
-          });
+      const addToMetadata = (blob?: Blob) => {
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: this.title ?? "Unknown Title",
+          artist: this.artist ?? "Unknown Artist",
+          album: this.album ?? "",
+          artwork: blob ? [
+            { src: (this.lastBlobUrl = URL.createObjectURL(blob)), sizes: `${img.naturalWidth}x${img.naturalHeight}`, type: "image/png" }
+          ]: []
         });
       }
-      img.addEventListener("load", onLoad);
+      
+      if (Toxen.getSupportedImageFiles().includes(Path.extname(bg).toLowerCase())) {
+        const onLoad = () => {
+          let canvas = document.createElement("canvas");
+          let ctx = canvas.getContext("2d");
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          try { ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight); } catch (error) { }
+          canvas.toBlob(addToMetadata);
+        }
+        img.addEventListener("load", onLoad);
+      }
+      else addToMetadata();
     }
 
     this.setCurrent();
@@ -253,9 +298,26 @@ export default class Song implements ISong {
   public contextMenu() {
     remote.Menu.buildFromTemplate([
       {
+        label: this.getDisplayName(),
+        enabled: false
+      },
+      {
         label: "Edit info",
         click: () => {
           Toxen.editSong(this);
+        }
+      },
+      {
+        type: "separator"
+      },
+      {
+        label: "Toxen",
+        enabled: false
+      },
+      {
+        label: "Toggle fullscreen",
+        click: () => {
+          Toxen.toggleFullscreen();
         }
       }
     ]).popup();
@@ -428,6 +490,7 @@ export interface ISong {
   visualizerIntensity: number;
   visualizerForceRainbowMode: boolean;
   paths: ISongPaths;
+  year: number;
 }
 
 interface ISongPaths {

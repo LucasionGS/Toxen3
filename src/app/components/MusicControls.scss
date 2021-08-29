@@ -17,6 +17,7 @@
   .toxen-music-controls-time {
     display: flex;
     justify-content: space-between;
+    user-select: none;
 
     .toxen-music-controls-time-start {
       margin-left: 5%;

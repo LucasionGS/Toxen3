@@ -27,13 +27,14 @@ import StoryboardEditorPanel from "./components/StoryboardEditorPanel/Storyboard
 import { Dirent } from "fs";
 import User from "./toxen/User";
 import LoginForm from "./components/LoginForm/LoginForm";
+import { MessageCards } from "./components/MessageCard/MessageCards";
+import ExternalUrl from "./components/ExternalUrl/ExternalUrl";
 
 //#region Define variables used all over the ToxenApp process.
 /**
  * Handler for events during runtime.
  */
 export class Toxen {
-
   /**
    * Used for fetching URLs and supports tx:// and txs:// URLs. (Gets converted to http(s)://)
    */
@@ -127,6 +128,7 @@ export class Toxen {
   public static songPanel: SongPanel;
   public static musicPlayer: MusicPlayer;
   public static musicControls: MusicControls;
+  public static messageCards: MessageCards;
 
   // Forms
   public static settingsForm: Form;
@@ -194,6 +196,11 @@ export class Toxen {
     else Toxen.sidePanel.setSectionId("editSong");
   }
 
+  public static toggleFullscreen(force?: boolean) {
+    const w = remote.getCurrentWindow();
+    w.setFullScreen(force ?? !w.isFullScreen());
+  }
+
   public static reloadSection() {
     let id = Toxen.sidePanel.state.sectionId;
     Toxen.sidePanel.setSectionId("$empty");
@@ -244,14 +251,6 @@ export default class ToxenApp extends React.Component {
         Toxen.loadingScreen.toggleVisible(false);
         Toxen.musicPlayer.playRandom();
         Toxen.background.visualizer.start();
-
-        // Stats.events.on("changed", () => {
-        //   if (Toxen.sidePanel.state.sectionId === "stats" && Toxen.sidePanel.isShowing()) {
-        //     console.log("Updated Stats");
-
-        //     Toxen.reloadSection();
-        //   }
-        // });
       }).then(() => Toxen._resolveWhenReady())
   }
 
@@ -333,11 +332,13 @@ export default class ToxenApp extends React.Component {
         {/* Playlist Management Panel */}
         <SidepanelSection key="playlist" id="playlist" title="Playlist" icon={<i className="fas fa-th-list"></i>}>
           <h1>Playlists</h1>
+          <p>Playlists are not yet implemented.</p>
         </SidepanelSection>
 
         {/* Playlist Management Panel */}
         <SidepanelSection key="adjust" id="adjust" title="Adjust" icon={<i className="fas fa-sliders-h"></i>}>
           <h1>Audio Adjustments</h1>
+          <p>Audio adjustments are not yet implemented.</p>
         </SidepanelSection>
 
         {/* Keep settings tab at the bottom */}
@@ -357,7 +358,6 @@ export default class ToxenApp extends React.Component {
           }}>
             {/* General settings */}
             <h2>General</h2>
-            
             {(() => {
               let ref = React.createRef<FormInput>();
               return (
@@ -448,9 +448,20 @@ export default class ToxenApp extends React.Component {
                 <p>{Toxen.songList.length} total songs</p>
                 <p>{Stats.get("songsPlayed")} songs played</p>
                 <p>{new Time(Stats.get("secondsPlayed") * 1000).toTimestamp()} Time played</p>
+
+                <hr />
+                <h2>Technical Details</h2>
+                <p>Toxen Version: {remote.app.getVersion()}</p>
+                <p>Electron Version: {remote.process.versions.electron}</p>
+                <p>Node Version: {remote.process.versions.node}</p>
+                <p>Chromium Version: {remote.process.versions.chrome}</p>
+                <p>V8 Version: {remote.process.versions.v8}</p>
+
+                Toxen is an open source project.
+                You can find the source code on <ExternalUrl href="https://github.com/LucasionGS/Toxen3">GitHub</ExternalUrl>.
               </>
             );
-          }}
+          }} 
         ></SidepanelSection>
 
         {/* No-icon panels. Doesn't appear as a clickable panel, instead only accessible by custom action */}
@@ -534,6 +545,7 @@ export default class ToxenApp extends React.Component {
             <FormInput displayName="Co-Artists" name="coArtists*array" getValueTemplateCallback={() => Toxen.editingSong} type="list" />
             <FormInput displayName="Album" name="album*string" getValueTemplateCallback={() => Toxen.editingSong} type="text" />
             <FormInput displayName="Source" name="source*string" getValueTemplateCallback={() => Toxen.editingSong} type="text" />
+            <FormInput displayName="Release Year" name="year*number" getValueTemplateCallback={() => Toxen.editingSong} type="number" />
             <FormInput displayName="Tags" name="tags*array" getValueTemplateCallback={() => Toxen.editingSong} type="list" />
             <hr />
             <h2>Song-specific visuals</h2>
@@ -610,6 +622,7 @@ export default class ToxenApp extends React.Component {
         <StoryboardEditorPanel />
 
       </Sidepanel>
+      <MessageCards ref={ref => Toxen.messageCards = ref} />
     </div>
   )
 }

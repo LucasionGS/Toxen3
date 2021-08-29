@@ -1,7 +1,6 @@
 import React, { Component } from 'react'
 import Time from '../toxen/Time';
 import "./LoadingScreen.scss";
-import MessageCard from './MessageCard/MessageCard';
 
 interface LoadingScreenProps {
   initialShow?: boolean;

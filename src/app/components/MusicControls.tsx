@@ -51,13 +51,22 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
   public progressBar: ProgressBar;
 
   render() {
+    const styleForEnabled: React.CSSProperties = {
+      // filter: "drop-shadow(0 0 20px green)",
+      // outline: "3px solid green"
+      filter: "drop-shadow(2px 2px 1px green) drop-shadow(-2px 2px 1px green) drop-shadow(2px -2px 1px green) drop-shadow(-2px -2px 1px green)"
+    };
     return (
       <div className="toxen-music-controls">
         <div className="toxen-music-controls-buttons hide-on-inactive">
-          <div className="ctrl-btn">
-            <i className="fas fa-random"></i>
+          <div className="ctrl-btn" onClick={() => {
+            Settings.set("shuffle", !Settings.get("shuffle"));
+            Settings.save();
+          }}>
+            <span hidden={ !Settings.get("shuffle") }><i className="fas fa-random" style={styleForEnabled}></i></span>
+            <span hidden={ Settings.get("shuffle") }><i className="fas fa-random"></i></span>
           </div>
-          <div className="ctrl-btn">
+          <div className="ctrl-btn" onClick={() => Toxen.musicPlayer.playPrev()}>
             <i className="fas fa-angle-double-left"></i>
           </div>
           <div className="ctrl-btn" onClick={() => Toxen.musicPlayer.toggle()}>
@@ -67,8 +76,12 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
           <div className="ctrl-btn" onClick={() => Toxen.musicPlayer.playNext()}>
             <i className="fas fa-angle-double-right"></i>
           </div>
-          <div className="ctrl-btn">
-            <i className="fas fa-redo"></i>
+          <div className="ctrl-btn" onClick={() => {
+            Settings.set("repeat", !Settings.get("repeat"));
+            Settings.save();
+          }}>
+            <span hidden={ !Settings.get("repeat") }><i className="fas fa-redo" style={styleForEnabled}></i></span>
+            <span hidden={ Settings.get("repeat") }><i className="fas fa-redo"></i></span>
           </div>
         </div>
 

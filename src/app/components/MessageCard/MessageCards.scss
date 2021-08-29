@@ -1,0 +1,69 @@
+.message-cards {
+  display: flex;
+  flex-direction: column;
+  max-width: 20vw;
+  max-height: 80vh;
+  z-index: 1000;
+  position: fixed;
+  top: 0;
+  right: 0;
+  justify-content: right;
+  overflow: auto;
+  border-bottom: white solid 1px;
+}
+
+.message-card {
+  pointer-events: all;
+  position: relative;
+  display: flex;
+  margin: 5% 0.5em;
+  width: 90%;
+  flex-direction: column;
+  background-color: #2b2b2b;
+  border: solid 1px;
+  --bc: white;
+  &.essage-card-type-normal {
+    --bc: white;
+  }
+  &.message-card-type-warning {
+    --bc: #ffc107;
+  }
+  &.message-card-type-error {
+    --bc: #ff0000;
+  }
+  border-color: var(--bc);
+  border-radius: 5px;
+  white-space: pre-line;
+
+  .message-card-close {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    width: 1em;
+    height: 1em;
+    border-radius: 50%;
+    background-color: red;
+    color: white;
+    text-align: center;
+    line-height: 1em;
+    cursor: pointer;
+  }
+  .message-card-title {
+    padding: 0.25em;
+    padding-right: 1.5em;
+    box-sizing: border-box;
+    color: var(--bc);
+  }
+  .message-card-footer {
+    border-top: solid var(--bc) 1px;
+    padding: 0.25em;
+    padding-right: 1.5em;
+    box-sizing: border-box;
+  }
+  .message-card-content  {
+    border-top: solid var(--bc) 1px;
+    padding: 0.25em;
+    padding-right: 1.5em;
+    box-sizing: border-box;
+  }
+}

@@ -91,24 +91,74 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
   }
 
   public playNext() {
-    this.playRandom();
+    let nextSongFromHistory = Song.historyForward();
+    if (nextSongFromHistory) {
+      return nextSongFromHistory.play({ disableHistory: true });
+    }
+    if (Settings.get("shuffle")) {
+      this.playRandom();
+    }
+    else {
+      let songs = Toxen.songList;
+      let songCount = songs.length;
+      let curSong = Song.getCurrent();
+      let nextSong: Song = null;
+      while (nextSong == null) {
+        let nextSongIndex = (songs.findIndex(s => curSong && s.uid === curSong.uid) + 1) % songCount;
+        nextSong = songs[nextSongIndex];
+        if (nextSong == null) {
+          Toxen.messageCards.addMessage({
+            content: "No songs available.",
+            type: "error"
+          });
+          console.error("No songs available.");
+          return;
+        }
+        if (curSong && nextSong.uid === curSong.uid) {
+          Toxen.messageCards.addMessage({
+            content: "No more songs available.",
+            type: "error"
+          });
+          console.error("No more songs available.");
+          return;
+        }
+        return nextSong.play();
+      }
+    }
+  }
+
+  private onEnded() {
+    if (Settings.get("repeat")) {
+      this.play();
+    }
+    else {
+      this.playRandom();
+    }
   }
   
   public playPrev() {
-    this.playRandom();
+    let prevSong = Song.historyBack();
+    if (prevSong) prevSong.play({ disableHistory: true });
   }
 
   public playRandom() {
     let songCount = Toxen.songList.length;
     if (songCount === 0) {
+      Toxen.messageCards.addMessage({
+        content: "No songs available.",
+      });
       console.error("No songs available.");
       return;
     }
     let randomSongIndex: number;
-    let song: Song;
+    let curSong = Song.getCurrent();
+    let song: Song = null;
     do {
       randomSongIndex = Math.floor(Math.random() * songCount);
       song = Toxen.songList[randomSongIndex];
+      if (curSong && curSong.uid === song.uid && songCount > 1) {
+        song = null;
+      }
     } while (song == null);
     song.play();
   }
@@ -124,8 +174,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
       ref={ref => this.media = ref}
       hidden
       src={this.state.src}
-      onEnded={this.playNext.bind(this)}
-      preload="auto"
+      onEnded={this.onEnded.bind(this)}
       />
     );
     // Video
@@ -134,7 +183,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
       onCanPlay={e => Toxen.musicControls.setMax(this.media.duration)}
       ref={ref => this.media = ref}
       src={this.state.src}
-      onEnded={this.playNext.bind(this)}
+      onEnded={this.onEnded.bind(this)}
       />
     );
   }

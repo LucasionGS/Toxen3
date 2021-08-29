@@ -1,3 +1,4 @@
+import { remote } from 'electron';
 import React, { useState } from 'react';
 import { Toxen } from '../../ToxenApp';
 import "./Sidepanel.scss";
@@ -38,10 +39,13 @@ export default class Sidepanel extends React.Component<Props, State> {
       vertical: (this.props.vertical ?? false),
       direction: (this.props.direction ?? "left"),
       exposeIcons: (this.props.exposeIcons ?? false),
-      width: (this.props.width ?? 600),
+      width: this.getWidth(),
     }
   }
 
+  private getWidth() {
+    return this.state?.width ?? remote.getCurrentWindow().getSize()[0] / 2;
+  }
 
   private sections: SidepanelSection[] = (Array.isArray(this.props.children) ? this.props.children : [this.props.children]) as any[];
 
@@ -83,7 +87,7 @@ export default class Sidepanel extends React.Component<Props, State> {
   
   public setWidth(width: number) {
     this.setState({
-      width
+      width: width ?? this.getWidth()
     });
   }
 
@@ -108,7 +112,7 @@ export default class Sidepanel extends React.Component<Props, State> {
     let panelIconsWidth: string = "168px";
 
     if (this.state.show) {
-      panelWidth = (Math.max(200, this.state.width)) + "px";
+      panelWidth = (Math.max(200, this.getWidth())) + "px";
     }
     else {
       if (!this.state.exposeIcons) {

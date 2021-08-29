@@ -115,6 +115,8 @@ export interface ISettings {
   libraryDirectory: string;
   isRemote: boolean;
   volume: number;
+  repeat: boolean;
+  shuffle: boolean;
 
   // Panel settings
   panelVerticalTransition: boolean;
