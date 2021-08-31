@@ -38,10 +38,11 @@ export default class User {
       if (response.ok) {
         let user = User.create(await response.json() as IUser);
         User.setCurrentUser(user);
-        console.log(`Logged in as ${user.username}`);
-        
+        Toxen.log(`Logged in as ${user.username}`, 3000);
         return user;
       }
+      if (password) Toxen.error(`Failed to login as ${username}`, 3000);
+      else Toxen.error(`Failed to login. Token invalid`, 3000);
       return null;
     });
   }

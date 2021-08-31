@@ -10,6 +10,8 @@ import Visualizer from './Visualizer';
 //@ts-expect-error 
 import ToxenMax from "../../../icons/skull_max.png";
 import Settings from '../../toxen/Settings';
+import Asyncifier from '../../toxen/Asyncifier';
+import Path from "path";
 
 interface BackgroundProps {
   getRef?: ((ref: Background) => void),
@@ -33,10 +35,19 @@ export default class Background extends Component<BackgroundProps, BackgroundSta
     if (typeof this.props.getRef === "function") this.props.getRef(this);
   }
 
+  setStateAsync = Asyncifier.createSetState(this);
+
   public setBackground(source: string) {
-    this.setState({
+    return this.setStateAsync({
       image: source
     })
+  }
+
+  /**
+   * Returns the currently in use background image. It will return the default image if no image is set.
+   */
+  public getBackground(): string {
+    return this.state.image || Settings.get("defaultBackground") || null;
   }
 
   public musicPlayer: MusicPlayer;
@@ -66,7 +77,7 @@ export default class Background extends Component<BackgroundProps, BackgroundSta
         <img
           // hidden={this.state.image ? false : true}
           className="toxen-background-image"
-          src={this.state.image ? this.state.image : Settings.get("defaultBackground") ? Settings.get("defaultBackground") : ToxenMax}
+          src={this.getBackground() || ToxenMax}
           alt="background" />
         <MusicPlayer ref={ref => Toxen.musicPlayer = ref} />
         <Storyboard ref={ref => this.storyboard = ref} />

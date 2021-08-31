@@ -12,6 +12,8 @@ New stuff:
 
 Changed stuff
   - Changed `Stats` panel to `About` panel.
+  - Changed `Music Library` change directory to a `Change Directory` button, and allowed the text field directly to change the directory, if they so desire.
+
 
 ## < 1.0.15
 Changes prior to 1.0.15 hasn't been recorded. Changes from 1.0.15 onwards are listed above.

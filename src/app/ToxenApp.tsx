@@ -89,27 +89,30 @@ export class Toxen {
 
   public static _resolveWhenReady: () => void;
 
-  public static log(message: any) {
+  public static log(message: any, expiresIn?: number) {
     console.log(message);
     Toxen.notify({
       title: "Info",
       content: message,
-      type: "normal"
+      expiresIn: expiresIn,
+      type: "normal",
     });
   }
-  public static warn(message: any) {
+  public static warn(message: any, expiresIn?: number) {
     console.warn(message);
     Toxen.notify({
       title: "Warning",
       content: message,
-      type: "warning"
+      expiresIn: expiresIn,
+      type: "warning",
     });
   }
-  public static error(message: any) {
+  public static error(message: any, expiresIn?: number) {
     console.error(message);
     Toxen.notify({
       title: "Error",
       content: message,
+      expiresIn: expiresIn,
       type: "error",
     });
   }
@@ -427,8 +430,8 @@ export default class ToxenApp extends React.Component {
                   <br />
                   <sup>
                     Music Library to fetch songs from.<br />
-                    You can use the Change Music Folder button to select a directory or write it in directly. <br />
-                    You can also insert a URL to a Toxen Streaming Server that you have an account on. Must begin with http:// or http://
+                    You can use the <code>Change Music Folder</code> button to select a directory or write it in directly. <br />
+                    You can also insert a URL to a Toxen Streaming Server that you have an account on. Must begin with <code>http://</code> or <code>https://</code>.
                   </sup>
                 </>
               );

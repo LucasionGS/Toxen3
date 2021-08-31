@@ -1,5 +1,6 @@
 import { remote } from 'electron';
 import React, { useState } from 'react';
+import Asyncifier from '../../toxen/Asyncifier';
 import { Toxen } from '../../ToxenApp';
 import "./Sidepanel.scss";
 import SidepanelSection from './SidepanelSection';
@@ -68,11 +69,7 @@ export default class Sidepanel extends React.Component<Props, State> {
     return this.state.show;
   }
 
-  setStateAsync<K extends keyof State>(state: ((prevState: Readonly<State>, props: Readonly<Props>) => (Pick<State, K> | State | null)) | (Pick<State, K> | State | null)) {
-    return new Promise<void>((resolve) => {
-      this.setState<K>(state, resolve);
-    });
-  }
+  setStateAsync = Asyncifier.createSetState(this);
 
   public setSectionId(sectionId: string) {
     return this.setStateAsync({

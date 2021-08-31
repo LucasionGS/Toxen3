@@ -14,6 +14,8 @@ import System, { ToxenFile } from "./System";
 import Converter from "./Converter";
 import Stats from "./Statistics";
 import navigator, { MediaMetadata } from "../../navigator";
+//@ts-expect-error 
+import ToxenMax from "../../../icons/skull_max.png";
 
 export default class Song implements ISong {
   public uid: string;
@@ -64,7 +66,7 @@ export default class Song implements ISong {
     let user = Settings.getUser();
     if (Settings.isRemote() && !user) return null;
     if (Settings.isRemote()) return `${user.getUserDirectoryCollection()}/${this.uid}${relativePath ? "/" + relativePath : ""}`;
-    return this.paths && this.paths.dirname ? resolve(Settings.get("libraryDirectory"), this.paths.dirname, relativePath ?? ".") : null;
+    return (this.paths && this.paths.dirname) ? resolve(Settings.get("libraryDirectory"), this.paths.dirname, relativePath ?? ".") : null;
   }
 
   /**
@@ -72,7 +74,7 @@ export default class Song implements ISong {
    */
   public mediaFile() {
     if (Settings.isRemote()) return this.paths.media ? `${this.dirname()}/${this.paths.media}` : "";
-    else return this.paths && this.paths.media ? resolve(this.dirname(), this.paths.media || "") : "";
+    else return (this.paths && this.paths.media) ? resolve(this.dirname(), this.paths.media || "") : "";
   }
 
   /**
@@ -80,7 +82,7 @@ export default class Song implements ISong {
    */
   public backgroundFile() {
     if (Settings.isRemote()) return this.paths.background ? `${this.dirname()}/${this.paths.background}` : "";
-    else return this.paths && this.paths.background ? resolve(this.dirname(), this.paths.background || "") : "";
+    else return (this.paths && this.paths.background) ? resolve(this.dirname(), this.paths.background || "") : "";
   }
 
   /**
@@ -88,7 +90,7 @@ export default class Song implements ISong {
    */
    public subtitleFile() {
     if (Settings.isRemote()) return this.paths.subtitles ? `${this.dirname()}/${this.paths.subtitles}`: "";
-    else return this.paths && this.paths.subtitles ? resolve(this.dirname(), this.paths.subtitles || "") : "";
+    else return (this.paths && this.paths.subtitles) ? resolve(this.dirname(), this.paths.subtitles || "") : "";
   }
   
   /**
@@ -96,7 +98,7 @@ export default class Song implements ISong {
    */
    public storyboardFile() {
     if (Settings.isRemote()) return `${this.dirname()}/${this.paths.storyboard}`;
-    else return this.paths && this.paths.storyboard ? resolve(this.dirname(), this.paths.storyboard) : "";
+    else return (this.paths && this.paths.storyboard) ? resolve(this.dirname(), this.paths.storyboard) : "";
   }
 
   public getDisplayName() {
@@ -240,7 +242,7 @@ export default class Song implements ISong {
 
   private lastBlobUrl: string;
 
-  public play(options?: {
+  public async play(options?: {
     /**
      * Prevent this play from being added to the history
      */
@@ -260,13 +262,15 @@ export default class Song implements ISong {
       let bg = this.backgroundFile();
       if (!options.disableHistory) Song.historyAdd(this);
       Toxen.musicPlayer.setSource(src, true);
-      Toxen.background.setBackground(bg);
+      await Toxen.background.setBackground(bg);
       Stats.set("songsPlayed", (Stats.get("songsPlayed") ?? 0) + 1)
       Toxen.setAllVisualColors(this.visualizerColor);
       Toxen.background.storyboard.setSong(this);
       Toxen.background.visualizer.update();
       let img = new Image();
-      img.src = bg;
+      img.src = Toxen.background.getBackground();
+      console.log(img);
+      
       const addToMetadata = (blob?: Blob) => {
         navigator.mediaSession.metadata = new MediaMetadata({
           title: this.title ?? "Unknown Title",
@@ -274,7 +278,7 @@ export default class Song implements ISong {
           album: this.album ?? "",
           artwork: blob ? [
             { src: (this.lastBlobUrl = URL.createObjectURL(blob)), sizes: `${img.naturalWidth}x${img.naturalHeight}`, type: "image/png" }
-          ]: []
+          ]: null
         });
       }
       
