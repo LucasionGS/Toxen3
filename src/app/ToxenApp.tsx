@@ -27,8 +27,11 @@ import StoryboardEditorPanel from "./components/StoryboardEditorPanel/Storyboard
 import { Dirent } from "fs";
 import User from "./toxen/User";
 import LoginForm from "./components/LoginForm/LoginForm";
-import { MessageCards } from "./components/MessageCard/MessageCards";
+import { MessageCardOptions, MessageCards } from "./components/MessageCard/MessageCards";
 import ExternalUrl from "./components/ExternalUrl/ExternalUrl";
+import showdown from "showdown";
+import htmlToReactParser, { Element, Text } from "html-react-parser";
+import AboutSection from "./components/AboutSection";
 
 //#region Define variables used all over the ToxenApp process.
 /**
@@ -41,6 +44,28 @@ export class Toxen {
   public static fetch(input: string, init?: RequestInit) {
     return fetch(Toxen.txToHttp(input), init);
   }
+
+  public static async getChangeLogs() {
+    return Toxen.changeLogs = Toxen.changeLogs ?? await fetch("https://raw.githubusercontent.com/LucasionGS/Toxen3/master/changenotes.md")
+      .then(res => res.text())
+      .then(text => {
+        this.log("Parsing changelog...");
+        const converter = new showdown.Converter();
+        const html = converter.makeHtml(text);
+        return htmlToReactParser(html, {
+          replace: (domNode: Element) => {
+            if (domNode.name == "a") {
+              return <ExternalUrl href={domNode.attribs.href}>{domNode.children.map((c: Text) => c.data)}</ExternalUrl>;
+            }
+          }
+        });
+      })
+    return;
+  }
+  public static resetChangeLogs() {
+    Toxen.changeLogs = undefined;
+  }
+  private static changeLogs: string | JSX.Element | JSX.Element[];
 
   /**
    * Converts a http(s) URL to a tx(s) URL.
@@ -129,6 +154,12 @@ export class Toxen {
   public static musicPlayer: MusicPlayer;
   public static musicControls: MusicControls;
   public static messageCards: MessageCards;
+  /**
+   * Send a message to the Toxen message cards.
+   */
+  public static notify(notification: Omit<Omit<MessageCardOptions, "createdAt">, "uniqueId">) {
+    this.messageCards.addMessage(notification);
+  }
 
   // Forms
   public static settingsForm: Form;
@@ -210,7 +241,7 @@ export class Toxen {
   }
 
   /**
-   * Applies the same color to all visual UI elements. Things like Audio visualizer, and song progress bar.
+   * Applies the same color to all RGB visual UI elements. Things like Audio visualizer, and song progress bar.
    */
   public static setAllVisualColors(color: string) {
     color = color || Settings.get("visualizerColor");
@@ -345,7 +376,7 @@ export default class ToxenApp extends React.Component {
         <SidepanelSection key="settings" id="settings" title="Settings" icon={<i className="fas fa-cog"></i>} separator>
           <SidepanelSectionHeader>
             <h1>Settings</h1>
-            <button className="tx-btn tx-btn-action" onClick={() => {Toxen.settingsForm.submit(); Toxen.reloadSection()}}>
+            <button className="tx-btn tx-btn-action" onClick={() => { Toxen.settingsForm.submit(); Toxen.reloadSection() }}>
               <i className="fas fa-save"></i>
               &nbsp;Save settings
             </button>
@@ -433,36 +464,35 @@ export default class ToxenApp extends React.Component {
           </Form>
         </SidepanelSection>
 
-        {/* Statistics Panel */}
-        <SidepanelSection key="stats" id="stats" title="Stats" icon={<i className="fas fa-info-circle"></i>}
-          dynamicContent={section => {
+        {/* About Panel */}
+        <SidepanelSection key="stats" id="stats" title="About" icon={<i className="fas fa-info-circle"></i>}
+          dynamicContent={AboutSection}
+        ></SidepanelSection>
+
+
+        <SidepanelSection key="changelogs" id="changelogs" title="Changes" icon={<i className="fas fa-envelope-open-text"></i>}
+          dynamicContent={async section => {
             return (
               <>
                 <SidepanelSectionHeader>
-                  Toxen Statistics (Experimental)
+                  <h1>Change logs</h1>
+                  <button className="tx-btn tx-btn-action" onClick={() => {
+                    Toxen.resetChangeLogs();
+                    Toxen.reloadSection();
+                  }}>
+                    <i className="fas fa-sync-alt"></i>
+                    &nbsp;Reset change logs
+                  </button>
                 </SidepanelSectionHeader>
-                <h2>General</h2>
-                <p>Toxen launched {Stats.get("timesOpened")} times</p>
-                <hr />
-                <h2>Audio Stats</h2>
-                <p>{Toxen.songList.length} total songs</p>
-                <p>{Stats.get("songsPlayed")} songs played</p>
-                <p>{new Time(Stats.get("secondsPlayed") * 1000).toTimestamp()} Time played</p>
-
-                <hr />
-                <h2>Technical Details</h2>
-                <p>Toxen Version: {remote.app.getVersion()}</p>
-                <p>Electron Version: {remote.process.versions.electron}</p>
-                <p>Node Version: {remote.process.versions.node}</p>
-                <p>Chromium Version: {remote.process.versions.chrome}</p>
-                <p>V8 Version: {remote.process.versions.v8}</p>
-
-                Toxen is an open source project.
-                You can find the source code on <ExternalUrl href="https://github.com/LucasionGS/Toxen3">GitHub</ExternalUrl>.
+                <div style={{ width: "100%", whiteSpace: "normal" }}>
+                  {
+                    await Toxen.getChangeLogs()
+                  }
+                </div>
               </>
             );
-          }} 
-        ></SidepanelSection>
+          }}
+        />
 
         {/* No-icon panels. Doesn't appear as a clickable panel, instead only accessible by custom action */}
         {/* Edit song Panel */}

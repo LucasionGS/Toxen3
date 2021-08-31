@@ -247,11 +247,11 @@ export default class Song implements ISong {
     disableHistory?: boolean
   }) {
 
-    Toxen.messageCards.addMessage({
-      content: "Playing " + this.getDisplayName(),
-      type: "normal",
-      expiresIn: 2000
-    });
+    // Toxen.messageCards.addMessage({
+    //   content: "Playing " + this.getDisplayName(),
+    //   type: "normal",
+    //   expiresIn: 2000
+    // });
     
     options ?? (options = {});
     if (this.lastBlobUrl) URL.revokeObjectURL(this.lastBlobUrl);

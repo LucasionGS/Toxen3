@@ -210,6 +210,7 @@ body.inactive .sidepanel:not(.show) {
 
     &:hover {
       cursor: col-resize;
+      background-color: rgba(0, 255, 255, 0.25);
     }
     
     &:active {

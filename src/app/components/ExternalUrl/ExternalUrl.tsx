@@ -1,11 +1,43 @@
 import { remote } from 'electron';
 import React from 'react'
+import { Toxen } from '../../ToxenApp';
 
+/**
+ * Opens a URL/path in the default method.
+ * On click, code executed is equalivant to:
+ * ```ts
+ * const { remote } = require('electron');
+ * remote.shell.openExternal(props.href);
+ * ```
+ */
 export default function ExternalUrl(props: React.DetailedHTMLProps<React.AnchorHTMLAttributes<HTMLAnchorElement>, HTMLAnchorElement>) {
   return (
-    <a {...props} onClick={e => {
+    <a {...props} title={props.href} onClick={e => {
       e.preventDefault();
       remote.shell.openExternal(props.href);
-    }}></a>
+    }}
+    onContextMenu={e => {
+      e.preventDefault();
+      remote.Menu.buildFromTemplate([
+        {
+          label: 'Open in browser',
+          click: () => {
+            remote.shell.openExternal(props.href);
+          }
+        },
+        {
+          label: 'Copy URL',
+          click: () => {
+            remote.clipboard.writeText(props.href);
+            Toxen.notify({
+              title: "Copied URL to clipboard",
+              content: <ExternalUrl href={props.href}>{props.href}</ExternalUrl>,
+              expiresIn: 3000,
+            });
+          }
+        }
+      ]).popup();
+    }}
+    ></a>
   )
 }

@@ -65,7 +65,7 @@ interface MessageCardProps {
   disableClose?: boolean;
 }
 
-interface MessageCardOptions extends Omit<MessageCardProps, "listRef"> {
+export interface MessageCardOptions extends Omit<MessageCardProps, "listRef"> {
   content: React.ReactNode;
   createdAt: number;
 }

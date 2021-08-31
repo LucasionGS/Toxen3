@@ -28,3 +28,11 @@ body.inactive *.hide-on-inactive {
 ) {
   font-size: 18px;
 }
+
+code {
+  display: inline-block;
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  padding: 4px;
+  color: orange;
+}
