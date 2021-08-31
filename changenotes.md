@@ -1,4 +1,5 @@
-## Upcoming update / 1.0.15
+<!-- ## Upcoming update / 1.0.16 -->
+## 1.0.15
 New stuff:
   - View change notes directly in Toxen from the sidebar under `Change logs`
   - Added `Repeat` functionality.

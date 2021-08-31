@@ -15,7 +15,7 @@ import Converter from "./Converter";
 import Stats from "./Statistics";
 import navigator, { MediaMetadata } from "../../navigator";
 //@ts-expect-error 
-import ToxenMax from "../../../icons/skull_max.png";
+import ToxenMax from "../../icons/skull_max.png";
 
 export default class Song implements ISong {
   public uid: string;
@@ -248,7 +248,7 @@ export default class Song implements ISong {
      */
     disableHistory?: boolean
   }) {
-
+    
     // Toxen.messageCards.addMessage({
     //   content: "Playing " + this.getDisplayName(),
     //   type: "normal",
@@ -256,9 +256,9 @@ export default class Song implements ISong {
     // });
     
     options ?? (options = {});
-    if (this.lastBlobUrl) URL.revokeObjectURL(this.lastBlobUrl);
     let src = this.mediaFile();
     if (Toxen.musicPlayer.state.src != src) {
+      if (this.lastBlobUrl) URL.revokeObjectURL(this.lastBlobUrl);
       let bg = this.backgroundFile();
       if (!options.disableHistory) Song.historyAdd(this);
       Toxen.musicPlayer.setSource(src, true);
@@ -268,9 +268,9 @@ export default class Song implements ISong {
       Toxen.background.storyboard.setSong(this);
       Toxen.background.visualizer.update();
       let img = new Image();
-      img.src = Toxen.background.getBackground();
+      img.src = Toxen.background.getBackground() || ToxenMax;
       console.log(img);
-      
+      this.setCurrent();
       const addToMetadata = (blob?: Blob) => {
         navigator.mediaSession.metadata = new MediaMetadata({
           title: this.title ?? "Unknown Title",
@@ -278,7 +278,7 @@ export default class Song implements ISong {
           album: this.album ?? "",
           artwork: blob ? [
             { src: (this.lastBlobUrl = URL.createObjectURL(blob)), sizes: `${img.naturalWidth}x${img.naturalHeight}`, type: "image/png" }
-          ]: null
+          ]: undefined
         });
       }
       
@@ -288,15 +288,16 @@ export default class Song implements ISong {
           let ctx = canvas.getContext("2d");
           canvas.width = img.naturalWidth;
           canvas.height = img.naturalHeight;
-          try { ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight); } catch (error) { }
+          try { ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight); } catch (error) {
+            console.error(error);
+            return addToMetadata();
+          }
           canvas.toBlob(addToMetadata);
         }
         img.addEventListener("load", onLoad);
       }
       else addToMetadata();
     }
-
-    this.setCurrent();
   }
 
   public contextMenu() {
