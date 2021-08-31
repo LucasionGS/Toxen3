@@ -1,3 +1,4 @@
+import { Toxen } from "../ToxenApp";
 import Time from "./Time";
 
 export default class Converter {
@@ -77,7 +78,7 @@ export default class Converter {
         data = context.getImageData(0, 0, width, height);
       } catch (e) {
         /* security error, img on diff domain */
-        console.error(e);
+        Toxen.error(e);
         return defaultRGB;
       }
 

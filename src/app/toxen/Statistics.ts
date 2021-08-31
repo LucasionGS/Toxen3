@@ -32,7 +32,7 @@ export default class Stats extends EventEmitter {
         savedAt: Date.now()
       });
     } catch (error) {
-      console.error(error);
+      Toxen.error(error);
     }
   }
   /**

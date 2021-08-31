@@ -217,7 +217,7 @@ export default class Song implements ISong {
             info = await Legacy.toxen2SongDetailsToInfo(JSON.parse(await fsp.readFile(path, "utf8")), info as ISong)
           }
         } catch (error) {
-          console.error("There was an error trying to convert details.json into info.json");
+          Toxen.error("There was an error trying to convert details.json into info.json");
         }
       }
 
@@ -397,7 +397,7 @@ export default class Song implements ISong {
       try {
         dir = await fsp.opendir(dirName);
       } catch (error) {
-        console.error(error);
+        Toxen.error(error);
 
         return [];
       }

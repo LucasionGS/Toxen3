@@ -7,6 +7,9 @@ import MusicPlayer from '../MusicPlayer';
 import "./Background.scss";
 import Storyboard from './Storyboard/Storyboard';
 import Visualizer from './Visualizer';
+//@ts-expect-error 
+import ToxenMax from "../../../icons/skull_max.png";
+import Settings from '../../toxen/Settings';
 
 interface BackgroundProps {
   getRef?: ((ref: Background) => void),
@@ -60,7 +63,11 @@ export default class Background extends Component<BackgroundProps, BackgroundSta
         onDragEnter={e => e.preventDefault()}
         onDragLeave={e => e.preventDefault()}
       >
-        <img hidden={this.state.image ? false : true} className="toxen-background-image" src={this.state.image} alt="background" />
+        <img
+          // hidden={this.state.image ? false : true}
+          className="toxen-background-image"
+          src={this.state.image ? this.state.image : Settings.get("defaultBackground") ? Settings.get("defaultBackground") : ToxenMax}
+          alt="background" />
         <MusicPlayer ref={ref => Toxen.musicPlayer = ref} />
         <Storyboard ref={ref => this.storyboard = ref} />
         <Visualizer ref={ref => this.visualizer = ref} />

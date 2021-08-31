@@ -29,7 +29,7 @@ export default class Settings {
       ws.write(Buffer.from(Settings.toString()));
       ws.close();
     } catch (error) {
-      console.error(error);
+      Toxen.error(error);
     }
   }
   /**
@@ -134,6 +134,9 @@ export interface ISettings {
   visualizerStyle: VisualizerStyle;
   visualizerIntensity: number;
   visualizerRainbowMode: boolean;
+
+  // Backgrounds
+  defaultBackground: string;
 }
 
 export enum VisualizerStyle {

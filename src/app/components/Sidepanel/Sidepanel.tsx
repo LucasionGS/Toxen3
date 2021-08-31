@@ -46,12 +46,19 @@ export default class Sidepanel extends React.Component<Props, State> {
   private getWidth() {
     return this.state?.width ?? remote.getCurrentWindow().getSize()[0] / 2;
   }
+  
+  /**
+   * Centers the panel on the screen.
+   */
+  private resetWidth() {
+    return this.setWidth(remote.getCurrentWindow().getSize()[0] / 2);
+  }
 
   private sections: SidepanelSection[] = (Array.isArray(this.props.children) ? this.props.children : [this.props.children]) as any[];
 
   public show(force?: boolean) {
     let value = force ?? !this.state.show;
-    this.setState({
+    this.setStateAsync({
       show: value
     });
     return value;
@@ -61,32 +68,38 @@ export default class Sidepanel extends React.Component<Props, State> {
     return this.state.show;
   }
 
+  setStateAsync<K extends keyof State>(state: ((prevState: Readonly<State>, props: Readonly<Props>) => (Pick<State, K> | State | null)) | (Pick<State, K> | State | null)) {
+    return new Promise<void>((resolve) => {
+      this.setState<K>(state, resolve);
+    });
+  }
+
   public setSectionId(sectionId: string) {
-    this.setState({
+    return this.setStateAsync({
       sectionId
     });
   }
 
   public setVertical(vertical: boolean) {
-    this.setState({
+    return this.setStateAsync({
       vertical
     });
   }
 
   public setDirection(direction: PanelDirection) {
-    this.setState({
+    return this.setStateAsync({
       direction
     });
   }
 
   public setExposeIcons(exposeIcons: boolean) {
-    this.setState({
+    return this.setStateAsync({
       exposeIcons
     });
   }
   
   public setWidth(width: number) {
-    this.setState({
+    return this.setStateAsync({
       width: width ?? this.getWidth()
     });
   }
@@ -190,6 +203,12 @@ export default class Sidepanel extends React.Component<Props, State> {
               holding = true;
               window.addEventListener("mousemove", moveHandler);
               window.addEventListener("mouseup", upHandler);
+            }}
+
+            onDoubleClick={async e => {
+              e.preventDefault();
+              await this.resetWidth();
+              if (typeof this.props.onResizeFinished === "function") this.props.onResizeFinished(this.state.width);
             }}
             />);
           })()}

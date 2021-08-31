@@ -107,11 +107,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
         let nextSongIndex = (songs.findIndex(s => curSong && s.uid === curSong.uid) + 1) % songCount;
         nextSong = songs[nextSongIndex];
         if (nextSong == null) {
-          Toxen.messageCards.addMessage({
-            content: "No songs available.",
-            type: "error"
-          });
-          console.error("No songs available.");
+          Toxen.error("No songs available.");
           return;
         }
         if (curSong && nextSong.uid === curSong.uid) {
@@ -119,7 +115,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
             content: "No more songs available.",
             type: "error"
           });
-          console.error("No more songs available.");
+          Toxen.error("No more songs available.");
           return;
         }
         return nextSong.play();
@@ -144,10 +140,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
   public playRandom() {
     let songCount = Toxen.songList.length;
     if (songCount === 0) {
-      Toxen.messageCards.addMessage({
-        content: "No songs available.",
-      });
-      console.error("No songs available.");
+      Toxen.error("No songs available.");
       return;
     }
     let randomSongIndex: number;

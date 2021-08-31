@@ -49,7 +49,7 @@ export class Toxen {
     return Toxen.changeLogs = Toxen.changeLogs ?? await fetch("https://raw.githubusercontent.com/LucasionGS/Toxen3/master/changenotes.md")
       .then(res => res.text())
       .then(text => {
-        this.log("Parsing changelog...");
+        console.log("Parsing changelog...");
         const converter = new showdown.Converter();
         const html = converter.makeHtml(text);
         return htmlToReactParser(html, {
@@ -89,9 +89,30 @@ export class Toxen {
 
   public static _resolveWhenReady: () => void;
 
-  public static log(message: any) { console.log(message); }
-  public static warn(message: any) { console.warn(message); }
-  public static error(message: any) { console.error(message); }
+  public static log(message: any) {
+    console.log(message);
+    Toxen.notify({
+      title: "Info",
+      content: message,
+      type: "normal"
+    });
+  }
+  public static warn(message: any) {
+    console.warn(message);
+    Toxen.notify({
+      title: "Warning",
+      content: message,
+      type: "warning"
+    });
+  }
+  public static error(message: any) {
+    console.error(message);
+    Toxen.notify({
+      title: "Error",
+      content: message,
+      type: "error",
+    });
+  }
 
   public static async filterSupportedFiles(path: string, supported: string[]) {
     return (
@@ -394,11 +415,6 @@ export default class ToxenApp extends React.Component {
               return (
                 <>
                   <FormInput ref={ref} type="text" name="libraryDirectory*string" displayName="Music Library" />
-                  <sup>
-                    Music Library to fetch songs from.<br />
-                    You can use the Change Music Folder button to select a directory or write it in directly. <br />
-                    You can also insert a URL to a Toxen Streaming Server that you have an account on. Must begin with http:// or http://
-                  </sup>
                   <button className="tx-btn tx-btn-action" onClick={() => ref.current.openFolder()}>
                     <i className="fas fa-folder"></i>
                     &nbsp;Change Music Folder
@@ -407,6 +423,13 @@ export default class ToxenApp extends React.Component {
                     <i className="fas fa-folder-open"></i>
                     &nbsp;Open Music Folder
                   </button>
+                  <br />
+                  <br />
+                  <sup>
+                    Music Library to fetch songs from.<br />
+                    You can use the Change Music Folder button to select a directory or write it in directly. <br />
+                    You can also insert a URL to a Toxen Streaming Server that you have an account on. Must begin with http:// or http://
+                  </sup>
                 </>
               );
             })()}
@@ -436,6 +459,28 @@ export default class ToxenApp extends React.Component {
             {/* Visuals settings */}
             <hr />
             <h2>Visuals</h2>
+            
+            {(() => {
+              let ref = React.createRef<FormInput>();
+              return (
+                <>
+                  <FormInput ref={ref} type="text" name="defaultBackground*string" displayName="Default Background" />
+                  <button className="tx-btn tx-btn-action" onClick={() => ref.current.openFile()}>
+                    <i className="fas fa-folder"></i>
+                    &nbsp;Change default background
+                  </button>
+                  <br />
+                  <br />
+                  <sup>
+                    Set a default background which will apply for songs without one. <br />
+                    Click the button <code>Change default background</code> to open a select prompt.
+                    You can also set a background for a specific song by clicking the song in the song list. <br />
+                  </sup>
+                  <br />
+                </>
+              );
+            })()}
+
             <FormInput nullable displayName="Visualizer Color" name="visualizerColor*string" type="color"
             // onChange={v => Toxen.setAllVisualColors(v)}
             />

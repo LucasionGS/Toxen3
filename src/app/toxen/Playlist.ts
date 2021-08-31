@@ -45,7 +45,7 @@ export default class Playlist {
          ws.write(Buffer.from(Playlist.toString()));
          ws.close();
        } catch (error) {
-         console.error(error);
+         Toxen.error(error);
        }
      }
    }

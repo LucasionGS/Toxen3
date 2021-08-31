@@ -1,4 +1,5 @@
 import React from 'react';
+import { Toxen } from '../../ToxenApp';
 import Sidepanel from './Sidepanel';
 
 interface Props {
@@ -25,7 +26,7 @@ class SidepanelSection extends React.Component<Props, State> {
       })
       .catch((error) => {
         this.setState({ content: "Something went wrong during the loading." });
-        console.error(error);
+        Toxen.error(error);
       });
     }
     else this.state = { content: content };

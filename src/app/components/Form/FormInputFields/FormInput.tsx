@@ -126,6 +126,7 @@ export default class FormInput extends React.Component<Props> {
       case "password":
       case "text": {
         const ref = React.createRef<HTMLInputElement>();
+        this.openFile = this.createOpenFile(ref);
         this.openFolder = this.createOpenFolder(ref);
         return (
           <>
@@ -156,7 +157,10 @@ export default class FormInput extends React.Component<Props> {
           <>
             {label}
             <br />
-            <input ref={ref} className="tx-form-field" type="text" readOnly name={this.props.name} defaultValue={value} onClick={
+            <input
+            placeholder="Click to select file"
+            title="Click to select file"
+            ref={ref} className="tx-form-field" type="text" readOnly name={this.props.name} defaultValue={value} onClick={
               () => {
                 let value = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
                   properties: [
@@ -182,7 +186,10 @@ export default class FormInput extends React.Component<Props> {
           <>
             {label}
             <br />
-            <input ref={ref} className="tx-form-field" type="text" readOnly name={this.props.name} defaultValue={value} onClick={
+            <input
+            placeholder="Click to select folder"
+            title="Click to select folder"
+            ref={ref} className="tx-form-field" type="text" readOnly name={this.props.name} defaultValue={value} onClick={
               this.openFolder
             } />
             <br />
@@ -252,8 +259,25 @@ export default class FormInput extends React.Component<Props> {
       }
     }
   }
+  public openFile() {
+    throw new Error("Unable to open File. Function not redefined.");
+  }
   public openFolder() {
     throw new Error("Unable to open folder. Function not redefined.");
+  }
+
+  private createOpenFile(ref: React.RefObject<HTMLInputElement>) {
+    return () => {
+      let value = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
+        properties: [
+          'openFile'
+        ]
+      });
+      if (value) {
+        const parseOutput = (this.props as PropsTypeFile).parseOutput;
+        ref.current.value = typeof parseOutput === "function" ? parseOutput(value[0]) : value[0];
+      }
+    }
   }
 
   private createOpenFolder(ref: React.RefObject<HTMLInputElement>) {
