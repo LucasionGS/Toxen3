@@ -60,13 +60,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
 
   public isVideo(src: string) {
     if (!src) return false;
-    switch (Path.extname(src)) {
-      // Video formats
-      case ".mp4":
-        return true;
-    
-      default: return false;
-    }
+    return Toxen.getSupportedVideoFiles().includes(Path.extname(src).toLowerCase());
   }
 
   public get paused() {
@@ -99,7 +93,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
       this.playRandom();
     }
     else {
-      let songs = Toxen.songList;
+      let songs = Toxen.getPlayableSongs();
       let songCount = songs.length;
       let curSong = Song.getCurrent();
       let nextSong: Song = null;
@@ -113,7 +107,8 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
         if (curSong && nextSong.uid === curSong.uid) {
           Toxen.messageCards.addMessage({
             content: "No more songs available.",
-            type: "error"
+            type: "error",
+            expiresIn: 3000
           });
           Toxen.error("No more songs available.");
           return;
@@ -138,7 +133,8 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
   }
 
   public playRandom() {
-    let songCount = Toxen.songList.length;
+    let songs = Toxen.getPlayableSongs();
+    let songCount = songs.length;
     if (songCount === 0) {
       Toxen.error("No songs available.");
       return;
@@ -148,7 +144,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
     let song: Song = null;
     do {
       randomSongIndex = Math.floor(Math.random() * songCount);
-      song = Toxen.songList[randomSongIndex];
+      song = songs[randomSongIndex];
       if (curSong && curSong.uid === song.uid && songCount > 1) {
         song = null;
       }

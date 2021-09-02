@@ -61,7 +61,7 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
         <div className="toxen-music-controls-buttons hide-on-inactive">
           <div className="ctrl-btn" onClick={() => {
             Settings.set("shuffle", !Settings.get("shuffle"));
-            Settings.save();
+            Settings.save({ suppressNotification: true });
           }}>
             <span hidden={ !Settings.get("shuffle") }><i className="fas fa-random" style={styleForEnabled}></i></span>
             <span hidden={ Settings.get("shuffle") }><i className="fas fa-random"></i></span>
@@ -78,7 +78,7 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
           </div>
           <div className="ctrl-btn" onClick={() => {
             Settings.set("repeat", !Settings.get("repeat"));
-            Settings.save();
+            Settings.save({ suppressNotification: true });
           }}>
             <span hidden={ !Settings.get("repeat") }><i className="fas fa-redo" style={styleForEnabled}></i></span>
             <span hidden={ Settings.get("repeat") }><i className="fas fa-redo"></i></span>
@@ -109,7 +109,7 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
             onClickRelease={(_, v, ref) => {
               this.setVolume(v);
               Settings.set("volume", v);
-              Settings.save();
+              Settings.save({ suppressNotification: true });
             }}
             />
           </div>

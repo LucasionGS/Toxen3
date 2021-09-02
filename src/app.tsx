@@ -94,10 +94,9 @@ setInterval(() => {
     if (Settings.get("restoreWindowSize")) {
       Settings.set("windowWidth", window.outerWidth);
       Settings.set("windowHeight", window.outerHeight);
-      Settings.save();
+      Settings.save({ suppressNotification: true });
     }
   }
-
 }, 1000);
 
 document.body.addEventListener("mousemove", () => {

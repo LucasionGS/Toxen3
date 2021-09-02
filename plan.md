@@ -24,3 +24,5 @@
   - A light script based on the editors attributes might be a possibility.
 
 - Music shuffle: Should be more shuffled, so it should play through at least the whole playlist, before replaying the same songs.
+
+- Themes: Allow for themes to be applied to the whole application. Should be downloadable from within Toxen, using the `Toxen.net` API.

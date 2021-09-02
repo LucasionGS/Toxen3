@@ -1,4 +1,8 @@
-<!-- ## Upcoming update / 1.0.16 -->
+## Upcoming update / 1.0.16
+New stuff:
+  - Added more functions to the context menu for songs.
+  - Added queue to the song panel! (Right click on a song to add it to the queue.)
+
 ## 1.0.15
 New stuff:
   - View change notes directly in Toxen from the sidebar under `Change logs`
@@ -14,7 +18,6 @@ New stuff:
 Changed stuff
   - Changed `Stats` panel to `About` panel.
   - Changed `Music Library` change directory to a `Change Directory` button, and allowed the text field directly to change the directory, if they so desire.
-
 
 ## < 1.0.15
 Changes prior to 1.0.15 hasn't been recorded. Changes from 1.0.15 onwards are listed above.

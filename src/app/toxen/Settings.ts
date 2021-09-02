@@ -19,17 +19,37 @@ export default class Settings {
   /**
    * Save Toxen's current settings.
    */
-  public static async save() {
+  public static async save(opts?: {
+    suppressNotification?: boolean;
+  }) {
+    opts = opts || {};
     console.log("Saving...");
     if (!(await fsp.stat(Settings.toxenDataPath).then(() => true).catch(() => false))) {
       await fsp.mkdir(Settings.toxenDataPath, { recursive: true });
     }
     try {
-      let ws = fs.createWriteStream(Settings.filePath);
-      ws.write(Buffer.from(Settings.toString()));
-      ws.close();
+      try {
+        let ws = fs.createWriteStream(Settings.filePath);
+        ws.write(Buffer.from(Settings.toString()));
+        ws.close();
+        if (!opts.suppressNotification) Toxen.notify({
+          content: "Your settings have been saved.",
+          expiresIn: 3000
+        });
+      } catch (error) {
+        Toxen.notify({
+          content: "Failed to save Settings",
+          expiresIn: 5000,
+          type: "error"
+        });
+      }
     } catch (error) {
-      Toxen.error(error);
+      console.error(error);
+      Toxen.notify({
+        content: "Failed to save Settings",
+        expiresIn: 5000,
+        type: "error"
+      });
     }
   }
   /**

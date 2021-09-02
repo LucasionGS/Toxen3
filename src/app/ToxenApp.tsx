@@ -32,6 +32,7 @@ import ExternalUrl from "./components/ExternalUrl/ExternalUrl";
 import showdown from "showdown";
 import htmlToReactParser, { Element, Text } from "html-react-parser";
 import AboutSection from "./components/AboutSection";
+import SongQueuePanel from "./components/SongPanel/SongQueuePanel";
 
 //#region Define variables used all over the ToxenApp process.
 /**
@@ -175,9 +176,14 @@ export class Toxen {
   // Objects
   public static sidePanel: Sidepanel;
   public static songPanel: SongPanel;
+  public static songQueuePanel: SongQueuePanel;
   public static musicPlayer: MusicPlayer;
   public static musicControls: MusicControls;
   public static messageCards: MessageCards;
+  public static updateSongPanels() {
+    Toxen.songQueuePanel.update();
+    Toxen.songPanel.update();
+  }
   /**
    * Send a message to the Toxen message cards.
    */
@@ -211,7 +217,26 @@ export class Toxen {
   public static songSearch = "";
   public static songList: Song[];
   public static setSongList(songList: Song[]) {
+    const cur = Song.getCurrent();
+    if (cur) {
+      const newCur = songList.find(s => s.uid === cur.uid);
+      if (newCur) newCur.setCurrent();
+    }
     Toxen.songList = songList;
+  }
+  public static songQueue: Song[] = [];
+
+  /**
+   * Returns all songs in songList and songQueue.
+   */
+  public static getAllSongs() {
+    return (Toxen.songList || []).concat(Toxen.songQueue);
+  }
+
+  public static getPlayableSongs() : readonly Song[] {
+    if (Toxen.songQueue && Toxen.songQueue.length > 0) return Toxen.songQueue
+    if (Toxen.songList && Toxen.songList.length > 0) return Toxen.songList;
+    return [];
   }
 
   public static async loadSongs() {
@@ -224,7 +249,7 @@ export class Toxen {
         <>
           <p>Loading songs...<br />{++songCount}/{totalSongCount}</p>
           <div>
-            <ProgressBar ref={_ref => ref = _ref} max={totalSongCount} />
+            <ProgressBar ref={_ref => ref = _ref} min={0} max={totalSongCount} />
           </div>
         </>
       );
@@ -232,8 +257,8 @@ export class Toxen {
 
       Toxen.loadingScreen.setContent(content);
       ref.setValue(songCount);
-      ref.setMin(0);
-      ref.setMax(totalSongCount);
+      // ref.setMin(0);
+      // ref.setMax(totalSongCount);
     }));
     Toxen.loadingScreen.toggleVisible(false);
   }
@@ -327,7 +352,7 @@ export default class ToxenApp extends React.Component {
 
         onResizeFinished={w => {
           Settings.set("panelWidth", w);
-          Settings.save();
+          Settings.save({ suppressNotification: true });
         }}
       >
         {/* Empty object for refreshing */}
@@ -349,7 +374,8 @@ export default class ToxenApp extends React.Component {
             <br />
             <SearchField />
           </SidepanelSectionHeader>
-          <SongPanel ref={s => Toxen.songPanel = s} songs={Toxen.songList} />
+          <SongQueuePanel ref={s => Toxen.songQueuePanel = s} />
+          <SongPanel ref={s => Toxen.songPanel = s} />
         </SidepanelSection>
 
         {/* Import Panel */}

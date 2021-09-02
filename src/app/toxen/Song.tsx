@@ -88,15 +88,15 @@ export default class Song implements ISong {
   /**
    * Return the full path of the subtitle file.
    */
-   public subtitleFile() {
-    if (Settings.isRemote()) return this.paths.subtitles ? `${this.dirname()}/${this.paths.subtitles}`: "";
+  public subtitleFile() {
+    if (Settings.isRemote()) return this.paths.subtitles ? `${this.dirname()}/${this.paths.subtitles}` : "";
     else return (this.paths && this.paths.subtitles) ? resolve(this.dirname(), this.paths.subtitles || "") : "";
   }
-  
+
   /**
    * Return the full path of the storyboard file.
    */
-   public storyboardFile() {
+  public storyboardFile() {
     if (Settings.isRemote()) return `${this.dirname()}/${this.paths.storyboard}`;
     else return (this.paths && this.paths.storyboard) ? resolve(this.dirname(), this.paths.storyboard) : "";
   }
@@ -112,17 +112,15 @@ export default class Song implements ISong {
   /**
    * React element of Song.
    */
-  public Element(): JSX.Element;
-  public Element(getRef: (ref: SongElement) => void): JSX.Element;
-  public Element(getRef?: (ref: SongElement) => void) {
+  public Element() {
     return (
-      <SongElement playing={this.isPlaying()} key={this.uid} song={this} getRef={getRef} ref={ref => this.currentElement = ref} />
+      <SongElement playing={this.isPlaying()} key={this.uid} song={this} ref={ref => this.currentElement = ref} />
     );
   }
 
   public static create(data: Partial<ISong>) {
     let song = new Song();
-    
+
     for (const key in data) {
       if (key in data) {
         const v = (data as any)[key];
@@ -201,11 +199,11 @@ export default class Song implements ISong {
             case ".webm":
               if (!info.paths.background) info.paths.background = ent.name;
               break;
-            
+
             case ".srt":
               if (!info.paths.subtitles) info.paths.subtitles = ent.name;
               break;
-            
+
             case ".tsb":
               if (!info.paths.storyboard) info.paths.storyboard = ent.name;
               break;
@@ -248,13 +246,13 @@ export default class Song implements ISong {
      */
     disableHistory?: boolean
   }) {
-    
+
     // Toxen.messageCards.addMessage({
     //   content: "Playing " + this.getDisplayName(),
     //   type: "normal",
     //   expiresIn: 2000
     // });
-    
+
     options ?? (options = {});
     let src = this.mediaFile();
     if (Toxen.musicPlayer.state.src != src) {
@@ -278,10 +276,10 @@ export default class Song implements ISong {
           album: this.album ?? "",
           artwork: blob ? [
             { src: (this.lastBlobUrl = URL.createObjectURL(blob)), sizes: `${img.naturalWidth}x${img.naturalHeight}`, type: "image/png" }
-          ]: undefined
+          ] : undefined
         });
       }
-      
+
       if (Toxen.getSupportedImageFiles().includes(Path.extname(bg).toLowerCase())) {
         const onLoad = () => {
           let canvas = document.createElement("canvas");
@@ -300,8 +298,48 @@ export default class Song implements ISong {
     }
   }
 
-  public contextMenu() {
-    remote.Menu.buildFromTemplate([
+  public static sortSongs(songs: Song[], by: "artist" | "title" | "album" = "artist") {
+    switch (by) {
+      case "artist":
+        return songs.sort((a, b) => a.artist && b.artist ? a.artist.localeCompare(b.artist) : -1);
+      case "title":
+        return songs.sort((a, b) => a.title && b.title ? a.title.localeCompare(b.title) : -1);
+      case "album":
+        return songs.sort((a, b) => a.album && b.album ? a.album.localeCompare(b.album) : -1);
+    }
+  }
+
+  public static clearQueue() {
+    Toxen.songQueue.forEach(s => s.inQueue = false);
+    Toxen.songQueue = [];
+    Toxen.updateSongPanels();
+  }
+  
+  public addToQueue() {
+    Toxen.songQueue.push(this);
+    this.inQueue = true;
+    // if (this.isPlaying()) this._isPlaying = false;
+    Toxen.songQueuePanel.update();
+    Toxen.songPanel.update();
+    return Song.sortSongs(Toxen.songQueue);
+  }
+
+  public removeFromQueue() {
+    let id = Toxen.songQueue.findIndex(s => s == this);
+    if (id != -1) Toxen.songQueue.splice(id, 1);
+    this.inQueue = false;
+    Toxen.songQueuePanel.update();
+    Toxen.songPanel.update();
+    return Toxen.songQueue;
+  }
+
+  public inQueue: boolean = false;
+
+  public contextMenu(opts?: {
+    noQueueOption?: boolean
+  }) {
+    opts ?? (opts = {});
+    const menu: Electron.MenuItemConstructorOptions[] = [
       {
         label: this.getDisplayName(),
         enabled: false
@@ -310,6 +348,21 @@ export default class Song implements ISong {
         label: "Edit info",
         click: () => {
           Toxen.editSong(this);
+        }
+      },
+      !opts.noQueueOption ? (this.inQueue ? {
+        label: "Remove from queue",
+        click: () => this.removeFromQueue()
+      } : {
+        label: "Add to queue",
+        click: () => this.addToQueue()
+      }) : undefined,
+      {
+        label: "Show song in list",
+        click: async () => {
+          await Toxen.sidePanel.show(true);
+          await Toxen.sidePanel.setSectionId("songPanel");
+          this.scrollTo();
         }
       },
       {
@@ -325,9 +378,17 @@ export default class Song implements ISong {
           Toxen.toggleFullscreen();
         }
       }
-    ]).popup();
+    ].filter(a => a) as Electron.MenuItemConstructorOptions[];
+    remote.Menu.buildFromTemplate(menu).popup();
   }
 
+  public existingElements: SongElement[] = [];
+  /**
+   * Remove the top element from the list of existing elements.
+   */
+  public popExistingElement() {
+    return this.existingElements.pop();
+  }
   public currentElement: SongElement;
 
   public setCurrent(): void;
@@ -347,7 +408,7 @@ export default class Song implements ISong {
   }
 
   public static getCurrent() {
-    let songs = (Toxen.songList || []);
+    let songs = (Toxen.getAllSongs() || []);
     return songs.find(s => s.isPlaying());
   }
 
@@ -386,7 +447,7 @@ export default class Song implements ISong {
       if (forEach) {
         songs.forEach(forEach);
       }
-      return songs.sort((a, b) => a.artist && b.artist ? a.artist.localeCompare(b.artist) : -1);
+      return Song.sortSongs(songs);
     }
     else return Promise.resolve().then(async () => {
       if (reload !== true && Toxen.songList) {
@@ -438,7 +499,7 @@ export default class Song implements ISong {
         }
       }
       await dir.close();
-      return songs.sort((a, b) => a.artist && b.artist ? a.artist.localeCompare(b.artist) : -1);
+      return Song.sortSongs(songs);
     });
   }
 
@@ -455,10 +516,38 @@ export default class Song implements ISong {
         headers: {
           "Content-Type": "application/json"
         }
-      }).then(() => void 0);
+      }).then(() => {
+        Toxen.notify({
+          title: "Song saved",
+          content: this.getDisplayName(),
+          expiresIn: 3000
+        });
+      }).catch(error => {
+        console.error(error);
+        Toxen.notify({
+          title: "Failed to save Song",
+          content: this.getDisplayName(),
+          expiresIn: 5000,
+          type: "error"
+        });
+      });
     }
     if (!this.paths || !this.paths.dirname) return;
-    return fsp.writeFile(Path.resolve(this.dirname(), "info.json"), JSON.stringify(this.toISong()));
+    try {
+      await fsp.writeFile(Path.resolve(this.dirname(), "info.json"), JSON.stringify(this.toISong()));
+      Toxen.notify({
+        title: "Song saved",
+        content: this.getDisplayName(),
+        expiresIn: 3000
+      });
+    } catch (error) {
+      Toxen.notify({
+        title: "Failed to save Song",
+        content: this.getDisplayName(),
+        expiresIn: 5000,
+        type: "error"
+      });
+    }
   }
 
   public static async importSong(file: File | ToxenFile): Promise<Result<void>> {
@@ -476,7 +565,7 @@ export default class Song implements ISong {
 
       await fsp.mkdir(newFolder, { recursive: true });
       await fsp.copyFile(file.path, Path.resolve(newFolder, file.name));
-      
+
       return new Success();
     });
   }

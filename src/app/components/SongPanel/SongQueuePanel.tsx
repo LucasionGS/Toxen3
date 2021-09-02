@@ -2,15 +2,15 @@ import React, { Component } from 'react'
 import { Toxen } from '../../ToxenApp';
 import Song from '../../toxen/Song';
 
-interface SongPanelProps {
-  getRef?: ((songPanel: SongPanel) => void)
+interface SongQueuePanelProps {
+  getRef?: ((songQueuePanel: SongQueuePanel) => void)
 }
 
-interface SongPanelState {
+interface SongQueuePanelState {
 }
 
-export default class SongPanel extends Component<SongPanelProps, SongPanelState> {
-  constructor(props: SongPanelProps) {
+export default class SongQueuePanel extends Component<SongQueuePanelProps, SongQueuePanelState> {
+  constructor(props: SongQueuePanelProps) {
     super(props);
   }
 
@@ -23,10 +23,8 @@ export default class SongPanel extends Component<SongPanelProps, SongPanelState>
   }
 
   render() {
-    let songs = (Toxen.songList ?? []).map(s => s);
-    if (Toxen.songQueue.length > 0)
-      songs = songs.filter(s => !Toxen.songQueue.some(s2 => s2.uid === s.uid)); // Remove queued items from the main list
-      
+    let songs = (Toxen.songQueue ?? []);
+    if (songs.length === 0) return (<></>);
     if (Toxen.songSearch) {
       let items = Toxen.songSearch.toLowerCase().replace(/_/g, " ").split(" ");
       songs = songs.filter(s => {
@@ -40,6 +38,14 @@ export default class SongPanel extends Component<SongPanelProps, SongPanelState>
         return items.every(item => sortItems.includes(item));
       })
     }
-    return songs.map(s => s.Element());
+    return (
+      <>
+        <h2>Current Queue</h2>
+        <button className="tx-btn tx-btn-action"
+        onClick={() => Song.clearQueue()}>Clear Queue</button>
+        {songs.map(s => s.Element())}
+        <hr />
+      </>
+    )
   }
 }

@@ -10,7 +10,7 @@ Toxen is capable of playing your music along with custom visuals, and is fully c
 * Customize your music collection with backgrounds, storyboards(\*), and a set of details and settings for each song
 * Customize your music player with a set of global settings, including;
   * Themes(\*),
-  * Default background(\*)
+  * Default background
   * Default Storyboard(\*)
 * Import your music from mp3, mp4, and other formats(\*)
 * Export your music and/or backgrounds in a zipped format for easy transferring of data from one machine to another(\*)

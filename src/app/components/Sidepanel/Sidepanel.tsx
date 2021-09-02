@@ -57,9 +57,9 @@ export default class Sidepanel extends React.Component<Props, State> {
 
   private sections: SidepanelSection[] = (Array.isArray(this.props.children) ? this.props.children : [this.props.children]) as any[];
 
-  public show(force?: boolean) {
+  public async show(force?: boolean) {
     let value = force ?? !this.state.show;
-    this.setStateAsync({
+    await this.setStateAsync({
       show: value
     });
     return value;
