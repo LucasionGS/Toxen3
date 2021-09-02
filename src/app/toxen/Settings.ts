@@ -1,3 +1,4 @@
+import os from "os";
 import fs from "fs";
 import fsp from "fs/promises";
 import Path from "path";
@@ -58,6 +59,13 @@ export default class Settings {
   public static async load(): Promise<ISettings> {
     return Promise.resolve().then(async () => {
       if (!(await fsp.stat(Settings.filePath).then(() => true).catch(() => false))) {
+        const musicPath = Path.resolve(os.homedir(), "Music", "ToxenMusic");
+        if (await fsp.stat(musicPath).then(() => false).catch(() => true)) {
+          await fsp.mkdir(musicPath, { recursive: true });
+        }
+        Settings.applyDefaultSettings({
+          libraryDirectory: musicPath
+        })
         await Settings.save();
       }
       try {
@@ -67,6 +75,13 @@ export default class Settings {
         throw "Unable to parse settings file.";
       }
     })
+  }
+
+  public static applyDefaultSettings(override?: Partial<ISettings>) {
+    Settings.apply({
+      volume: 50,
+    });
+    if (override) Settings.apply(override);
   }
 
   public static isRemote() {
