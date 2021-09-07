@@ -3,6 +3,7 @@ import Song from '../toxen/Song';
 import { Toxen } from '../ToxenApp';
 import Path from "path";
 import Settings from '../toxen/Settings';
+import Time from '../toxen/Time';
 
 export type MediaSourceInfo = string;
 
@@ -153,6 +154,10 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
   }
 
   public media: HTMLMediaElement;
+
+  public getTime() {
+    return new Time(this.media.currentTime * 1000);
+  }
   
   render() {
     let isVideo = this.isVideo(this.state.src);

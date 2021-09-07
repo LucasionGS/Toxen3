@@ -11,6 +11,9 @@
 - Listen together: Listen along other Toxen users.
 - Visualizer
   - Color picker from current background.
+- Playlist management
+  - Create playlist from current queue.
+  - Multi-add to playlist.
 
 ### Improvements from v2
 - Asynchronize loading of Songs, and overall use an async structure.
@@ -21,7 +24,7 @@
 - Visualizer: Smooth out visuals
 
 - Storyboard: Drop the custom language concept entirely, make an editor immmediately using JSON storage.
-  - A light script based on the editors attributes might be a possibility.
+  - A light script based on the editors attributes might be a possibility. This could make it easier to edit a storyboard for those who prefer to use a text editor.
 
 - Music shuffle: Should be more shuffled, so it should play through at least the whole playlist, before replaying the same songs.
 

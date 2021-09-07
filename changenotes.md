@@ -2,6 +2,46 @@
 New stuff:
   - Added more functions to the context menu for songs.
   - Added queue to the song panel! (Right click on a song to add it to the queue.)
+  - Added tooltip to Music progress bar to easier tell what timestamp your cursor is hovering over.
+  - Added `srt` (SubRip) subtitle support, as well as a more customizable subtitle format specifically for Toxen, `tst` files!(**T**oxen **S**ub**T**itles)
+    - `Toxen SubTitles` are a subtitle format that is used by Toxen, and is similar to, yet more customizable than the default `srt` format.
+
+### New Subtitle support
+Along with support for a standard `srt` subtitle format, Toxen supports a more customizable subtitle format, specifically for Toxen.  
+If you don't know how srt subtitles work, you can read about them [here](https://en.wikipedia.org/wiki/SubRip).
+
+#### How Toxen SubTitles work:
+```
+@color = white
+@font = Arial
+@size = 24
+
+00:00:15,500 | 00:00:19,155
+This will come in between the two timestamps!
+
+00:00:19,155 | 00:00:22,238
+This will come in between the other two timestamps above this text!
+
+00:00:22,238 | 00:00:25,753
+You can make it multiple lines
+by simply making a new line.
+Just make sure you leave no empty lines in between.
+
+00:00:25,753 | 00:00:29,386
+But you need to always have a new line at the end of each subtitle.
+
+00:00:29,386 | 00:00:31,171
+Timestamps are in the format:
+hh:mm:ss,MMM
+(h: hours, m: minutes, s: seconds, M: milliseconds)
+
+00:00:31,171 | 00:00:33,199
+@color = red
+@fontSize = 30
+And this text will be in the color red and font size 30! Other options are available like "@font".
+If you have a line that begins with an @ symbol, you can escape it with "\".
+\@ like this!
+```
 
 ## 1.0.15
 New stuff:

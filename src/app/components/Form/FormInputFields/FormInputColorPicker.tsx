@@ -56,7 +56,7 @@ export default function FormInputColorPicker(props: Props) {
   );
 }
 
-function hexToRgb(hex: string) {
+export function hexToRgb(hex: string) {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   return result ? {
     r: parseInt(result[1], 16),
@@ -65,7 +65,7 @@ function hexToRgb(hex: string) {
   } : null;
 }
 
-function invertRgb(rgb: { r: number, g: number, b: number }) {
+export function invertRgb(rgb: { r: number, g: number, b: number }) {
   const { r, g, b } = rgb ?? { r: 0, g: 0, b: 0 };
   return {
     r: 255 - r,
@@ -74,7 +74,7 @@ function invertRgb(rgb: { r: number, g: number, b: number }) {
   };
 }
 
-function rgbToGrayscale(rgb: { r: number, g: number, b: number }) {
+export function rgbToGrayscale(rgb: { r: number, g: number, b: number }) {
   const { r, g, b } = rgb ?? { r: 0, g: 0, b: 0 };
   const avg = (r + g + b) / 3;
   return {
@@ -84,7 +84,7 @@ function rgbToGrayscale(rgb: { r: number, g: number, b: number }) {
   };
 }
 
-function rgbToHex(rgb: { r: number, g: number, b: number }) {
+export function rgbToHex(rgb: { r: number, g: number, b: number }) {
   const { r, g, b } = rgb ?? { r: 0, g: 0, b: 0 };
   return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
 }

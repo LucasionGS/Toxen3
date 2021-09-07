@@ -14,8 +14,11 @@ import System, { ToxenFile } from "./System";
 import Converter from "./Converter";
 import Stats from "./Statistics";
 import navigator, { MediaMetadata } from "../../navigator";
+import SubtitleParser from "./SubtitleParser";
 //@ts-expect-error 
 import ToxenMax from "../../icons/skull_max.png";
+import Time from "./Time";
+import { SubParser } from "showdown";
 
 export default class Song implements ISong {
   public uid: string;
@@ -258,6 +261,27 @@ export default class Song implements ISong {
     if (Toxen.musicPlayer.state.src != src) {
       if (this.lastBlobUrl) URL.revokeObjectURL(this.lastBlobUrl);
       let bg = this.backgroundFile();
+      let subFile = this.subtitleFile();
+      if (subFile) {
+        if (Settings.isRemote()) {
+          throw new Error("Remote playback does not support subtitles.");
+        }
+        else {
+          let subs: SubtitleParser.SubtitleArray = null;
+          const supported = Toxen.getSupportedSubtitleFiles();
+          const type = Path.extname(subFile);
+          const data = await fsp.readFile(subFile, "utf8");
+          if (supported.includes(type)) {
+            const subParsers = {
+              ".srt": SubtitleParser.parseSrt,
+              ".tst": SubtitleParser.parseTst
+            };
+            subs = (subParsers as any)[type] ? (subParsers as any)[type](data) : null;
+          }
+          Toxen.subtitles.setSubtitles(subs);
+        }
+      }
+      else Toxen.subtitles.setSubtitles(null);
       if (!options.disableHistory) Song.historyAdd(this);
       Toxen.musicPlayer.setSource(src, true);
       await Toxen.background.setBackground(bg);

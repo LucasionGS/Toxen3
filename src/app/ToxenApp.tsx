@@ -33,6 +33,7 @@ import showdown from "showdown";
 import htmlToReactParser, { Element, Text } from "html-react-parser";
 import AboutSection from "./components/AboutSection";
 import SongQueuePanel from "./components/SongPanel/SongQueuePanel";
+import Subtitles from "./components/Subtitles/Subtitles";
 
 //#region Define variables used all over the ToxenApp process.
 /**
@@ -158,6 +159,7 @@ export class Toxen {
   public static getSupportedSubtitleFiles() {
     return [
       ".srt",
+      ".tst",
     ];
   }
 
@@ -179,6 +181,7 @@ export class Toxen {
   public static songQueuePanel: SongQueuePanel;
   public static musicPlayer: MusicPlayer;
   public static musicControls: MusicControls;
+  public static subtitles: Subtitles;
   public static messageCards: MessageCards;
   public static updateSongPanels() {
     Toxen.songQueuePanel.update();

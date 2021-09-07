@@ -1,6 +1,8 @@
 import React, { Component } from 'react'
 import Visualizer from './Background/Visualizer';
+import { hexToRgb, invertRgb, rgbToGrayscale, rgbToHex } from './Form/FormInputFields/FormInputColorPicker';
 import "./ProgressBar.scss";
+import Tooltip from './Tooltip';
 
 type Color = string;
 
@@ -13,6 +15,8 @@ interface ProgressBarProps {
   onClick?: (event: React.MouseEvent<HTMLDivElement, MouseEvent>, valueAtCursor: number, ref: ProgressBar) => void;
   onClickRelease?: (event: React.MouseEvent<HTMLDivElement, MouseEvent>, valueAtCursor: number, ref: ProgressBar) => void;
   onDragging?: (event: React.MouseEvent<HTMLDivElement, MouseEvent>, valueAtCursor: number, ref: ProgressBar) => void;
+  onHover?: (event: React.MouseEvent<HTMLDivElement, MouseEvent>, valueAtCursor: number, ref: ProgressBar) => void;
+  toolTip?: (value: number, max: number, min: number, ref: ProgressBar) => string | number;
 }
 
 interface ProgressBarState {
@@ -36,6 +40,8 @@ export default class ProgressBar extends Component<ProgressBarProps, ProgressBar
     }
   }
 
+  private toolTip: Tooltip;
+
   componentDidMount() {
   }
 
@@ -53,6 +59,10 @@ export default class ProgressBar extends Component<ProgressBarProps, ProgressBar
     if (typeof this.props.onDragging === "function") this.props.onDragging(event, this.offsetToValue(event.nativeEvent.offsetX), this);
   }
 
+  onHover(event: React.MouseEvent<HTMLDivElement, MouseEvent>) {
+    if (typeof this.props.onHover === "function") this.props.onHover(event, this.offsetToValue(event.nativeEvent.offsetX), this);
+  }
+
   public progressBarObject: HTMLDivElement;
 
   private offsetToValue(xOffset: number) {
@@ -66,6 +76,11 @@ export default class ProgressBar extends Component<ProgressBarProps, ProgressBar
    * Whether or not the cursor currently holding down Mouse0 on this progress bar.
    */
   public holding = false;
+
+  /**
+   * Whether or not the cursor currently hovering over this progress bar.
+   */
+  public hovering = false;
 
   /**
    * Set both fillColor and borderColor to the same color.
@@ -119,23 +134,50 @@ export default class ProgressBar extends Component<ProgressBarProps, ProgressBar
       backgroundColor: this.state.fillColor ?? "#fff"
     };
     return (
-      <div className="toxen-progress-bar-container">
-        <div ref={ref => this.progressBarObject = ref}
-          className="toxen-progress-bar"
-          style={borderStyle}
-          onMouseDown={e => {
-            if (e.nativeEvent.buttons === 1) this.onClick(e);
-          }}
-          onMouseUp={e => {
-            this.onClickRelease(e);
-          }}
-          onMouseMove={e => {
-            if (e.nativeEvent.buttons === 1) this.onDragging(e);
-          }}
-        >
-          <div className="toxen-progress-bar-fill" style={fillStyle}></div>
+      <>
+        <div className="toxen-progress-bar-container">
+          <div ref={ref => this.progressBarObject = ref}
+            className="toxen-progress-bar"
+            style={borderStyle}
+            onMouseDown={e => {
+              if (e.nativeEvent.buttons === 1) this.onClick(e);
+            }}
+            onMouseUp={e => {
+              this.onClickRelease(e);
+            }}
+            onMouseMove={e => {
+              this.onHover(e);
+              if (e.nativeEvent.buttons === 1) this.onDragging(e);
+              if (typeof this.props.toolTip === "function") {
+                this.toolTip.set(
+                  String(this.props.toolTip(
+                    this.offsetToValue(e.nativeEvent.offsetX),
+                    max,
+                    min,
+                    this
+                  )),
+                  e.nativeEvent.offsetX - (this.toolTip.divElement.getBoundingClientRect().width / 2),
+                  -32,
+                  // rgbToHex(invertRgb(hexToRgb(this.state.fillColor))),
+                  // rgbToHex(rgbToGrayscale(hexToRgb(this.state.fillColor)))
+                );
+              }
+            }}
+            onMouseLeave={e => {
+              this.hovering = false;
+              if (typeof this.props.toolTip === "function") this.toolTip.setVisibility(this.hovering);
+            }}
+            onMouseEnter={e => {
+              this.hovering = true;
+              if (typeof this.props.toolTip === "function") this.toolTip.setVisibility(this.hovering);
+            }}
+          >
+            <div className="toxen-progress-bar-fill" style={fillStyle}>
+              <Tooltip text="" ref={ref => this.toolTip = ref} />
+            </div>
+          </div>
         </div>
-      </div>
+      </>
     )
   }
 }

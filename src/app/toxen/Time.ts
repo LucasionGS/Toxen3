@@ -106,4 +106,20 @@ export default class Time {
     
     return formatArray;
   }
+
+  public valueOf() {
+    return this.toMillseconds();
+  }
+  
+  public geaterThan(other: Time) {
+    return this.toMillseconds() > other.toMillseconds();
+  }
+
+  public lessThan(other: Time) {
+    return this.toMillseconds() < other.toMillseconds();
+  }
+
+  public equals(other: Time) {
+    return this.toMillseconds() == other.toMillseconds();
+  }
 }

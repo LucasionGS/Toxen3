@@ -91,6 +91,10 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
             fillColor={"greenyellow"}
             onClick={(e, v) => Toxen.musicPlayer.setPosition(v)}
             onDragging={(e, v) => Toxen.musicPlayer.setPosition(v)}
+            toolTip={(v) => {
+              const time = new Time(v * 1000);
+              return time.toTimestamp("hh?:mm:ss");
+            }}
           />
         </span>
 

@@ -12,6 +12,7 @@ import ToxenMax from "../../../icons/skull_max.png";
 import Settings from '../../toxen/Settings';
 import Asyncifier from '../../toxen/Asyncifier';
 import Path from "path";
+import Subtitles from '../Subtitles/Subtitles';
 
 interface BackgroundProps {
   getRef?: ((ref: Background) => void),
@@ -79,10 +80,18 @@ export default class Background extends Component<BackgroundProps, BackgroundSta
           className="toxen-background-image"
           src={this.getBackground() || ToxenMax}
           alt="background" />
-        <MusicPlayer ref={ref => Toxen.musicPlayer = ref} />
-        <Storyboard ref={ref => this.storyboard = ref} />
-        <Visualizer ref={ref => this.visualizer = ref} />
-      </div>
+        {
+          (() => {
+            let musicPlayer: { current : MusicPlayer } = { current: null };
+            return (<>
+              <MusicPlayer ref={ref => Toxen.musicPlayer = musicPlayer.current = ref} />
+              <Subtitles ref={ref => Toxen.subtitles = ref} musicPlayer={musicPlayer} />
+              <Storyboard ref={ref => this.storyboard = ref} />
+              <Visualizer ref={ref => this.visualizer = ref} />
+            </>)
+          })()
+        }
+      </div >
     )
   }
 }

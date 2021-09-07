@@ -20,10 +20,12 @@
       border: 2px solid;
     }
     
-    overflow: hidden;
+    // overflow: hidden;
     .toxen-progress-bar-fill {
+      overflow: visible;
       height: 100%;
-      border-radius: 5px;
+      border-radius: 20px;
+      position: relative;
     }
   }
 }
