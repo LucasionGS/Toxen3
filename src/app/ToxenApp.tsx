@@ -34,6 +34,7 @@ import htmlToReactParser, { Element, Text } from "html-react-parser";
 import AboutSection from "./components/AboutSection";
 import SongQueuePanel from "./components/SongPanel/SongQueuePanel";
 import Subtitles from "./components/Subtitles/Subtitles";
+import SubtitleParser from "./toxen/SubtitleParser";
 
 //#region Define variables used all over the ToxenApp process.
 /**
@@ -236,7 +237,7 @@ export class Toxen {
     return (Toxen.songList || []).concat(Toxen.songQueue);
   }
 
-  public static getPlayableSongs() : readonly Song[] {
+  public static getPlayableSongs(): readonly Song[] {
     if (Toxen.songQueue && Toxen.songQueue.length > 0) return Toxen.songQueue
     if (Toxen.songList && Toxen.songList.length > 0) return Toxen.songList;
     return [];
@@ -491,7 +492,7 @@ export default class ToxenApp extends React.Component {
             {/* Visuals settings */}
             <hr />
             <h2>Visuals</h2>
-            
+
             {(() => {
               let ref = React.createRef<FormInput>();
               return (
@@ -589,7 +590,7 @@ export default class ToxenApp extends React.Component {
               Reload data
             </button>
           </SidepanelSectionHeader>
-          <Form hideSubmit ref={ref => Toxen.editSongForm = ref} saveButtonText="Save song" onSubmit={(_, formValues) => {
+          <Form hideSubmit ref={ref => Toxen.editSongForm = ref} saveButtonText="Save song" onSubmit={async (_, formValues) => {
             let current = Song.getCurrent();
             let preBackground = Toxen.editingSong.paths.background;
             let preMedia = Toxen.editingSong.paths.media;
@@ -624,7 +625,7 @@ export default class ToxenApp extends React.Component {
                   case "paths.subtitles":
                     // Update subtitles
                     if (Toxen.editingSong == current && current.paths.subtitles !== preSubtitles) {
-                      // Toxen.musicPlayer.setSubtitles(current.subtitlesFile(), true); // Not yet implemented
+                      current.applySubtitles();
                     }
                     break;
 
@@ -652,6 +653,7 @@ export default class ToxenApp extends React.Component {
             <FormInput displayName="Co-Artists" name="coArtists*array" getValueTemplateCallback={() => Toxen.editingSong} type="list" />
             <FormInput displayName="Album" name="album*string" getValueTemplateCallback={() => Toxen.editingSong} type="text" />
             <FormInput displayName="Source" name="source*string" getValueTemplateCallback={() => Toxen.editingSong} type="text" />
+            <FormInput displayName="Language" name="language*string" getValueTemplateCallback={() => Toxen.editingSong} type="text" />
             <FormInput displayName="Release Year" name="year*number" getValueTemplateCallback={() => Toxen.editingSong} type="number" />
             <FormInput displayName="Tags" name="tags*array" getValueTemplateCallback={() => Toxen.editingSong} type="list" />
             <hr />
@@ -724,6 +726,95 @@ export default class ToxenApp extends React.Component {
             <sup>Select which style for the visualizer to use for this song.</sup>
           </Form>
           <hr />
+          <h2>Export options</h2>
+          <button className="tx-btn tx-whitespace-nowrap" onClick={async () => {
+            remote.Menu.buildFromTemplate(
+              (await Toxen.filterSupportedFiles(Toxen.editingSong.dirname(), Toxen.getSupportedMediaFiles())).map(file => {
+                file = Toxen.editingSong.dirname(file);
+                return {
+                  label: (Toxen.editingSong.mediaFile() === file ? "(Current) " : "") + "Export " + file,
+                  click: async () => {
+                    let fileData: Buffer;
+                    try {
+                      if (Settings.isRemote()) {
+                        fileData = Buffer.from(await Toxen.fetch(file).then(res => res.arrayBuffer()));
+                      }
+                      else {
+                        fileData = await fsp.readFile(file);
+                      }
+                    } catch (error) {
+                      return Toxen.error(error);
+                    }
+                    System.exportFile(Settings.isRemote() ? Path.basename(file) : file, fileData, [{ name: "", extensions: [file.split(".").pop()] }]);
+                  }
+                }
+              }),
+            ).popup();
+          }}><i className="fas fa-file-export"></i>&nbsp;Export Media File</button>
+          
+          <br />
+          
+          <button className="tx-btn tx-whitespace-nowrap" onClick={async () => {
+            remote.Menu.buildFromTemplate(
+              (await Toxen.filterSupportedFiles(Toxen.editingSong.dirname(), Toxen.getSupportedImageFiles())).map(file => {
+                file = Toxen.editingSong.dirname(file);
+                return {
+                  label: (Toxen.editingSong.backgroundFile() === file ? "(Current) " : "") + "Export " + file,
+                  click: async () => {
+                    let fileData: Buffer;
+                    try {
+                      if (Settings.isRemote()) {
+                        fileData = Buffer.from(await Toxen.fetch(file).then(res => res.arrayBuffer()));
+                      }
+                      else {
+                        fileData = await fsp.readFile(file);
+                      }
+                    } catch (error) {
+                      return Toxen.error(error);
+                    }
+                    System.exportFile(Settings.isRemote() ? Path.basename(file) : file, fileData, [{ name: "", extensions: [file.split(".").pop()] }]);
+                  }
+                }
+              }),
+            ).popup();
+          }}><i className="fas fa-file-export"></i>&nbsp;Export Image File</button>
+          
+          <br />
+          
+          <button className="tx-btn tx-whitespace-nowrap" onClick={async () => {
+            remote.Menu.buildFromTemplate(
+              (await Toxen.filterSupportedFiles(Toxen.editingSong.dirname(), Toxen.getSupportedSubtitleFiles())).map(file => {
+                file = Toxen.editingSong.dirname(file);
+                return {
+                  label: (Toxen.editingSong.subtitleFile() === file ? "(Current) " : "") + "Export " + file,
+                  click: async () => {
+                    let fileData: Buffer;
+                    try {
+                      if (Settings.isRemote()) {
+                        fileData = Buffer.from(await Toxen.fetch(file).then(res => res.arrayBuffer()));
+                      }
+                      else {
+                        fileData = await fsp.readFile(file);
+                      }
+                    } catch (error) {
+                      return Toxen.error(error);
+                    }
+                    remote.Menu.buildFromTemplate(
+                      Toxen.getSupportedSubtitleFiles().map(ext => {
+                        return {
+                          label: (Path.extname(file) === ext ? "(Current) " : "") + `Export as ${ext} format`,
+                          click: () => {
+                            fileData = Buffer.from(SubtitleParser.exportByExtension(SubtitleParser.parseByExtension(fileData.toString(), Path.extname(file)), ext));
+                            System.exportFile((Settings.isRemote() ? "" : Path.dirname(file) + "/") + Path.basename(file, Path.extname(file)), fileData, [{ name: "", extensions: [ext.replace(/^\.+/g, "")] }]);
+                          }
+                        }
+                      })
+                    ).popup();
+                  }
+                }
+              }),
+            ).popup();
+          }}><i className="fas fa-file-export"></i>&nbsp;Export Subtitle File</button>
         </SidepanelSection>
 
         <StoryboardEditorPanel />

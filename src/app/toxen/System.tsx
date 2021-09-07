@@ -8,6 +8,7 @@ import { Toxen } from "../ToxenApp";
 import ArrayX from "./ArrayX";
 import ProgressBar from "../components/ProgressBar";
 import { remote } from "electron";
+import Settings from "./Settings";
 
 export default class System {
   public static async recursive(path: string): Promise<Dirent[]>;
@@ -35,21 +36,21 @@ export default class System {
       let sMedia = Toxen.getSupportedMediaFiles();
       let sImage = Toxen.getSupportedImageFiles();
       let sSubtitle = Toxen.getSupportedSubtitleFiles();
-      
+
       const Content = (props: { children?: React.ReactNode }) => (
         <>
           {props.children}
           <ProgressBar initialValue={i ?? 0} max={files.length} />
         </>
       );
-      
+
       Toxen.loadingScreen.toggleVisible(true);
       Toxen.loadingScreen.setContent(
         <Content>
           Preparing...
         </Content>
       );
-      
+
       let mediaPack = false;
       var i = 0;
       for (i = 0; i < files.length; i++) {
@@ -107,10 +108,10 @@ export default class System {
             Toxen.background.setBackground(dest);
             song.saveInfo();
           })
-          .catch((reason) => {
-            Toxen.error("Unable to change background");
-            Toxen.error(reason);
-          });
+            .catch((reason) => {
+              Toxen.error("Unable to change background");
+              Toxen.error(reason);
+            });
 
           break;
         }
@@ -131,6 +132,20 @@ export default class System {
 
   public static async pathExists(path: string) {
     return fsp.stat(path).then(() => true).catch(() => false);
+  }
+
+  public static async exportFile(name: string, data: string | Buffer, fileFilters?: Electron.FileFilter[]) {
+    let filters: Electron.FileFilter[] = [{ name: "All Files", extensions: ["*"] }];
+    if (fileFilters) filters = filters = fileFilters;
+    const newPath = await remote.dialog.showSaveDialog(remote.getCurrentWindow(), {
+      title: "Export File",
+      buttonLabel: "Export",
+      filters: filters,
+      defaultPath: name
+    });
+    if (!newPath.canceled) fsp.writeFile(newPath.filePath, data).then(() => {
+      Toxen.log("Exported " + newPath.filePath, 3000);
+    });
   }
 }
 

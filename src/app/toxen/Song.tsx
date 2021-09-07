@@ -34,6 +34,7 @@ export default class Song implements ISong {
   public visualizerIntensity: number;
   public visualizerForceRainbowMode: boolean;
   public year: number;
+  public language: string;
 
 
   private static history: Song[] = [];
@@ -96,6 +97,34 @@ export default class Song implements ISong {
     else return (this.paths && this.paths.subtitles) ? resolve(this.dirname(), this.paths.subtitles || "") : "";
   }
 
+  public readSubtitleFile() {
+    return new Promise<string>((resolve, reject) => {
+      if (!this.subtitleFile()) {
+        resolve(null);
+        return;
+      }
+
+      if (Settings.isRemote()) {
+        Toxen.fetch(this.subtitleFile()).then(res => {
+          if (res.status === 200) {
+            resolve(res.text());
+          } else {
+            Toxen.error("Failed to fetch subtitles from server.");
+            resolve(null);
+          }
+        });
+      }
+      else {
+        fsp.readFile(this.subtitleFile(), "utf8").then(data => {
+          resolve(data);
+        }).catch(err => {
+          Toxen.error("Failed to load subtitles from storage.");
+          resolve(null);
+        });
+      }
+    });
+  }
+
   /**
    * Return the full path of the storyboard file.
    */
@@ -150,6 +179,7 @@ export default class Song implements ISong {
       "visualizerIntensity",
       "visualizerForceRainbowMode",
       "year",
+      "language",
     ];
     const obj = {} as any;
     keys.forEach(key => {
@@ -261,27 +291,7 @@ export default class Song implements ISong {
     if (Toxen.musicPlayer.state.src != src) {
       if (this.lastBlobUrl) URL.revokeObjectURL(this.lastBlobUrl);
       let bg = this.backgroundFile();
-      let subFile = this.subtitleFile();
-      if (subFile) {
-        if (Settings.isRemote()) {
-          throw new Error("Remote playback does not support subtitles.");
-        }
-        else {
-          let subs: SubtitleParser.SubtitleArray = null;
-          const supported = Toxen.getSupportedSubtitleFiles();
-          const type = Path.extname(subFile);
-          const data = await fsp.readFile(subFile, "utf8");
-          if (supported.includes(type)) {
-            const subParsers = {
-              ".srt": SubtitleParser.parseSrt,
-              ".tst": SubtitleParser.parseTst
-            };
-            subs = (subParsers as any)[type] ? (subParsers as any)[type](data) : null;
-          }
-          Toxen.subtitles.setSubtitles(subs);
-        }
-      }
-      else Toxen.subtitles.setSubtitles(null);
+      this.applySubtitles();
       if (!options.disableHistory) Song.historyAdd(this);
       Toxen.musicPlayer.setSource(src, true);
       await Toxen.background.setBackground(bg);
@@ -321,6 +331,29 @@ export default class Song implements ISong {
       else addToMetadata();
     }
   }
+  async applySubtitles() {
+    let subFile = this.subtitleFile();
+    if (subFile) {
+      if (Settings.isRemote()) {
+        throw new Error("Remote playback does not support subtitles.");
+      }
+      else {
+        let subs: SubtitleParser.SubtitleArray = null;
+        const supported = Toxen.getSupportedSubtitleFiles();
+        const type = Path.extname(subFile);
+        const data = await this.readSubtitleFile();
+        if (supported.includes(type)) {
+          const subParsers = {
+            ".srt": SubtitleParser.parseSrt,
+            ".tst": SubtitleParser.parseTst
+          };
+          subs = (subParsers as any)[type] ? (subParsers as any)[type](data) : null;
+        }
+        Toxen.subtitles.setSubtitles(subs);
+      }
+    }
+    else Toxen.subtitles.setSubtitles(null);
+  }
 
   public static sortSongs(songs: Song[], by: "artist" | "title" | "album" = "artist") {
     switch (by) {
@@ -338,7 +371,7 @@ export default class Song implements ISong {
     Toxen.songQueue = [];
     Toxen.updateSongPanels();
   }
-  
+
   public addToQueue() {
     Toxen.songQueue.push(this);
     this.inQueue = true;
@@ -609,6 +642,7 @@ export interface ISong {
   visualizerForceRainbowMode: boolean;
   paths: ISongPaths;
   year: number;
+  language: string;
 }
 
 interface ISongPaths {

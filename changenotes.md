@@ -5,6 +5,7 @@ New stuff:
   - Added tooltip to Music progress bar to easier tell what timestamp your cursor is hovering over.
   - Added `srt` (SubRip) subtitle support, as well as a more customizable subtitle format specifically for Toxen, `tst` files!(**T**oxen **S**ub**T**itles)
     - `Toxen SubTitles` are a subtitle format that is used by Toxen, and is similar to, yet more customizable than the default `srt` format.
+  - Added export options for media files, image files, and subtitle files, as well as transpiling between subtitle formats.
 
 ### New Subtitle support
 Along with support for a standard `srt` subtitle format, Toxen supports a more customizable subtitle format, specifically for Toxen.  

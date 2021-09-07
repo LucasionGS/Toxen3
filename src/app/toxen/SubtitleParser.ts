@@ -8,7 +8,7 @@ namespace SubtitleParser {
     font: string;
     fontSize: string;
   }
-  
+
   export interface SubtitleItem {
     id: number,
     start: Time,
@@ -59,6 +59,36 @@ namespace SubtitleParser {
     }
   }
 
+  export function exportByExtension(data: SubtitleArray, extension: string) {
+    let content: string;
+    switch (extension) {
+      case ".srt":
+        content = exportSrt(data);
+        break;
+      case ".tst":
+        content = exportTst(data);
+        break;
+      default:
+        throw new Error("Unsupported extension");
+    }
+    return content;
+  }
+
+  export function parseByExtension(data: string, extension: string) {
+    let content: SubtitleArray;
+    switch (extension) {
+      case ".srt":
+        content = parseSrt(data);
+        break;
+      case ".tst":
+        content = parseTst(data);
+        break;
+      default:
+        throw new Error("Unsupported extension");
+    }
+    return content;
+  }
+
   export function parseSrt(text: string): SubtitleArray {
     let lines = text.split("\n");
     let index = 0;
@@ -72,7 +102,7 @@ namespace SubtitleParser {
         start: null,
         end: null,
         text: null,
-        options: { }
+        options: {}
       };
       while (!line && index < lines.length) { line = getNextLine(); }
       if (index >= lines.length) { break; }
@@ -138,7 +168,7 @@ namespace SubtitleParser {
         start: null,
         end: null,
         text: null,
-        options: { },
+        options: {},
       };
       while (!line && index < lines.length) { line = getNextLine(); }
 
@@ -174,7 +204,7 @@ namespace SubtitleParser {
       item.text = textLines.map(s => s.replace(/\\(.)/g, "$1")).join("<br />");
       items.push(item);
     }
-    console.log(items);    
+    console.log(items);
     return items;
   }
 
