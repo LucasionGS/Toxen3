@@ -7,6 +7,7 @@ namespace SubtitleParser {
     color: string;
     font: string;
     fontSize: string;
+    bold: string;
   }
 
   export interface SubtitleItem {
@@ -23,11 +24,7 @@ namespace SubtitleParser {
     }
 
     // Options
-    public options: SubtitleOptions = {
-      color: "#FFFFFF",
-      font: "Arial",
-      fontSize: "24",
-    }
+    public options: Partial<SubtitleOptions> = { }
 
     public getById(id: number): SubtitleItem {
       return this.find(item => item.id === id);
@@ -90,7 +87,7 @@ namespace SubtitleParser {
   }
 
   export function parseSrt(text: string): SubtitleArray {
-    let lines = text.split("\n");
+    let lines = text.split(/\r?\n/);
     let index = 0;
     const items: SubtitleArray = new SubtitleArray();
     const getLine = () => lines[index];
@@ -156,7 +153,7 @@ namespace SubtitleParser {
   }
 
   export function parseTst(text: string): SubtitleArray {
-    let lines = text.split("\n");
+    let lines = text.split(/\r?\n/);
     let index = 0;
     const items: SubtitleArray = new SubtitleArray();
     const getLine = () => lines[index];
@@ -175,10 +172,10 @@ namespace SubtitleParser {
       const getOptions = () => {
         const options: Partial<SubtitleOptions> = {};
         while (line && line.startsWith("@")) {
-          const matches = line.match(/@(\w+)\s*=\s*(.*)/);
+          const matches = line.match(/@(\w+)(?:\s*=\s*(.*))?/);
           if (matches) {
             const [, key, value] = matches;
-            (options as any)[key] = value;
+            (options as any)[key] = value || "true";
           }
           else Toxen.error(`${index + 1}: Invalid option line in TST file: ${line}`);
           // Final

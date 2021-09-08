@@ -7,7 +7,6 @@ import { Toxen } from "../ToxenApp";
 import Path from "path";
 import SongElement from "../components/SongPanel/SongElement";
 import Legacy from "./Legacy";
-import Debug from "./Debug";
 import { remote } from "electron";
 import { Failure, Result, Success } from "./Result";
 import System, { ToxenFile } from "./System";
@@ -17,8 +16,7 @@ import navigator, { MediaMetadata } from "../../navigator";
 import SubtitleParser from "./SubtitleParser";
 //@ts-expect-error 
 import ToxenMax from "../../icons/skull_max.png";
-import Time from "./Time";
-import { SubParser } from "showdown";
+import ToxenInteractionMode from "./ToxenInteractionMode";
 
 export default class Song implements ISong {
   public uid: string;
@@ -234,6 +232,7 @@ export default class Song implements ISong {
               break;
 
             case ".srt":
+            case ".tst":
               if (!info.paths.subtitles) info.paths.subtitles = ent.name;
               break;
 
@@ -286,6 +285,11 @@ export default class Song implements ISong {
     //   expiresIn: 2000
     // });
 
+    if ( !Toxen.isMode("Player") && Toxen.editingSong && Toxen.editingSong.uid !== this.uid ) {
+      Toxen.error("You are currently editing a song. Please save or cancel your changes before playing another song.", 5000);
+      return;
+    }
+
     options ?? (options = {});
     let src = this.mediaFile();
     if (Toxen.musicPlayer.state.src != src) {
@@ -304,6 +308,7 @@ export default class Song implements ISong {
       console.log(img);
       this.setCurrent();
       const addToMetadata = (blob?: Blob) => {
+        document.title = this.getDisplayName();
         navigator.mediaSession.metadata = new MediaMetadata({
           title: this.title ?? "Unknown Title",
           artist: this.artist ?? "Unknown Artist",
@@ -331,6 +336,7 @@ export default class Song implements ISong {
       else addToMetadata();
     }
   }
+
   async applySubtitles() {
     let subFile = this.subtitleFile();
     if (subFile) {

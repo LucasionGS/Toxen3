@@ -228,6 +228,7 @@ export default class FormInput extends React.Component<Props> {
             {label}
             <br />
             <FormInputSelect nullable={this.props.nullable} name={this.props.name} defaultValue={value} asyncValues={typeof this.props.values === "function" ? this.props.values() : this.props.values} />
+            {this.props.children}
             <br />
             <br />
           </>

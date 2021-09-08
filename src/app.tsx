@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom";
 import { remote } from "electron";
-import ToxenApp, { Toxen } from "./app/ToxenApp";
+import ToxenAppRenderer, { Toxen } from "./app/ToxenApp";
 import "@fortawesome/fontawesome-free/js/all"; // Import FA
 import "@fortawesome/fontawesome-free/scss/regular.scss";
 import "@fortawesome/fontawesome-free/scss/solid.scss";
@@ -134,5 +134,5 @@ Toxen.whenReady().then(async () => {
 //#endregion
 
 // Render app
-const toxenApp = <ToxenApp /> as React.ClassicElement<ToxenApp>;
+const toxenApp = <ToxenAppRenderer /> as React.ClassicElement<ToxenAppRenderer>;
 ReactDOM.render(toxenApp, document.querySelector("app-root"));

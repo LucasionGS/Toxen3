@@ -35,12 +35,47 @@ import AboutSection from "./components/AboutSection";
 import SongQueuePanel from "./components/SongPanel/SongQueuePanel";
 import Subtitles from "./components/Subtitles/Subtitles";
 import SubtitleParser from "./toxen/SubtitleParser";
+import ToxenInteractionMode from "./toxen/ToxenInteractionMode";
 
 //#region Define variables used all over the ToxenApp process.
 /**
  * Handler for events during runtime.
  */
 export class Toxen {
+
+  private static mode: ToxenInteractionMode = ToxenInteractionMode.Player;
+
+  public static setMode(mode: ToxenInteractionMode | keyof typeof ToxenInteractionMode) {
+    if (typeof mode == "string") {
+      mode = ToxenInteractionMode[mode as keyof typeof ToxenInteractionMode];
+    }
+    Toxen.mode = mode;
+    switch (mode) {
+      case ToxenInteractionMode.Player: {
+        Toxen.sidePanel.setSectionId("songPanel");
+        break;
+      }
+
+      case ToxenInteractionMode.StoryboardEditor: {
+        Toxen.sidePanel.setSectionId("storyboardEditor");
+        break;
+      }
+
+      case ToxenInteractionMode.SubtitlesEditor: {
+        // Some action here
+        break;
+      }
+    }
+  }
+
+  public static isMode(mode: ToxenInteractionMode | keyof typeof ToxenInteractionMode) {
+    if (typeof mode == "string") {
+    } else {
+      return Toxen.mode == mode;
+    }
+    return Toxen.mode == ToxenInteractionMode[mode];
+  }
+
   /**
    * Used for fetching URLs and supports tx:// and txs:// URLs. (Gets converted to http(s)://)
    */
@@ -305,7 +340,7 @@ export class Toxen {
 //#endregion
 
 //#region ToxenApp Layout
-export default class ToxenApp extends React.Component {
+export default class ToxenAppRenderer extends React.Component {
   componentDidMount() {
     Promise.resolve()
       .then(Settings.load) // Load settings and apply them.
@@ -706,7 +741,15 @@ export default class ToxenApp extends React.Component {
                 let supported = Toxen.getSupportedStoryboardFiles();
                 return await Toxen.filterSupportedFiles(path, supported);
               })}
-            />
+            >
+              <button className="tx-btn tx-btn-action" onClick={() => {
+                if (!Toxen.editingSong) {
+                  return Toxen.error("No song has been selected for editing.", 5000);
+                }
+
+                Toxen.setMode("StoryboardEditor");
+              }}>Edit Storyboard</button>
+            </FormInput>
 
             <FormInput type="select" name="visualizerStyle*string" displayName="Visualizer Style" getValueTemplateCallback={() => Toxen.editingSong}>
               {(() => {
@@ -751,9 +794,9 @@ export default class ToxenApp extends React.Component {
               }),
             ).popup();
           }}><i className="fas fa-file-export"></i>&nbsp;Export Media File</button>
-          
+
           <br />
-          
+
           <button className="tx-btn tx-whitespace-nowrap" onClick={async () => {
             remote.Menu.buildFromTemplate(
               (await Toxen.filterSupportedFiles(Toxen.editingSong.dirname(), Toxen.getSupportedImageFiles())).map(file => {
@@ -778,9 +821,9 @@ export default class ToxenApp extends React.Component {
               }),
             ).popup();
           }}><i className="fas fa-file-export"></i>&nbsp;Export Image File</button>
-          
+
           <br />
-          
+
           <button className="tx-btn tx-whitespace-nowrap" onClick={async () => {
             remote.Menu.buildFromTemplate(
               (await Toxen.filterSupportedFiles(Toxen.editingSong.dirname(), Toxen.getSupportedSubtitleFiles())).map(file => {
@@ -817,7 +860,9 @@ export default class ToxenApp extends React.Component {
           }}><i className="fas fa-file-export"></i>&nbsp;Export Subtitle File</button>
         </SidepanelSection>
 
-        <StoryboardEditorPanel />
+        <SidepanelSection key="storyboardEditor" id="storyboardEditor">
+          <StoryboardEditorPanel />
+        </SidepanelSection>
 
       </Sidepanel>
       <MessageCards ref={ref => Toxen.messageCards = ref} />

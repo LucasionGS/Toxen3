@@ -2,22 +2,17 @@ import React, { Component } from 'react'
 import Song from '../../toxen/Song';
 import { Toxen } from '../../ToxenApp';
 import SidepanelSection from '../Sidepanel/SidepanelSection';
+import SidepanelSectionHeader from '../Sidepanel/SidepanelSectionHeader';
 
-interface StoryboardEditorPanelProps {
+interface StoryboardEditorPanelProps { }
 
-}
-
-interface StoryboardEditorPanelState {
-  song: Song;
-}
+interface StoryboardEditorPanelState { }
 
 export default class StoryboardEditorPanel extends Component<StoryboardEditorPanelProps, StoryboardEditorPanelState> {
   constructor(props: StoryboardEditorPanelProps) {
     super(props);
 
-    this.state = {
-      song: null
-    }
+    this.state = {};
   }
 
   public setSong(song: Song) {
@@ -25,9 +20,18 @@ export default class StoryboardEditorPanel extends Component<StoryboardEditorPan
   }
   render() {
     return (
-      <SidepanelSection id="storyboardEditor">
-        
-      </SidepanelSection>
+      <SidepanelSectionHeader>
+        <h1>Storyboard Editor</h1>
+        <button className="tx-btn tx-btn-action" onClick={() => {
+          Toxen.log("Saved storyboard", 2000);
+        }}>Save</button>
+        <button className="tx-btn tx-btn-cancel" onClick={() => {
+          // Check if there are unsaved changes and confirm the exit.
+
+
+          Toxen.setMode("Player");
+        }}>Exit editor</button>
+      </SidepanelSectionHeader>
     )
   }
 }
