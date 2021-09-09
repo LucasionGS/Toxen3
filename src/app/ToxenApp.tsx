@@ -92,13 +92,12 @@ export class Toxen {
         const html = converter.makeHtml(text);
         return htmlToReactParser(html, {
           replace: (domNode: Element) => {
-            if (domNode.name == "a") {
+            if (domNode.name == "a" && !domNode.attribs.href.startsWith("#")) {
               return <ExternalUrl href={domNode.attribs.href}>{domNode.children.map((c: Text) => c.data)}</ExternalUrl>;
             }
           }
         });
       })
-    return;
   }
   public static resetChangeLogs() {
     Toxen.changeLogs = undefined;

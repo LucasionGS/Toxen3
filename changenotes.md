@@ -5,7 +5,7 @@ New stuff:
   - Added queue to the song panel! (Right click on a song to add it to the queue.)
   - Added tooltip to Music progress bar to easier tell what timestamp your cursor is hovering over.
   - Added `srt` (SubRip) subtitle support, as well as a more customizable subtitle format specifically for Toxen, `tst` files!(**T**oxen **S**ub**T**itles)  
-  More details under [New Subtitle support](#new-subtitle-support).
+  More details under [New Subtitle support](#newsubtitlesupport).
     - `Toxen SubTitles` are a subtitle format that is used by Toxen, and is similar to, yet more customizable than the default `srt` format.
     - `tst` is being continuously updated over time.
   - Added export options for media files, image files, and subtitle files, as well as transpiling between subtitle formats.
