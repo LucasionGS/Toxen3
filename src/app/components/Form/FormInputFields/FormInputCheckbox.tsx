@@ -15,9 +15,8 @@ export default function FormInputCheckbox(props: Props) {
       setValue(!value);
     }}>
       <input type="hidden" name={props.name} value={value ? "1" : "0"} />
-      <span className="toggle-icon" hidden={!value}><i className="fas fa-toggle-on"></i></span>
-      <span className="toggle-icon" hidden={value}><i className="fas fa-toggle-off"></i></span>
-      &nbsp;
+      <span className="toggle-icon" hidden={!value}><i className="fas fa-check-circle"></i></span>
+      <span className="toggle-icon" hidden={value}><i className="far fa-circle"></i></span>
       &nbsp;
       {props.children}
     </div>
