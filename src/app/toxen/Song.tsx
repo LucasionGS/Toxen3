@@ -33,6 +33,7 @@ export default class Song implements ISong {
   public visualizerForceRainbowMode: boolean;
   public year: number;
   public language: string;
+  public subtitleDelay: number;
 
 
   private static history: Song[] = [];
@@ -286,7 +287,7 @@ export default class Song implements ISong {
     // });
 
     if ( !Toxen.isMode("Player") && Toxen.editingSong && Toxen.editingSong.uid !== this.uid ) {
-      Toxen.error("You are currently editing a song. Please save or cancel your changes before playing another song.", 5000);
+      Toxen.sendError("CURRENTLY_EDITING_SONG");
       return;
     }
 
@@ -355,6 +356,7 @@ export default class Song implements ISong {
           };
           subs = (subParsers as any)[type] ? (subParsers as any)[type](data) : null;
         }
+        if (subs) subs.song = this;
         Toxen.subtitles.setSubtitles(subs);
       }
     }
@@ -423,6 +425,7 @@ export default class Song implements ISong {
       {
         label: "Show song in list",
         click: async () => {
+          if (!Toxen.isMode("Player")) return Toxen.sendError("CURRENTLY_EDITING_SONG");
           await Toxen.sidePanel.show(true);
           await Toxen.sidePanel.setSectionId("songPanel");
           this.scrollTo();
@@ -649,6 +652,7 @@ export interface ISong {
   paths: ISongPaths;
   year: number;
   language: string;
+  subtitleDelay: number;
 }
 
 interface ISongPaths {

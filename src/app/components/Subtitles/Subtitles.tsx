@@ -3,6 +3,7 @@ import HTMLReactParser from 'html-react-parser';
 import SubtitleParser from '../../toxen/SubtitleParser';
 import MusicPlayer from '../MusicPlayer';
 import "./Subtitles.scss";
+import Song from '../../toxen/Song';
 
 interface SubtitlesProps {
   musicPlayer: { current: MusicPlayer }
@@ -42,6 +43,7 @@ export default class Subtitles extends Component<SubtitlesProps, SubtitlesState>
     const currentTime = mp.getTime();
     if (!currentTime) return;
     const subtitles = this.state.subtitles;
+    if (subtitles && subtitles.song && subtitles.song.subtitleDelay) currentTime.addMilliseconds(-subtitles.song.subtitleDelay);
     const sub = subtitles?.getByTime(currentTime);
     if (sub !== this.lastSub) {
       this.lastSub = sub;

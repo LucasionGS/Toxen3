@@ -1,5 +1,7 @@
-## Upcoming update / 1.0.16
+<!-- ## Upcoming update / 1.0.17 -->
+## 1.0.16
 New stuff:
+  - Added a less intrusive auto update prompt.
   - Added more functions to the context menu for songs.
   - Added queue to the song panel! (Right click on a song to add it to the queue.)
   - Added tooltip to Music progress bar to easier tell what timestamp your cursor is hovering over.

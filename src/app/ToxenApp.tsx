@@ -57,6 +57,8 @@ export class Toxen {
       }
 
       case ToxenInteractionMode.StoryboardEditor: {
+        const curSong = Song.getCurrent();
+        if (Toxen.editingSong && curSong && Toxen.editingSong.uid !== curSong.uid) Toxen.editingSong.play();
         Toxen.sidePanel.setSectionId("storyboardEditor");
         break;
       }
@@ -153,6 +155,14 @@ export class Toxen {
       expiresIn: expiresIn,
       type: "error",
     });
+  }
+
+  private static presetErrors = {
+    CURRENTLY_EDITING_SONG: ["You are currently editing a song. Please save or cancel your changes before playing another song.", 5000],
+  }
+  public static sendError(error: keyof typeof Toxen.presetErrors) {
+    const [message, expiresIn] = Toxen.presetErrors[error] as [string, number];
+    return Toxen.error(message, expiresIn);
   }
 
   public static async filterSupportedFiles(path: string, supported: string[]) {
@@ -305,6 +315,9 @@ export class Toxen {
   public static editingSong: Song = null;
   public static editSong(song: Song) {
     if (Toxen.editingSong == song) {
+      if (!Toxen.isMode("Player")) {
+        return Toxen.sidePanel.show(true);
+      }
       Toxen.sidePanel.show(true);
       Toxen.sidePanel.setSectionId("editSong");
       return;
@@ -361,6 +374,35 @@ export default class ToxenAppRenderer extends React.Component {
             Math.floor(display.size.width / 2) - Math.floor(winSizeWidth / 2),
             Math.floor(display.size.height / 2) - Math.floor(winSizeheight / 2),
           );
+        }
+
+        try {
+          remote.autoUpdater.on("update-available", () => {
+            Toxen.log("A new update available and is being installed in the background...", 5000)
+          });
+
+          remote.autoUpdater.on("update-downloaded", (e, releaseNotes, releaseName, releaseDate, updateURL) => {
+            e.preventDefault();
+            new remote.Notification({
+              title: "Update Downloaded",
+              body: `A new update is available: ${releaseName}`
+            }).show();
+            Toxen.log(<>
+              Update downloaded: <code>{releaseName}</code>
+              <br />
+              <button className="tx-btn tx-btn-action"
+                onClick={() => {
+                  remote.autoUpdater.quitAndInstall();
+                }}
+              >Update</button>
+            </>);
+          });
+
+          remote.autoUpdater.on("error", (error) => {
+            Toxen.error(`Error while updating: ${error.message}`);
+          });
+        } catch (error) {
+          Toxen.error("Error trying to listen to auto updater.", 5000);
         }
 
         await Toxen.loadSongs();
@@ -731,7 +773,10 @@ export default class ToxenAppRenderer extends React.Component {
                 let supported = Toxen.getSupportedSubtitleFiles();
                 return await Toxen.filterSupportedFiles(path, supported);
               })}
-            />
+            >
+              <br />
+              <FormInput displayName="Subtitle Offset (ms)" name="subtitleDelay*number" getValueTemplateCallback={() => Toxen.editingSong} type="number" />
+            </FormInput>
             <FormInput nullable displayName="Storyboard file" name="paths.storyboard*string" getValueTemplateCallback={() => Toxen.editingSong} type="selectAsync"
               values={(async () => {
                 let song = Toxen.editingSong;

@@ -157,7 +157,7 @@ export default class Sidepanel extends React.Component<Props, State> {
               {s.props.separator === true ? (<hr />) : ""}
               <div className="sidepanel-icon" title={s.props.title} onClick={() => {
                 if ( !Toxen.isMode("Player") && Toxen.editingSong) {
-                  Toxen.error("You are currently editing a song. Please save or cancel your changes before playing another song.", 5000);
+                  Toxen.sendError("CURRENTLY_EDITING_SONG");
                   return;
                 }
                 this.setSectionId(s.props.id);

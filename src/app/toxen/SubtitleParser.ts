@@ -1,4 +1,5 @@
 import { Toxen } from "../ToxenApp";
+import Song from "./Song";
 import Time from "./Time";
 
 namespace SubtitleParser {
@@ -22,6 +23,8 @@ namespace SubtitleParser {
     constructor(...items: SubtitleItem[]) {
       super(...items);
     }
+
+    public song?: Song;
 
     // Options
     public options: Partial<SubtitleOptions> = { }
