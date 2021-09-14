@@ -1,3 +1,4 @@
+import { remote } from 'electron';
 import React, { Component } from 'react'
 import Playlist from '../../toxen/Playlist';
 import Song from '../../toxen/Song';
@@ -103,6 +104,70 @@ class PlaylistItem extends Component<PlaylistItemProps, PlaylistItemState> {
     this.setState({});
   }
 
+  public async deletePlaylist(force = false) {
+    const pl = this.props.playlist;
+    const currentPlaylist = Playlist.getCurrent();
+    let resolve: (answer: boolean) => void;
+    const confirmed = new Promise<boolean>(re => resolve = re);
+    if (!force) {
+      Toxen.warn(<>
+        Are you sure you want to delete {pl.name}?
+        <Button txStyle="cancel" onClick={() => resolve(true)}>Delete</Button>
+      </>, 10000);
+      setTimeout(() => {
+        if (alreadyConfirmed) return;
+        resolve(false);
+      }, 10000);
+    }
+    else resolve(true);
+    let alreadyConfirmed = false;
+    if (!(await confirmed)) {
+      alreadyConfirmed = true;
+      return;
+    }
+    alreadyConfirmed = true;
+    if (currentPlaylist === pl) {
+      Toxen.playlist = null;
+    }
+    Toxen.playlists = Toxen.playlists.filter(p => p.name !== pl.name);
+    Playlist.save();
+    Toxen.log(<>
+      Removed playlist: <code>{pl.name}</code>
+    </>, 3000);
+
+    this.props.playlistPanel.update();
+  }
+
+  private contextMenu(e: React.MouseEvent<HTMLDivElement>) {
+    e.stopPropagation();
+    e.preventDefault();
+
+    remote.Menu.buildFromTemplate([
+      {
+        label: "Manage " + this.props.playlist?.name,
+        enabled: false
+      },
+      {
+        type: "separator"
+      },
+      {
+        label: "Delete",
+        // click: () => this.deletePlaylist(),
+        submenu: [
+          {
+            label: "Are you sure you want to delete " + this.props.playlist?.name + "?",
+            submenu: [
+              {
+                label: "Confirm Deletion",
+                click: () => this.deletePlaylist(true)
+              }
+            ]
+          }
+        ]
+      }
+    ]).popup();
+  }
+
   render() {
     const pl = this.props.playlist;
     const currentPlaylist = Playlist.getCurrent();
@@ -112,41 +177,9 @@ class PlaylistItem extends Component<PlaylistItemProps, PlaylistItemState> {
           Toxen.playlist = pl;
           this.props.playlistPanel.update();
         }}>
-          <span hidden={!pl} onClick={e => {
-            e.stopPropagation();
-            e.preventDefault();
-
-            Promise.resolve().then(async () => {
-              let resolve: (answer: boolean) => void;
-              const confirmed = new Promise<boolean>(re => resolve = re);
-              Toxen.warn(<>
-                Are you sure you want to delete {pl.name}?
-                <Button txStyle="cancel" onClick={() => resolve(true)}>Delete</Button>
-              </>, 10000);
-              let alreadyConfirmed = false;
-              setTimeout(() => {
-                if (alreadyConfirmed) return;
-                resolve(false);
-              }, 10000);
-              if (!(await confirmed)) {
-                alreadyConfirmed = true;
-                return;
-              }
-              alreadyConfirmed = true;
-              if (currentPlaylist === pl) {
-                Toxen.playlist = null;
-              }
-              Toxen.playlists = Toxen.playlists.filter(p => p.name !== pl.name);
-              Playlist.save();
-              Toxen.log(<>
-                Removed playlist: <code>{pl.name}</code>
-              </>, 3000);
-
-              this.props.playlistPanel.update();
-            });
-          }}><i className={"playlist-select fas fa-trash"}></i></span>
           <span hidden={pl == currentPlaylist}><i className={"playlist-select far fa-circle"}></i></span>
           <span hidden={pl != currentPlaylist}><i className={"playlist-select fas fa-check-circle"}></i></span>
+          <span className={!pl ? "disabled-item" : ""} onClick={this.contextMenu.bind(this)}><i className={"playlist-select fas fa-ellipsis-h"}></i></span>
           <div className="playlist-item-title">
             <h2>{pl?.name || "No playlist"}</h2>
           </div>

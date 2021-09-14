@@ -286,7 +286,7 @@ export default class Song implements ISong {
     //   expiresIn: 2000
     // });
 
-    if ( !Toxen.isMode("Player") && Toxen.editingSong && Toxen.editingSong.uid !== this.uid ) {
+    if (!Toxen.isMode("Player") && Toxen.editingSong && Toxen.editingSong.uid !== this.uid) {
       Toxen.sendError("CURRENTLY_EDITING_SONG");
       return;
     }
@@ -431,6 +431,19 @@ export default class Song implements ISong {
           this.scrollTo();
         }
       },
+      Settings.isAdvanced<Electron.MenuItemConstructorOptions>({
+        label: "Extra options",
+        submenu: [
+          {
+            label: "Open in file explorer",
+            click: () => {
+              if (!Settings.isRemote()) {
+                remote.shell.openExternal(this.dirname());
+              }
+            }
+          },
+        ]
+      }),
       {
         type: "separator"
       },
@@ -634,6 +647,13 @@ export default class Song implements ISong {
 
       return new Success();
     });
+  }
+
+  public copyUID(): void {
+    remote.clipboard.write({
+      text: this.uid
+    });
+    Toxen.log("Copied UID to clipboard", 2000);
   }
 }
 

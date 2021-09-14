@@ -143,6 +143,21 @@ export default class Settings {
   public static getUser() {
     return User.getCurrentUser();
   }
+
+  /**
+   * Returns if the `showAdvancedSettings` option is enabled.
+   */
+  public static isAdvanced(): boolean;
+  /**
+   * If the `showAdvancedSettings` option is enabled, return what is parsed, otherwise return `null`.  
+   * Do not pass `null` to the function, as it would return `null` in both cases, rendering it useless.
+   */
+  public static isAdvanced<T>(toReturn: T): T;
+  public static isAdvanced<T>(toReturn?: T): T | boolean {
+    if (toReturn === undefined) return Boolean(Settings.get("showAdvancedSettings"));
+    return Settings.get("showAdvancedSettings") ? toReturn : null;
+    // return toReturn;
+  }
 }
 
 export interface ISettings {
@@ -172,6 +187,10 @@ export interface ISettings {
 
   // Backgrounds
   defaultBackground: string;
+
+
+  // Advanced settings & UI
+  showAdvancedSettings: boolean;
 }
 
 export enum VisualizerStyle {

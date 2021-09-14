@@ -36,3 +36,9 @@ body.exposed-icons {
     display: none;
   }
 }
+
+body:not(.advanced) {
+  .advanced-only {
+    display: none;
+  }
+}

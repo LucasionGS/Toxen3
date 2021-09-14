@@ -260,6 +260,8 @@ export class Toxen {
     (Settings.get("visualizerStyle") || Settings.set("visualizerStyle", VisualizerStyle.ProgressBar /* Default */));
 
     Toxen.musicControls.setVolume(Settings.get("volume") ?? 50);
+
+    document.body.classList.toggle("advanced", Settings.isAdvanced())
   }
 
   public static loadingScreen: LoadingScreen;
@@ -323,6 +325,10 @@ export class Toxen {
     }));
     try {
       Toxen.setPlaylists(await Playlist.load());
+
+      if (Toxen.playlist) {
+        Toxen.playlist = Toxen.playlists.find(p => p.name === Toxen.playlist.name); // Recover last playlist
+      }
     }
     catch (error) {
       Toxen.error(error.message);
@@ -511,7 +517,7 @@ export default class ToxenAppRenderer extends React.Component {
 
         {/* Playlist Management Panel */}
         <SidepanelSection key="playlist" id="playlist" title="Playlist" icon={<i className="fas fa-th-list"></i>}>
-          <PlaylistPanel ref={ref => Toxen.playlistPanel = ref}/>
+          <PlaylistPanel ref={ref => Toxen.playlistPanel = ref} />
         </SidepanelSection>
 
         {/* Playlist Management Panel */}
@@ -633,6 +639,16 @@ export default class ToxenAppRenderer extends React.Component {
             <br />
             <sup>Select which style for the visualizer to use.</sup>
             <br />
+
+            <hr />
+            {/* Anything below here should be advanced settings only */}
+            <h2>Advanced settings</h2>
+            <FormInput type="checkbox" name="showAdvancedSettings*boolean" displayName="Show Advanced UI" />
+            <sup>
+              Enables the viewing of advanced settings and UI elements. This will display a few more buttons around in Toxen,
+              along with more technical settings that users usually don't have to worry about.
+            </sup>
+            <br />
           </Form>
         </SidepanelSection>
 
@@ -683,6 +699,12 @@ export default class ToxenAppRenderer extends React.Component {
               <i className="fas fa-redo"></i>&nbsp;
               Reload data
             </button>
+            <button className="tx-btn advanced-only" onClick={() => Toxen.editingSong.copyUID()}>
+              {/* <i className="fas fa-redo"></i>&nbsp; */}
+              Copy UUID
+            </button>
+            {Settings.isAdvanced(
+            )}
           </SidepanelSectionHeader>
           <Form hideSubmit ref={ref => Toxen.editSongForm = ref} saveButtonText="Save song" onSubmit={async (_, formValues) => {
             let current = Song.getCurrent();

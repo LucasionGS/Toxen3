@@ -41,6 +41,11 @@ export default class SongPanel extends Component<SongPanelProps, SongPanelState>
         return items.every(item => sortItems.includes(item));
       })
     }
-    return songs.map(s => s.Element());
+    return (
+      <>
+        {Toxen.playlist ? <>Playlist: <code>{Toxen.playlist.name}</code></> : ""}
+        {songs.map(s => s.Element())}
+      </>
+    )
   }
 }
