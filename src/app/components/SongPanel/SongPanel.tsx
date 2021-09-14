@@ -23,7 +23,8 @@ export default class SongPanel extends Component<SongPanelProps, SongPanelState>
   }
 
   render() {
-    let songs = (Toxen.songList ?? []).map(s => s);
+    let songList = Toxen.playlist && Toxen.playlist.songList ? Toxen.playlist.songList : Toxen.songList;
+    let songs = (songList ?? []).map(s => s);
     if (Toxen.songQueue.length > 0)
       songs = songs.filter(s => !Toxen.songQueue.some(s2 => s2.uid === s.uid)); // Remove queued items from the main list
       

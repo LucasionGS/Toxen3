@@ -1,0 +1,15 @@
+.playlist-list {
+  .playlist-item {
+    display: inline-block;
+    user-select: none;
+    cursor: pointer;
+    .playlist-item-title {
+      display: inline-block;
+      // font-size: 1.2em;
+    }
+    .playlist-select {
+      display: inline-block;
+      font-size: 1.4em;
+    }
+  }
+}

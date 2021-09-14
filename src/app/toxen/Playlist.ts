@@ -4,17 +4,18 @@ import fsp from "fs/promises";
 import fs from "fs";
 import CrossPlatform from "./CrossPlatform";
 import { Toxen } from "../ToxenApp";
+import Path from "path";
 
-export default class Playlist {
-  constructor() {
-    
-  }
+export default class Playlist{
+  private constructor() { }
 
-  public static playlists: Playlist[];
+  // public static playlists: Playlist[];
+  public name: string;
   public songList: Song[];
 
   public static create(data: IPlaylist, compareToSongObject?: {[uid: string]: Song}) {
     let pl = new Playlist();
+    pl.name = data.name;
     if (compareToSongObject) {
       pl.songList = data.songList.map(uid => compareToSongObject[uid]).filter(s => s !== null);
     }
@@ -28,7 +29,9 @@ export default class Playlist {
   /**
    * Path for the playlists file.
    */
-   public static readonly filePath = CrossPlatform.getToxenDataPath("playlists.json");
+   public static get filePath() {
+     return Path.resolve(Settings.get("libraryDirectory"), "playlists.json");
+   }
    /**
     * Save Toxen's current playlists.
     */
@@ -37,7 +40,7 @@ export default class Playlist {
      
      if (Settings.isRemote()) {
        // Remote server
-       throw "Saving playlists remotely not yet implemented";
+       new Error("Saving playlists remotely not yet implemented");
      }
      else {
        try {
@@ -56,7 +59,7 @@ export default class Playlist {
      return Promise.resolve().then(async () => {
        if (Settings.isRemote()) {
          // Remote server
-         throw "Loading playlists remotely not yet implemented";
+         Toxen.error("Loading playlists remotely not yet implemented");
        }
        else {
          // Local
@@ -69,13 +72,33 @@ export default class Playlist {
            let playlists: Playlist[] = iPlaylists.map(pl => Playlist.create(pl));
            return playlists;
          } catch (error) {
-           throw "Unable to parse playlists file.";
+           Toxen.error("Unable to parse playlists file.\nPlaylists have been reset.");
+           Playlist.save();
+           return [];
          }
        }
      })
    }
+
+   public static getCurrent() {
+     return Toxen.playlist;
+   }
+
+   public static addPlaylist(playlist: Playlist) {
+     if (!Toxen.playlists) Toxen.playlists = [];
+     Toxen.playlists.push(playlist);
+     Playlist.save();
+   }
+
+   /**
+   * Returns a stringified version of `IPlaylist`.
+   */
+  public static toString() {
+    return JSON.stringify(Toxen.playlists ?? [], null, 2);
+  }
 }
 
 interface IPlaylist {
+  name: string;
   songList: string[];
 }

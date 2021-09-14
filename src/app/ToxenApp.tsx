@@ -36,6 +36,8 @@ import SongQueuePanel from "./components/SongPanel/SongQueuePanel";
 import Subtitles from "./components/Subtitles/Subtitles";
 import SubtitleParser from "./toxen/SubtitleParser";
 import ToxenInteractionMode from "./toxen/ToxenInteractionMode";
+import Playlist from "./toxen/Playlist";
+import PlaylistPanel from "./components/PlaylistPanel/PlaylistPanel";
 
 //#region Define variables used all over the ToxenApp process.
 /**
@@ -224,6 +226,7 @@ export class Toxen {
   public static sidePanel: Sidepanel;
   public static songPanel: SongPanel;
   public static songQueuePanel: SongQueuePanel;
+  public static playlistPanel: PlaylistPanel;
   public static musicPlayer: MusicPlayer;
   public static musicControls: MusicControls;
   public static subtitles: Subtitles;
@@ -264,7 +267,7 @@ export class Toxen {
 
   public static songSearch = "";
   public static songList: Song[];
-  public static setSongList(songList: Song[]) {
+  private static setSongList(songList: Song[]) {
     const cur = Song.getCurrent();
     if (cur) {
       const newCur = songList.find(s => s.uid === cur.uid);
@@ -274,6 +277,15 @@ export class Toxen {
   }
   public static songQueue: Song[] = [];
 
+  public static playlists: Playlist[];
+  /**
+   * The current playlist being used.
+   */
+  public static playlist: Playlist;
+  private static setPlaylists(playlists: Playlist[]) {
+    Toxen.playlists = playlists;
+  }
+
   /**
    * Returns all songs in songList and songQueue.
    */
@@ -282,7 +294,8 @@ export class Toxen {
   }
 
   public static getPlayableSongs(): readonly Song[] {
-    if (Toxen.songQueue && Toxen.songQueue.length > 0) return Toxen.songQueue
+    if (Toxen.songQueue && Toxen.songQueue.length > 0) return Toxen.songQueue;
+    if (Toxen.playlist && Toxen.playlist.songList.length > 0) return Toxen.playlist.songList;
     if (Toxen.songList && Toxen.songList.length > 0) return Toxen.songList;
     return [];
   }
@@ -305,9 +318,15 @@ export class Toxen {
 
       Toxen.loadingScreen.setContent(content);
       ref.setValue(songCount);
-      // ref.setMin(0);
-      // ref.setMax(totalSongCount);
+      ref.setMin(0);
+      ref.setMax(totalSongCount);
     }));
+    try {
+      Toxen.setPlaylists(await Playlist.load());
+    }
+    catch (error) {
+      Toxen.error(error.message);
+    }
     Toxen.loadingScreen.toggleVisible(false);
   }
 
@@ -492,8 +511,7 @@ export default class ToxenAppRenderer extends React.Component {
 
         {/* Playlist Management Panel */}
         <SidepanelSection key="playlist" id="playlist" title="Playlist" icon={<i className="fas fa-th-list"></i>}>
-          <h1>Playlists</h1>
-          <p>Playlists are not yet implemented.</p>
+          <PlaylistPanel ref={ref => Toxen.playlistPanel = ref}/>
         </SidepanelSection>
 
         {/* Playlist Management Panel */}
