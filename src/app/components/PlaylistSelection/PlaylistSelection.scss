@@ -1,0 +1,37 @@
+.playlist-list-small {
+  .playlist-item {
+    display: inline-block;
+    user-select: none;
+    cursor: pointer;
+    .playlist-item-title {
+      display: inline-block;
+      transition: margin-left 0.2s ease-in-out;
+      margin-left: 0.25em;
+    }
+
+    &:hover {
+      .playlist-item-title {
+        & {
+          margin-left: 0.40em;
+        }
+      }
+    }
+    .playlist-select {
+      display: inline-block;
+      font-size: 1.4em;
+    }
+
+    span {
+      margin: 0 0.25em;
+      transition: filter 0.2s ease-in-out;
+      &:hover {
+        filter:drop-shadow(0 0 0.5em #fff);
+      }
+    }
+
+    span.disabled-item {
+      pointer-events: none;
+      filter: brightness(0.5);
+    }
+  }
+}

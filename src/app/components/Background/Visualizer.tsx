@@ -6,6 +6,7 @@ import "./Visualizer.scss";
 import System from '../../toxen/System';
 //@ts-expect-error 
 import txnLogo from "../../../icons/toxen.png";
+import { hexToRgb } from '../Form/FormInputFields/FormInputColorPicker';
 
 const imgSize = 256;
 const toxenLogo = new Image(imgSize, imgSize);
@@ -23,6 +24,10 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
   }
 
   private curLen: number = 0;
+  /**
+   * Dynamic dim for the background of the visualizer.
+   */
+  private dynamicDim = 0;
   private loop(time: number) {
     if (!this.stopped) requestAnimationFrame(this.loop.bind(this));
     if (!this.ctx) return console.log("No ctx exist!");
@@ -34,6 +39,11 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
 
     const ctx = this.ctx;
     const storedColor = Toxen.background.storyboard.getVisualizerColor();
+    const storedColorAsRGB = hexToRgb(storedColor);
+    this.ctx.fillStyle = this.dynamicDim >= 0 ? `rgba(0,0,0,${this.dynamicDim})`
+                                              : `rgba(${storedColorAsRGB.r},${storedColorAsRGB.g},${storedColorAsRGB.b},${-this.dynamicDim / 2})`;
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
     ctx.fillStyle = ctx.strokeStyle = storedColor;
     let [vWidth, vHeight, vLeft, vTop] = [
       this.canvas.width,
@@ -51,10 +61,28 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     dataArray = dataArray.slice(dataArray.length / 2);
 
     const len = this.curLen = dataArray.length;
-    let opacity = 0.7;
-
     const power = (1 / (Settings.get("volume") / 100));
     const getMaxHeight = (multipler?: number) => (vHeight * (multipler ?? 1)) ^ power ^ power
+
+    let opacity = 0.7; // Opacity of the visualizer bars.
+    const baseBackgroundDim = 0.5; // Base opacity of the background.
+
+    this.dynamicDim = baseBackgroundDim - (() => {
+      const maxHeight = getMaxHeight(0.30);
+      const unitH = maxHeight / dataSize;
+      let averageHeight = 0;
+      for (let i = 0; i < len; i++) {
+        const data = dataArray[i];
+        averageHeight += (data * unitH);
+      }
+
+      averageHeight /= len;
+      averageHeight = Math.min(averageHeight, maxHeight);
+      return (averageHeight / maxHeight);
+    })();
+    // this.dynamicDim = Math.max(this.dynamicDim, 0);
+
+
     let useLogo = false;
     switch (style) {
       default:
@@ -253,7 +281,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
 
                 imgSize - smallestHeight / 2,
                 imgSize - smallestHeight / 2,
-                
+
                 smallestHeight,
                 smallestHeight
               );
@@ -268,7 +296,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
         // Use logo if MirroredSingularityWithLogo is selected, and fall through into the regular MirroredSingularity.
         useLogo = true;
       case VisualizerStyle.MirroredSingularity: {
-        let newData  = dataArray.filter(d => d > 0);
+        let newData = dataArray.filter(d => d > 0);
         const len = newData.length;
         let cycleIncrementer = 180 / len;
         const maxHeight = getMaxHeight(0.50);
@@ -325,7 +353,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
 
                 imgSize - smallestHeight / 2,
                 imgSize - smallestHeight / 2,
-                
+
                 smallestHeight,
                 smallestHeight
               );

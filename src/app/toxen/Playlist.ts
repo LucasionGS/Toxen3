@@ -94,7 +94,13 @@ export default class Playlist{
    * Returns a stringified version of `IPlaylist`.
    */
   public static toString() {
-    return JSON.stringify(Toxen.playlists ?? [], null, 2);
+    const playlists: IPlaylist[] = (Toxen.playlists ?? []).map(pl => {
+      return {
+        name: pl.name,
+        songList: pl.songList.map(s => s.uid)
+      }
+    });
+    return JSON.stringify(playlists, null, 2);
   }
 }
 
