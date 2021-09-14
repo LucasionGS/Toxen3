@@ -1,5 +1,6 @@
 import { remote } from 'electron';
 import React from 'react'
+import Settings from '../../toxen/Settings';
 import { Toxen } from '../../ToxenApp';
 
 /**
@@ -23,7 +24,7 @@ export default function ExternalUrl(props: React.DetailedHTMLProps<React.AnchorH
           label: 'Open in browser',
           click: () => {
             remote.shell.openExternal(props.href);
-          }
+          },
         },
         {
           label: 'Copy URL',

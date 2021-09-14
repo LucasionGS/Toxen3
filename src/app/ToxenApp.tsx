@@ -38,6 +38,7 @@ import SubtitleParser from "./toxen/SubtitleParser";
 import ToxenInteractionMode from "./toxen/ToxenInteractionMode";
 import Playlist from "./toxen/Playlist";
 import PlaylistPanel from "./components/PlaylistPanel/PlaylistPanel";
+import Button from "./components/Button/Button";
 
 //#region Define variables used all over the ToxenApp process.
 /**
@@ -664,13 +665,13 @@ export default class ToxenAppRenderer extends React.Component {
               <>
                 <SidepanelSectionHeader>
                   <h1>Change logs</h1>
-                  <button className="tx-btn tx-btn-action" onClick={() => {
+                  <Button txStyle="action" className="advanced-only" onClick={() => {
                     Toxen.resetChangeLogs();
                     Toxen.reloadSection();
                   }}>
                     <i className="fas fa-sync-alt"></i>
-                    &nbsp;Reset change logs
-                  </button>
+                    &nbsp;Reload change logs
+                  </Button>
                 </SidepanelSectionHeader>
                 <div style={{ width: "100%", whiteSpace: "normal" }}>
                   {

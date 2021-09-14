@@ -84,16 +84,42 @@ export default class Settings {
     if (override) Settings.apply(override);
   }
 
-  public static isRemote() {
-    return Boolean(
+  /**
+   * Returns whether the current music folder is remote.
+   */
+  public static isRemote(): boolean;
+  /**
+   * If the current music folder is a remote folder, return what is parsed, otherwise return `null`.  
+   * Do not pass `null` to the function, as it would return `null` in both cases, rendering it useless.
+   */
+  public static isRemote<T>(toReturn: T): T;
+  public static isRemote<T>(toReturn?: T): T | boolean {
+    const isRemote = Boolean(
       Settings.data
       && Settings.data.libraryDirectory
       && (
-        Settings.data.libraryDirectory.toLowerCase().startsWith("tx://")
-        || Settings.data.libraryDirectory.toLowerCase().startsWith("txs://")
-        || Settings.data.libraryDirectory.toLowerCase().startsWith("http://")
+        Settings.data.libraryDirectory.toLowerCase().startsWith("http://")
         || Settings.data.libraryDirectory.toLowerCase().startsWith("https://")
+        || Settings.data.libraryDirectory.toLowerCase().startsWith("tx://")
+        || Settings.data.libraryDirectory.toLowerCase().startsWith("txs://")
       ));
+    if (toReturn === undefined) return isRemote;
+    return isRemote ? toReturn : null;
+  }
+
+  /**
+   * Returns if the `showAdvancedSettings` option is enabled.
+   */
+  public static isAdvanced(): boolean;
+  /**
+   * If the `showAdvancedSettings` option is enabled, return what is parsed, otherwise return `null`.  
+   * Do not pass `null` to the function, as it would return `null` in both cases, rendering it useless.
+   */
+  public static isAdvanced<T>(toReturn: T): T;
+  public static isAdvanced<T>(toReturn?: T): T | boolean {
+    if (toReturn === undefined) return Boolean(Settings.get("showAdvancedSettings"));
+    return Settings.get("showAdvancedSettings") ? toReturn : null;
+    // return toReturn;
   }
 
   public static data: ISettings;
@@ -142,21 +168,6 @@ export default class Settings {
 
   public static getUser() {
     return User.getCurrentUser();
-  }
-
-  /**
-   * Returns if the `showAdvancedSettings` option is enabled.
-   */
-  public static isAdvanced(): boolean;
-  /**
-   * If the `showAdvancedSettings` option is enabled, return what is parsed, otherwise return `null`.  
-   * Do not pass `null` to the function, as it would return `null` in both cases, rendering it useless.
-   */
-  public static isAdvanced<T>(toReturn: T): T;
-  public static isAdvanced<T>(toReturn?: T): T | boolean {
-    if (toReturn === undefined) return Boolean(Settings.get("showAdvancedSettings"));
-    return Settings.get("showAdvancedSettings") ? toReturn : null;
-    // return toReturn;
   }
 }
 

@@ -435,12 +435,15 @@ export default class Song implements ISong {
         label: "Extra options",
         submenu: [
           {
+            label: "Copy UID",
+            click: () => this.copyUID()
+          },
+          {
             label: "Open in file explorer",
             click: () => {
-              if (!Settings.isRemote()) {
-                remote.shell.openExternal(this.dirname());
-              }
-            }
+              remote.shell.openPath(this.dirname());
+            },
+            enabled: !Settings.isRemote(),
           },
         ]
       }),
@@ -649,6 +652,9 @@ export default class Song implements ISong {
     });
   }
 
+  /**
+   * Copy the song's UID to the clipboard.
+   */
   public copyUID(): void {
     remote.clipboard.write({
       text: this.uid
