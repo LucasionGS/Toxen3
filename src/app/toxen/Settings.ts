@@ -80,6 +80,9 @@ export default class Settings {
   public static applyDefaultSettings(override?: Partial<ISettings>) {
     Settings.apply({
       volume: 50,
+      exposePanelIcons: true,
+      backgroundDynamicLighting: true,
+      backgroundDim: 50
     });
     if (override) Settings.apply(override);
   }
@@ -195,9 +198,11 @@ export interface ISettings {
   visualizerStyle: VisualizerStyle;
   visualizerIntensity: number;
   visualizerRainbowMode: boolean;
+  backgroundDynamicLighting: boolean;
 
   // Backgrounds
   defaultBackground: string;
+  backgroundDim: number;
 
 
   // Advanced settings & UI

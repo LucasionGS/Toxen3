@@ -71,7 +71,7 @@ export interface MessageCardOptions extends Omit<MessageCardProps, "listRef"> {
 }
 
 interface MessageCardState {
-
+  isClosing: boolean;
 }
 
 class MessageCard extends Component<MessageCardProps, MessageCardState> {
@@ -79,7 +79,7 @@ class MessageCard extends Component<MessageCardProps, MessageCardState> {
     super(props);
 
     this.state = {
-
+      isClosing: false
     }
   }
 
@@ -89,9 +89,14 @@ class MessageCard extends Component<MessageCardProps, MessageCardState> {
   timeCreated = Time.now();
 
   close() {
-    this.props.listRef.current.setState({
-      messages: this.props.listRef.current.state.messages.filter(msg => msg.uniqueId !== this.props.uniqueId)
+    this.setState({
+      isClosing: true
     });
+    setTimeout(() => {
+      this.props.listRef.current.setState({
+        messages: this.props.listRef.current.state.messages.filter(msg => msg.uniqueId !== this.props.uniqueId)
+      });
+    }, 500);
   }
 
   render() {
@@ -106,9 +111,15 @@ class MessageCard extends Component<MessageCardProps, MessageCardState> {
         this.close();
       }, this.props.expiresIn);
     }
+
+    const classes = [
+      "message-card",
+      "message-card-type-" + (type || "normal"),
+      this.state.isClosing ? "message-card-fade-out" : null
+    ];
     
     return (
-      <div className={"message-card message-card-type-" + (type || "normal")}>
+      <div className={classes.filter(a => a).join(" ")}>
         {!this.props.disableClose ? (<div className="message-card-close" onClick={
           () => {
             this.close();

@@ -1,4 +1,14 @@
-<!-- ## Upcoming update / 1.0.17 -->
+## Upcoming update / 1.0.17
+Major changes:
+- Added playlist functionality!
+- Added Dynamic Background Lighting and an option to toggle it.
+- Added background dim level to settings.
+
+
+Minor changes:
+- Added fade-in/out animation for message cards.
+- Added preparation for the storyboard system.
+- Added warning in description on some options that has flashing colors.
 ## 1.0.16
 New stuff:
   - Added a less intrusive auto update prompt.

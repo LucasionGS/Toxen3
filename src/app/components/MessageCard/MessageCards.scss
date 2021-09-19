@@ -8,11 +8,13 @@
   top: 0;
   right: 0;
   justify-content: right;
-  overflow: auto;
-  border-bottom: white solid 1px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  // border-bottom: white solid 1px;
 }
 
 .message-card {
+  animation: message-card-fade-in 0.5s;
   pointer-events: all;
   position: relative;
   display: flex;
@@ -65,5 +67,32 @@
     padding: 0.25em;
     padding-right: 1.5em;
     box-sizing: border-box;
+  }
+
+  &.message-card-fade-out {
+    animation: message-card-fade-out 0.5s;
+  }
+}
+
+// Create message-card-fade-in
+@keyframes message-card-fade-in {
+  0% {
+    transform: translateX(110%);
+  }
+  80% {
+    transform: translateX(-3%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+// Create message-card-fade-out
+@keyframes message-card-fade-out {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(110%);
   }
 }

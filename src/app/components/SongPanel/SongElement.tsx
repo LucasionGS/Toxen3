@@ -24,7 +24,7 @@ export default class SongElement extends Component<SongElementProps, SongElement
       playing: this.props.playing ?? false
     }
   }
-  
+
   componentDidMount() {
     if (typeof this.props.getRef === "function") this.props.getRef(this);
   }
@@ -37,21 +37,30 @@ export default class SongElement extends Component<SongElementProps, SongElement
     this.props.song.contextMenu();
   }
 
+  public select(force?: boolean) {
+
+    const state = force ?? !this.state.selected;
+    this.setState({ selected: state });
+  }
+
   public divElement: HTMLDivElement;
-  
+
   render() {
     let song = this.props.song;
-    let classes = ["song-element"];
+    let classes = ["song-element", this.state.selected ? "selected" : null].filter(a => a);
     const bgFile = song.backgroundFile();
     if (this.state.playing) classes.push("playing");
     return (
       <div ref={ref => this.divElement = ref} className={classes.join(" ")} style={{
         background: `linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0)) 0% 0% / cover, url("${bgFile.replace(/\\/g, "/")}")`
       }}
-      onClick={this.play.bind(this)}
-      onContextMenu={e => {
-        this.contextMenu();
-      }}
+        onClick={e => {
+          if (e.ctrlKey) return this.select()
+          this.play();
+        }}
+        onContextMenu={e => {
+          this.contextMenu();
+        }}
       >
         <p className="song-title" >{song.getDisplayName()}</p>
       </div>

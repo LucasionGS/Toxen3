@@ -33,16 +33,19 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     if (!this.ctx) return console.log("No ctx exist!");
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     if (!Toxen.musicPlayer || !Toxen.musicPlayer.media) return console.log("Player or media missing");
-
-    let style = Toxen.background.storyboard.getVisualizerStyle();
-    if (style === VisualizerStyle.None) return;
-
+    
     const ctx = this.ctx;
     const storedColor = Toxen.background.storyboard.getVisualizerColor();
-    const storedColorAsRGB = hexToRgb(storedColor);
-    this.ctx.fillStyle = this.dynamicDim >= 0 ? `rgba(0,0,0,${this.dynamicDim})`
-                                              : `rgba(${storedColorAsRGB.r},${storedColorAsRGB.g},${storedColorAsRGB.b},${-this.dynamicDim / 2})`;
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    if (Settings.get("backgroundDynamicLighting")) {
+      const storedColorAsRGB = hexToRgb(storedColor);
+      this.ctx.fillStyle = this.dynamicDim >= 0 ? `rgba(0,0,0,${this.dynamicDim})`
+        : `rgba(${storedColorAsRGB.r},${storedColorAsRGB.g},${storedColorAsRGB.b},${-this.dynamicDim / 2})`;
+      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    }
+
+    let style = Toxen.background.storyboard.getVisualizerStyle();
+    if (style === VisualizerStyle.None && !Settings.get("backgroundDynamicLighting")) return;
+    
 
     ctx.fillStyle = ctx.strokeStyle = storedColor;
     let [vWidth, vHeight, vLeft, vTop] = [
@@ -64,8 +67,9 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     const power = (1 / (Settings.get("volume") / 100));
     const getMaxHeight = (multipler?: number) => (vHeight * (multipler ?? 1)) ^ power ^ power
 
+
     let opacity = 0.7; // Opacity of the visualizer bars.
-    const baseBackgroundDim = 0.5; // Base opacity of the background.
+    const baseBackgroundDim = (Settings.get("backgroundDim") ?? 50) / 100; // Base opacity of the background.
 
     this.dynamicDim = baseBackgroundDim - (() => {
       const maxHeight = getMaxHeight(0.30);
@@ -80,8 +84,8 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
       averageHeight = Math.min(averageHeight, maxHeight);
       return (averageHeight / maxHeight);
     })();
-    // this.dynamicDim = Math.max(this.dynamicDim, 0);
 
+    if (style === VisualizerStyle.None) return;
 
     let useLogo = false;
     switch (style) {
@@ -363,7 +367,6 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
         }
         break;
       }
-
     }
   }
 

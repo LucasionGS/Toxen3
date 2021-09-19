@@ -615,6 +615,11 @@ export default class ToxenAppRenderer extends React.Component {
               );
             })()}
 
+            <FormInput displayName="Base Background Dim" name="backgroundDim*number" type="number" min={0} max={100} />
+            <sup>
+              Set the base background dim level between <code>0-100</code>. <br />
+              This is how dark the background will appear. Can be dynamically changed by having <code>Dynamic Lighting</code> enabled.
+            </sup>
             <FormInput nullable displayName="Visualizer Color" name="visualizerColor*string" type="color"
             // onChange={v => Toxen.setAllVisualColors(v)}
             />
@@ -622,7 +627,19 @@ export default class ToxenAppRenderer extends React.Component {
             <br />
 
             <FormInput type="checkbox" name="visualizerRainbowMode*boolean" displayName="Rainbow Mode" />
-            <sup>Override the visualizer color to show a colorful rainbow visualizer.</sup>
+            <sup>
+              Override the visualizer color to show a colorful rainbow visualizer.
+              <br />
+              <code>⚠ Flashing colors ⚠</code>
+            </sup>
+            <br />
+
+            <FormInput type="checkbox" name="backgroundDynamicLighting*boolean" displayName="Dynamic Lighting" />
+            <sup>
+              Enables dynamic lighting in on the background image on songs.
+              <br />
+              <code>⚠ Flashing colors ⚠</code>
+            </sup>
             <br />
 
             <FormInput type="select" name="visualizerStyle*string" displayName="Visualizer Style" >

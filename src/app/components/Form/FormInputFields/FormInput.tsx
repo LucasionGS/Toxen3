@@ -23,7 +23,7 @@ type Props = [
 ][number];
 
 interface PropsTemplate<T extends string> {
-  name: string;
+  name: `${string}*${"string" | "boolean" | "number" | "array" | "list" | "select"}`;
   type: T;
   displayName?: string;
   /**
@@ -85,7 +85,7 @@ export default class FormInput extends React.Component<Props> {
     switch (type) {
       case "number":
         return Number(value);
-      
+
       case "array":
       case "list":
         return JSON.parse(String(value));
@@ -138,7 +138,7 @@ export default class FormInput extends React.Component<Props> {
           </>
         )
       }
-      
+
       case "number": {
         return (
           <>
@@ -158,21 +158,21 @@ export default class FormInput extends React.Component<Props> {
             {label}
             <br />
             <input
-            placeholder="Click to select file"
-            title="Click to select file"
-            ref={ref} className="tx-form-field" type="text" readOnly name={this.props.name} defaultValue={value} onClick={
-              () => {
-                let value = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
-                  properties: [
-                    'openFile'
-                  ]
-                });
-                if (value) {
-                  const parseOutput = (this.props as PropsTypeFile).parseOutput;
-                  ref.current.value = typeof parseOutput === "function" ? parseOutput(value[0]) : value[0];
+              placeholder="Click to select file"
+              title="Click to select file"
+              ref={ref} className="tx-form-field" type="text" readOnly name={this.props.name} defaultValue={value} onClick={
+                () => {
+                  let value = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
+                    properties: [
+                      'openFile'
+                    ]
+                  });
+                  if (value) {
+                    const parseOutput = (this.props as PropsTypeFile).parseOutput;
+                    ref.current.value = typeof parseOutput === "function" ? parseOutput(value[0]) : value[0];
+                  }
                 }
-              }
-            } />
+              } />
             <br />
             <br />
           </>
@@ -187,11 +187,11 @@ export default class FormInput extends React.Component<Props> {
             {label}
             <br />
             <input
-            placeholder="Click to select folder"
-            title="Click to select folder"
-            ref={ref} className="tx-form-field" type="text" readOnly name={this.props.name} defaultValue={value} onClick={
-              this.openFolder
-            } />
+              placeholder="Click to select folder"
+              title="Click to select folder"
+              ref={ref} className="tx-form-field" type="text" readOnly name={this.props.name} defaultValue={value} onClick={
+                this.openFolder
+              } />
             <br />
             <br />
           </>
@@ -221,7 +221,7 @@ export default class FormInput extends React.Component<Props> {
           </>
         )
       }
-      
+
       case "selectAsync": {
         return (
           <>
@@ -234,7 +234,7 @@ export default class FormInput extends React.Component<Props> {
           </>
         )
       }
-      
+
       case "list": {
         return (
           <>
@@ -246,7 +246,7 @@ export default class FormInput extends React.Component<Props> {
           </>
         )
       }
-      
+
       case "color": {
         return (
           <>

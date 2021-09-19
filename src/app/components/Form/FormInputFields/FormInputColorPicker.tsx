@@ -14,22 +14,24 @@ export default function FormInputColorPicker(props: Props) {
   return (
     <div style={{ position: "relative" }}>
       <input defaultValue={value}
-      style={{
-        pointerEvents: "none",
-        opacity: 0,
-        position: "absolute",
-        top: 0,
-        left: 0
-      }} ref={ref => colorPicker = ref} type="color" onChange={e => {
-        setValue(e.currentTarget.value);
-        if (typeof props.onChange === "function") props.onChange(e.currentTarget.value);
-      }} />
+        style={{
+          pointerEvents: "none",
+          opacity: 0,
+          position: "absolute",
+          top: 0,
+          left: 0
+        }} ref={ref => colorPicker = ref} type="color" onChange={e => {
+          setValue(e.currentTarget.value);
+          if (typeof props.onChange === "function") props.onChange(e.currentTarget.value);
+        }} />
       <input className="tx-form-field" style={{
         backgroundColor: value,
         color: rgbToGrayscale(hexToRgb(value)).r < 128 ? "#fff" : "#000",
       }} readOnly type="text" name={props.name} value={value} onClick={() => {
         colorPicker.click();
-      }} />
+      }}
+        placeholder="Click to select color"
+      />
       {
         props.nullable ? (
           <button className="tx-btn" onClick={() => {
@@ -49,7 +51,7 @@ export default function FormInputColorPicker(props: Props) {
             <i className="fas fa-redo"></i>
             &nbsp;
             Reset
-            </button>
+          </button>
         ) : ""
       }
     </div>

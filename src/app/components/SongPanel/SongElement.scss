@@ -14,11 +14,25 @@
     padding-left: 8px;
   }
 
+  &.selected {
+    width: 92%;
+    z-index: 10;
+    border-color: blue;
+    border-width: 5px;
+    &.playing {
+      border-color: #00ffff;
+    }
+  }
+
   &.playing {
     width: 95%;
     z-index: 10;
     box-shadow: 30px 0px 5px white;
+    border-color: green;
+    border-width: 10px;
+    border-radius: 5px;
   }
+  
   
   &:hover {
     width: 100%;
@@ -26,14 +40,14 @@
     border-bottom-right-radius: 10px;
     cursor: pointer;
     // Animation
-    & + * {
-      width: 98%;
-      border-bottom-right-radius: 10px;
-      & + * {
-        width: 94%;
-        border-bottom-right-radius: 10px;
-      }
-    }
+    // & + * {
+    //   width: 98%;
+    //   border-bottom-right-radius: 10px;
+    //   & + * {
+    //     width: 94%;
+    //     border-bottom-right-radius: 10px;
+    //   }
+    // }
 
     .song-title {
       // word-break: keep-all;

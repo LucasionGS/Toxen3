@@ -149,6 +149,26 @@ export default class Song implements ISong {
     );
   }
 
+  public set selected(v) {
+    if (this.currentElement) this.currentElement.select(v);
+  }
+
+  public get selected() {
+    return this.currentElement ? this.currentElement.state.selected : false;
+  }
+
+  public select(force?: boolean) {
+    if (this.currentElement) this.currentElement.select(force);
+  }
+
+  public static getSelected() {
+    return Toxen.songList.filter(song => song.selected);
+  }
+
+  public static deselectAll() {
+    Toxen.songList.forEach(song => song.selected ? (song.selected = false) : null);
+  }
+
   public static create(data: Partial<ISong>) {
     let song = new Song();
 
@@ -384,6 +404,7 @@ export default class Song implements ISong {
     Toxen.songQueue.push(this);
     this.inQueue = true;
     // if (this.isPlaying()) this._isPlaying = false;
+    this.selected = false;
     Toxen.songQueuePanel.update();
     Toxen.songPanel.update();
     return Song.sortSongs(Toxen.songQueue);
@@ -393,6 +414,7 @@ export default class Song implements ISong {
     let id = Toxen.songQueue.findIndex(s => s == this);
     if (id != -1) Toxen.songQueue.splice(id, 1);
     this.inQueue = false;
+    this.selected = false;
     Toxen.songQueuePanel.update();
     Toxen.songPanel.update();
     return Toxen.songQueue;
@@ -404,64 +426,92 @@ export default class Song implements ISong {
     noQueueOption?: boolean
   }) {
     opts ?? (opts = {});
-    const menu: Electron.MenuItemConstructorOptions[] = [
-      {
-        label: this.getDisplayName(),
-        enabled: false
-      },
-      {
-        label: "Edit info",
-        click: () => {
-          Toxen.editSong(this);
-        }
-      },
-      !opts.noQueueOption ? (this.inQueue ? {
-        label: "Remove from queue",
-        click: () => this.removeFromQueue()
-      } : {
-        label: "Add to queue",
-        click: () => this.addToQueue()
-      }) : undefined,
-      {
-        label: "Show song in list",
-        click: async () => {
-          if (!Toxen.isMode("Player")) return Toxen.sendError("CURRENTLY_EDITING_SONG");
-          await Toxen.sidePanel.show(true);
-          await Toxen.sidePanel.setSectionId("songPanel");
-          this.scrollTo();
-        }
-      },
-      Settings.isAdvanced<Electron.MenuItemConstructorOptions>({
-        label: "Extra options",
-        submenu: [
-          {
-            label: "Copy UID",
-            click: () => this.copyUID()
-          },
-          {
-            label: "Open in file explorer",
-            click: () => {
-              remote.shell.openPath(this.dirname());
+    const selectedSongs = Song.getSelected();
+    // Single song context menu
+    if (!this.selected) {
+      const singleMenu: Electron.MenuItemConstructorOptions[] = [
+        {
+          label: this.getDisplayName(),
+          enabled: false
+        },
+        {
+          label: "Edit info",
+          click: () => {
+            Toxen.editSong(this);
+          }
+        },
+        !opts.noQueueOption ? (this.inQueue ? {
+          label: "Remove from queue",
+          click: () => this.removeFromQueue()
+        } : {
+          label: "Add to queue",
+          click: () => this.addToQueue()
+        }) : undefined,
+        {
+          label: "Show song in list",
+          click: async () => {
+            if (!Toxen.isMode("Player")) return Toxen.sendError("CURRENTLY_EDITING_SONG");
+            await Toxen.sidePanel.show(true);
+            await Toxen.sidePanel.setSectionId("songPanel");
+            this.scrollTo();
+          }
+        },
+        Settings.isAdvanced<Electron.MenuItemConstructorOptions>({
+          label: "Extra options",
+          submenu: [
+            {
+              label: "Copy UID",
+              click: () => this.copyUID()
             },
-            enabled: !Settings.isRemote(),
-          },
-        ]
-      }),
-      {
-        type: "separator"
-      },
-      {
-        label: "Toxen",
-        enabled: false
-      },
-      {
-        label: "Toggle fullscreen",
-        click: () => {
-          Toxen.toggleFullscreen();
+            {
+              label: "Open in file explorer",
+              click: () => {
+                remote.shell.openPath(this.dirname());
+              },
+              enabled: !Settings.isRemote(),
+            },
+          ]
+        }),
+        {
+          type: "separator"
+        },
+        {
+          label: "Toxen",
+          enabled: false
+        },
+        {
+          label: "Toggle fullscreen",
+          click: () => {
+            Toxen.toggleFullscreen();
+          }
         }
-      }
-    ].filter(a => a) as Electron.MenuItemConstructorOptions[];
-    remote.Menu.buildFromTemplate(menu).popup();
+      ].filter(a => a) as Electron.MenuItemConstructorOptions[];
+      remote.Menu.buildFromTemplate(singleMenu).popup();
+    }
+    else if (selectedSongs.length > 0) {
+      // Multi-selected song context menu
+      const multiMenu: Electron.MenuItemConstructorOptions[] = [
+        {
+          label: "Deselect all",
+          click: () => {
+            Song.deselectAll();
+          }
+        },
+        {
+          label: "Add to queue",
+          click: () => {
+            selectedSongs.forEach(s => s.addToQueue());
+          }
+        },
+        {
+          label: "Remove from queue",
+          click: () => {
+            selectedSongs.forEach(s => s.removeFromQueue());
+          }
+        }
+      ].filter(a => a) as Electron.MenuItemConstructorOptions[];
+      remote.Menu.buildFromTemplate(multiMenu).popup();
+    }
   }
 
   public existingElements: SongElement[] = [];
