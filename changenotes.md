@@ -1,14 +1,29 @@
+<!--
+Template:
+## x.x.x
+Major changes:
+- Added something major
+- Changed something major
+
+Minor changes:
+- Added something minor
+- Changed something minor
+-->
 ## Upcoming update / 1.0.17
 Major changes:
 - Added playlist functionality!
 - Added Dynamic Background Lighting and an option to toggle it.
 - Added background dim level to settings.
-
+- Added `Advanced UI` to settings. It will enable more options in settings, as well as add a few new elements to the UI for more technical use.
+  - If you're just a regular user of Toxen, this is not necessary to enable. It's meant for advanced users who want to work with Toxen in a more technical way.
 
 Minor changes:
 - Added fade-in/out animation for message cards.
 - Added preparation for the storyboard system.
 - Added warning in description on some options that has flashing colors.
+- Changed how the currently playing track is displayed.
+- Changed the default state of the side panel to be closed on startup.
+
 ## 1.0.16
 New stuff:
   - Added a less intrusive auto update prompt.

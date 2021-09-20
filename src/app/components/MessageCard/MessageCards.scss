@@ -14,7 +14,12 @@
 }
 
 .message-card {
-  animation: message-card-fade-in 0.5s;
+  // Animations
+  animation: message-card-fade-in 0.4s;
+  &.message-card-fade-out {
+    animation: message-card-fade-out 0.5s;
+  }
+  // Properties
   pointer-events: all;
   position: relative;
   display: flex;
@@ -67,10 +72,6 @@
     padding: 0.25em;
     padding-right: 1.5em;
     box-sizing: border-box;
-  }
-
-  &.message-card-fade-out {
-    animation: message-card-fade-out 0.5s;
   }
 }
 

@@ -711,6 +711,15 @@ export default class Song implements ISong {
     });
     Toxen.log("Copied UID to clipboard", 2000);
   }
+
+  /**
+   * Returns whether the song's media file is a video. If false, it's an audio file.
+   */
+  public isVideo() {
+    const mediaFile = this.mediaFile();
+    if (!mediaFile) return false;
+    return Toxen.getSupportedVideoFiles().includes(Path.extname(mediaFile).toLowerCase());
+  }
 }
 
 export interface ISong {

@@ -204,9 +204,12 @@ export interface ISettings {
   defaultBackground: string;
   backgroundDim: number;
 
-
   // Advanced settings & UI
   showAdvancedSettings: boolean;
+
+  // Discord
+  discordPresence: boolean;
+  discordPresenceDetailed: boolean;
 }
 
 export enum VisualizerStyle {

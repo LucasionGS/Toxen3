@@ -39,6 +39,7 @@ import ToxenInteractionMode from "./toxen/ToxenInteractionMode";
 import Playlist from "./toxen/Playlist";
 import PlaylistPanel from "./components/PlaylistPanel/PlaylistPanel";
 import Button from "./components/Button/Button";
+import Discord from "./toxen/Discord";
 
 //#region Define variables used all over the ToxenApp process.
 /**
@@ -372,7 +373,9 @@ export class Toxen {
   public static setAllVisualColors(color: string) {
     color = color || Settings.get("visualizerColor");
     Toxen.musicControls.progressBar.setFillColor(color);
-  };
+  }
+
+  // public static discord = new Discord("647178364511191061"); // Toxen's App ID
 }
 
 //#endregion
@@ -432,12 +435,13 @@ export default class ToxenAppRenderer extends React.Component {
 
         await Toxen.loadSongs();
         Toxen.songPanel.update();
-        Toxen.sidePanel.show(true);
+        // Toxen.sidePanel.show(true);
         Toxen.sidePanel.setWidth(Settings.get("panelWidth"));
         Toxen.loadingScreen.toggleVisible(false);
         Toxen.musicPlayer.playRandom();
         Toxen.background.visualizer.start();
-      }).then(() => Toxen._resolveWhenReady())
+        // Toxen.discord.connect();
+      }).then(() => Toxen._resolveWhenReady());
   }
 
   render = () => (
@@ -466,7 +470,7 @@ export default class ToxenAppRenderer extends React.Component {
         {/* Song Panel */}
         <SidepanelSection key="songPanel" id="songPanel" title="Music" icon={<i className="fas fa-music"></i>}>
           <SidepanelSectionHeader>
-            <h1>Songs</h1>
+            <h1>Tracks</h1>
             <button className="tx-btn tx-whitespace-nowrap" onClick={async () => {
               await Toxen.loadSongs();
               Toxen.songPanel.update();
@@ -476,7 +480,7 @@ export default class ToxenAppRenderer extends React.Component {
             </button>
             <button className="tx-btn tx-whitespace-nowrap" onClick={async () => {
               Toxen.showCurrentSong();
-            }}><i className="fas fa-search"></i>&nbsp;Show playing</button>
+            }}><i className="fas fa-search"></i>&nbsp;Show playing track</button>
             <br />
             <SearchField />
           </SidepanelSectionHeader>
@@ -486,7 +490,7 @@ export default class ToxenAppRenderer extends React.Component {
 
         {/* Import Panel */}
         <SidepanelSection key="importSong" id="importSong" title="Import" icon={<i className="fas fa-file-import"></i>}>
-          <h1>Import song</h1>
+          <h1>Import music</h1>
           <button className="tx-btn"
             onClick={() => {
               let paths = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
