@@ -263,7 +263,9 @@ export class Toxen {
 
     Toxen.musicControls.setVolume(Settings.get("volume") ?? 50);
 
-    document.body.classList.toggle("advanced", Settings.isAdvanced())
+    document.body.classList.toggle("advanced", Settings.isAdvanced());
+
+    Toxen.discord.setPresence();
   }
 
   public static loadingScreen: LoadingScreen;
@@ -375,7 +377,7 @@ export class Toxen {
     Toxen.musicControls.progressBar.setFillColor(color);
   }
 
-  // public static discord = new Discord("647178364511191061"); // Toxen's App ID
+  public static discord = new Discord("647178364511191061"); // Toxen's App ID
 }
 
 //#endregion
@@ -440,7 +442,9 @@ export default class ToxenAppRenderer extends React.Component {
         Toxen.loadingScreen.toggleVisible(false);
         Toxen.musicPlayer.playRandom();
         Toxen.background.visualizer.start();
-        // Toxen.discord.connect();
+        if (Settings.get("discordPresence")) Toxen.discord.connect().then(() => {
+          Toxen.discord.setPresence();
+        });
       }).then(() => Toxen._resolveWhenReady());
   }
 
@@ -670,7 +674,20 @@ export default class ToxenAppRenderer extends React.Component {
               Enables the viewing of advanced settings and UI elements. This will display a few more buttons around in Toxen,
               along with more technical settings that users usually don't have to worry about.
             </sup>
-            <br />
+            <div className="advanced-only"> {/* Container for advanced settings */}
+              <h3>Discord Integration</h3>
+              <FormInput type="checkbox" name="discordPresence*boolean" displayName="Discord Presence" />
+              <sup>
+                Enables Discord presence integration. It will show you are using Toxen in your status.
+              </sup>
+              <br />
+
+              <FormInput type="checkbox" name="discordPresenceDetailed*boolean" displayName="Discord Presence: Show details" />
+              <sup>
+                Enables a detailed activity status in Discord presence. It'll show what song you are listening to, and how far into it you are.
+              </sup>
+              <br />
+            </div>
           </Form>
         </SidepanelSection>
 

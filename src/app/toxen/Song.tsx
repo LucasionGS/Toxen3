@@ -16,7 +16,7 @@ import navigator, { MediaMetadata } from "../../navigator";
 import SubtitleParser from "./SubtitleParser";
 //@ts-expect-error 
 import ToxenMax from "../../icons/skull_max.png";
-import ToxenInteractionMode from "./ToxenInteractionMode";
+// import ToxenInteractionMode from "./ToxenInteractionMode";
 
 export default class Song implements ISong {
   public uid: string;
@@ -185,6 +185,7 @@ export default class Song implements ISong {
 
   public toISong(): ISong {
     const keys: Exclude<keyof ISong, number>[] = [
+      // SONG SETTINGS
       "uid",
       "artist",
       "title",
@@ -199,6 +200,7 @@ export default class Song implements ISong {
       "visualizerForceRainbowMode",
       "year",
       "language",
+      "subtitleDelay",
     ];
     const obj = {} as any;
     keys.forEach(key => {
@@ -299,7 +301,6 @@ export default class Song implements ISong {
      */
     disableHistory?: boolean
   }) {
-
     // Toxen.messageCards.addMessage({
     //   content: "Playing " + this.getDisplayName(),
     //   type: "normal",
@@ -356,6 +357,8 @@ export default class Song implements ISong {
       }
       else addToMetadata();
     }
+
+    Toxen.discord.setPresence(this);
   }
 
   async applySubtitles() {
@@ -723,6 +726,7 @@ export default class Song implements ISong {
 }
 
 export interface ISong {
+  // SONG SETTINGS
   uid: string;
   artist: string;
   coArtists: string[];

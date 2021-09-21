@@ -70,21 +70,41 @@ export default class Settings {
       }
       try {
         let data = await fsp.readFile(Settings.filePath, "utf8");
-        return (Settings.data = JSON.parse(data));
+        Settings.data = JSON.parse(data);
+        Settings.applyDefaultSettings();
+        return Settings.data;
       } catch (error) {
-        throw "Unable to parse settings file.";
+        throw "Unable to parse settings file";
       }
     })
   }
 
-  public static applyDefaultSettings(override?: Partial<ISettings>) {
-    Settings.apply({
+  public static applyDefaultSettings(overrideDefault?: Partial<ISettings>, forceReset?: boolean) {
+    // Default settings for Toxen.
+    const defaultSettings: Partial<ISettings> = {
+      showAdvancedSettings: false,
       volume: 50,
       exposePanelIcons: true,
       backgroundDynamicLighting: true,
-      backgroundDim: 50
-    });
-    if (override) Settings.apply(override);
+      backgroundDim: 50,
+      discordPresence: true,
+      discordPresenceDetailed: true,
+      panelDirection: "left",
+      panelVerticalTransition: false,
+      repeat: false,
+      shuffle: false,
+      visualizerRainbowMode: false,
+    };
+
+    let toUse: Partial<ISettings> = {};
+    for (const key in defaultSettings) {
+      if (!forceReset && Settings.data && key in Settings.data) continue;
+      (toUse as any)[key] = (defaultSettings as any)[key];
+    }
+    toUse = Object.assign(toUse, overrideDefault || {});
+
+    Settings.apply(toUse);
+    // if (overrideDefault) Settings.apply(overrideDefault);
   }
 
   /**

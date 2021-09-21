@@ -60,7 +60,6 @@ export default class Subtitles extends Component<SubtitlesProps, SubtitlesState>
       let font = getOption("font", "Arial");
       let fontSize = getOption("fontSize", 24);
       let bold = getOption("bold", "false");
-      console.log(sub.options, color, font, fontSize);
       
       text = `<span style="color: ${color}; font-family: ${font}; font-size: ${fontSize + "px"};">${text}</span>`;
       if (bold === "true") {

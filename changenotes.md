@@ -16,6 +16,7 @@ Major changes:
 - Added background dim level to settings.
 - Added `Advanced UI` to settings. It will enable more options in settings, as well as add a few new elements to the UI for more technical use.
   - If you're just a regular user of Toxen, this is not necessary to enable. It's meant for advanced users who want to work with Toxen in a more technical way.
+- Added Discord integration. Settings for these are located in `Settings > Advanced UI > Discord`.
 
 Minor changes:
 - Added fade-in/out animation for message cards.
@@ -23,6 +24,8 @@ Minor changes:
 - Added warning in description on some options that has flashing colors.
 - Changed how the currently playing track is displayed.
 - Changed the default state of the side panel to be closed on startup.
+- Fixed subtitleDelay song property not saving after reload.
+- Fixed certain settings not applying as defaults, if they are not set.
 
 ## 1.0.16
 New stuff:

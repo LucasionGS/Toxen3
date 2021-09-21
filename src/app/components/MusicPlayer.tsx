@@ -48,8 +48,12 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
     this.media.volume = vol / 100;
   }
 
-  public setPosition(seconds: number) {
+  public setPosition(seconds: number, options?: {
+    updateDiscord?: boolean
+  }) {
+    options = options || {};
     this.media.currentTime = seconds;
+    if (options.updateDiscord) Toxen.discord.setPresence();
   }
 
   public setSource(src: MediaSourceInfo, playWhenReady: boolean = false) {
@@ -70,6 +74,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
 
   public play() {
     this.media.play();
+    Toxen.discord.setPresence();
   }
   
   public load() {
@@ -78,11 +83,12 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
   
   public pause() {
     this.media.pause();
+    Toxen.discord.setPresence();
   }
 
   public toggle() {
-    if (this.media.paused) this.media.play();
-    else this.media.pause();
+    if (this.media.paused) this.play();
+    else this.pause();
   }
 
   public playNext() {
