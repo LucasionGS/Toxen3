@@ -442,6 +442,7 @@ export default class ToxenAppRenderer extends React.Component {
         Toxen.loadingScreen.toggleVisible(false);
         Toxen.musicPlayer.playRandom();
         Toxen.background.visualizer.start();
+        
         if (Settings.get("discordPresence")) Toxen.discord.connect().then(() => {
           Toxen.discord.setPresence();
         });
@@ -492,6 +493,17 @@ export default class ToxenAppRenderer extends React.Component {
           <SongPanel ref={s => Toxen.songPanel = s} />
         </SidepanelSection>
 
+        {/* Playlist Management Panel */}
+        <SidepanelSection key="playlist" id="playlist" title="Playlist" icon={<i className="fas fa-th-list"></i>}>
+          <PlaylistPanel ref={ref => Toxen.playlistPanel = ref} />
+        </SidepanelSection>
+
+        {/* Playlist Management Panel */}
+        <SidepanelSection key="adjust" id="adjust" title="Adjust" icon={<i className="fas fa-sliders-h"></i>} disabled>
+          <h1>Audio Adjustments</h1>
+          <p>Audio adjustments are not yet implemented.</p>
+        </SidepanelSection>
+
         {/* Import Panel */}
         <SidepanelSection key="importSong" id="importSong" title="Import" icon={<i className="fas fa-file-import"></i>}>
           <h1>Import music</h1>
@@ -508,7 +520,6 @@ export default class ToxenAppRenderer extends React.Component {
                     extensions: Toxen.getSupportedMediaFiles().map(ext => ext.replace(".", ""))
                   },
                 ],
-
               });
 
               if (!paths || paths.length == 0) return;
@@ -524,16 +535,6 @@ export default class ToxenAppRenderer extends React.Component {
           ><i className="fas fa-file-import"></i>&nbsp;Import song from Files</button>
         </SidepanelSection>
 
-        {/* Playlist Management Panel */}
-        <SidepanelSection key="playlist" id="playlist" title="Playlist" icon={<i className="fas fa-th-list"></i>}>
-          <PlaylistPanel ref={ref => Toxen.playlistPanel = ref} />
-        </SidepanelSection>
-
-        {/* Playlist Management Panel */}
-        <SidepanelSection key="adjust" id="adjust" title="Adjust" icon={<i className="fas fa-sliders-h"></i>}>
-          <h1>Audio Adjustments</h1>
-          <p>Audio adjustments are not yet implemented.</p>
-        </SidepanelSection>
 
         {/* Keep settings tab at the bottom */}
         <SidepanelSection key="settings" id="settings" title="Settings" icon={<i className="fas fa-cog"></i>} separator>
@@ -742,8 +743,6 @@ export default class ToxenAppRenderer extends React.Component {
               {/* <i className="fas fa-redo"></i>&nbsp; */}
               Copy UUID
             </button>
-            {Settings.isAdvanced(
-            )}
           </SidepanelSectionHeader>
           <Form hideSubmit ref={ref => Toxen.editSongForm = ref} saveButtonText="Save song" onSubmit={async (_, formValues) => {
             let current = Song.getCurrent();

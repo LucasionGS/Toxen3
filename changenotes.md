@@ -17,6 +17,7 @@ Major changes:
 - Added `Advanced UI` to settings. It will enable more options in settings, as well as add a few new elements to the UI for more technical use.
   - If you're just a regular user of Toxen, this is not necessary to enable. It's meant for advanced users who want to work with Toxen in a more technical way.
 - Added Discord integration. Settings for these are located in `Settings > Advanced UI > Discord`.
+- Added song multi-select and multi-action.
 
 Minor changes:
 - Added fade-in/out animation for message cards.
@@ -26,6 +27,7 @@ Minor changes:
 - Changed the default state of the side panel to be closed on startup.
 - Fixed subtitleDelay song property not saving after reload.
 - Fixed certain settings not applying as defaults, if they are not set.
+- Added transparency to the sidepanel when not hovered over.
 
 ## 1.0.16
 New stuff:

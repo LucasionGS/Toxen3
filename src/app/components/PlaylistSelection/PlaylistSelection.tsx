@@ -1,5 +1,6 @@
 import React, { Component } from 'react'
 import Song from '../../toxen/Song';
+import { Toxen } from '../../ToxenApp';
 import "./PlaylistSelection.scss";
 
 interface PlaylistSelectionProps {
@@ -20,6 +21,7 @@ export default class PlaylistSelection extends Component<PlaylistSelectionProps,
   }
   
   render() {
+    const playlists = Toxen.playlists;
     return (
       <div>
         

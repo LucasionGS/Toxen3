@@ -6,6 +6,18 @@ body {
   z-index: -10;
   left: 0;
   top: 0;
+
+  &.exposed-icons {
+    .song-panel-toggle {
+      display: none;
+    }
+  }
+  
+  &:not(.advanced) {
+    .advanced-only {
+      display: none;
+    }
+  }
 }
 
 .song-panel-toggle {
@@ -28,17 +40,5 @@ body {
     height: 48px;
     vertical-align: 10px;
     padding: 8px;
-  }
-}
-
-body.exposed-icons {
-  .song-panel-toggle {
-    display: none;
-  }
-}
-
-body:not(.advanced) {
-  .advanced-only {
-    display: none;
   }
 }

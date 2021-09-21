@@ -327,7 +327,6 @@ export default class Song implements ISong {
       Toxen.background.visualizer.update();
       let img = new Image();
       img.src = Toxen.background.getBackground() || ToxenMax;
-      console.log(img);
       this.setCurrent();
       const addToMetadata = (blob?: Blob) => {
         document.title = this.getDisplayName();
@@ -451,6 +450,26 @@ export default class Song implements ISong {
           click: () => this.addToQueue()
         }) : undefined,
         {
+          label: "Add to playlist",
+          submenu: Toxen.playlists ? Toxen.playlists.map(p => ({
+            label: p.name,
+            click: () => {
+              p.addSong(this);
+            },
+            visible: !p.songList.find(s => s.uid === this.uid)
+          })) : []
+        },
+        {
+          label: "Remove from playlist",
+          submenu: Toxen.playlists ? Toxen.playlists.map(p => ({
+            label: p.name,
+            click: () => {
+              p.removeSong(this);
+            },
+            visible: !!p.songList.find(s => s.uid === this.uid)
+          })) : []
+        },
+        {
           label: "Show song in list",
           click: async () => {
             if (!Toxen.isMode("Player")) return Toxen.sendError("CURRENTLY_EDITING_SONG");
@@ -499,6 +518,30 @@ export default class Song implements ISong {
           click: () => {
             Song.deselectAll();
           }
+        },
+        {
+          type: "separator"
+        },
+        {
+          label: "Add to playlist",
+          submenu: Toxen.playlists ? Toxen.playlists.map(p => ({
+            label: p.name,
+            click: () => {
+              p.addSong(...selectedSongs);
+            }
+          })) : []
+        },
+        {
+          label: "Remove from playlist",
+          submenu: Toxen.playlists ? Toxen.playlists.map(p => ({
+            label: p.name,
+            click: () => {
+              p.removeSong(...selectedSongs);
+            }
+          })) : []
+        },
+        {
+          type: "separator"
         },
         {
           label: "Add to queue",

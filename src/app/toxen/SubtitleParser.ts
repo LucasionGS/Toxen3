@@ -204,7 +204,6 @@ namespace SubtitleParser {
       item.text = textLines.map(s => s.replace(/\\(.)/g, "$1")).join("<br />");
       items.push(item);
     }
-    console.log(items);
     return items;
   }
 

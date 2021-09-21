@@ -52,6 +52,7 @@ export default class Playlist{
        }
      }
    }
+
    /**
     * Save Toxen's playlists from `filePath`.
     */
@@ -97,10 +98,29 @@ export default class Playlist{
     const playlists: IPlaylist[] = (Toxen.playlists ?? []).map(pl => {
       return {
         name: pl.name,
-        songList: pl.songList.map(s => s.uid)
+        songList: [... new Set(pl.songList.map(s => s.uid))]
       }
     });
     return JSON.stringify(playlists, null, 2);
+  }
+
+  public addSong(song: Song): void;
+  public addSong(...songs: Song[]): void;
+  public addSong(...songs: Song[]): void {
+    const existingUIDs = this.songList.map(s => s.uid);
+    songs = songs.filter(s => !existingUIDs.includes(s.uid));
+    this.songList.push(...songs);
+    this.songList = Song.sortSongs(this.songList);
+    if (Toxen.sidePanel.getSectionId() === "songPanel") Toxen.reloadSection();
+    Playlist.save();
+  }
+
+  public removeSong(song: Song): void;
+  public removeSong(...songs: Song[]): void;
+  public removeSong(...songs: Song[]): void {
+    this.songList = this.songList.filter(s => !songs.includes(s));
+    if (Toxen.sidePanel.getSectionId() === "songPanel") Toxen.reloadSection();
+    Playlist.save();
   }
 }
 

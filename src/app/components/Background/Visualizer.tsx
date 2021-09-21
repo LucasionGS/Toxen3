@@ -11,7 +11,6 @@ import { hexToRgb } from '../Form/FormInputFields/FormInputColorPicker';
 const imgSize = 256;
 const toxenLogo = new Image(imgSize, imgSize);
 toxenLogo.src = txnLogo;
-console.log(toxenLogo.src, txnLogo);
 
 interface VisualizerProps { }
 

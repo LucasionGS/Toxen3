@@ -79,7 +79,10 @@ export default class PlaylistPanel extends Component<PlaylistPanelProps, Playlis
           this.state.playlistForm ?
             <PlaylistForm playlistPanel={this} />
             :
-            <Button onClick={() => this.showPlaylistForm()}>Add playlist</Button>
+            <>
+              <Button txStyle="action" onClick={() => Toxen.sidePanel.setSectionId("songPanel")}>To music panel</Button>
+              <Button onClick={() => this.showPlaylistForm()}>Add playlist</Button>
+            </>
         }
         <div className="playlist-list">
           {playlistsItems}

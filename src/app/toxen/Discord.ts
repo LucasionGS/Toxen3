@@ -81,7 +81,6 @@ export default class Discord {
           + `${song.getDisplayName()}`;
         if (song.source) options["state"] = `\nFrom ${song.source}`;
       }
-      console.log(options);
       this.client.setActivity(options, process.pid);
       break;
     }

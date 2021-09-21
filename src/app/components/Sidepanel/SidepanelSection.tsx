@@ -8,6 +8,7 @@ interface Props {
   title?: string;
   separator?: boolean;
   scrollY?: number;
+  disabled?: boolean;
   dynamicContent?: (section: SidepanelSection) => React.ReactNode | Promise<React.ReactNode>;
 }
 

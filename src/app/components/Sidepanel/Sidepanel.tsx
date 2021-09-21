@@ -77,6 +77,10 @@ export default class Sidepanel extends React.Component<Props, State> {
     });
   }
 
+  public getSectionId() {
+    return this.state.sectionId;
+  }
+
   public setVertical(vertical: boolean) {
     return this.setStateAsync({
       vertical
@@ -155,7 +159,13 @@ export default class Sidepanel extends React.Component<Props, State> {
           {this.sections.map(s => (s.props.icon || s.props.title) && (
             <div key={String(s.props.id)}>
               {s.props.separator === true ? (<hr />) : ""}
-              <div className="sidepanel-icon" title={s.props.title} onClick={() => {
+              <div className={(() => {
+                const classes = [
+                  "sidepanel-icon"
+                ];
+                if (s.props.disabled) classes.push("sidepanel-icon-disabled")
+                return classes.join(" ");
+              })()} title={s.props.title} onClick={s.props.disabled ? null : () => {
                 if ( !Toxen.isMode("Player") && Toxen.editingSong) {
                   Toxen.sendError("CURRENTLY_EDITING_SONG");
                   return;
