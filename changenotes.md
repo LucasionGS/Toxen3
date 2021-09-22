@@ -9,9 +9,11 @@ Minor changes:
 - Added something minor
 - Changed something minor
 -->
-## Upcoming update / 1.0.17
+<!-- ## Upcoming update / 1.0.18 -->
+## 1.0.17 - 2021/09/23
 Major changes:
 - Added playlist functionality!
+  - Playlists are still subject to change! It will be upgraded and improved in the future.
 - Added Dynamic Background Lighting and an option to toggle it.
 - Added background dim level to settings.
 - Added `Advanced UI` to settings. It will enable more options in settings, as well as add a few new elements to the UI for more technical use.
