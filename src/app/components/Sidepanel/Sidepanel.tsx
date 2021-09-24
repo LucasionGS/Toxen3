@@ -145,7 +145,7 @@ export default class Sidepanel extends React.Component<Props, State> {
         maxWidth: "100vw"
       }}>
         <div className="sidepanel-backdrop" onClick={() => this.show(false)}></div>
-        <div className="sidepanel-icons">
+        <div className="sidepanel-icons" onClick={() => this.show(true)}>
           <div className="sidepanel-icon sidepanel-icon-toggle" onClick={
             typeof this.props.onClose === "function" ? this.props.onClose : null
           }>
