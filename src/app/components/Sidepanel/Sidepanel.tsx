@@ -47,7 +47,7 @@ export default class Sidepanel extends React.Component<Props, State> {
   private getWidth() {
     return this.state?.width ?? remote.getCurrentWindow().getSize()[0] / 2;
   }
-  
+
   /**
    * Centers the panel on the screen.
    */
@@ -98,7 +98,7 @@ export default class Sidepanel extends React.Component<Props, State> {
       exposeIcons
     });
   }
-  
+
   public setWidth(width: number) {
     return this.setStateAsync({
       width: width ?? this.getWidth()
@@ -140,15 +140,17 @@ export default class Sidepanel extends React.Component<Props, State> {
     let sec = this.sections.find(sec => sec?.props?.id == this.state.sectionId);
     return (
       <div className={classList.join(" ")}
-      style={{
-        width: panelWidth,
-        maxWidth: "100vw"
-      }}>
+        style={{
+          width: panelWidth,
+          maxWidth: "100vw"
+        }}>
         <div className="sidepanel-backdrop" onClick={() => this.show(false)}></div>
-        <div className="sidepanel-icons" onClick={() => this.show(true)}>
-          <div className="sidepanel-icon sidepanel-icon-toggle" onClick={
-            typeof this.props.onClose === "function" ? this.props.onClose : null
-          }>
+        <div className="sidepanel-icons" onClick={() => this.state.show || this.show(true)}>
+          <div className="sidepanel-icon sidepanel-icon-toggle" onClick={e => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof this.props.onClose === "function") this.props.onClose();
+          }}>
             <i className="far fa-times-circle"></i>
             {
               this.state.show ?
@@ -165,17 +167,19 @@ export default class Sidepanel extends React.Component<Props, State> {
                 ];
                 if (s.props.disabled) classes.push("sidepanel-icon-disabled")
                 return classes.join(" ");
-              })()} title={s.props.title} onClick={s.props.disabled ? null : () => {
-                if ( !Toxen.isMode("Player") && Toxen.editingSong) {
+              })()} title={s.props.title} onClick={s.props.disabled ? null : (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (!Toxen.isMode("Player") && Toxen.editingSong) {
                   Toxen.sendError("CURRENTLY_EDITING_SONG");
                   return;
                 }
                 this.setSectionId(s.props.id);
-                if (this.state.exposeIcons) this.state.show || this.show(true);
+                if (this.state.exposeIcons && !this.state.show) this.show(true);
               }}
-              style={{
-                width: panelIconsWidth
-              }}>
+                style={{
+                  width: panelIconsWidth
+                }}>
                 {s.props.icon}
                 {s.props.title && (<span className="sidepanel-icon-title">&nbsp;{s.props.title}</span>)}
               </div>
@@ -195,34 +199,34 @@ export default class Sidepanel extends React.Component<Props, State> {
             }}
           >{sec}</div>
           : ""}
-          {(() => {
-            let holding = false;
+        {(() => {
+          let holding = false;
 
-            const upHandler = () => {
-              window.removeEventListener("mousemove", moveHandler);
-              window.removeEventListener("mouseup", upHandler);
-              holding = false;
-              if (typeof this.props.onResizeFinished === "function") this.props.onResizeFinished(this.state.width);
-            }
-            
-            const moveHandler = (e: MouseEvent) => {
-              this.setWidth(e.clientX + 4);
-            }
-            
-            return (<div className="sidepanel-resizer" onMouseDown={e => {
-              e.preventDefault();
-              holding = true;
-              window.addEventListener("mousemove", moveHandler);
-              window.addEventListener("mouseup", upHandler);
-            }}
+          const upHandler = () => {
+            window.removeEventListener("mousemove", moveHandler);
+            window.removeEventListener("mouseup", upHandler);
+            holding = false;
+            if (typeof this.props.onResizeFinished === "function") this.props.onResizeFinished(this.state.width);
+          }
+
+          const moveHandler = (e: MouseEvent) => {
+            this.setWidth(e.clientX + 4);
+          }
+
+          return (<div className="sidepanel-resizer" onMouseDown={e => {
+            e.preventDefault();
+            holding = true;
+            window.addEventListener("mousemove", moveHandler);
+            window.addEventListener("mouseup", upHandler);
+          }}
 
             onDoubleClick={async e => {
               e.preventDefault();
               await this.resetWidth();
               if (typeof this.props.onResizeFinished === "function") this.props.onResizeFinished(this.state.width);
             }}
-            />);
-          })()}
+          />);
+        })()}
       </div>
     )
   }
