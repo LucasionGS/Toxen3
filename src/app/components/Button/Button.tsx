@@ -8,7 +8,12 @@ interface Props extends React.DetailedHTMLProps<React.ButtonHTMLAttributes<HTMLB
 
 export default function Button(props: Props) {
   const newProps = { ...props };
-  newProps.className = `${props.className ? props.className + " tx-btn" : "tx-btn"} ${buttonStyles[props.txStyle] ? buttonStyles[props.txStyle] : ""}`;
+  const classes = [
+    "tx-btn",
+    props.className,
+    buttonStyles[props.txStyle] ? buttonStyles[props.txStyle] : ""
+  ].filter(a => a);
+  newProps.className = classes.join(" ");
   delete newProps.txStyle;
   
   return (

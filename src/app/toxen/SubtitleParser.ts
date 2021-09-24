@@ -25,6 +25,10 @@ namespace SubtitleParser {
     }
 
     public song?: Song;
+    /**
+     * Type of subtitle file this is parsed from.
+     */
+    public type: string;
 
     // Options
     public options: Partial<SubtitleOptions> = { }
@@ -93,6 +97,7 @@ namespace SubtitleParser {
     let lines = text.split(/\r?\n/);
     let index = 0;
     const items: SubtitleArray = new SubtitleArray();
+    items.type = "srt";
     const getLine = () => lines[index];
     const getNextLine = () => lines[++index];
     while (index < lines.length) {
@@ -159,6 +164,7 @@ namespace SubtitleParser {
     let lines = text.split(/\r?\n/);
     let index = 0;
     const items: SubtitleArray = new SubtitleArray();
+    items.type = "tst";
     const getLine = () => lines[index];
     const getNextLine = () => lines[++index];
     while (index < lines.length) {
@@ -204,6 +210,7 @@ namespace SubtitleParser {
       item.text = textLines.map(s => s.replace(/\\(.)/g, "$1")).join("<br />");
       items.push(item);
     }
+
     return items;
   }
 

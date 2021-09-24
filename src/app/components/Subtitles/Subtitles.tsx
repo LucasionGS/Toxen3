@@ -28,14 +28,17 @@ export default class Subtitles extends Component<SubtitlesProps, SubtitlesState>
 
   public setSubtitles(subtitles: SubtitleParser.SubtitleArray) {
     this.lastSub = null;
+    this.currentOptions = { };
     this.setState({
       subtitles: subtitles,
       currentText: ""
     });
   }
 
+  private currentOptions: SubtitleParser.SubtitleItem["options"] = { };
   private lastSub: SubtitleParser.SubtitleItem = null;
   private update() {
+    const self = this;
     requestAnimationFrame(this.update);
     const mp = this.props.musicPlayer.current;
     if (!mp) return;
@@ -46,15 +49,27 @@ export default class Subtitles extends Component<SubtitlesProps, SubtitlesState>
     if (subtitles && subtitles.song && subtitles.song.subtitleDelay) currentTime.addMilliseconds(-subtitles.song.subtitleDelay);
     const sub = subtitles?.getByTime(currentTime);
     if (sub !== this.lastSub) {
+      if (sub) {
+        Object.assign(this.currentOptions, sub.options);
+      }
+      // let lastSub = this.lastSub;
       this.lastSub = sub;
       if (!sub) {
         return this.setState({
           currentText: null
         });
       }
+      console.log("Previous Options", this.currentOptions);
+      console.log("Current", sub.options);
+      
       let text = sub.text || "";
       function getOption<T>(key: keyof SubtitleParser.SubtitleOptions, defaultValue: T = null) {
-        return (sub.options[key] ?? subtitles.options[key]) || defaultValue;
+        switch (subtitles.type) {
+          case "tst":
+            return (sub.options[key] ?? subtitles.options[key]) || (self.currentOptions ? self.currentOptions[key] : null) || defaultValue;
+          default:
+            return (sub.options[key] ?? subtitles.options[key]) || defaultValue;
+        }
       }
       let color = getOption("color", "white");
       let font = getOption("font", "Arial");

@@ -1,3 +1,4 @@
+import "./toxen/global"; // Set global variables
 import { remote } from "electron";
 import React from "react";
 import fsp from "fs/promises";
@@ -40,6 +41,9 @@ import Playlist from "./toxen/Playlist";
 import PlaylistPanel from "./components/PlaylistPanel/PlaylistPanel";
 import Button from "./components/Button/Button";
 import Discord from "./toxen/Discord";
+import Hue from "./toxen/philipshue/Hue";
+
+Hue;
 
 //#region Define variables used all over the ToxenApp process.
 /**
@@ -410,7 +414,7 @@ export default class ToxenAppRenderer extends React.Component {
           remote.autoUpdater.on("update-available", () => {
             Toxen.log("A new update available and is being installed in the background...", 5000)
           });
-
+          
           remote.autoUpdater.on("update-downloaded", (e, releaseNotes, releaseName, releaseDate, updateURL) => {
             e.preventDefault();
             new remote.Notification({
@@ -420,11 +424,11 @@ export default class ToxenAppRenderer extends React.Component {
             Toxen.log(<>
               Update downloaded: <code>{releaseName}</code>
               <br />
-              <button className="tx-btn tx-btn-action"
+              <Button txStyle="action"
                 onClick={() => {
                   remote.autoUpdater.quitAndInstall();
                 }}
-              >Update</button>
+              >Update</Button>
             </>);
           });
 
@@ -507,7 +511,7 @@ export default class ToxenAppRenderer extends React.Component {
         {/* Import Panel */}
         <SidepanelSection key="importSong" id="importSong" title="Import" icon={<i className="fas fa-file-import"></i>}>
           <h1>Import music</h1>
-          <button className="tx-btn"
+          <Button
             onClick={() => {
               let paths = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
                 properties: [
@@ -532,7 +536,7 @@ export default class ToxenAppRenderer extends React.Component {
                 System.handleImportedFiles(files);
               });
             }}
-          ><i className="fas fa-file-import"></i>&nbsp;Import song from Files</button>
+          ><i className="fas fa-file-import"></i>&nbsp;Import song from Files</Button>
         </SidepanelSection>
 
 
