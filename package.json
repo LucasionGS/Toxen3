@@ -25,7 +25,7 @@
     "forge": {
       "packagerConfig": {
         "icon": "./src/icons/toxen.ico",
-        "executableName": "Toxen"
+        "executableName": "toxen3"
       },
       "makers": [
         {
