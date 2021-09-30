@@ -64,7 +64,8 @@ export default class System {
           );
           await Song.importSong(file).then(res => {
             if (res.isSuccess()) {
-              Toxen.log(file.name + "\n" + file.path);
+              Toxen.songList.push(res.data);
+              Toxen.log(file.name + " imported successfully.", 2000);
               Toxen.loadingScreen.setContent(
                 <Content>
                   Imported {file.name}
@@ -98,7 +99,7 @@ export default class System {
           imageName = imageName.replace(/^(.*?)(?:_\$tx(\d+))?$/, (_, $1: string, $2: string) => {
             return `${$1}_$tx${(+$2 || 0) + 1}`;
           });
-          imageName += ext; // Readding the extension
+          imageName += ext; // Reading the extension
 
           let dest = song.dirname(imageName);
           let prePic = song.backgroundFile() || null;
@@ -116,16 +117,19 @@ export default class System {
           break;
         }
 
-
         // Unsupported
         else {
-          Toxen.log(file.name + " is unsupported.");
+          Toxen.error(file.name + " is unsupported.");
         }
       }
       Toxen.loadingScreen.toggleVisible(false);
 
       if (mediaPack) {
-        Toxen.loadSongs();
+        // Toxen.loadSongs();
+        Toxen.songList[Toxen.songList.length - 1].play();
+        Song.sortSongs(Toxen.songList);
+        if (Toxen.sidePanel.getSectionId() === "songPanel") await Toxen.reloadSection();
+        Toxen.showCurrentSong();
       }
     });
   }

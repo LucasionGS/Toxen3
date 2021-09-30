@@ -14,7 +14,7 @@ export class Result<T = unknown> {
 }
 
 export class Success<T> extends Result<T> {
-  constructor(public data?: T) {
+  constructor(public data: T) {
     super(true);
   }
 }

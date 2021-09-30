@@ -311,6 +311,7 @@ export class Toxen {
   }
 
   public static async loadSongs() {
+    const cur = Song.getCurrent();
     Toxen.loadingScreen.toggleVisible(true);
     let songCount = 0;
     let totalSongCount = await Song.getSongCount();
@@ -342,6 +343,14 @@ export class Toxen {
       Toxen.error(error.message);
     }
     Toxen.loadingScreen.toggleVisible(false);
+    console.log(cur);
+    if (cur) {
+      const equal = Toxen.songList.find(s => s.uid === cur.uid);
+      if (equal) {
+        equal.setCurrent();
+        equal.scrollTo();
+      }
+    }
   }
 
   public static editingSong: Song = null;
@@ -365,12 +374,13 @@ export class Toxen {
     w.setFullScreen(force ?? !w.isFullScreen());
   }
 
-  public static reloadSection() {
-    let id = Toxen.sidePanel.state.sectionId;
-    Toxen.sidePanel.setSectionId("$empty");
-    setTimeout(() => {
-      Toxen.sidePanel.setSectionId(id);
-    }, 0);
+  public static async reloadSection() {
+    // let id = Toxen.sidePanel.state.sectionId;
+    // Toxen.sidePanel.setSectionId("$empty");
+    // setTimeout(() => {
+    //   Toxen.sidePanel.setSectionId(id);
+    // }, 0);
+    return Toxen.sidePanel.reloadSection();
   }
 
   /**

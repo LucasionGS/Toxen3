@@ -37,7 +37,9 @@ export default class Discord {
   }
 
   async disconnect() {
-    await this.client.destroy();
+    try {
+      await this.client.destroy();
+    } catch (error) { }
     this.isReady = false;
     this.isDestroyed = true;
     Toxen.log("Disconnected from Discord", 3000);
@@ -55,6 +57,7 @@ export default class Discord {
     const enabled = Settings.get("discordPresence");
     if (enabled && this.isDestroyed) this.connect();
     if (!enabled && !this.isDestroyed) return this.disconnect();
+    if (!enabled) return;
     let attemptCount = 0;
     while (true) {
       if (attemptCount > 30) {

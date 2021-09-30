@@ -474,7 +474,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     this.loop(0);
   }
 
-  public static readonly DEFAULT_COLOR: string = "rgba(255, 255, 255, 1)";
+  public static readonly DEFAULT_COLOR: string = "#ffffff";
   // public color: string = Visualizer.DEFAULT_COLOR;
   // public setColor(color: string) {
   //   this.color = color || Visualizer.DEFAULT_COLOR;

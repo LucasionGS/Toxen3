@@ -223,6 +223,7 @@ export default class Song implements ISong {
         },
       };
       const dir = await fsp.opendir(fullPath);
+      info.paths.dirname = Path.basename(fullPath);
       let ent: Dirent;
       while (ent = await dir.read()) {
         if (ent.isFile()) {
@@ -728,7 +729,7 @@ export default class Song implements ISong {
     }
   }
 
-  public static async importSong(file: File | ToxenFile): Promise<Result<void>> {
+  public static async importSong(file: File | ToxenFile): Promise<Result<Song>> {
     return Promise.resolve().then(async () => {
       let supported = Toxen.getSupportedMediaFiles();
       if (!supported.some(s => Path.extname(file.name) === s)) return new Failure(file.name + " isn't a valid file");
@@ -744,7 +745,12 @@ export default class Song implements ISong {
       await fsp.mkdir(newFolder, { recursive: true });
       await fsp.copyFile(file.path, Path.resolve(newFolder, file.name));
 
-      return new Success();
+      // Build info
+      const info = await Song.buildInfo(newFolder);
+      let s = Song.create(info);
+      await s.saveInfo();
+
+      return new Success(s);
     });
   }
 

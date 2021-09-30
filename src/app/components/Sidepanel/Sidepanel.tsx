@@ -44,6 +44,14 @@ export default class Sidepanel extends React.Component<Props, State> {
     }
   }
 
+  public async reloadSection() {
+    let id = this.state.sectionId;
+    await this.setSectionId("$empty");
+    await this.setSectionId(id);
+    // setTimeout(() => {
+    // }, 0);
+  }
+
   private getWidth() {
     return this.state?.width ?? remote.getCurrentWindow().getSize()[0] / 2;
   }
