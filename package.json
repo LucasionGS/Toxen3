@@ -31,7 +31,7 @@
         {
           "name": "@electron-forge/maker-squirrel",
           "config": {
-            "name": "toxen3"
+            "name": "Toxen"
           }
         },
         {
