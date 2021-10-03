@@ -158,6 +158,7 @@ export default class Settings {
    * Applies the defined data to the ISettings.
    */
   public static apply(data: Partial<ISettings>) {
+    if (!Settings.data) Settings.data = {} as ISettings;
     for (const key in data) {
       if (Object.prototype.hasOwnProperty.call(data, key)) {
         const value = (data as any)[key];
