@@ -9,7 +9,13 @@ Minor changes:
 - Added something minor
 - Changed something minor
 -->
-<!-- ## Upcoming update / 1.0.18 -->
+## Upcoming update / 1.0.18
+Major changes:
+- Fixed a software breaking bug that was preventing Toxen from initializing properly on first run.
+
+Minor changes:
+- Made the border around `Progress bars` / `Sliders` less round
+
 ## 1.0.17 - 2021/09/23
 Major changes:
 - Added playlist functionality!

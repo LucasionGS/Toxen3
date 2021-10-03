@@ -13,7 +13,7 @@
     transition: all 0.1s ease-in-out;
     
     border: 1px solid;
-    border-radius: 20px;
+    border-radius: 5px;
 
     &:hover {
       height: 2em;
@@ -24,7 +24,7 @@
     .toxen-progress-bar-fill {
       overflow: visible;
       height: 100%;
-      border-radius: 20px;
+      border-radius: 2px;
       position: relative;
     }
   }
