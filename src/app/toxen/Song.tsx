@@ -16,6 +16,7 @@ import navigator, { MediaMetadata } from "../../navigator";
 import SubtitleParser from "./SubtitleParser";
 //@ts-expect-error 
 import ToxenMax from "../../icons/skull_max.png";
+import ScreenRecorder from "./ScreenRecorder";
 // import ToxenInteractionMode from "./ToxenInteractionMode";
 
 export default class Song implements ISong {
@@ -115,6 +116,12 @@ export default class Song implements ISong {
       }
       else {
         fsp.readFile(this.subtitleFile(), "utf8").then(data => {
+          // Replace dumb characters
+          data = data
+            .replace(/\r\n/g, "\n")
+            .replace(/‚/g, ",") // Why the fuck are these two characters different?
+            ;
+          
           resolve(data);
         }).catch(err => {
           Toxen.error("Failed to load subtitles from storage.");
@@ -373,11 +380,16 @@ export default class Song implements ISong {
         const type = Path.extname(subFile);
         const data = await this.readSubtitleFile();
         if (supported.includes(type)) {
-          const subParsers = {
-            ".srt": SubtitleParser.parseSrt,
-            ".tst": SubtitleParser.parseTst
-          };
-          subs = (subParsers as any)[type] ? (subParsers as any)[type](data) : null;
+          // const subParsers = {
+          //   ".srt": SubtitleParser.parseSrt,
+          //   ".tst": SubtitleParser.parseTst
+          // };
+          // subs = (subParsers as any)[type] ? (subParsers as any)[type](data) : null;
+          try {
+            subs = SubtitleParser.parseByExtension(data, type);
+          } catch (error) {
+            Toxen.error(error);
+          }
         }
         if (subs) subs.song = this;
         Toxen.subtitles.setSubtitles(subs);
@@ -440,6 +452,8 @@ export default class Song implements ISong {
         {
           label: "Edit info",
           click: () => {
+            if (Toxen.isMode("ThemeEditor")) return Toxen.sendError("CURRENTLY_EDITING_THEME");
+            if (!Toxen.isMode("Player")) return Toxen.sendError("CURRENTLY_EDITING_SONG");
             Toxen.editSong(this);
           }
         },
@@ -473,6 +487,7 @@ export default class Song implements ISong {
         {
           label: "Show song in list",
           click: async () => {
+            if (Toxen.isMode("ThemeEditor")) return Toxen.sendError("CURRENTLY_EDITING_THEME");
             if (!Toxen.isMode("Player")) return Toxen.sendError("CURRENTLY_EDITING_SONG");
             await Toxen.sidePanel.show(true);
             await Toxen.sidePanel.setSectionId("songPanel");
@@ -492,6 +507,13 @@ export default class Song implements ISong {
                 remote.shell.openPath(this.dirname());
               },
               enabled: !Settings.isRemote(),
+            },
+            {
+              label: "Record (Experimental)",
+              click: () => {
+                const recorder = new ScreenRecorder();
+                recorder.startRecording();
+              }
             },
           ]
         }),

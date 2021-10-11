@@ -15,6 +15,10 @@ Major changes:
 
 Minor changes:
 - Made the border around `Progress bars` / `Sliders` less round
+- Added expandable content components.
+- Fixed Toxen attempting to connect to Discord infinitly if Discord is not installed, not running, or couldn't connect.
+- Added preparations for recording a song with the visuals as a video.
+- Fixed subtitles not being parsed if the file used the wrong type of comma.
 
 ## 1.0.17 - 2021/09/23
 Major changes:

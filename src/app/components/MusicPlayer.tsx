@@ -1,6 +1,6 @@
 import React, { Component } from 'react'
 import Song from '../toxen/Song';
-import { Toxen } from '../ToxenApp';
+import { Toxen, ToxenEvent } from '../ToxenApp';
 import Path from "path";
 import Settings from '../toxen/Settings';
 import Time from '../toxen/Time';
@@ -126,6 +126,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
   }
 
   private onEnded() {
+    ToxenEvent.emit("songEnded");
     if (Settings.get("repeat")) {
       this.play();
     }

@@ -1,5 +1,6 @@
 import "./toxen/global"; // Set global variables
 import { remote } from "electron";
+import { EventEmitter } from "events";
 import React from "react";
 import fsp from "fs/promises";
 import Path from "path";
@@ -42,8 +43,8 @@ import PlaylistPanel from "./components/PlaylistPanel/PlaylistPanel";
 import Button from "./components/Button/Button";
 import Discord from "./toxen/Discord";
 import Hue from "./toxen/philipshue/Hue";
-
-Hue;
+import ThemeContainer from "./components/ThemeContainer/ThemeContainer";
+import ThemeEditorPanel from "./components/ThemeEditorPanel/ThemeEditorPanel";
 
 //#region Define variables used all over the ToxenApp process.
 /**
@@ -58,6 +59,7 @@ export class Toxen {
       mode = ToxenInteractionMode[mode as keyof typeof ToxenInteractionMode];
     }
     Toxen.mode = mode;
+    // Actions on specific modes
     switch (mode) {
       case ToxenInteractionMode.Player: {
         Toxen.sidePanel.setSectionId("songPanel");
@@ -73,6 +75,11 @@ export class Toxen {
 
       case ToxenInteractionMode.SubtitlesEditor: {
         // Some action here
+        break;
+      }
+
+      case ToxenInteractionMode.ThemeEditor: {
+        Toxen.sidePanel.setSectionId("themeEditor");
         break;
       }
     }
@@ -165,7 +172,8 @@ export class Toxen {
   }
 
   private static presetErrors = {
-    CURRENTLY_EDITING_SONG: ["You are currently editing a song. Please save or cancel your changes before playing another song.", 5000],
+    CURRENTLY_EDITING_SONG: ["You are currently editing a song. Please save or cancel your changes.", 5000],
+    CURRENTLY_EDITING_THEME: ["You are currently editing a theme. Please save or cancel your changes.", 5000],
   }
   public static sendError(error: keyof typeof Toxen.presetErrors) {
     const [message, expiresIn] = Toxen.presetErrors[error] as [string, number];
@@ -237,6 +245,7 @@ export class Toxen {
   public static musicControls: MusicControls;
   public static subtitles: Subtitles;
   public static messageCards: MessageCards;
+  public static themeContainer: ThemeContainer;
   public static updateSongPanels() {
     Toxen.songQueuePanel.update();
     Toxen.songPanel.update();
@@ -394,6 +403,31 @@ export class Toxen {
   public static discord = new Discord("647178364511191061"); // Toxen's App ID
 }
 
+class ToxenEventEmitter extends EventEmitter {
+  constructor() {
+    super();
+    this.on("error", (error) => {
+      Toxen.error(error.message);
+    });
+  }
+}
+
+interface ToxenEventEmitter extends EventEmitter {
+  // Error
+  on(event: "error", listener: (error: Error) => void): this;
+  once(event: "error", listener: (error: Error) => void): this;
+  off(event: "error", listener: (error: Error) => void): this;
+  emit(event: "error", error: Error): boolean;
+
+  // Song ended
+  on(event: "songEnded", listener: () => void): this;
+  once(event: "songEnded", listener: () => void): this;
+  off(event: "songEnded", listener: () => void): this;
+  emit(event: "songEnded"): boolean;
+}
+
+export const ToxenEvent = new ToxenEventEmitter();
+
 //#endregion
 
 //#region ToxenApp Layout
@@ -465,6 +499,7 @@ export default class ToxenAppRenderer extends React.Component {
 
   render = () => (
     <div>
+      <ThemeContainer ref={ref => Toxen.themeContainer = ref} />
       <Background ref={ref => Toxen.background = ref} />
       <MusicControls ref={ref => Toxen.musicControls = ref} />
       <LoadingScreen ref={ls => Toxen.loadingScreen = ls} initialShow={true} />
@@ -590,6 +625,13 @@ export default class ToxenAppRenderer extends React.Component {
                 </>
               );
             })()}
+
+            {/* Edit theme button */}
+            <Button txStyle="action" onClick={() => {
+              Toxen.setMode("ThemeEditor");
+            }}><i className="fas fa-paint-brush"></i>&nbsp;Edit Theme</Button>
+
+            {/* Theme editor */}
 
             {/* Sidepanel settings */}
             <hr />
@@ -998,6 +1040,10 @@ export default class ToxenAppRenderer extends React.Component {
 
         <SidepanelSection key="storyboardEditor" id="storyboardEditor">
           <StoryboardEditorPanel />
+        </SidepanelSection>
+        
+        <SidepanelSection key="themeEditor" id="themeEditor">
+          <ThemeEditorPanel />
         </SidepanelSection>
 
       </Sidepanel>

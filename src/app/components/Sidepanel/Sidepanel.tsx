@@ -178,8 +178,9 @@ export default class Sidepanel extends React.Component<Props, State> {
               })()} title={s.props.title} onClick={s.props.disabled ? null : (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (!Toxen.isMode("Player") && Toxen.editingSong) {
+                if (!Toxen.isMode("Player")) {
                   Toxen.sendError("CURRENTLY_EDITING_SONG");
+                  Toxen.sidePanel.show(true);
                   return;
                 }
                 this.setSectionId(s.props.id);

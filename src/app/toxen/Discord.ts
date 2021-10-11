@@ -45,6 +45,8 @@ export default class Discord {
     Toxen.log("Disconnected from Discord", 3000);
   }
 
+  private totalFails = 0;
+
   /**
    * Update Discord presence. Uses the currently playing song.
    */
@@ -54,6 +56,8 @@ export default class Discord {
    */
   async setPresence(song: Song): Promise<void>;
   async setPresence(song = Song.getCurrent()) {
+    if (this.totalFails >= 5) return; // Failsafe to not spam failure messages.
+
     const enabled = Settings.get("discordPresence");
     if (enabled && this.isDestroyed) this.connect();
     if (!enabled && !this.isDestroyed) return this.disconnect();
@@ -61,15 +65,28 @@ export default class Discord {
     let attemptCount = 0;
     while (true) {
       if (attemptCount > 30) {
-        Toxen.error("Failed to set presence", 3000);
+        if (this.totalFails == 5) {
+          Toxen.error("Discord Presence disabled due to too many failed attempts.\nRestart Toxen to try again.", 10000);
+          return;
+        }
+
+        if (this.totalFails < 5) {
+          Toxen.error("Failed to set presence", 2000);
+          this.totalFails++;
+        }
+
         break;
       }
+
       if (isNaN(Toxen?.musicPlayer?.media?.duration) || !this.isReady) {
         attemptCount++;
         // await 100ms
         await new Promise(resolve => setTimeout(resolve, 100));
         continue;
       }
+
+      this.totalFails = 0;
+
       let options: Presence = {
         details: `${song?.isVideo() ? "Watching a video" : "Listening to a song"}`,
         largeImageKey: "toxen",
