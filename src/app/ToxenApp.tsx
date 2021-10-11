@@ -45,6 +45,8 @@ import Discord from "./toxen/Discord";
 import Hue from "./toxen/philipshue/Hue";
 import ThemeContainer from "./components/ThemeContainer/ThemeContainer";
 import ThemeEditorPanel from "./components/ThemeEditorPanel/ThemeEditorPanel";
+import Expandable from "./components/Expandable/Expandable";
+import Theme from "./toxen/Theme";
 
 //#region Define variables used all over the ToxenApp process.
 /**
@@ -53,7 +55,7 @@ import ThemeEditorPanel from "./components/ThemeEditorPanel/ThemeEditorPanel";
 export class Toxen {
 
   private static mode: ToxenInteractionMode = ToxenInteractionMode.Player;
-
+  
   public static setMode(mode: ToxenInteractionMode | keyof typeof ToxenInteractionMode) {
     if (typeof mode == "string") {
       mode = ToxenInteractionMode[mode as keyof typeof ToxenInteractionMode];
@@ -281,6 +283,17 @@ export class Toxen {
     Toxen.discord.setPresence();
   }
 
+  public static themes: Theme[] = [];
+  public static theme: Theme = null;
+  public static setTheme(theme: Theme) {
+    Toxen.theme = theme;
+    Toxen.themeContainer.setTheme(theme);
+    Settings.set("theme", theme?.name ?? null);
+    Settings.save({
+      suppressNotification: true,
+    });
+  }
+
   public static loadingScreen: LoadingScreen;
   public static background: Background;
 
@@ -360,6 +373,15 @@ export class Toxen {
         equal.scrollTo();
       }
     }
+  }
+
+  public static async loadThemes() {
+    Toxen.themes = await Theme.load();
+    let theme = Toxen.themes.find(t => t.name === Settings.get("theme"));
+    if (!Toxen.theme) {
+      Settings.set("theme", null);
+    }
+    Toxen.setTheme(theme ?? null);
   }
 
   public static editingSong: Song = null;
@@ -458,7 +480,7 @@ export default class ToxenAppRenderer extends React.Component {
           remote.autoUpdater.on("update-available", () => {
             Toxen.log("A new update available and is being installed in the background...", 5000)
           });
-          
+
           remote.autoUpdater.on("update-downloaded", (e, releaseNotes, releaseName, releaseDate, updateURL) => {
             e.preventDefault();
             new remote.Notification({
@@ -483,14 +505,16 @@ export default class ToxenAppRenderer extends React.Component {
           Toxen.error("Error trying to listen to auto updater.", 5000);
         }
 
-        await Toxen.loadSongs();
+        await Toxen.loadThemes(); // Loads themes
+        await Toxen.loadSongs(); // Loads songs
+
         Toxen.songPanel.update();
         // Toxen.sidePanel.show(true);
         Toxen.sidePanel.setWidth(Settings.get("panelWidth"));
         Toxen.loadingScreen.toggleVisible(false);
         Toxen.musicPlayer.playRandom();
         Toxen.background.visualizer.start();
-        
+
         if (Settings.get("discordPresence")) Toxen.discord.connect().then(() => {
           Toxen.discord.setPresence();
         });
@@ -726,12 +750,12 @@ export default class ToxenAppRenderer extends React.Component {
             <hr />
             {/* Anything below here should be advanced settings only */}
             <h2>Advanced settings</h2>
-            <FormInput type="checkbox" name="showAdvancedSettings*boolean" displayName="Show Advanced UI" />
             <sup>
               Enables the viewing of advanced settings and UI elements. This will display a few more buttons around in Toxen,
               along with more technical settings that users usually don't have to worry about.
             </sup>
-            <div className="advanced-only"> {/* Container for advanced settings */}
+            <FormInput type="expandCheckbox" name="showAdvancedSettings*boolean" displayName="Show Advanced UI">
+              {/* <div className="advanced-only"> */}
               <h3>Discord Integration</h3>
               <FormInput type="checkbox" name="discordPresence*boolean" displayName="Discord Presence" />
               <sup>
@@ -744,7 +768,7 @@ export default class ToxenAppRenderer extends React.Component {
                 Enables a detailed activity status in Discord presence. It'll show what song you are listening to, and how far into it you are.
               </sup>
               <br />
-            </div>
+            </FormInput>
           </Form>
         </SidepanelSection>
 
@@ -1041,7 +1065,7 @@ export default class ToxenAppRenderer extends React.Component {
         <SidepanelSection key="storyboardEditor" id="storyboardEditor">
           <StoryboardEditorPanel />
         </SidepanelSection>
-        
+
         <SidepanelSection key="themeEditor" id="themeEditor">
           <ThemeEditorPanel />
         </SidepanelSection>

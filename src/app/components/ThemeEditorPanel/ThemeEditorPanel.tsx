@@ -1,5 +1,6 @@
 import React, { Component } from 'react'
 import { ThemeStyleTemplate } from '../../toxen/Theme'
+import { Toxen } from '../../ToxenApp'
 import Expandable from '../Expandable/Expandable'
 
 interface State {
@@ -12,6 +13,7 @@ interface Props {
 
 export default class ThemeEditorPanel extends Component<State, Props> {
   render() {
+    const theme = Toxen.themes;
     return (
       <div>
         {(() => {

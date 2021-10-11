@@ -8,6 +8,7 @@ import JSONX from '../../../toxen/JSONX';
 import { OptionValues } from "./FormInputSelect";
 import FormInputList from './FormInputList';
 import FormInputCheckbox from './FormInputCheckbox';
+import Expandable from '../../Expandable/Expandable';
 
 type Props = [
   PropsTypeText,
@@ -16,6 +17,7 @@ type Props = [
   PropsTypeFile,
   PropsTypeFolder,
   PropsTypeCheckbox,
+  PropsTypeExpandCheckbox,
   PropsTypeSelect,
   PropsTypeSelectAsync,
   PropsTypeList,
@@ -51,6 +53,7 @@ interface PropsTypeFolder extends PropsTemplate<"folder"> {
   parseOutput?: (value: string) => string
 }
 interface PropsTypeCheckbox extends PropsTemplate<"checkbox"> { }
+interface PropsTypeExpandCheckbox extends PropsTemplate<"expandCheckbox"> { }
 interface PropsTypeSelect extends PropsTemplate<"select"> { }
 interface PropsTypeSelectAsync extends PropsTemplate<"selectAsync"> {
   values: Promise<OptionValues> | (() => Promise<OptionValues>);
@@ -204,6 +207,24 @@ export default class FormInput extends React.Component<Props> {
             <FormInputCheckbox name={this.props.name} defaultChecked={value} >
               {label}
             </FormInputCheckbox>
+            <br />
+          </>
+        )
+      }
+
+      case "expandCheckbox": {
+        const ref = React.createRef<Expandable>();
+        return (
+          <>
+            <Expandable showBorder={false} showArrow={false} expanded={value} ref={ref} title={
+              <FormInputCheckbox name={this.props.name} defaultChecked={value} onChange={(e, s) => ref.current.toggle(s)}>
+                {label}
+              </FormInputCheckbox>
+            }
+            disabled={true}
+            >
+              {this.props.children}
+            </Expandable>
             <br />
           </>
         )

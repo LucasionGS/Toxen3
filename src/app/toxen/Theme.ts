@@ -1,6 +1,24 @@
-export default class Theme implements ITheme {
-  constructor() {
+import Settings from "./Settings";
+import CrossPlatform from "./CrossPlatform";
+import fsp from "fs/promises";
 
+export default class Theme implements ITheme {
+  public static readonly themeFolderPath = CrossPlatform.getToxenDataPath("themes");
+  public static async load(): Promise<Theme[]> {
+    const themes: Theme[] = await fsp.readdir(Theme.themeFolderPath).then(async (files) => {
+      const themeFiles = files.filter((file) => file.endsWith(".json"));
+      const themePromises = themeFiles.map((file) => {
+        return fsp.readFile(`${Theme.themeFolderPath}/${file}`, "utf8").then((data) => {
+          return Theme.create(JSON.parse(data));
+        });
+      });
+      return Promise.all(themePromises);
+    }).catch(async () => {
+      await fsp.mkdir(Theme.themeFolderPath);
+      return [];
+    });
+
+    return themes;
   }
 
   name: string;
@@ -12,16 +30,39 @@ export default class Theme implements ITheme {
     theme.name = themeData.name;
     theme.description = themeData.description;
     theme.styles = themeData.styles;
+
+    return theme;
   }
 
   public static parseToCSS(themeStyle: ThemeStyle) {
     let css = "";
+    const selectorValuePair: { [selector: string]: (ThemeStyle[string] & { key: string } )[] } = {};
+    // debugger;
     for (const key in themeStyle) {
       if (themeStyle.hasOwnProperty(key)) {
-        const style = themeStyle[key];
-        style.parser(style.value)
+        const style: (ThemeStyle[string] & { key: string } ) = {
+          ...ThemeStyleKeyValue[key],
+          ...themeStyle[key],
+          key
+        };
+        if (!selectorValuePair[style.selector]) {
+          selectorValuePair[style.selector] = [];
+        }
+        selectorValuePair[style.selector].push(style);
       }
     }
+
+    for (const selector in selectorValuePair) {
+      if (selectorValuePair.hasOwnProperty(selector)) {
+        const styles = selectorValuePair[selector];
+        css += `\n${selector} {\n`;
+        for (const style of styles) {
+          if (style.value) css += `  ${ThemeStyleKeyValue[style.key].parser(style.value)};\n`;
+        }
+        css += "}\n";
+      }
+    }
+    
     return css;
   }
 }
@@ -34,19 +75,19 @@ interface ITheme {
 
 type ThemeStyle = { [key: string]: IThemeStyleItem<ThemeStyleItemType> };
 interface IThemeStyleItem<T extends ThemeStyleItemType> extends IThemeStyleItemTemplate<T> {
-  value: ThemeStyleItemTypeParsers[T];
+  value: ThemeStyleItemParserTypes[T];
 }
 
 /**
  * Theme Style Item Type:Parser. Includes parsers function typess for the different types of styles.
  */
-interface ThemeStyleItemTypeParsers {
+interface ThemeStyleItemParserTypes {
   "string": string;
   "number": number;
   "color": RGBColor;
 }
 
-type ThemeStyleItemType = keyof ThemeStyleItemTypeParsers;
+type ThemeStyleItemType = keyof ThemeStyleItemParserTypes;
 
 interface IThemeStyleItemTemplate<T extends ThemeStyleItemType> {
   title: string;
@@ -54,7 +95,7 @@ interface IThemeStyleItemTemplate<T extends ThemeStyleItemType> {
   type: T;
   description?: string;
 
-  parser: (value: ThemeStyleItemTypeParsers[T]) => string;
+  parser: (value: ThemeStyleItemParserTypes[T]) => string;
 }
 
 class ThemeStyleItem<T extends ThemeStyleItemType> implements IThemeStyleItemTemplate<T> {
@@ -62,7 +103,7 @@ class ThemeStyleItem<T extends ThemeStyleItemType> implements IThemeStyleItemTem
   selector: string;
   type: T;
   description: string;
-  parser: (value: ThemeStyleItemTypeParsers[T]) => string;
+  parser: (value: ThemeStyleItemParserTypes[T]) => string;
 
   constructor(data: IThemeStyleItemTemplate<T>) {
     this.title = data.title;
@@ -86,23 +127,44 @@ export const ThemeStyleTemplate: IThemeStyleTemplate = {
   "Side Panel": {
     panelBackground: new ThemeStyleItem({
       title: "Panel Background color",
-      selector: ".sidepanel",
+      selector: ".sidepanel, .sidepanel-section-header",
       description: "The background color of the panel",
       type: "color",
       parser: (rgb) => {
-        return `background-color: rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+        return `background-color: rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]});`;
       }
     }),
   },
   "Text & UI": {
-    panelBackground: new ThemeStyleItem({
+    textColor: new ThemeStyleItem({
       title: "Base Text color",
       selector: "*",
+      description: "Base color of the text",
+      type: "color",
+      parser: (rgb) => {
+        return `color: rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]}); border-color: rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]}) !important`;
+      }
+    }),
+    songElementColor: new ThemeStyleItem({
+      title: "Song Element Text color",
+      selector: ".song-element *",
       description: "The color of the panel",
       type: "color",
       parser: (rgb) => {
-        return `background-color: rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+        return `color: rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
       }
     }),
   },
 };
+
+const ThemeStyleKeyValue: { [key: string]: IThemeStyleItemTemplate<ThemeStyleItemType> } = {};
+for (const key in ThemeStyleTemplate) {
+  if (Object.prototype.hasOwnProperty.call(ThemeStyleTemplate, key)) {
+    const style = ThemeStyleTemplate[key];
+    for (const key2 in style) {
+      if (Object.prototype.hasOwnProperty.call(style, key2)) {
+        ThemeStyleKeyValue[key2] = style[key2];
+      }
+    }
+  }
+}

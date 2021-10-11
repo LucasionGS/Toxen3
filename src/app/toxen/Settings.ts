@@ -215,6 +215,7 @@ export interface ISettings {
   windowHeight: number;
 
   // Visuals
+  theme: string;
   visualizerColor: string;
   visualizerStyle: VisualizerStyle;
   visualizerIntensity: number;

@@ -389,7 +389,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     top?: boolean;
     bottom?: boolean;
   }) {
-    const rainbowColor = `hsl(${(cycleIncrementer ?? this.getCycleIncrementer()) * i + (Toxen.musicPlayer.media.currentTime * 100)}, 100%, 50%)`;
+    const rainbowColor = `hsl(${(cycleIncrementer ?? this.getCycleIncrementer()) * i + (Toxen.musicPlayer.media.currentTime * 50)}, 100%, 50%)`;
 
     const grd = ctx.createLinearGradient(barX, barY, barX + barWidth, barY + barHeight);
     if (!options) {

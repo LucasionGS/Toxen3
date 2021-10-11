@@ -17,13 +17,18 @@ export default class ThemeContainer extends Component<Props, State> {
     }
   }
 
+  setTheme(theme: Theme) {
+    this.setState({
+      theme: theme
+    })
+  }
+
   render() {
+    if (!this.state.theme) return (<></>);
     return (
-      <div style={{
-        display: "none"
-      }}>
-        {this.state.theme}
-      </div>
+      <style>
+        {Theme.parseToCSS(this.state.theme.styles)}
+      </style>
     )
   }
 }

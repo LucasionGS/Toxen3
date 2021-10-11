@@ -5,7 +5,9 @@ type Props = React.PropsWithChildren<{
   title: React.ReactNode;
   expanded?: boolean;
   disabled?: boolean;
-  onToggle?: (newState: boolean) => void;
+  showArrow?: boolean;
+  showBorder?: boolean;
+  onClick?: () => void;
 }>;
 
 interface State {
@@ -20,17 +22,11 @@ export default class Expandable extends Component<Props, State> {
       expanded: props.expanded || false,
       disabled: props.disabled || false
     }
-
-    console.log(this.props);
   }
 
-  public toggle() {
-    const newState = !this.state.expanded
+  public toggle(force? :boolean) {
+    const newState = force ?? !this.state.expanded;
     this.setState({ expanded: newState });
-
-    if (this.props.onToggle) {
-      this.props.onToggle(newState);
-    }
   }
 
   render() {
@@ -39,15 +35,22 @@ export default class Expandable extends Component<Props, State> {
     const { expanded } = this.state;
     const classList = [
       "expandable",
-      expanded ? "expandable-expanded" : "expandable-collapsed"
-    ];
+      expanded ? "expandable-expanded" : "expandable-collapsed",
+      !this.props.showBorder ? "expandable-no-border" : null,
+    ].filter(a => a);
     return (
       <div className={classList.join(" ")}>
         <div className="expandable-title"
-          onClick={() => this.toggle()}
+          onClick={() => {
+            if (!this.state.disabled) this.toggle();
+
+            if (this.props.onClick) this.props.onClick();
+          }}
         >
           <span className="expandable-title-text">{this.props.title}</span>
-          <span className="expandable-arrow">{"<"}</span>
+          {(this.props.showArrow ?? true) && (
+            <span className="expandable-arrow">{"◀"}</span>
+          )}
         </div>
         <div className="expandable-content">
           {this.props.children}

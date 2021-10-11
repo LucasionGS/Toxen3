@@ -18,7 +18,7 @@
     box-sizing: border-box;
     user-select: none;
     * {
-      font-size: 22px;
+      // font-size: 22px;
       // font-size: 20px;
       font-weight: bold;
     }
@@ -28,7 +28,7 @@
       cursor: pointer;
       background-color: rgba(255, 255, 255, 0.1);
     }
-    border-bottom: solid 1px #fff;
+    // border-bottom: solid 1px #fff;
   }
 
   &.expandable-expanded {
@@ -51,8 +51,8 @@
 
   .expandable-content {
     padding: 10px;
-    border-radius: 10px;
-    border-top: solid 1px #fff;
+    border-bottom-left-radius: 10px;
+    border-left: solid 1px #fff;
     border-bottom: solid 1px #fff;
     box-sizing: border-box;
   }
@@ -60,6 +60,16 @@
   &.expandable-collapsed {
     .expandable-content {
       display: none;
+    }
+  }
+
+  &.expandable-no-border {
+    .expandable-title {
+      border-bottom: none;
+    }
+
+    .expandable-content {
+      border: none;
     }
   }
 }
