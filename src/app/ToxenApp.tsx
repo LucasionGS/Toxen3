@@ -55,7 +55,7 @@ import Theme from "./toxen/Theme";
 export class Toxen {
 
   private static mode: ToxenInteractionMode = ToxenInteractionMode.Player;
-  
+
   public static setMode(mode: ToxenInteractionMode | keyof typeof ToxenInteractionMode) {
     if (typeof mode == "string") {
       mode = ToxenInteractionMode[mode as keyof typeof ToxenInteractionMode];
@@ -292,6 +292,12 @@ export class Toxen {
     Settings.save({
       suppressNotification: true,
     });
+  }
+
+  public static setThemeByName(name: string) {
+    let theme = Toxen.themes.find(t => t.name === name);
+    if (!theme && name) Toxen.error(`Theme ${name} not found.`);
+    Toxen.setTheme(theme || null);
   }
 
   public static loadingScreen: LoadingScreen;
@@ -650,13 +656,6 @@ export default class ToxenAppRenderer extends React.Component {
               );
             })()}
 
-            {/* Edit theme button */}
-            <Button txStyle="action" onClick={() => {
-              Toxen.setMode("ThemeEditor");
-            }}><i className="fas fa-paint-brush"></i>&nbsp;Edit Theme</Button>
-
-            {/* Theme editor */}
-
             {/* Sidepanel settings */}
             <hr />
             <h2>Sidepanel</h2>
@@ -683,6 +682,39 @@ export default class ToxenAppRenderer extends React.Component {
             <hr />
             <h2>Visuals</h2>
 
+            {/* Edit theme button */}
+            {
+              (() => {
+                const btn = React.createRef<Button & HTMLButtonElement>();
+                return (
+                  <>
+                    <FormInput type="selectAsync" name="theme*string" displayName="Theme" onChange={(value) => {
+                      Toxen.setThemeByName(value);
+                      btn?.current.forceUpdate();
+                    }}
+                      values={(async () => {
+                        return [
+                          ["<None>", ""],
+                          ...Toxen.themes.map(t => [t.getDisplayName(), t.name] as [string, string])
+                        ];
+                      })} >
+                    </FormInput>
+                    <sup>Select the theme you want to use.</sup>
+                    <Button disabled ref={btn} txDisabled={() => !Toxen.theme} txStyle="action" onClick={() => {
+                      Toxen.setMode("ThemeEditor");
+                    }}><i className="fas fa-paint-brush"></i>&nbsp;Edit Theme</Button>
+                    <br />
+                    <Button txStyle="action" onClick={(e) => {
+                      e.preventDefault();
+                      Toxen.loadThemes();
+                    }}><i className="fas fa-paint-brush"></i>&nbsp;Reload Theme</Button>
+                  </>
+                )
+              })()
+            }
+
+            <br />
+            <br />
             {(() => {
               let ref = React.createRef<FormInput>();
               return (
@@ -709,6 +741,8 @@ export default class ToxenAppRenderer extends React.Component {
               Set the base background dim level between <code>0-100</code>. <br />
               This is how dark the background will appear. Can be dynamically changed by having <code>Dynamic Lighting</code> enabled.
             </sup>
+            <br />
+
             <FormInput nullable displayName="Visualizer Color" name="visualizerColor*string" type="color"
             // onChange={v => Toxen.setAllVisualColors(v)}
             />

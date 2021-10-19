@@ -159,7 +159,8 @@ export default class Settings {
    */
   public static apply(data: Partial<ISettings>) {
     if (!Settings.data) Settings.data = {} as ISettings;
-    for (const key in data) {
+    let key: keyof ISettings;
+    for (key in data) {
       if (Object.prototype.hasOwnProperty.call(data, key)) {
         const value = (data as any)[key];
         const preValue = JSONX.getObjectValue(Settings.data, key);
@@ -169,6 +170,7 @@ export default class Settings {
         // Special cases
         if (value !== preValue) {
           if (key === "libraryDirectory") Toxen.loadSongs();
+          else if (key === "theme") Toxen.setThemeByName(value);
         }
       }
     }

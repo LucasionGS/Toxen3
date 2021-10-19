@@ -44,6 +44,16 @@ remote.Menu.setApplicationMenu(
                 break;
             }
           }
+        },
+        {
+          type: "separator"
+        },
+        {
+          label: "Reload Theme",
+          accelerator: "CTRL + SHIFT + T",
+          click() {
+            Toxen.loadThemes();
+          }
         }
       ]
     },

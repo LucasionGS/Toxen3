@@ -33,6 +33,11 @@
   &:active {
     filter: brightness(0.8);
   }
+
+  &:disabled {
+    background-color: #bdbdbd; // Disabled color
+    cursor: not-allowed;
+  }
 }
 
 

@@ -25,7 +25,7 @@ export default class Discord {
     return new Promise<void>((resolve, reject) => {
       this.client.once("ready", () => {
         this.isReady = true;
-        Toxen.log("Discord connected", 2000);
+        // Toxen.log("Discord connected", 2000);
         resolve();
       });
 
@@ -42,7 +42,7 @@ export default class Discord {
     } catch (error) { }
     this.isReady = false;
     this.isDestroyed = true;
-    Toxen.log("Disconnected from Discord", 3000);
+    // Toxen.log("Disconnected from Discord", 3000);
   }
 
   private totalFails = 0;

@@ -1,0 +1,24 @@
+.pulsing-logo {
+  // display: inline-block;
+  width: 1.5em;
+  height: 1.5em;
+  // border-radius: 50%;
+  // background-color: #fff;
+  // filter: drop-shadow(0 0 0 0 #fff);
+  animation: pulse 0.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    filter: drop-shadow(0 0 0 0 #fff);
+    rotate: 0deg;
+  }
+  50% {
+    filter: drop-shadow(0 0 0 25px #fff);
+    rotate: 180deg;
+  }
+  100% {
+    filter: drop-shadow(0 0 0 0 #fff);
+    rotate: 360deg;
+  }
+}

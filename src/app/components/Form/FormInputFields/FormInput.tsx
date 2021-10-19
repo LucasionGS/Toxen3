@@ -58,6 +58,7 @@ interface PropsTypeSelect extends PropsTemplate<"select"> { }
 interface PropsTypeSelectAsync extends PropsTemplate<"selectAsync"> {
   values: Promise<OptionValues> | (() => Promise<OptionValues>);
   nullable?: boolean;
+  onChange?: (value: string) => void;
 }
 interface PropsTypeList extends PropsTemplate<"list"> { }
 interface PropsTypeColor extends PropsTemplate<"color"> {
@@ -248,7 +249,7 @@ export default class FormInput extends React.Component<Props> {
           <>
             {label}
             <br />
-            <FormInputSelect nullable={this.props.nullable} name={this.props.name} defaultValue={value} asyncValues={typeof this.props.values === "function" ? this.props.values() : this.props.values} />
+            <FormInputSelect onChange={this.props.onChange} nullable={this.props.nullable} name={this.props.name} defaultValue={value} asyncValues={typeof this.props.values === "function" ? this.props.values() : this.props.values} />
             {this.props.children}
             <br />
             <br />

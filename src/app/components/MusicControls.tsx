@@ -34,6 +34,13 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
     this.setState({});
     this.progressBar.setValue(value);
   }
+  
+  /**
+   * Sets the background value of the progress bar. This is useful for showing what part of a song is buffered.
+   */
+  public setBackgroundRange(start: number, end: number) {
+    this.progressBar.setBackgroundRange(start, end);
+  }
 
   public setMax(max: number) {
     this.duration = new Time(max * 1000);

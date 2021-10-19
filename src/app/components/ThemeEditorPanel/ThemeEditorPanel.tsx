@@ -1,7 +1,9 @@
 import React, { Component } from 'react'
 import { ThemeStyleTemplate } from '../../toxen/Theme'
 import { Toxen } from '../../ToxenApp'
+import Button from '../Button/Button';
 import Expandable from '../Expandable/Expandable'
+import SidepanelSectionHeader from '../Sidepanel/SidepanelSectionHeader';
 
 interface State {
 
@@ -13,9 +15,18 @@ interface Props {
 
 export default class ThemeEditorPanel extends Component<State, Props> {
   render() {
-    const theme = Toxen.themes;
+    const theme = Toxen.theme || new Theme();
     return (
       <div>
+        <SidepanelSectionHeader>
+          Theme Editor
+          <Button onClick={
+            () => {
+              Toxen.theme.save();
+              Toxen.setMode("Player");
+            }
+          }>Save and finish</Button>
+        </SidepanelSectionHeader>
         {(() => {
           const sessions: JSX.Element[] = [];
           for (const sectionName in ThemeStyleTemplate) {
@@ -35,6 +46,7 @@ export default class ThemeEditorPanel extends Component<State, Props> {
                               <div>{style.title}</div>
                               <div>{style.description}</div>
                               <div>{style.type}</div>
+                              <div>Value: {theme.styles[style.title]?.value}</div>
                             </div>
                           );
                         }

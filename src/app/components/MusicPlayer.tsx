@@ -4,6 +4,7 @@ import { Toxen, ToxenEvent } from '../ToxenApp';
 import Path from "path";
 import Settings from '../toxen/Settings';
 import Time from '../toxen/Time';
+import PulsingLogo from './PulsingLogo/PulsingLogo';
 
 export type MediaSourceInfo = string;
 
@@ -30,6 +31,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
     setInterval(() => {
       try {
         Toxen.musicControls.setValue(this.media.currentTime);
+        Toxen.musicControls.setBackgroundRange(this.media.buffered.start(0) || 0, this.media.buffered.end(this.media.buffered.length - 1) || 0);
       } catch {
         // Nothing
       }
@@ -76,11 +78,11 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
     this.media.play();
     Toxen.discord.setPresence();
   }
-  
+
   public load() {
     this.media.load();
   }
-  
+
   public pause() {
     this.media.pause();
     Toxen.discord.setPresence();
@@ -125,16 +127,6 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
     }
   }
 
-  private onEnded() {
-    ToxenEvent.emit("songEnded");
-    if (Settings.get("repeat")) {
-      this.play();
-    }
-    else {
-      this.playRandom();
-    }
-  }
-  
   public playPrev() {
     let prevSong = Song.historyBack();
     if (prevSong) prevSong.play({ disableHistory: true });
@@ -165,26 +157,67 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
   public getTime() {
     return new Time(this.media.currentTime * 1000);
   }
-  
+
+  private onEnded() {
+    ToxenEvent.emit("songEnded");
+    if (Settings.get("repeat")) {
+      this.play();
+    }
+    else {
+      this.playRandom();
+    }
+  }
+
+  private isSeeking = false;
+  private onSeeking() {
+    if (!Settings.isRemote()) return;
+    if (
+      this.isSeeking == false
+      && (this.media.currentTime < Toxen.musicControls.progressBar.state.bufferedRange[0]
+        || this.media.currentTime > Toxen.musicControls.progressBar.state.bufferedRange[1])
+    ) {
+      Toxen.loadingScreen.show();
+      Toxen.loadingScreen.setContent(
+        <>
+          <PulsingLogo />Buffering...
+        </>
+      );
+      this.isSeeking = true;
+    }
+  }
+
+  private onSeeked() {
+    if (!Settings.isRemote()) return;
+    if (this.isSeeking) {
+      Toxen.loadingScreen.hide();
+      this.isSeeking = false;
+    }
+    this.isSeeking = false;
+  }
+
   render() {
     let isVideo = this.isVideo(this.state.src);
     // Audio
     if (!isVideo) return (
       <video
-      onCanPlay={e => Toxen.musicControls.setMax(this.media.duration)}
-      ref={ref => this.media = ref}
-      hidden
-      src={this.state.src}
-      onEnded={this.onEnded.bind(this)}
+        onCanPlay={e => Toxen.musicControls.setMax(this.media.duration)}
+        ref={ref => this.media = ref}
+        hidden
+        src={this.state.src}
+        onEnded={this.onEnded.bind(this)}
+        onSeeking={this.onSeeking.bind(this)}
+        onSeeked={this.onSeeked.bind(this)}
       />
     );
     // Video
     else return (
       <video
-      onCanPlay={e => Toxen.musicControls.setMax(this.media.duration)}
-      ref={ref => this.media = ref}
-      src={this.state.src}
-      onEnded={this.onEnded.bind(this)}
+        onCanPlay={e => Toxen.musicControls.setMax(this.media.duration)}
+        ref={ref => this.media = ref}
+        src={this.state.src}
+        onEnded={this.onEnded.bind(this)}
+        onSeeking={this.onSeeking.bind(this)}
+        onSeeked={this.onSeeked.bind(this)}
       />
     );
   }

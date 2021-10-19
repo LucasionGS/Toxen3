@@ -336,8 +336,8 @@ export default class Song implements ISong {
       let img = new Image();
       img.src = Toxen.background.getBackground() || ToxenMax;
       this.setCurrent();
+      this.setAppTitle();
       const addToMetadata = (blob?: Blob) => {
-        document.title = this.getDisplayName();
         navigator.mediaSession.metadata = new MediaMetadata({
           title: this.title ?? "Unknown Title",
           artist: this.artist ?? "Unknown Artist",
@@ -366,6 +366,13 @@ export default class Song implements ISong {
     }
 
     Toxen.discord.setPresence(this);
+  }
+
+  /**
+   * Sets the Toxen's title to this song's title.
+   */
+  setAppTitle() {
+    document.title = this.getDisplayName();
   }
 
   async applySubtitles() {
@@ -644,7 +651,7 @@ export default class Song implements ISong {
         return [];
       }
       let iSongs: ISong[] = await Toxen.fetch(user.getUserDirectoryCollection()).then(res => res.json());
-      const songs: Song[] = iSongs.map(iSong => Song.create(iSong));
+      const songs: Song[] = iSongs.map(iSong => Song.create(iSong)).filter(s => s.paths && s.paths.media);
       if (forEach) {
         songs.forEach(forEach);
       }

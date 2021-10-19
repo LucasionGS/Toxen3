@@ -7,6 +7,7 @@
     user-select: none;
   }
   .toxen-progress-bar {
+    position: relative;
     margin: auto;
     width: 90%;
     height: 1em;
@@ -14,7 +15,7 @@
     
     border: 1px solid;
     border-radius: 5px;
-
+    
     &:hover {
       height: 2em;
       border: 2px solid;
@@ -22,10 +23,10 @@
     
     // overflow: hidden;
     .toxen-progress-bar-fill {
+      position: absolute;
       overflow: visible;
       height: 100%;
       border-radius: 2px;
-      position: relative;
     }
   }
 }

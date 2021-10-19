@@ -60,7 +60,8 @@ export default class Playlist{
      return Promise.resolve().then(async () => {
        if (Settings.isRemote()) {
          // Remote server
-         Toxen.error("Loading playlists remotely not yet implemented");
+         Toxen.error("Loading playlists remotely not yet implemented", 5000);
+         return [];
        }
        else {
          // Local

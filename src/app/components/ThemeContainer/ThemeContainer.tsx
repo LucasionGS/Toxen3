@@ -27,7 +27,7 @@ export default class ThemeContainer extends Component<Props, State> {
     if (!this.state.theme) return (<></>);
     return (
       <style>
-        {Theme.parseToCSS(this.state.theme.styles)}
+        {Theme.parseToCSS(this.state.theme)}
       </style>
     )
   }

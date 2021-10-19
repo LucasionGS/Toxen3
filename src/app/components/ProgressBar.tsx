@@ -21,6 +21,7 @@ interface ProgressBarProps {
 
 interface ProgressBarState {
   value: number;
+  bufferedRange: [number, number];
   min: number;
   max: number;
   fillColor: Color;
@@ -37,6 +38,7 @@ export default class ProgressBar extends Component<ProgressBarProps, ProgressBar
       max: this.props.max ?? 100,
       fillColor: this.props.fillColor,
       borderColor: this.props.borderColor,
+      bufferedRange: [0, 0]
     }
   }
 
@@ -109,6 +111,13 @@ export default class ProgressBar extends Component<ProgressBarProps, ProgressBar
     this.setState({ value });
   }
 
+  /**
+   * Sets the background value of the progress bar. This is useful for showing what part of a song is buffered.
+   */
+  public setBackgroundRange(start: number, end: number) {
+    this.setState({ bufferedRange: [start, end] });
+  }
+
   setMax(max: number) {
     this.setState({ max });
   }
@@ -118,12 +127,15 @@ export default class ProgressBar extends Component<ProgressBarProps, ProgressBar
   }
 
   render() {
+    // console.log(this.state.bufferedRange);
+    
     const {
       max,
       min,
       value
     } = this.state;
     let percent = (100 / (max - min)) * (value - min);
+    let percentBuffered = (100 / (max - min)) * ((this.state.bufferedRange[1] - this.state.bufferedRange[0]) - min);
 
     let borderStyle: React.HTMLAttributes<HTMLDivElement>["style"] = {
       borderColor: this.state.borderColor ?? "#fff"
@@ -132,6 +144,12 @@ export default class ProgressBar extends Component<ProgressBarProps, ProgressBar
     let fillStyle: React.HTMLAttributes<HTMLDivElement>["style"] = {
       width: `${percent}%`,
       backgroundColor: this.state.fillColor ?? "#fff"
+    };
+    let fillStyleBuffered: React.HTMLAttributes<HTMLDivElement>["style"] = {
+      backgroundColor: this.state.fillColor ?? "#fff",
+      width: `${percentBuffered}%`,
+      left: `${this.state.bufferedRange[0] / (max - min) * 100}%`,
+      opacity: 0.2,
     };
     return (
       <>
@@ -175,6 +193,7 @@ export default class ProgressBar extends Component<ProgressBarProps, ProgressBar
             <div className="toxen-progress-bar-fill" style={fillStyle}>
               <Tooltip text="" ref={ref => this.toolTip = ref} />
             </div>
+            <div className="toxen-progress-bar-fill" style={fillStyleBuffered}></div>
           </div>
         </div>
       </>

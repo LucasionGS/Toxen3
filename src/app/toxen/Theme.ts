@@ -1,5 +1,6 @@
 import Settings from "./Settings";
 import CrossPlatform from "./CrossPlatform";
+import fs from "fs";
 import fsp from "fs/promises";
 
 export default class Theme implements ITheme {
@@ -21,28 +22,39 @@ export default class Theme implements ITheme {
     return themes;
   }
 
+  public save() {
+    const data = JSON.stringify(this, null, 2);
+    return fsp.writeFile(`${Theme.themeFolderPath}/${this.name}.json`, data);
+  }
+
   name: string;
+  displayName: string;
+  public getDisplayName() {
+    return this.displayName || this.name;
+  }
   description: string;
   styles: ThemeStyle = {};
+  customCSS: string;
 
   public static create(themeData: ITheme) {
     const theme = new Theme();
     theme.name = themeData.name;
+    theme.displayName = themeData.displayName;
     theme.description = themeData.description;
     theme.styles = themeData.styles;
 
     return theme;
   }
 
-  public static parseToCSS(themeStyle: ThemeStyle) {
+  public static parseToCSS(theme: Theme) {
     let css = "";
     const selectorValuePair: { [selector: string]: (ThemeStyle[string] & { key: string } )[] } = {};
     // debugger;
-    for (const key in themeStyle) {
-      if (themeStyle.hasOwnProperty(key)) {
+    for (const key in theme.styles) {
+      if (theme.styles.hasOwnProperty(key)) {
         const style: (ThemeStyle[string] & { key: string } ) = {
           ...ThemeStyleKeyValue[key],
-          ...themeStyle[key],
+          ...theme.styles[key],
           key
         };
         if (!selectorValuePair[style.selector]) {
@@ -62,13 +74,31 @@ export default class Theme implements ITheme {
         css += "}\n";
       }
     }
+
+    theme.loadExternalCSS();
+    if (theme.customCSS) css += "\n" + theme.customCSS;
     
     return css;
+  }
+
+  /**
+   * Loads and applies the external CSS file to `Theme.customCSS`, if it exists.
+   */
+  public loadExternalCSS() {
+    const cssPath = `${Theme.themeFolderPath}/${this.name}.css`;
+    console.log(cssPath);
+    
+    if (fs.existsSync(cssPath)) {
+      const css = fs.readFileSync(cssPath, "utf8");
+      this.customCSS = css;
+    }
+    else this.customCSS = "";
   }
 }
 
 interface ITheme {
   name: string;
+  displayName: string;
   description: string;
   styles: ThemeStyle;
 }

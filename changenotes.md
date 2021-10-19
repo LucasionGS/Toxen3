@@ -9,16 +9,20 @@ Minor changes:
 - Added something minor
 - Changed something minor
 -->
-## Upcoming update / 1.0.18
+<!-- ## Upcoming update / 1.0.19 -->
+## 1.0.18 - 2021/10/19
 Major changes:
 - Fixed a software breaking bug that was preventing Toxen from initializing properly on first run.
+- Added customizable themes (Currently with no built-in editor or documentation - will come later)
 
 Minor changes:
-- Made the border around `Progress bars` / `Sliders` less round
+- Added buffering display when streaming from a Toxen server.
 - Added expandable content components.
-- Fixed Toxen attempting to connect to Discord infinitly if Discord is not installed, not running, or couldn't connect.
+- Made the border around `Progress bars` / `Sliders` less round
 - Added preparations for recording a song with the visuals as a video.
+- Fixed Toxen attempting to connect to Discord infinitly if Discord is not installed, not running, or couldn't connect.
 - Fixed subtitles not being parsed if the file used the wrong type of comma.
+- Fixed toxen not being able to load songs from a remote server due to playlists not being supported remotely.
 - Changed rainbow visualizer's rotation speed.
 
 ## 1.0.17 - 2021/09/23
