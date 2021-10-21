@@ -694,7 +694,7 @@ export default class ToxenAppRenderer extends React.Component {
                     }}
                       values={(async () => {
                         return [
-                          ["<None>", ""],
+                          ["<Default>", ""],
                           ...Toxen.themes.map(t => [t.getDisplayName(), t.name] as [string, string])
                         ];
                       })} >
