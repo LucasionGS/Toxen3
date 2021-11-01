@@ -121,7 +121,7 @@ export default class Song implements ISong {
             .replace(/\r\n/g, "\n")
             .replace(/‚/g, ",") // Why the fuck are these two characters different?
             ;
-          
+
           resolve(data);
         }).catch(err => {
           Toxen.error("Failed to load subtitles from storage.");
@@ -235,41 +235,29 @@ export default class Song implements ISong {
       while (ent = await dir.read()) {
         if (ent.isFile()) {
           let ext = Path.extname(ent.name).toLowerCase();
-          switch (ext) {
-            case ".mp3":
-            case ".mp4":
-              if (!info.paths.media || info.paths.media.toLowerCase().endsWith(".mp3")) info.paths.media = ent.name;
-              if (!info.title && !info.artist) {
-                const name = Path.basename(ent.name, Path.extname(ent.name))
-                if (ent.name.indexOf(" - ") > -1) {
-                  let [artist, title] = name.split(" - ");
+          if (Toxen.getSupportedMediaFiles().includes(ext)) {
+            info.paths.media = ent.name;
+            if (!info.title && !info.artist) {
+              const name = Path.basename(ent.name, Path.extname(ent.name))
+              if (ent.name.indexOf(" - ") > -1) {
+                let [artist, title] = name.split(" - ");
 
-                  info.artist = artist;
-                  info.title = title;
-                }
-                else {
-                  info.title = name;
-                }
+                info.artist = artist;
+                info.title = title;
               }
-
-              break;
-
-            case ".png":
-            case ".jpg":
-            case ".jpeg":
-            case ".gif":
-            case ".webm":
-              if (!info.paths.background) info.paths.background = ent.name;
-              break;
-
-            case ".srt":
-            case ".tst":
-              if (!info.paths.subtitles) info.paths.subtitles = ent.name;
-              break;
-
-            case ".tsb":
-              if (!info.paths.storyboard) info.paths.storyboard = ent.name;
-              break;
+              else {
+                info.title = name;
+              }
+            }
+          }
+          else if (Toxen.getSupportedImageFiles().includes(ext)) {
+            if (!info.paths.background) info.paths.background = ent.name;
+          }
+          else if (Toxen.getSupportedSubtitleFiles().includes(ext)) {
+            if (!info.paths.subtitles) info.paths.subtitles = ent.name;
+          }
+          else if (Toxen.getSupportedStoryboardFiles().includes(ext)) {
+            if (!info.paths.storyboard) info.paths.storyboard = ent.name;
           }
         }
 
@@ -387,11 +375,6 @@ export default class Song implements ISong {
         const type = Path.extname(subFile);
         const data = await this.readSubtitleFile();
         if (supported.includes(type)) {
-          // const subParsers = {
-          //   ".srt": SubtitleParser.parseSrt,
-          //   ".tst": SubtitleParser.parseTst
-          // };
-          // subs = (subParsers as any)[type] ? (subParsers as any)[type](data) : null;
           try {
             subs = SubtitleParser.parseByExtension(data, type);
           } catch (error) {

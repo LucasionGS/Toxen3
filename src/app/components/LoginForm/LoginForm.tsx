@@ -5,9 +5,9 @@ import { Toxen } from "../../ToxenApp";
 import Form from "../Form/Form";
 import FormInput from "../Form/FormInputFields/FormInput";
 
-let attemptedInitialLogin = false;  
+let attemptedInitialLogin = false;
 export default function LoginForm() {
-  if (!Settings.isRemote()) return <>Connect to a server to login.</>
+  // if (!Settings.isRemote()) return <>Connect to a server to login.</>
   const [loggedIn, setLoggedIn] = React.useState(false);
   const user = Settings.getUser();
   if (!attemptedInitialLogin && user) {
@@ -18,8 +18,13 @@ export default function LoginForm() {
         User.setCurrentUser(loggedInUser);
         console.log("Logged in user: ", loggedInUser);
         setLoggedIn(true);
-        Toxen.loadSongs();
+        Toxen.sidePanel.reloadSection();
+        if (Settings.isRemote()) Toxen.loadSongs();
       }
+    }).catch(e => {
+      console.error(e);
+      Toxen.error("Unable to reach Toxen server");
+      Toxen.sidePanel.reloadSection();
     });
   }
   const template = () => ({
@@ -36,11 +41,15 @@ export default function LoginForm() {
       User.login(values.username as string, values.password as string).then(loggedInUser => {
         if (loggedInUser) {
           User.setCurrentUser(loggedInUser);
-          console.log("Logged in user: ", loggedInUser);
+          Toxen.log("Logged in user: " + loggedInUser, 2000);
           setLoggedIn(true);
-          Toxen.loadSongs();
+          Toxen.sidePanel.reloadSection();
+          if (Settings.isRemote()) Toxen.loadSongs();
         }
-        else alert("Login failed");
+        else Toxen.error("Login failed");
+      }).catch(e => {
+        Toxen.error("Unable to reach Toxen server");
+        console.error(e);
       });
     }} saveButtonText="Login">
       <FormInput name="username*string" displayName="Username" type="text" getValueTemplateCallback={template} />

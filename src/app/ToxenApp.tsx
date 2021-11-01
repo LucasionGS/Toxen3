@@ -47,6 +47,7 @@ import ThemeContainer from "./components/ThemeContainer/ThemeContainer";
 import ThemeEditorPanel from "./components/ThemeEditorPanel/ThemeEditorPanel";
 import Expandable from "./components/Expandable/Expandable";
 import Theme from "./toxen/Theme";
+import { OptionValues } from "./components/Form/FormInputFields/FormInputSelect";
 
 //#region Define variables used all over the ToxenApp process.
 /**
@@ -145,7 +146,7 @@ export class Toxen {
 
   public static _resolveWhenReady: () => void;
 
-  public static log(message: any, expiresIn?: number) {
+  public static log(message: React.ReactNode, expiresIn?: number) {
     console.log(message);
     Toxen.notify({
       title: "Info",
@@ -154,7 +155,7 @@ export class Toxen {
       type: "normal",
     });
   }
-  public static warn(message: any, expiresIn?: number) {
+  public static warn(message: React.ReactNode, expiresIn?: number) {
     console.warn(message);
     Toxen.notify({
       title: "Warning",
@@ -163,7 +164,7 @@ export class Toxen {
       type: "warning",
     });
   }
-  public static error(message: any, expiresIn?: number) {
+  public static error(message: React.ReactNode, expiresIn?: number) {
     console.error(message);
     Toxen.notify({
       title: "Error",
@@ -195,7 +196,10 @@ export class Toxen {
 
   public static getSupportedAudioFiles() {
     return [
-      ".mp3"
+      ".mp3",
+      ".flac",
+      ".ogg",
+      ".wav"
     ];
   }
 
@@ -223,6 +227,7 @@ export class Toxen {
     return [
       ".srt",
       ".tst",
+      ".lrc"
     ];
   }
 
@@ -343,7 +348,7 @@ export class Toxen {
     Toxen.loadingScreen.toggleVisible(true);
     let songCount = 0;
     let totalSongCount = await Song.getSongCount();
-    Toxen.setSongList(await Song.getSongs(true, () => {
+    const loadingCallback = () => {
       let ref: ProgressBar;
       let content = (
         <>
@@ -359,7 +364,16 @@ export class Toxen {
       ref.setValue(songCount);
       ref.setMin(0);
       ref.setMax(totalSongCount);
-    }));
+    };
+    try {
+      var songList = await Song.getSongs(true, loadingCallback);
+    } catch (error) {
+      Settings.set("isRemote", false);
+      var songList = await Song.getSongs(true, loadingCallback);
+    }
+
+    Toxen.setSongList(songList);
+
     try {
       Toxen.setPlaylists(await Playlist.load());
 
@@ -626,6 +640,11 @@ export default class ToxenAppRenderer extends React.Component {
           </SidepanelSectionHeader>
           <LoginForm />
           <Form hideSubmit ref={ref => Toxen.settingsForm = ref} saveButtonText="Save settings" onSubmit={(_, params) => {
+
+            console.log(params);
+
+            // if (params.isRemote === "true") params.isRemote = true;
+            // else params.isRemote = false;
             Settings.apply(params);
             Settings.save();
             Toxen.updateSettings();
@@ -636,8 +655,38 @@ export default class ToxenAppRenderer extends React.Component {
               let ref = React.createRef<FormInput>();
               return (
                 <>
-                  <FormInput ref={ref} type="text" name="libraryDirectory*string" displayName="Music Library" />
-                  <button className="tx-btn tx-btn-action" onClick={() => ref.current.openFolder()}>
+                  {/* <FormInput ref={ref} type="text" name="libraryDirectory*string" displayName="Music Library" /> */}
+                  <FormInput ref={ref} type="selectAsync" name="isRemote*boolean" displayName="Music Library" values={async () => {
+                    const data: OptionValues = [
+                      [Settings.get("libraryDirectory"), "false"],
+                      Settings.getUser()?.premium ? ["Remote Library", "true"] : null
+                    ].filter(x => x) as OptionValues;
+
+                    return data;
+                    // .filter(x => x) as [string, string?][];
+                  }}
+                  />
+                  <button className="tx-btn tx-btn-action"
+                    onClick={
+                      (e) => {
+                        e.preventDefault();
+                        let value = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
+                          properties: [
+                            'openDirectory'
+                          ]
+                        });
+
+                        if (!value || value.length == 0) return;
+
+                        Settings.set("libraryDirectory", value[0]);
+                        Settings.save({
+                          suppressNotification: true
+                        }).then(() => {
+                          Toxen.sidePanel.reloadSection();
+                          Toxen.loadSongs();
+                        });
+                      }
+                    }>
                     <i className="fas fa-folder"></i>
                     &nbsp;Change Music Folder
                   </button>
@@ -650,7 +699,7 @@ export default class ToxenAppRenderer extends React.Component {
                   <sup>
                     Music Library to fetch songs from.<br />
                     You can use the <code>Change Music Folder</code> button to select a directory or write it in directly. <br />
-                    You can also insert a URL to a Toxen Streaming Server that you have an account on. Must begin with <code>http://</code> or <code>https://</code>.
+                    {/* You can also insert a URL to a Toxen Streaming Server that you have an account on. Must begin with <code>http://</code> or <code>https://</code>. */}
                   </sup>
                 </>
               );
@@ -924,17 +973,7 @@ export default class ToxenAppRenderer extends React.Component {
             <FormInput displayName="Language" name="language*string" getValueTemplateCallback={() => Toxen.editingSong} type="text" />
             <FormInput displayName="Release Year" name="year*number" getValueTemplateCallback={() => Toxen.editingSong} type="number" />
             <FormInput displayName="Tags" name="tags*array" getValueTemplateCallback={() => Toxen.editingSong} type="list" />
-            <hr />
-            <h2>Song-specific visuals</h2>
-            <FormInput nullable displayName="Visualizer Color" name="visualizerColor*string" getValueTemplateCallback={() => Toxen.editingSong} type="color"
-              onChange={v => Toxen.setAllVisualColors(v)}
-            />
-
-            <FormInput type="checkbox" name="visualizerForceRainbowMode*boolean" displayName="Force Visualizer Rainbow Mode" getValueTemplateCallback={() => Toxen.editingSong} />
             <br />
-            <sup>Enable to force Rainbow mode onto this song. If disabled, but the global settings have it enabled, this will also be enabled.</sup>
-            <hr />
-            <h2></h2>
             <FormInput displayName="Media File" name="paths.media*string" getValueTemplateCallback={() => Toxen.editingSong} type="selectAsync"
               values={(async () => {
                 let song = Toxen.editingSong;
@@ -986,6 +1025,15 @@ export default class ToxenAppRenderer extends React.Component {
                 Toxen.setMode("StoryboardEditor");
               }}>Edit Storyboard</button>
             </FormInput>
+            <hr />
+            <h2>Song-specific visuals</h2>
+            <FormInput nullable displayName="Visualizer Color" name="visualizerColor*string" getValueTemplateCallback={() => Toxen.editingSong} type="color"
+              onChange={v => Toxen.setAllVisualColors(v)}
+            />
+
+            <FormInput type="checkbox" name="visualizerForceRainbowMode*boolean" displayName="Force Visualizer Rainbow Mode" getValueTemplateCallback={() => Toxen.editingSong} />
+            <br />
+            <sup>Enable to force Rainbow mode onto this song. If disabled, but the global settings have it enabled, this will also be enabled.</sup>
 
             <FormInput type="select" name="visualizerStyle*string" displayName="Visualizer Style" getValueTemplateCallback={() => Toxen.editingSong}>
               {(() => {

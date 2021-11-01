@@ -9,6 +9,7 @@ import ArrayX from "./ArrayX";
 import ProgressBar from "../components/ProgressBar";
 import { remote } from "electron";
 import Settings from "./Settings";
+import SubtitleParser from "./SubtitleParser";
 
 export default class System {
   public static async recursive(path: string): Promise<Dirent[]>;
@@ -111,6 +112,29 @@ export default class System {
           })
             .catch((reason) => {
               Toxen.error("Unable to change background");
+              Toxen.error(reason);
+            });
+
+          break;
+        }
+        else if (sSubtitle.some(ext => file.name.endsWith(ext))) {
+          if (mediaPack) {
+            Toxen.warn("Unable to mix media and subtitles. Skipping subtitle file.");
+            continue;
+          }
+
+          let song = Song.getCurrent();
+          if (!song) break;
+          let subName = file.name; // name with extension
+
+          let dest = song.dirname(subName);
+          await fsp.copyFile(file.path, dest).then(async () => {
+            song.paths.subtitles = Path.basename(dest);
+            await song.saveInfo();
+            song.applySubtitles();
+          })
+            .catch((reason) => {
+              Toxen.error("Unable to change subtitles");
               Toxen.error(reason);
             });
 

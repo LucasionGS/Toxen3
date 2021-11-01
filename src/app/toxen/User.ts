@@ -5,17 +5,17 @@ export default class User {
   constructor() { }
 
   public getUserDirectory() {
-    return Settings.get("libraryDirectory") + "/" + this.token;
+    return Settings.getServer() + "/" + this.token;
   }
   
   public getUserDirectoryCollection() {
-    return Settings.get("libraryDirectory") + "/" + this.token + "/collection";
+    return this.getUserDirectory() + "/collection";
   }
 
   public static async login(token: string): Promise<User>;
   public static async login(username: string, password: string): Promise<User>;
   public static async login(username: string, password?: string) {
-    let loginUrl = Settings.isRemote() ? Settings.get("libraryDirectory") : "https://toxen.net/stream";
+    let loginUrl = Settings.getServer();
     while (loginUrl.endsWith("/")) {
       loginUrl = loginUrl.substring(0, loginUrl.length - 1);
     }
@@ -38,9 +38,13 @@ export default class User {
       if (response.ok) {
         let user = User.create(await response.json() as IUser);
         User.setCurrentUser(user);
-        Toxen.log(`Logged in as ${user.username}`, 3000);
         return user;
       }
+      // If server couldn't be reached
+      if (response.status === 0 || response.status === 502 || response.status === 503) {
+        throw new Error("Could not reach Toxen server");
+      }
+
       if (password) Toxen.error(`Failed to login as ${username}`, 3000);
       else Toxen.error(`Failed to login. Token invalid`, 3000);
       return null;

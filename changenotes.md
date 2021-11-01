@@ -9,7 +9,14 @@ Minor changes:
 - Added something minor
 - Changed something minor
 -->
-<!-- ## Upcoming update / 1.0.19 -->
+## Upcoming update / 1.0.19
+Major changes:
+- Changed how login works. Login can now be done even when not connected to a specific remote server, and will resolve to Toxen official server. Only users with a premium Toxen account can use a remote library.
+- Added additional support for flac, ogg, and wav audio files.
+
+Minor changes:
+- Moved around some settings in `Edit Song` panel.
+- Fixed the subtitles being selectable with the mouse when active.
 ## 1.0.18 - 2021/10/19
 Major changes:
 - Fixed a software breaking bug that was preventing Toxen from initializing properly on first run.

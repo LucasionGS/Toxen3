@@ -24,7 +24,6 @@ export default class Settings {
     suppressNotification?: boolean;
   }) {
     opts = opts || {};
-    console.log("Saving...");
     if (!(await fsp.stat(Settings.toxenDataPath).then(() => true).catch(() => false))) {
       await fsp.mkdir(Settings.toxenDataPath, { recursive: true });
     }
@@ -83,6 +82,8 @@ export default class Settings {
     // Default settings for Toxen.
     const defaultSettings: Partial<ISettings> = {
       showAdvancedSettings: false,
+      remoteServer: null,
+      isRemote: false,
       volume: 50,
       exposePanelIcons: true,
       backgroundDynamicLighting: true,
@@ -107,6 +108,10 @@ export default class Settings {
     // if (overrideDefault) Settings.apply(overrideDefault);
   }
 
+  public static getServer() {
+    return (Settings.get("remoteServer") || "https://toxen.net/remote").replace(/\/+$/, ""); // Remove trailing slashes.
+  }
+
   /**
    * Returns whether the current music folder is remote.
    */
@@ -117,15 +122,16 @@ export default class Settings {
    */
   public static isRemote<T>(toReturn: T): T;
   public static isRemote<T>(toReturn?: T): T | boolean {
-    const isRemote = Boolean(
-      Settings.data
-      && Settings.data.libraryDirectory
-      && (
-        Settings.data.libraryDirectory.toLowerCase().startsWith("http://")
-        || Settings.data.libraryDirectory.toLowerCase().startsWith("https://")
-        || Settings.data.libraryDirectory.toLowerCase().startsWith("tx://")
-        || Settings.data.libraryDirectory.toLowerCase().startsWith("txs://")
-      ));
+    // const isRemote = Boolean(
+    //   Settings.data
+    //   && Settings.data.libraryDirectory
+    //   && (
+    //     Settings.data.libraryDirectory.toLowerCase().startsWith("http://")
+    //     || Settings.data.libraryDirectory.toLowerCase().startsWith("https://")
+    //     || Settings.data.libraryDirectory.toLowerCase().startsWith("tx://")
+    //     || Settings.data.libraryDirectory.toLowerCase().startsWith("txs://")
+    //   ));
+    const isRemote = Settings.get("isRemote") ?? false;
     if (toReturn === undefined) return isRemote;
     return isRemote ? toReturn : null;
   }
@@ -169,7 +175,12 @@ export default class Settings {
 
         // Special cases
         if (value !== preValue) {
-          if (key === "libraryDirectory") Toxen.loadSongs();
+          if (key === "libraryDirectory") {
+            Toxen.loadSongs();
+          }
+          else if (key === "isRemote") {
+            Toxen.loadSongs();
+          }
           else if (key === "theme") Toxen.setThemeByName(value);
         }
       }
@@ -230,6 +241,7 @@ export interface ISettings {
 
   // Advanced settings & UI
   showAdvancedSettings: boolean;
+  remoteServer: string;
 
   // Discord
   discordPresence: boolean;

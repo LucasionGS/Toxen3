@@ -72,6 +72,9 @@ namespace SubtitleParser {
       case ".tst":
         content = exportTst(data);
         break;
+      case ".lrc":
+        // content = exportLrc(data);
+        break;
       default:
         throw new Error("Unsupported extension");
     }
@@ -87,12 +90,32 @@ namespace SubtitleParser {
       case ".tst":
         content = parseTst(data);
         break;
+      case ".lrc":
+        content = parseLrc(data);
+        break;
       default:
         throw new Error("Unsupported extension");
     }
     return content;
   }
 
+  function parseSrtTime(time: string): Time {
+    let parts = time.split(/[:,]/g);
+    let hours = parseInt(parts[0]);
+    let minutes = parseInt(parts[1]);
+    let seconds = parseInt(parts[2]);
+    let milliseconds = parseInt(parts[3]);
+    return new Time(hours * 3600000 + minutes * 60000 + seconds * 1000 + milliseconds);
+  }
+
+  function exportSrtTime(time: Time): string {
+    let hours = (time.getHours()).toString().padStart(2, "0");
+    let minutes = (time.getMinutes()).toString().padStart(2, "0");
+    let seconds = (time.getSeconds()).toString().padStart(2, "0");
+    let milliseconds = (time.getMilliseconds()).toString().padStart(3, "0");
+    return `${hours}:${minutes}:${seconds},${milliseconds}`;
+  }
+  
   export function parseSrt(text: string): SubtitleArray {
     let lines = text.split(/\r?\n/);
     let index = 0;
@@ -141,23 +164,6 @@ namespace SubtitleParser {
       text += `${item.text.replace(/<br\s*\/?>/g, "\n")}\n\n`;
     }
     return text;
-  }
-
-  function parseSrtTime(time: string): Time {
-    let parts = time.split(/[:,]/g);
-    let hours = parseInt(parts[0]);
-    let minutes = parseInt(parts[1]);
-    let seconds = parseInt(parts[2]);
-    let milliseconds = parseInt(parts[3]);
-    return new Time(hours * 3600000 + minutes * 60000 + seconds * 1000 + milliseconds);
-  }
-
-  function exportSrtTime(time: Time): string {
-    let hours = (time.getHours()).toString().padStart(2, "0");
-    let minutes = (time.getMinutes()).toString().padStart(2, "0");
-    let seconds = (time.getSeconds()).toString().padStart(2, "0");
-    let milliseconds = (time.getMilliseconds()).toString().padStart(3, "0");
-    return `${hours}:${minutes}:${seconds},${milliseconds}`;
   }
 
   export function parseTst(text: string): SubtitleArray {
@@ -235,6 +241,67 @@ namespace SubtitleParser {
     }
 
     return text;
+  }
+
+  function parseLrcTime(time: string): Time {
+    let parts = time.split(/[.:]/g);
+    let hours = parseInt(parts[0]);
+    let minutes = parseInt(parts[1]);
+    let seconds = parseInt(parts[2]);
+    return new Time(hours * 3600000 + minutes * 60000 + seconds * 1000);
+  }
+
+  function exportLrcTime(time: Time): string {
+    let hours = (time.getHours()).toString().padStart(2, "0");
+    let minutes = (time.getMinutes()).toString().padStart(2, "0");
+    let seconds = (time.getSeconds() + Math.round(time.getMilliseconds() / 1000)).toString().padStart(2, "0");
+    return `${hours}:${minutes}.${seconds}`;
+  }
+
+  export function parseLrc(text: string): SubtitleArray {
+    let lines = text.split(/\r?\n/);
+    let index = 0;
+    const items: SubtitleArray = new SubtitleArray();
+    items.type = "lrc";
+    const getLine = () => lines[index];
+    const getNextLine = () => lines[++index];
+    while (index < lines.length) {
+      let line = getLine();
+      const item: SubtitleItem = {
+        id: null,
+        start: null,
+        end: null,
+        text: null,
+        options: {},
+      };
+
+      while (!line && index < lines.length) { line = getNextLine(); }
+      if (index >= lines.length) { break; }
+      item.id = items.length + 1;
+      const makeRegex = () => /^\[(\d+\:\d+\.\d+)\](.*)/;
+      if (makeRegex().test(line)) {
+        const matches = line.match(makeRegex());
+        item.start = parseLrcTime(matches[1]);
+        item.text = matches[2] || "";
+        items.push(item);
+        // throw new Error("Not implemented");
+      }
+      getNextLine();
+    }
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const itemNext = items[i + 1];
+      if (i + 1 < items.length) {
+        item.end = itemNext.start;
+      }
+      else {
+        item.end = new Time(item.start.valueOf() + 1500);
+      }
+    }
+    
+    debugger
+    return items;
   }
 }
 

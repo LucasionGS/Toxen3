@@ -95,8 +95,8 @@ export default class FormInput extends React.Component<Props> {
         return JSON.parse(String(value));
 
       case "boolean":
-        if (value === "1") return true;
-        if (value === "0") return false;
+        if (value === "1" || value === "true") return true;
+        if (value === "0" || value === "false") return false;
         return Boolean(value);
 
       case "select":
@@ -111,7 +111,7 @@ export default class FormInput extends React.Component<Props> {
         return String(value);
 
       case "boolean":
-        return value ? "1" : "0";
+        return value ? "true" : "false";
 
       default:
         return value;
@@ -263,7 +263,6 @@ export default class FormInput extends React.Component<Props> {
             {label}
             <br />
             <FormInputList name={this.props.name} defaultValue={value} />
-            <br />
             <br />
           </>
         )
