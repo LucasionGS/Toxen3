@@ -48,6 +48,7 @@ import ThemeEditorPanel from "./components/ThemeEditorPanel/ThemeEditorPanel";
 import Expandable from "./components/Expandable/Expandable";
 import Theme from "./toxen/Theme";
 import { OptionValues } from "./components/Form/FormInputFields/FormInputSelect";
+import Remote from "./toxen/Remote";
 
 //#region Define variables used all over the ToxenApp process.
 /**
@@ -1159,3 +1160,7 @@ export default class ToxenAppRenderer extends React.Component {
 }
 //#endregion
 
+
+// setTimeout(async () => {
+//   console.log(await Remote.compareLocalAndRemote());
+// }, 5000);

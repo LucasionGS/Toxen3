@@ -4,12 +4,16 @@ import Settings from "./Settings";
 export default class User {
   constructor() { }
 
-  public getUserDirectory() {
+  public getUserDirectoryPath() {
     return Settings.getServer() + "/" + this.token;
   }
   
-  public getUserDirectoryCollection() {
-    return this.getUserDirectory() + "/collection";
+  public getUserCollectionPath() {
+    return this.getUserDirectoryPath() + "/collection";
+  }
+  
+  public getPlaylistsPath() {
+    return this.getUserDirectoryPath() + "/collection/playlists.json";
   }
 
   public static async login(token: string): Promise<User>;

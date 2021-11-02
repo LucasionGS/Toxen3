@@ -69,7 +69,7 @@ export default class Song implements ISong {
   public dirname(relativePath?: string) {
     let user = Settings.getUser();
     if (Settings.isRemote() && !user) return null;
-    if (Settings.isRemote()) return `${user.getUserDirectoryCollection()}/${this.uid}${relativePath ? "/" + relativePath : ""}`;
+    if (Settings.isRemote()) return `${user.getUserCollectionPath()}/${this.uid}${relativePath ? "/" + relativePath : ""}`;
     return (this.paths && this.paths.dirname) ? resolve(Settings.get("libraryDirectory"), this.paths.dirname, relativePath ?? ".") : null;
   }
 
@@ -311,6 +311,7 @@ export default class Song implements ISong {
     options ?? (options = {});
     let src = this.mediaFile();
     if (Toxen.musicPlayer.state.src != src) {
+      if (Settings.isRemote() && this.isVideo()) Toxen.log("Streaming a video can take some time to load... Using audio files is much faster.", 3000);
       if (this.lastBlobUrl) URL.revokeObjectURL(this.lastBlobUrl);
       let bg = this.backgroundFile();
       this.applySubtitles();
@@ -326,6 +327,7 @@ export default class Song implements ISong {
       this.setCurrent();
       this.setAppTitle();
       const addToMetadata = (blob?: Blob) => {
+        Toxen.discord.setPresence(this);
         navigator.mediaSession.metadata = new MediaMetadata({
           title: this.title ?? "Unknown Title",
           artist: this.artist ?? "Unknown Artist",
@@ -352,8 +354,6 @@ export default class Song implements ISong {
       }
       else addToMetadata();
     }
-
-    Toxen.discord.setPresence(this);
   }
 
   /**
@@ -366,24 +366,19 @@ export default class Song implements ISong {
   async applySubtitles() {
     let subFile = this.subtitleFile();
     if (subFile) {
-      if (Settings.isRemote()) {
-        throw new Error("Remote playback does not support subtitles.");
-      }
-      else {
-        let subs: SubtitleParser.SubtitleArray = null;
-        const supported = Toxen.getSupportedSubtitleFiles();
-        const type = Path.extname(subFile);
-        const data = await this.readSubtitleFile();
-        if (supported.includes(type)) {
-          try {
-            subs = SubtitleParser.parseByExtension(data, type);
-          } catch (error) {
-            Toxen.error(error);
-          }
+      let subs: SubtitleParser.SubtitleArray = null;
+      const supported = Toxen.getSupportedSubtitleFiles();
+      const type = Path.extname(subFile);
+      const data = await this.readSubtitleFile();
+      if (supported.includes(type)) {
+        try {
+          subs = SubtitleParser.parseByExtension(data, type);
+        } catch (error) {
+          Toxen.error(error);
         }
-        if (subs) subs.song = this;
-        Toxen.subtitles.setSubtitles(subs);
       }
+      if (subs) subs.song = this;
+      Toxen.subtitles.setSubtitles(subs);
     }
     else Toxen.subtitles.setSubtitles(null);
   }
@@ -619,7 +614,7 @@ export default class Song implements ISong {
       if (!user) {
         return 0;
       }
-      let iSongs: ISong[] = await Toxen.fetch(user.getUserDirectoryCollection()).then(res => res.json()).catch(() => []);
+      let iSongs: ISong[] = await Toxen.fetch(user.getUserCollectionPath()).then(res => res.json()).catch(() => []);
       return iSongs.length;
     }
     else {
@@ -629,18 +624,13 @@ export default class Song implements ISong {
 
   public static async getSongs(reload?: boolean, forEach?: (song: Song) => void): Promise<Song[]> {
     if (Settings.isRemote()) {
-      let user = Settings.getUser();
-      if (!user) {
-        return [];
-      }
-      let iSongs: ISong[] = await Toxen.fetch(user.getUserDirectoryCollection()).then(res => res.json());
-      const songs: Song[] = iSongs.map(iSong => Song.create(iSong)).filter(s => s.paths && s.paths.media);
-      if (forEach) {
-        songs.forEach(forEach);
-      }
-      return Song.sortSongs(songs);
+      return Song.loadRemoteSongs(reload, forEach);
     }
-    else return Promise.resolve().then(async () => {
+    else return Song.loadLocalSongs(reload, forEach);
+  }
+
+  public static async loadLocalSongs(reload?: boolean, forEach?: (song: Song) => void) {
+    return Promise.resolve().then(async () => {
       if (reload !== true && Toxen.songList) {
         return Toxen.songList;
       }
@@ -694,6 +684,19 @@ export default class Song implements ISong {
     });
   }
 
+  public static async loadRemoteSongs(reload?: boolean, forEach?: (song: Song) => void) {
+    let user = Settings.getUser();
+    if (!user) {
+      return [];
+    }
+    let iSongs: ISong[] = await Toxen.fetch(user.getUserCollectionPath()).then(res => res.json());
+    const songs: Song[] = iSongs.map(iSong => Song.create(iSong)).filter(s => s.paths && s.paths.media);
+    if (forEach) {
+      songs.forEach(forEach);
+    }
+    return Song.sortSongs(songs);
+  }
+
   public async saveInfo(): Promise<void> {
     if (Settings.isRemote()) {
       let info = this.toISong();
@@ -701,7 +704,7 @@ export default class Song implements ISong {
       if (!user) {
         return;
       }
-      return await Toxen.fetch(user.getUserDirectoryCollection() + "/" + this.uid + "/info.json", {
+      return await Toxen.fetch(user.getUserCollectionPath() + "/" + this.uid + "/info.json", {
         method: "PUT",
         body: JSON.stringify(info),
         headers: {
