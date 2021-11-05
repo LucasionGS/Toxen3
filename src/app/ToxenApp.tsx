@@ -49,12 +49,20 @@ import Expandable from "./components/Expandable/Expandable";
 import Theme from "./toxen/Theme";
 import { OptionValues } from "./components/Form/FormInputFields/FormInputSelect";
 import Remote from "./toxen/Remote";
+import AppBar from "./components/AppBar/AppBar";
 
 //#region Define variables used all over the ToxenApp process.
 /**
  * Handler for events during runtime.
  */
 export class Toxen {
+
+  public static setTitle(title: string) {
+    Toxen.setTitleBarText(title);
+    document.title = title;
+  }
+
+  public static setTitleBarText: (text: string) => void = () => void 0;
 
   private static mode: ToxenInteractionMode = ToxenInteractionMode.Player;
 
@@ -423,7 +431,9 @@ export class Toxen {
 
   public static toggleFullscreen(force?: boolean) {
     const w = remote.getCurrentWindow();
-    w.setFullScreen(force ?? !w.isFullScreen());
+    const newMode = force ?? !w.isFullScreen();
+    w.setFullScreen(newMode);
+    document.body.toggleAttribute("fullscreen", newMode);
   }
 
   public static async reloadSection() {
@@ -481,8 +491,8 @@ export default class ToxenAppRenderer extends React.Component {
       .then(async () => {
         Toxen.updateSettings();
         Stats.load();
+        let win = remote.getCurrentWindow();
         if (Settings.get("restoreWindowSize")) {
-          let win = remote.getCurrentWindow();
           // Window initial size
           win.setSize(
             Settings.set("windowWidth", Settings.get("windowWidth") ?? 1280),
@@ -496,6 +506,8 @@ export default class ToxenAppRenderer extends React.Component {
             Math.floor(display.size.height / 2) - Math.floor(winSizeheight / 2),
           );
         }
+
+        Toxen.toggleFullscreen(win.isFullScreen());
 
         try {
           remote.autoUpdater.on("update-available", () => {
@@ -545,6 +557,7 @@ export default class ToxenAppRenderer extends React.Component {
   render = () => (
     <div>
       <ThemeContainer ref={ref => Toxen.themeContainer = ref} />
+      <AppBar />
       <Background ref={ref => Toxen.background = ref} />
       <MusicControls ref={ref => Toxen.musicControls = ref} />
       <LoadingScreen ref={ls => Toxen.loadingScreen = ls} initialShow={true} />
@@ -750,7 +763,7 @@ export default class ToxenAppRenderer extends React.Component {
                       })} >
                     </FormInput>
                     <sup>Select the theme you want to use.</sup>
-                    <Button disabled ref={btn} txDisabled={() => !Toxen.theme} txStyle="action" onClick={() => {
+                    <Button disabled ref={btn} txDisabled={() => !Toxen.theme || true /* Due to edit theme not being finished */} txStyle="action" onClick={() => {
                       Toxen.setMode("ThemeEditor");
                     }}><i className="fas fa-paint-brush"></i>&nbsp;Edit Theme</Button>
                     <br />

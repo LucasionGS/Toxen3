@@ -360,7 +360,7 @@ export default class Song implements ISong {
    * Sets the Toxen's title to this song's title.
    */
   setAppTitle() {
-    document.title = this.getDisplayName();
+    Toxen.setTitle(this.getDisplayName());
   }
 
   async applySubtitles() {
@@ -698,6 +698,10 @@ export default class Song implements ISong {
   }
 
   public async saveInfo(): Promise<void> {
+    const curSong = Song.getCurrent();
+    if (curSong === this) {
+      curSong.setAppTitle();
+    }
     if (Settings.isRemote()) {
       let info = this.toISong();
       let user = Settings.getUser();

@@ -101,7 +101,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           // Position and size
           const [barX, barY, barWidth, barHeight] = [
             (i * unitW) + vLeft + 10 /* Progress bar curve */, // barX
-            vHeight - _barHeight + vTop, // barY
+            vHeight - _barHeight - vTop, // barY
             unitW, // barWidth
             _barHeight // barHeight
           ];

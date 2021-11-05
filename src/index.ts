@@ -23,6 +23,7 @@ const createWindow = (): void => {
       webSecurity: false
     },
     autoHideMenuBar: true,
+    frame: false,
     center: true,
     icon: "./src/icons/toxen.ico",
     darkTheme: true,

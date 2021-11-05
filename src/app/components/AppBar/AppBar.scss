@@ -1,0 +1,56 @@
+.appBar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  width: 100vw;
+  height: calc(100vh - var(--bodyHeight));
+  background-color: #1b1b1b;
+  border-bottom: #0b0b0b solid 2px;
+  box-sizing: border-box;
+
+  // Add electron titlebar functions
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-app-region: drag;
+
+  // Buttons
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+
+  .appBarTitle {
+    width: calc(99% - (48px * 3));
+    white-space: nowrap;
+    overflow: hidden;
+    
+    * {
+      font-size: 1.2em;
+      // Remove extra space from le text
+      margin: 0;
+      padding: 0;
+    }
+  }
+
+  .appBarButton {
+    -webkit-app-region: none;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    width: 48px;
+    height: calc(100vh - var(--bodyHeight));
+    transition: all 0.1s ease-in-out;
+
+    &:hover {
+      background-color: #2b2b2b;
+    }
+
+    &.appBar__closeButton:hover {
+      background-color: #ff2b2b;
+    }
+  }
+}
+
+body[fullscreen] .appBar {
+  display: none;
+}

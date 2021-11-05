@@ -13,6 +13,7 @@ Minor changes:
 Major changes:
 - Changed how login works. Login can now be done even when not connected to a specific remote server, and will resolve to Toxen official server. Only users with a premium Toxen account can use a remote library.
 - Added additional support for flac, ogg, and wav audio files.
+- Added a custom app title bar instead of the default OS one. It will be consistent across all OSes.
 
 Minor changes:
 - Moved around some settings in `Edit Song` panel.

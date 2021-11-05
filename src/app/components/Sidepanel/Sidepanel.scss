@@ -1,3 +1,4 @@
+@import "../../../root.scss";
 $sidePanelColor: #252525;
 
 :root {
@@ -34,7 +35,7 @@ body.inactive .sidepanel:not(.show) {
 
 /* For sideways transition */
 .sidepanel:not(.vertical) {
-  height: 100vh;
+  height: var(--bodyHeight);
 
   // &:not(.expose-icons) {
   //   width: 0px;
@@ -47,7 +48,7 @@ body.inactive .sidepanel:not(.show) {
 
 /* For vertical transition */
 .sidepanel.vertical {
-  max-height: 100vh;
+  max-height: var(--bodyHeight);
   height: 0px;
   // width: var(--panel-width);
 }
@@ -59,13 +60,13 @@ body.inactive .sidepanel:not(.show) {
 /* For sideways transition */
 .sidepanel.show:not(.vertical) {
   // width: var(--panel-width);
-  height: 100vh;
+  height: var(--bodyHeight);
 }
 
 /* For vertical transition */
 .sidepanel.show.vertical {
   border-top: solid white 1px;
-  height: 100vh;
+  height: var(--bodyHeight);
 }
 
 .sidepanel.sidepanel-left {
@@ -183,7 +184,7 @@ body.inactive .sidepanel:not(.show) {
 .sidepanel .sidepanel-backdrop {
   position: fixed;
   width: 100vw;
-  height: 100vh;
+  height: var(--bodyHeight);
   left: 0;
   top: 0;
   // background-color: #000;
@@ -214,7 +215,7 @@ body.inactive .sidepanel:not(.show) {
 .sidepanel.show {
   .sidepanel-resizer {
     width: 8px;
-    height: 100vh;
+    height: var(--bodyHeight);
     transition: all 0.3s ease-in-out;
 
     &:hover {

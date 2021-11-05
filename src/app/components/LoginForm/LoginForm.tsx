@@ -16,7 +16,6 @@ export default function LoginForm() {
     User.login(user.token).then(loggedInUser => {
       if (loggedInUser) {
         User.setCurrentUser(loggedInUser);
-        console.log("Logged in user: ", loggedInUser);
         setLoggedIn(true);
         Toxen.sidePanel.reloadSection();
         if (Settings.isRemote()) Toxen.loadSongs();
@@ -41,7 +40,7 @@ export default function LoginForm() {
       User.login(values.username as string, values.password as string).then(loggedInUser => {
         if (loggedInUser) {
           User.setCurrentUser(loggedInUser);
-          Toxen.log("Logged in user: " + loggedInUser, 2000);
+          Toxen.log("Logged in user: " + loggedInUser.username, 2000);
           setLoggedIn(true);
           Toxen.sidePanel.reloadSection();
           if (Settings.isRemote()) Toxen.loadSongs();
