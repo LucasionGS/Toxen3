@@ -16,6 +16,21 @@ export default class AppBar extends Component<AppBarProps, AppBarState> {
     return (
       <div className="appBar">
         <AppBarTitle />
+        {/* Toxen Action button */}
+        <div className="appBarButton appBar__actionButton"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const btnBox = e.currentTarget.getBoundingClientRect();
+            remote.Menu.getApplicationMenu().popup({
+              x: btnBox.left,
+              y: btnBox.bottom
+            });
+          }}>
+          {/* Arrow down icon */}
+          <i className="fas fa-caret-down"></i>
+        </div>
+
         {/* Minimize button */}
         <div className="appBarButton appBar__minimizeButton"
           onClick={(e) => {

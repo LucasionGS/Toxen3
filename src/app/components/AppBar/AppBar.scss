@@ -20,7 +20,7 @@
   align-items: center;
 
   .appBarTitle {
-    width: calc(99% - (48px * 3));
+    width: calc(100% - (50px * 4) - 8px);
     white-space: nowrap;
     overflow: hidden;
     
@@ -37,7 +37,8 @@
     display: inline-flex;
     justify-content: center;
     align-items: center;
-    width: 48px;
+    min-width: 50px;
+    font-weight: bold;
     height: calc(100vh - var(--bodyHeight));
     transition: all 0.1s ease-in-out;
 
