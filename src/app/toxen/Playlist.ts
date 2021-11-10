@@ -49,7 +49,7 @@ export default class Playlist {
 
       await Toxen.fetch(Settings.getUser().getPlaylistsPath(), {
         method: "PUT",
-        body: JSON.stringify(Toxen.playlists),
+        body: Playlist.toString(),
         headers: {
           "Content-Type": "application/json"
         }
