@@ -6,7 +6,7 @@ import { Dir, Dirent } from "fs";
 import { Toxen } from "../ToxenApp";
 import Path from "path";
 import SongElement from "../components/SongPanel/SongElement";
-import Legacy from "./Legacy";
+import Legacy, { Toxen2SongDetails } from "./Legacy";
 import { remote } from "electron";
 import { Failure, Result, Success } from "./Result";
 import System, { ToxenFile } from "./System";
@@ -63,6 +63,18 @@ export default class Song implements ISong {
     return null;
   }
 
+  public async getToxen2Details(): Promise<Toxen2SongDetails> {
+    if (Settings.isRemote()) {
+      Toxen.error("Toxen2 migration is not supported on remote library.");
+      return null;
+    }
+    try {
+      return JSON.parse(await fsp.readFile(this.dirname("details.json"), "utf8"));
+    } catch (error) {
+      return null;
+    }
+  }
+  
   /**
    * Return the full path of the song folder.
    */

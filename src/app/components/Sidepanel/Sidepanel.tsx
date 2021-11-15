@@ -167,7 +167,7 @@ export default class Sidepanel extends React.Component<Props, State> {
             }
           </div>
           {this.sections.map(s => (s.props.icon || s.props.title) && (
-            <div key={String(s.props.id)}>
+            <div className={s.props.advancedOnly ? "advanced-only" : ""} key={String(s.props.id)}>
               {s.props.separator === true ? (<hr />) : ""}
               <div className={(() => {
                 const classes = [

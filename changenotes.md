@@ -9,11 +9,14 @@ Minor changes:
 - Added something minor
 - Changed something minor
 -->
-## Upcoming update / 1.0.19
+<!-- ## Upcoming update / 1.0.19 -->
+## 1.0.19 - 2021/11/16
 Major changes:
 - Changed how login works. Login can now be done even when not connected to a specific remote server, and will resolve to Toxen official server. Only users with a premium Toxen account can use a remote library.
 - Added additional support for flac, ogg, and wav audio files.
 - Added a custom app title bar instead of the default OS one. It will be consistent across all OSes.
+- Added migration of playlists from Toxen2 if you had any prior to Toxen3
+  - This can be done by going to the settings page, and enabling `Advanced UI`, then after saving, pressing on the `Migration` button in the sidebar.
 
 Minor changes:
 - Moved around some settings in `Edit Song` panel.

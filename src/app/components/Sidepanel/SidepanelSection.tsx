@@ -10,6 +10,7 @@ interface Props {
   scrollY?: number;
   disabled?: boolean;
   dynamicContent?: (section: SidepanelSection) => React.ReactNode | Promise<React.ReactNode>;
+  advancedOnly?: boolean;
 }
 
 interface State {

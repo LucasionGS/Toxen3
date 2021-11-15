@@ -42,7 +42,7 @@ export default class Stats extends EventEmitter {
     return Promise.resolve().then(async () => {
       if (!(await fsp.stat(Stats.filePath).then(() => true).catch(() => false))) {
         // Backwards compatibility.
-        let oldStats = Legacy.toxen2StatisticsPath();
+        let oldStats = Legacy.getToxen2StatisticsPath();
         if (oldStats) {
           try {
             let raw = await fsp.readFile(oldStats, "utf8");

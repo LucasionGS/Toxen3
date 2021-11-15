@@ -50,6 +50,7 @@ import Theme from "./toxen/Theme";
 import { OptionValues } from "./components/Form/FormInputFields/FormInputSelect";
 import Remote from "./toxen/Remote";
 import AppBar from "./components/AppBar/AppBar";
+import Legacy from "./toxen/Legacy";
 
 //#region Define variables used all over the ToxenApp process.
 /**
@@ -899,6 +900,52 @@ export default class ToxenAppRenderer extends React.Component {
           }}
         />
 
+        {/* Toxen2 Migration */}
+        <SidepanelSection advancedOnly key="migration" id="migration" title="Migration" icon={<i className="fas fa-exchange-alt"></i>}
+          dynamicContent={async section => {
+            return (
+              <>
+                <SidepanelSectionHeader>
+                  <h1>Migration</h1>
+                </SidepanelSectionHeader>
+                <div style={{ width: "100%", whiteSpace: "normal" }}>
+                  <h2>Import from Toxen2</h2>
+                  <Button txStyle="action" onClick={async () => {
+                    const playlists = await Legacy.getToxen2Playlists();
+
+                    if (playlists.length === 0) {
+                      Toxen.log("No playlists found in Toxen2", 2000);
+                      return;
+                    }
+                    Toxen.log("Found " + playlists.length + " playlists in Toxen2", 2000);
+
+                    playlists.forEach(async playlist => {
+                      const existingPlaylist = Toxen.playlists.find(p => p.name === playlist.name);
+                      if (existingPlaylist) {
+                        existingPlaylist.addSong(...playlist.songList);
+                      }
+                      else {
+                        Toxen.playlists.push(playlist);
+                      }
+                    });
+
+                    Playlist.save();
+                    Toxen.log("Migrated " + playlists.length + " playlists from Toxen2", 2000);
+                  }}>
+                    <i className="fas fa-sync-alt"></i>
+                    &nbsp;Migrate playlists from Toxen2
+                  </Button>
+                  <br />
+                  <br />
+                  <sup>
+                    This will migrate all playlists from Toxen2 to Toxen3 (This version).
+                  </sup>
+                </div>
+              </>
+            );
+          }}
+        />
+
         {/* No-icon panels. Doesn't appear as a clickable panel, instead only accessible by custom action */}
         {/* Edit song Panel */}
         <SidepanelSection key="editSong" id="editSong">
@@ -1174,6 +1221,7 @@ export default class ToxenAppRenderer extends React.Component {
 //#endregion
 
 
-// setTimeout(async () => {
-//   console.log(await Remote.compareLocalAndRemote());
-// }, 5000);
+setTimeout(async () => {
+  // console.log(await Remote.compareLocalAndRemote());
+  // console.log(await Legacy.getToxen2Playlists());
+}, 5000);

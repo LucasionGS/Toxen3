@@ -51,6 +51,7 @@ export default function LoginForm() {
         console.error(e);
       });
     }} saveButtonText="Login">
+      <h2>Toxen server credentials</h2>
       <FormInput name="username*string" displayName="Username" type="text" getValueTemplateCallback={template} />
       <FormInput name="password*string" displayName="Password" type="password" getValueTemplateCallback={template} />
     </Form>)
