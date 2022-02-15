@@ -96,7 +96,9 @@ export default class Playlist {
           let data = await fsp.readFile(Playlist.filePath, "utf8");
           let iPlaylists: IPlaylist[] = JSON.parse(data);
           let playlists: Playlist[] = iPlaylists.map(pl => Playlist.create(pl));
-          return playlists;
+          return playlists
+            // Sort that shit
+            .sort((a, b) => a.name.localeCompare(b.name));
         } catch (error) {
           Toxen.error("Unable to parse playlists file.\nPlaylists have been reset.");
           Playlist.save();

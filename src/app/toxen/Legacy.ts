@@ -2,7 +2,7 @@ import fs from "fs";
 import fsp from "fs/promises";
 import CrossPlatform from "./CrossPlatform";
 import Path from "path";
-import { ISong } from "./Song";
+import Song, { ISong } from "./Song";
 import { IStatistics } from "./Statistics";
 import Settings from "./Settings";
 import Playlist from "./Playlist";

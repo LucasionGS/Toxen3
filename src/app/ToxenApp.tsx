@@ -51,6 +51,9 @@ import { OptionValues } from "./components/Form/FormInputFields/FormInputSelect"
 import Remote from "./toxen/Remote";
 import AppBar from "./components/AppBar/AppBar";
 import Legacy from "./toxen/Legacy";
+import AdjustPanel from "./components/AdjustPanel/AdjustPanel";
+import TrimSongPanel from "./components/TrimSongPanel/TrimSongPanel";
+import { Tabs } from "@mantine/core";
 
 //#region Define variables used all over the ToxenApp process.
 /**
@@ -567,7 +570,8 @@ export default class ToxenAppRenderer extends React.Component {
         <i className="fas fa-bars"></i>
         <span className="song-panel-toggle-title">Menu</span>
       </div>
-      <Sidepanel sectionId="songPanel" // Default panel
+      <Sidepanel
+        sectionId="songPanel" // Default panel
         direction="right"
         show={false}
         ref={sidePanel => Toxen.sidePanel = sidePanel}
@@ -607,9 +611,8 @@ export default class ToxenAppRenderer extends React.Component {
         </SidepanelSection>
 
         {/* Playlist Management Panel */}
-        <SidepanelSection key="adjust" id="adjust" title="Adjust" icon={<i className="fas fa-sliders-h"></i>} disabled>
-          <h1>Audio Adjustments</h1>
-          <p>Audio adjustments are not yet implemented.</p>
+        <SidepanelSection key="adjust" id="adjust" title="Adjust" icon={<i className="fas fa-sliders-h"></i>} /*disabled*/>
+          <AdjustPanel />
         </SidepanelSection>
 
         {/* Import Panel */}
@@ -665,6 +668,9 @@ export default class ToxenAppRenderer extends React.Component {
             Toxen.updateSettings();
           }}>
             {/* General settings */}
+            {/* <Tabs>
+              
+            </Tabs> */}
             <h2>General</h2>
             {(() => {
               let ref = React.createRef<FormInput>();
@@ -713,7 +719,7 @@ export default class ToxenAppRenderer extends React.Component {
                   <br />
                   <sup>
                     Music Library to fetch songs from.<br />
-                    You can use the <code>Change Music Folder</code> button to select a directory or write it in directly. <br />
+                    {/* You can use the <code>Change Music Folder</code> button to select a directory or write it in directly. <br /> */}
                     {/* You can also insert a URL to a Toxen Streaming Server that you have an account on. Must begin with <code>http://</code> or <code>https://</code>. */}
                   </sup>
                 </>
@@ -1203,6 +1209,10 @@ export default class ToxenAppRenderer extends React.Component {
               }),
             ).popup();
           }}><i className="fas fa-file-export"></i>&nbsp;Export Subtitle File</button>
+        </SidepanelSection>
+
+        <SidepanelSection key="trimSong" id="trimSong">
+          <TrimSongPanel />
         </SidepanelSection>
 
         <SidepanelSection key="storyboardEditor" id="storyboardEditor">

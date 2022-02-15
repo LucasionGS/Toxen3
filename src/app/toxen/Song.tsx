@@ -2,7 +2,7 @@ import React from "react";
 import { resolve } from "path";
 import Settings, { VisualizerStyle } from "./Settings";
 import fsp from "fs/promises";
-import { Dir, Dirent } from "fs";
+import { Dir, Dirent, createReadStream, createWriteStream } from "fs";
 import { Toxen } from "../ToxenApp";
 import Path from "path";
 import SongElement from "../components/SongPanel/SongElement";
@@ -17,6 +17,9 @@ import SubtitleParser from "./SubtitleParser";
 //@ts-expect-error 
 import ToxenMax from "../../icons/skull_max.png";
 import ScreenRecorder from "./ScreenRecorder";
+import yazl from "yazl";
+import yauzl from "yauzl";
+import os from "os";
 // import ToxenInteractionMode from "./ToxenInteractionMode";
 
 export default class Song implements ISong {
@@ -35,7 +38,6 @@ export default class Song implements ISong {
   public year: number;
   public language: string;
   public subtitleDelay: number;
-
 
   private static history: Song[] = [];
   private static historyIndex = 0;
@@ -74,7 +76,7 @@ export default class Song implements ISong {
       return null;
     }
   }
-  
+
   /**
    * Return the full path of the song folder.
    */
@@ -802,6 +804,50 @@ export default class Song implements ISong {
     const mediaFile = this.mediaFile();
     if (!mediaFile) return false;
     return Toxen.getSupportedVideoFiles().includes(Path.extname(mediaFile).toLowerCase());
+  }
+
+  public static async export(...songs: Song[]) {
+    if (Settings.isRemote()) {
+      // TODO: Implement
+      Toxen.notify({
+        title: "Export not implemented",
+        content: "This feature is not yet implemented for remote users.",
+        expiresIn: 5000,
+        type: "error"
+      });
+      return;
+    }
+    
+    // Zip all songs into one file, in separate folders
+    const zip = new yazl.ZipFile();
+    const zipPathTmp = Path.resolve(os.tmpdir(), "toxen-export-" + Math.random().toString().substr(2) + ".zip");
+    // Pipe the zip file to the file system
+    const zipStream = createWriteStream(zipPathTmp);
+    zip.outputStream.pipe(zipStream);
+
+    for (const song of songs) {
+      const songPath = Path.resolve(song.dirname());
+      zip.addReadStream(createReadStream(songPath), Path.basename(song.uid || songPath));
+    }
+
+    zip.end();
+
+    // Wait for the zip file to be written
+    return await new Promise((resolve, reject) => {
+      zipStream.on("finish", resolve);
+      zipStream.on("error", reject);
+    })
+      .then(() => {
+        // Open the zip file in the user's default program
+        return open(zipPathTmp);
+      }).then(() => {
+        // Delete the zip file
+        return fsp.unlink(zipPathTmp);
+      }).catch(error => {
+        Toxen.error("Something went wrong writing the exported zip file.");
+        console.error(error);
+        return fsp.unlink(zipPathTmp);
+      });
   }
 }
 

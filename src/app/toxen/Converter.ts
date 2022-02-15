@@ -7,15 +7,6 @@ export default class Converter {
   }
 
   /**
-   * Adds padding 0's to the beginning of a number if needed.
-   */
-  public static padNumber(number: number, size: number) {
-    let s = String(number);
-    while (s.length < size) { s = "0" + s; }
-    return s;
-  }
-
-  /**
    * Trims the specified trailing characters or string from the start and end of the string.
    */
   public static trimChar(txt: string, toTrim: string) {

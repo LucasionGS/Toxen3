@@ -184,7 +184,7 @@ class PlaylistItem extends Component<PlaylistItemProps, PlaylistItemState> {
           <span hidden={pl != currentPlaylist}><i className={"playlist-select fas fa-check-circle"}></i></span>
           <span className={!pl ? "disabled-item" : ""} onClick={this.contextMenu.bind(this)}><i className={"playlist-select fas fa-ellipsis-h"}></i></span>
           <div className="playlist-item-title">
-            <h2>{pl?.name || "No playlist"}</h2>
+            <h3>{pl?.name || "No playlist"}</h3>
           </div>
         </div>
         <br />

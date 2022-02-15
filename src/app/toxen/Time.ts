@@ -60,7 +60,7 @@ export default class Time {
     let order = this.fromFormat(format ?? "hh?:mm:ss");
 
     let orderStrings = order.map((o) => {
-      return Converter.padNumber(o, 2);
+      return o.toString().padStart(2, "0");
     });
 
     return orderStrings.join(":");
@@ -70,7 +70,27 @@ export default class Time {
     return `${this.hours} hours, ${this.minutes} min, ${this.seconds} sec`;
   }
 
-  public fromFormat(format: string) {
+  private static splitSecondsAndMilliseconds(seconds: number) {
+    let ms = seconds * 1000;
+    let s = Math.floor(ms / 1000);
+    ms -= s * 1000;
+    return [s, ms];
+  }
+
+  public static fromTimestamp(timestamp: string) {
+    let time = new Time();
+    let parts = timestamp.split(":").reverse();
+    // Assume the timestamp is in the format `hh?:mm?:ss`
+    const [s, ms] = Time.splitSecondsAndMilliseconds(parseFloat(parts[0]));
+    time.addMilliseconds(ms || 0);
+    time.addSeconds(s || 0);
+    time.addMinutes(parseInt(parts[1]) || 0);
+    time.addHours(parseInt(parts[2]) || 0);
+    
+    return time;
+  }
+
+  public fromFormat(format: string = "hh?:mm:ss") {
     let order = format.toLowerCase().split(":");
     
     let optionalExpired = false;

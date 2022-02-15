@@ -7,13 +7,15 @@
       display: inline-block;
       transition: margin-left 0.2s ease-in-out;
       margin-left: 0.25em;
+
+      h3 {
+        margin: 0.2em 0;
+      }
     }
 
     &:hover {
       .playlist-item-title {
-        & {
-          margin-left: 0.40em;
-        }
+        margin-left: 0.40em;
       }
     }
     .playlist-select {
@@ -23,7 +25,7 @@
 
     span {
       margin: 0 0.25em;
-      transition: filter 0.2s ease-in-out;
+      transition: filter 0.1s ease-in-out;
       &:hover {
         filter:drop-shadow(0 0 0.5em #fff);
       }

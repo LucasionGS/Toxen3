@@ -15,6 +15,10 @@
   - Create playlist from current queue.
   - Multi-add to playlist.
 
+### Bugs
+- Fix background dim still being dimmed even at 0% opacity.
+- No easy way to delete a song from your library. (Physically delete it from the file system)
+
 ### Improvements from v2
 - Asynchronize loading of Songs, and overall use an async structure.
 

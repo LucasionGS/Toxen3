@@ -93,10 +93,14 @@
     "@electron-forge/publisher-github": "^6.0.0-beta.54",
     "@marshallofsound/webpack-asset-relocator-loader": "^0.5.0",
     "@types/discord-rpc": "^3.0.6",
+    "@types/electron": "^1.6.10",
+    "@types/fluent-ffmpeg": "^2.1.20",
     "@types/react": "^17.0.3",
     "@types/react-dom": "^17.0.3",
     "@types/react-select": "^4.0.14",
     "@types/showdown": "^1.9.4",
+    "@types/yauzl": "^2.9.2",
+    "@types/yazl": "^2.4.2",
     "@typescript-eslint/eslint-plugin": "^4.0.1",
     "@typescript-eslint/parser": "^4.0.1",
     "css-loader": "^4.2.1",
@@ -114,10 +118,14 @@
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^5.15.3",
+    "@mantine/core": "^3.6.7",
+    "@mantine/hooks": "^3.6.7",
+    "@mantine/modals": "^3.6.7",
     "@nodertc/dtls": "^0.6.0",
     "bootstrap": "^4.6.0",
     "discord-rpc": "^3.2.0",
     "electron-squirrel-startup": "^1.0.0",
+    "fluent-ffmpeg": "^2.1.2",
     "html-react-parser": "^1.2.8",
     "libflacjs": "^5.4.0",
     "react": "^17.0.2",
@@ -125,6 +133,8 @@
     "react-dom": "^17.0.2",
     "react-select": "^4.3.0",
     "showdown": "^1.9.1",
-    "update-electron-app": "^2.0.1"
+    "update-electron-app": "^2.0.1",
+    "yauzl": "^2.10.0",
+    "yazl": "^2.5.1"
   }
 }
