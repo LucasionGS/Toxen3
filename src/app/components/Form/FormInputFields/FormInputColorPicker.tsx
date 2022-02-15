@@ -6,6 +6,7 @@ interface Props {
   children?: React.ReactNode;
   onChange?: (value: string) => void;
   nullable?: boolean;
+  mouseRelease?: (value: string) => void;
 }
 
 export default function FormInputColorPicker(props: Props) {
@@ -23,7 +24,8 @@ export default function FormInputColorPicker(props: Props) {
         }} ref={ref => colorPicker = ref} type="color" onChange={e => {
           setValue(e.currentTarget.value);
           if (typeof props.onChange === "function") props.onChange(e.currentTarget.value);
-        }} />
+        }}
+        onMouseUp={(e) => props.mouseRelease(e.currentTarget.value)} />
       <input className="tx-form-field" style={{
         backgroundColor: value,
         color: rgbToGrayscale(hexToRgb(value)).r < 128 ? "#fff" : "#000",

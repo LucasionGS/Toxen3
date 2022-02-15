@@ -28,6 +28,7 @@ interface PropsTemplate<T extends string> {
   name: `${string}*${"string" | "boolean" | "number" | "array" | "list" | "select"}`;
   type: T;
   displayName?: string;
+  onChange?: (...value: any[]) => void;
   /**
    * If not defined, will use settings default value.
    */
@@ -60,9 +61,12 @@ interface PropsTypeSelectAsync extends PropsTemplate<"selectAsync"> {
   nullable?: boolean;
   onChange?: (value: string) => void;
 }
-interface PropsTypeList extends PropsTemplate<"list"> { }
+interface PropsTypeList extends PropsTemplate<"list"> {
+  onChange?: (value: string[]) => void;
+}
 interface PropsTypeColor extends PropsTemplate<"color"> {
   onChange?: (value: string) => void;
+  mouseRelease?: (value: string) => void;  
   nullable?: boolean;
 }
 
@@ -136,7 +140,7 @@ export default class FormInput extends React.Component<Props> {
           <>
             {label}
             <br />
-            <input ref={ref} className={"tx-form-field" + (this.props.readOnly ? " read-only" : "")} type={this.props.type} name={this.props.name} defaultValue={value} readOnly={this.props.readOnly} />
+            <input onInput={this.props.onChange} ref={ref} className={"tx-form-field" + (this.props.readOnly ? " read-only" : "")} type={this.props.type} name={this.props.name} defaultValue={value} readOnly={this.props.readOnly} />
             <br />
             <br />
           </>
@@ -148,7 +152,7 @@ export default class FormInput extends React.Component<Props> {
           <>
             {label}
             <br />
-            <input className={"tx-form-field" + (this.props.readOnly ? " read-only" : "")} type="number" name={this.props.name} defaultValue={value} readOnly={this.props.readOnly} max={this.props.max} min={this.props.min} />
+            <input onInput={this.props.onChange} className={"tx-form-field" + (this.props.readOnly ? " read-only" : "")} type="number" name={this.props.name} defaultValue={value} readOnly={this.props.readOnly} max={this.props.max} min={this.props.min} />
             <br />
             <br />
           </>
@@ -162,6 +166,7 @@ export default class FormInput extends React.Component<Props> {
             {label}
             <br />
             <input
+              onInput={this.props.onChange}
               placeholder="Click to select file"
               title="Click to select file"
               ref={ref} className="tx-form-field" type="text" readOnly name={this.props.name} defaultValue={value} onClick={
@@ -191,6 +196,7 @@ export default class FormInput extends React.Component<Props> {
             {label}
             <br />
             <input
+              onInput={this.props.onChange}
               placeholder="Click to select folder"
               title="Click to select folder"
               ref={ref} className="tx-form-field" type="text" readOnly name={this.props.name} defaultValue={value} onClick={
@@ -205,7 +211,7 @@ export default class FormInput extends React.Component<Props> {
       case "checkbox": {
         return (
           <>
-            <FormInputCheckbox name={this.props.name} defaultChecked={value} >
+            <FormInputCheckbox onChange={this.props.onChange} name={this.props.name} defaultChecked={value} >
               {label}
             </FormInputCheckbox>
             <br />
@@ -218,7 +224,10 @@ export default class FormInput extends React.Component<Props> {
         return (
           <>
             <Expandable showBorder={false} showArrow={false} expanded={value} ref={ref} title={
-              <FormInputCheckbox name={this.props.name} defaultChecked={value} onChange={(e, s) => ref.current.toggle(s)}>
+              <FormInputCheckbox name={this.props.name} defaultChecked={value} onChange={(e, s) => {
+                ref.current.toggle(s);
+                if (this.props.onChange) this.props.onChange(s.toString());
+              }}>
                 {label}
               </FormInputCheckbox>
             }
@@ -236,7 +245,7 @@ export default class FormInput extends React.Component<Props> {
           <>
             {label}
             <br />
-            <FormInputSelect name={this.props.name} defaultValue={value} >
+            <FormInputSelect onChange={this.props.onChange} name={this.props.name} defaultValue={value} >
               {this.props.children}
             </FormInputSelect>
             <br />
@@ -275,7 +284,6 @@ export default class FormInput extends React.Component<Props> {
             <br />
             <FormInputColorPicker nullable={this.props.nullable} onChange={this.props.onChange} name={this.props.name} defaultValue={value} />
             <br />
-            {/* <br /> */}
           </>
         )
       }

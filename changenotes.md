@@ -9,7 +9,18 @@ Minor changes:
 - Added something minor
 - Changed something minor
 -->
-<!-- ## Upcoming update / 1.0.19 -->
+<!-- ## Upcoming update / 1.0.21 -->
+## 1.0.20 - 2022/2/15
+Major changes:
+- Added tabs to settings
+- Settings now automatically save when changed.
+- Redesigned the color scheme for the base application, giving it a greener, more Toxen-like look.
+
+Minor changes:
+- Added a `Pause With Click` option under a new `Controls` tab.
+  - Toggling this off will disable pausing the application when the mouse is clicked on the background.
+- Created preparations for song trimming.
+
 ## 1.0.19 - 2021/11/16
 Major changes:
 - Changed how login works. Login can now be done even when not connected to a specific remote server, and will resolve to Toxen official server. Only users with a premium Toxen account can use a remote library.

@@ -95,6 +95,7 @@ export default class Settings {
       repeat: false,
       shuffle: false,
       visualizerRainbowMode: false,
+      pauseWithClick: true,
     };
 
     let toUse: Partial<ISettings> = {};
@@ -226,6 +227,9 @@ export interface ISettings {
   restoreWindowSize: boolean;
   windowWidth: number;
   windowHeight: number;
+
+  // Controls
+  pauseWithClick: boolean;
 
   // Visuals
   theme: string;

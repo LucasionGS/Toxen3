@@ -1,5 +1,5 @@
 @import "../../../root.scss";
-$sidePanelColor: #252525;
+$sidePanelColor: #1b1b1b;;
 
 :root {
   --sidebar-transition-in: width 0.5s cubic-bezier(0.98, -0.03, 0.67, 0.77),
@@ -30,6 +30,10 @@ body.inactive .sidepanel:not(.show) {
   opacity: 0.8;
   &:hover {
     opacity: 1;
+  }
+
+  * {
+    border-color: #b6ffba !important;
   }
 }
 

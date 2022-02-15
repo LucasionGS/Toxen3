@@ -5,6 +5,7 @@ interface FormInputListProps {
   name: string;
   defaultValue?: string | string[];
   children?: React.ReactNode;
+  onChange?: (value: string[]) => void;
 }
 
 interface FormInputListState {
@@ -51,6 +52,12 @@ export default class FormInputList extends Component<FormInputListProps, FormInp
     this.setState({
       value: list
     });
+  }
+
+  componentDidUpdate(prevProps: Readonly<FormInputListProps>, prevState: Readonly<FormInputListState>, snapshot?: any): void {
+    if (this.props.onChange && prevState.value !== this.state.value) {
+      this.props.onChange(this.state.value);
+    }
   }
 
   render() {

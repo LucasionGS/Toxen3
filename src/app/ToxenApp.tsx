@@ -53,7 +53,7 @@ import AppBar from "./components/AppBar/AppBar";
 import Legacy from "./toxen/Legacy";
 import AdjustPanel from "./components/AdjustPanel/AdjustPanel";
 import TrimSongPanel from "./components/TrimSongPanel/TrimSongPanel";
-import { Tabs } from "@mantine/core";
+import { Tab, Tabs } from "@mantine/core";
 
 //#region Define variables used all over the ToxenApp process.
 /**
@@ -280,6 +280,17 @@ export class Toxen {
   // Forms
   public static settingsForm: Form;
   public static editSongForm: Form;
+
+  public static saveSettings() {
+    setTimeout(() => {
+      try {
+        Toxen.settingsForm.submit();
+        Toxen.updateSettings();
+      } catch (error) {
+
+      }
+    }, 100);
+  }
 
   /**
    * Applies the current GUI settings to the GUI.
@@ -611,7 +622,7 @@ export default class ToxenAppRenderer extends React.Component {
         </SidepanelSection>
 
         {/* Playlist Management Panel */}
-        <SidepanelSection key="adjust" id="adjust" title="Adjust" icon={<i className="fas fa-sliders-h"></i>} /*disabled*/>
+        <SidepanelSection key="adjust" id="adjust" title="Adjust" icon={<i className="fas fa-sliders-h"></i>} disabled>
           <AdjustPanel />
         </SidepanelSection>
 
@@ -649,14 +660,13 @@ export default class ToxenAppRenderer extends React.Component {
 
         {/* Keep settings tab at the bottom */}
         <SidepanelSection key="settings" id="settings" title="Settings" icon={<i className="fas fa-cog"></i>} separator>
-          <SidepanelSectionHeader>
-            <h1>Settings</h1>
-            <button className="tx-btn tx-btn-action" onClick={() => { Toxen.settingsForm.submit(); Toxen.reloadSection() }}>
+          <h1>Settings</h1>
+          {/* <SidepanelSectionHeader>
+            <button className="tx-btn tx-btn-action" onClick={() => { Toxen.saveSettings(); }}>
               <i className="fas fa-save"></i>
               &nbsp;Save settings
             </button>
-          </SidepanelSectionHeader>
-          <LoginForm />
+          </SidepanelSectionHeader> */}
           <Form hideSubmit ref={ref => Toxen.settingsForm = ref} saveButtonText="Save settings" onSubmit={(_, params) => {
 
             console.log(params);
@@ -664,215 +674,227 @@ export default class ToxenAppRenderer extends React.Component {
             // if (params.isRemote === "true") params.isRemote = true;
             // else params.isRemote = false;
             Settings.apply(params);
-            Settings.save();
+            Settings.save({
+              suppressNotification: true
+            });
             Toxen.updateSettings();
           }}>
-            {/* General settings */}
-            {/* <Tabs>
-              
-            </Tabs> */}
-            <h2>General</h2>
-            {(() => {
-              let ref = React.createRef<FormInput>();
-              return (
-                <>
-                  {/* <FormInput ref={ref} type="text" name="libraryDirectory*string" displayName="Music Library" /> */}
-                  <FormInput ref={ref} type="selectAsync" name="isRemote*boolean" displayName="Music Library" values={async () => {
-                    const data: OptionValues = [
-                      [Settings.get("libraryDirectory"), "false"],
-                      Settings.getUser()?.premium ? ["Remote Library", "true"] : null
-                    ].filter(x => x) as OptionValues;
+            <Tabs variant="default">
+              <Tabs.Tab title="General" label="General">
+                <h2>General</h2>
+                {(() => {
+                  let ref = React.createRef<FormInput>();
+                  return (
+                    <>
+                      {/* <FormInput ref={ref} type="text" name="libraryDirectory*string" displayName="Music Library" /> */}
+                      <FormInput onChange={() => Toxen.saveSettings()} ref={ref} type="selectAsync" name="isRemote*boolean" displayName="Music Library" values={async () => {
+                        const data: OptionValues = [
+                          [Settings.get("libraryDirectory"), "false"],
+                          Settings.getUser()?.premium ? ["Remote Library", "true"] : null
+                        ].filter(x => x) as OptionValues;
 
-                    return data;
-                    // .filter(x => x) as [string, string?][];
-                  }}
-                  />
-                  <button className="tx-btn tx-btn-action"
-                    onClick={
-                      (e) => {
-                        e.preventDefault();
-                        let value = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
-                          properties: [
-                            'openDirectory'
-                          ]
-                        });
+                        return data;
+                        // .filter(x => x) as [string, string?][];
+                      }}
+                      />
+                      <button className="tx-btn tx-btn-action"
+                        onClick={
+                          (e) => {
+                            e.preventDefault();
+                            let value = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
+                              properties: [
+                                'openDirectory'
+                              ]
+                            });
 
-                        if (!value || value.length == 0) return;
+                            if (!value || value.length == 0) return;
 
-                        Settings.set("libraryDirectory", value[0]);
-                        Settings.save({
-                          suppressNotification: true
-                        }).then(() => {
-                          Toxen.sidePanel.reloadSection();
-                          Toxen.loadSongs();
-                        });
-                      }
-                    }>
-                    <i className="fas fa-folder"></i>
-                    &nbsp;Change Music Folder
-                  </button>
-                  <button className="tx-btn tx-btn-action" onClick={() => remote.shell.openPath(Settings.get("libraryDirectory"))}>
-                    <i className="fas fa-folder-open"></i>
-                    &nbsp;Open Music Folder
-                  </button>
-                  <br />
-                  <br />
-                  <sup>
-                    Music Library to fetch songs from.<br />
-                    {/* You can use the <code>Change Music Folder</code> button to select a directory or write it in directly. <br /> */}
-                    {/* You can also insert a URL to a Toxen Streaming Server that you have an account on. Must begin with <code>http://</code> or <code>https://</code>. */}
-                  </sup>
-                </>
-              );
-            })()}
+                            Settings.set("libraryDirectory", value[0]);
+                            Settings.save({
+                              suppressNotification: true
+                            }).then(() => {
+                              Toxen.sidePanel.reloadSection();
+                              Toxen.loadSongs();
+                            });
+                          }
+                        }>
+                        <i className="fas fa-folder"></i>
+                        &nbsp;Change Music Folder
+                      </button>
+                      <button className="tx-btn tx-btn-action" onClick={() => remote.shell.openPath(Settings.get("libraryDirectory"))}>
+                        <i className="fas fa-folder-open"></i>
+                        &nbsp;Open Music Folder
+                      </button>
+                      <br />
+                      <br />
+                      <sup>
+                        Music Library to fetch songs from.<br />
+                        {/* You can use the <code>Change Music Folder</code> button to select a directory or write it in directly. <br /> */}
+                        {/* You can also insert a URL to a Toxen Streaming Server that you have an account on. Must begin with <code>http://</code> or <code>https://</code>. */}
+                      </sup>
+                    </>
+                  );
+                })()}
+              </Tabs.Tab>
 
-            {/* Sidepanel settings */}
-            <hr />
-            <h2>Sidepanel</h2>
-            <FormInput type="checkbox" name="panelVerticalTransition*boolean" displayName="Vertical Transition" />
-            <sup>Makes the Sidepanel appear from the bottom instead of the side.</sup>
+              <Tabs.Tab title="Sidepanel" label="Sidepanel">
+                <h2>Sidepanel</h2>
+                <FormInput onChange={() => Toxen.saveSettings()} type="checkbox" name="panelVerticalTransition*boolean" displayName="Vertical Transition" />
+                <sup>Makes the Sidepanel appear from the bottom instead of the side.</sup>
 
-            <FormInput type="checkbox" name="exposePanelIcons*boolean" displayName="Expose Panel Icons" />
-            <sup>Exposes the icons when the panel is hidden. Only applies when Vertical Transition is off.</sup>
+                <FormInput onChange={() => Toxen.saveSettings()} type="checkbox" name="exposePanelIcons*boolean" displayName="Expose Panel Icons" />
+                <sup>Exposes the icons when the panel is hidden. Only applies when Vertical Transition is off.</sup>
 
-            <FormInput type="select" name="panelDirection*string" displayName="Panel Direction" >
-              <option className="tx-form-field" value="left">Left</option>
-              <option className="tx-form-field" value="right">Right</option>
-            </FormInput>
-            <br />
-            <sup>Choose which side the sidepanel should appear on.</sup>
+                <FormInput onChange={() => Toxen.saveSettings()} type="select" name="panelDirection*string" displayName="Panel Direction" >
+                  <option className="tx-form-field" value="left">Left</option>
+                  <option className="tx-form-field" value="right">Right</option>
+                </FormInput>
+                <br />
+                <sup>Choose which side the sidepanel should appear on.</sup>
+              </Tabs.Tab>
 
-            {/* Window settings */}
-            <hr />
-            <h2>Window</h2>
-            <FormInput type="checkbox" name="restoreWindowSize*boolean" displayName="Restore Window Size On Startup" />
-            <sup>Saves and restores the window size from last session.</sup>
+              <Tabs.Tab title="Controls" label="Controls">
+                <h2>Controls</h2>
+                <FormInput onChange={() => Toxen.saveSettings()} type="checkbox" name="pauseWithClick*boolean" displayName="Pause With Click" />
+                <sup>Pauses/Plays the song when you click on the background.</sup>
+              </Tabs.Tab>
 
-            {/* Visuals settings */}
-            <hr />
-            <h2>Visuals</h2>
+              <Tabs.Tab title="Window" label="Window">
+                <h2>Window</h2>
+                <FormInput onChange={() => Toxen.saveSettings()} type="checkbox" name="restoreWindowSize*boolean" displayName="Restore Window Size On Startup" />
+                <sup>Saves and restores the window size from last session.</sup>
+              </Tabs.Tab>
 
-            {/* Edit theme button */}
-            {
-              (() => {
-                const btn = React.createRef<Button & HTMLButtonElement>();
-                return (
-                  <>
-                    <FormInput type="selectAsync" name="theme*string" displayName="Theme" onChange={(value) => {
-                      Toxen.setThemeByName(value);
-                      btn?.current.forceUpdate();
-                    }}
-                      values={(async () => {
-                        return [
-                          ["<Default>", ""],
-                          ...Toxen.themes.map(t => [t.getDisplayName(), t.name] as [string, string])
-                        ];
-                      })} >
-                    </FormInput>
-                    <sup>Select the theme you want to use.</sup>
-                    <Button disabled ref={btn} txDisabled={() => !Toxen.theme || true /* Due to edit theme not being finished */} txStyle="action" onClick={() => {
-                      Toxen.setMode("ThemeEditor");
-                    }}><i className="fas fa-paint-brush"></i>&nbsp;Edit Theme</Button>
-                    <br />
-                    <Button txStyle="action" onClick={(e) => {
-                      e.preventDefault();
-                      Toxen.loadThemes();
-                    }}><i className="fas fa-paint-brush"></i>&nbsp;Reload Theme</Button>
-                  </>
-                )
-              })()
-            }
+              <Tabs.Tab title="Visuals" label="Visuals">
+                <h2>Visuals</h2>
 
-            <br />
-            <br />
-            {(() => {
-              let ref = React.createRef<FormInput>();
-              return (
-                <>
-                  <FormInput ref={ref} type="text" name="defaultBackground*string" displayName="Default Background" />
-                  <button className="tx-btn tx-btn-action" onClick={() => ref.current.openFile()}>
-                    <i className="fas fa-folder"></i>
-                    &nbsp;Change default background
-                  </button>
-                  <br />
-                  <br />
-                  <sup>
-                    Set a default background which will apply for songs without one. <br />
-                    Click the button <code>Change default background</code> to open a select prompt.
-                    You can also set a background for a specific song by clicking the song in the song list. <br />
-                  </sup>
-                  <br />
-                </>
-              );
-            })()}
-
-            <FormInput displayName="Base Background Dim" name="backgroundDim*number" type="number" min={0} max={100} />
-            <sup>
-              Set the base background dim level between <code>0-100</code>. <br />
-              This is how dark the background will appear. Can be dynamically changed by having <code>Dynamic Lighting</code> enabled.
-            </sup>
-            <br />
-
-            <FormInput nullable displayName="Visualizer Color" name="visualizerColor*string" type="color"
-            // onChange={v => Toxen.setAllVisualColors(v)}
-            />
-            <sup>Default color for the visualizer if a song specific isn't set.</sup>
-            <br />
-
-            <FormInput type="checkbox" name="visualizerRainbowMode*boolean" displayName="Rainbow Mode" />
-            <sup>
-              Override the visualizer color to show a colorful rainbow visualizer.
-              <br />
-              <code>⚠ Flashing colors ⚠</code>
-            </sup>
-            <br />
-
-            <FormInput type="checkbox" name="backgroundDynamicLighting*boolean" displayName="Dynamic Lighting" />
-            <sup>
-              Enables dynamic lighting in on the background image on songs.
-              <br />
-              <code>⚠ Flashing colors ⚠</code>
-            </sup>
-            <br />
-
-            <FormInput type="select" name="visualizerStyle*string" displayName="Visualizer Style" >
-              {(() => {
-                let objs: JSX.Element[] = [];
-                for (const key in VisualizerStyle) {
-                  if (Object.prototype.hasOwnProperty.call(VisualizerStyle, key)) {
-                    const v = (VisualizerStyle as any)[key];
-                    objs.push(<option key={key} className="tx-form-field" value={v}>{Converter.camelCaseToSpacing(key)}</option>)
-                  }
+                {/* Edit theme button */}
+                {
+                  (() => {
+                    const btn = React.createRef<Button & HTMLButtonElement>();
+                    return (
+                      <>
+                        <FormInput type="selectAsync" name="theme*string" displayName="Theme" onChange={(value) => {
+                          Toxen.setThemeByName(value);
+                          btn?.current.forceUpdate();
+                        }}
+                          values={(async () => {
+                            return [
+                              ["<Default>", ""],
+                              ...Toxen.themes.map(t => [t.getDisplayName(), t.name] as [string, string])
+                            ];
+                          })} >
+                        </FormInput>
+                        <sup>Select the theme you want to use.</sup>
+                        <Button disabled ref={btn} txDisabled={() => !Toxen.theme || true /* Due to edit theme not being finished */} txStyle="action" onClick={() => {
+                          Toxen.setMode("ThemeEditor");
+                        }}><i className="fas fa-paint-brush"></i>&nbsp;Edit Theme</Button>
+                        <br />
+                        <Button txStyle="action" onClick={(e) => {
+                          e.preventDefault();
+                          Toxen.loadThemes();
+                        }}><i className="fas fa-paint-brush"></i>&nbsp;Reload Theme</Button>
+                      </>
+                    )
+                  })()
                 }
-                return objs;
-              })()}
-            </FormInput>
-            <br />
-            <sup>Select which style for the visualizer to use.</sup>
-            <br />
 
-            <hr />
-            {/* Anything below here should be advanced settings only */}
-            <h2>Advanced settings</h2>
-            <sup>
-              Enables the viewing of advanced settings and UI elements. This will display a few more buttons around in Toxen,
-              along with more technical settings that users usually don't have to worry about.
-            </sup>
-            <FormInput type="expandCheckbox" name="showAdvancedSettings*boolean" displayName="Show Advanced UI">
-              {/* <div className="advanced-only"> */}
-              <h3>Discord Integration</h3>
-              <FormInput type="checkbox" name="discordPresence*boolean" displayName="Discord Presence" />
-              <sup>
-                Enables Discord presence integration. It will show you are using Toxen in your status.
-              </sup>
-              <br />
+                <br />
+                <br />
+                {(() => {
+                  let ref = React.createRef<FormInput>();
+                  return (
+                    <>
+                      <FormInput onChange={() => Toxen.saveSettings()} ref={ref} type="text" name="defaultBackground*string" displayName="Default Background" />
+                      <button className="tx-btn tx-btn-action" onClick={() => ref.current.openFile()}>
+                        <i className="fas fa-folder"></i>
+                        &nbsp;Change default background
+                      </button>
+                      <br />
+                      <br />
+                      <sup>
+                        Set a default background which will apply for songs without one. <br />
+                        Click the button <code>Change default background</code> to open a select prompt.
+                        You can also set a background for a specific song by clicking the song in the song list. <br />
+                      </sup>
+                      <br />
+                    </>
+                  );
+                })()}
 
-              <FormInput type="checkbox" name="discordPresenceDetailed*boolean" displayName="Discord Presence: Show details" />
-              <sup>
-                Enables a detailed activity status in Discord presence. It'll show what song you are listening to, and how far into it you are.
-              </sup>
-              <br />
-            </FormInput>
+                <FormInput onChange={() => Toxen.saveSettings()} displayName="Base Background Dim" name="backgroundDim*number" type="number" min={0} max={100} />
+                <sup>
+                  Set the base background dim level between <code>0-100</code>. <br />
+                  This is how dark the background will appear. Can be dynamically changed by having <code>Dynamic Lighting</code> enabled.
+                </sup>
+                <br />
+
+                <FormInput nullable mouseRelease={() => Toxen.saveSettings()} displayName="Visualizer Color" name="visualizerColor*string" type="color"
+                // onChange={v => Toxen.setAllVisualColors(v)}
+                />
+                <sup>Default color for the visualizer if a song specific isn't set.</sup>
+                <br />
+
+                <FormInput onChange={() => Toxen.saveSettings()} type="checkbox" name="visualizerRainbowMode*boolean" displayName="Rainbow Mode" />
+                <sup>
+                  Override the visualizer color to show a colorful rainbow visualizer.
+                  <br />
+                  <code>⚠ Flashing colors ⚠</code>
+                </sup>
+                <br />
+
+                <FormInput onChange={() => Toxen.saveSettings()} type="checkbox" name="backgroundDynamicLighting*boolean" displayName="Dynamic Lighting" />
+                <sup>
+                  Enables dynamic lighting in on the background image on songs.
+                  <br />
+                  <code>⚠ Flashing colors ⚠</code>
+                </sup>
+                <br />
+
+                <FormInput onChange={() => Toxen.saveSettings()} type="select" name="visualizerStyle*string" displayName="Visualizer Style" >
+                  {(() => {
+                    let objs: JSX.Element[] = [];
+                    for (const key in VisualizerStyle) {
+                      if (Object.prototype.hasOwnProperty.call(VisualizerStyle, key)) {
+                        const v = (VisualizerStyle as any)[key];
+                        objs.push(<option key={key} className="tx-form-field" value={v}>{Converter.camelCaseToSpacing(key)}</option>)
+                      }
+                    }
+                    return objs;
+                  })()}
+                </FormInput>
+                <br />
+                <sup>Select which style for the visualizer to use.</sup>
+                <br />
+              </Tabs.Tab>
+
+              <Tabs.Tab title="Account" label="Account">
+                <LoginForm />
+              </Tabs.Tab>
+
+              <Tabs.Tab title="Advanced" label="Advanced">
+                <h2>Advanced settings</h2>
+                <sup>
+                  Enables the viewing of advanced settings and UI elements. This will display a few more buttons around in Toxen,
+                  along with more technical settings that users usually don't have to worry about.
+                </sup>
+                <FormInput onChange={() => Toxen.saveSettings()} type="expandCheckbox" name="showAdvancedSettings*boolean" displayName="Show Advanced UI">
+                  {/* <div className="advanced-only"> */}
+                  <h3>Discord Integration</h3>
+                  <FormInput onChange={() => Toxen.saveSettings()} type="checkbox" name="discordPresence*boolean" displayName="Discord Presence" />
+                  <sup>
+                    Enables Discord presence integration. It will show you are using Toxen in your status.
+                  </sup>
+                  <br />
+
+                  <FormInput onChange={() => Toxen.saveSettings()} type="checkbox" name="discordPresenceDetailed*boolean" displayName="Discord Presence: Show details" />
+                  <sup>
+                    Enables a detailed activity status in Discord presence. It'll show what song you are listening to, and how far into it you are.
+                  </sup>
+                  <br />
+                </FormInput>
+              </Tabs.Tab>
+            </Tabs>
           </Form>
         </SidepanelSection>
 
