@@ -679,7 +679,7 @@ export default class ToxenAppRenderer extends React.Component {
             });
             Toxen.updateSettings();
           }}>
-            <Tabs variant="default">
+            <Tabs>
               <Tabs.Tab title="General" label="General">
                 <h2>General</h2>
                 {(() => {

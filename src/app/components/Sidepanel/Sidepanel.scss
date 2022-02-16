@@ -1,5 +1,5 @@
 @import "../../../root.scss";
-$sidePanelColor: #1b1b1b;;
+$sidePanelColor: #1b1b1b;
 
 :root {
   --sidebar-transition-in: width 0.5s cubic-bezier(0.98, -0.03, 0.67, 0.77),
@@ -32,8 +32,9 @@ body.inactive .sidepanel:not(.show) {
     opacity: 1;
   }
 
+  border-color: #b6ffba;
   * {
-    border-color: #b6ffba !important;
+    border-color: #b6ffba;
   }
 }
 
@@ -94,6 +95,7 @@ body.inactive .sidepanel:not(.show) {
   padding: 16px;
   border-left: white 1px solid;
   border-right: white 1px solid;
+  border-color: #b6ffba;
   // width: var(--panel-icons-width);
   user-select: none;
   overflow-y: auto;
