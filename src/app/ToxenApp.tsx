@@ -24,12 +24,10 @@ import SidepanelSectionHeader from "./components/Sidepanel/SidepanelSectionHeade
 import SearchField from "./components/SongPanel/SearchField";
 import Converter from "./toxen/Converter";
 import Stats from "./toxen/Statistics";
-import Time from "./toxen/Time";
 import StoryboardEditorPanel from "./components/StoryboardEditorPanel/StoryboardEditorPanel";
 import { Dirent } from "fs";
-import User from "./toxen/User";
 import LoginForm from "./components/LoginForm/LoginForm";
-import { MessageCardOptions, MessageCards } from "./components/MessageCard/MessageCards";
+import { MessageCardOptions } from "./components/MessageCard/MessageCards";
 import ExternalUrl from "./components/ExternalUrl/ExternalUrl";
 import showdown from "showdown";
 import htmlToReactParser, { Element, Text } from "html-react-parser";
@@ -42,18 +40,16 @@ import Playlist from "./toxen/Playlist";
 import PlaylistPanel from "./components/PlaylistPanel/PlaylistPanel";
 import Button from "./components/Button/Button";
 import Discord from "./toxen/Discord";
-import Hue from "./toxen/philipshue/Hue";
 import ThemeContainer from "./components/ThemeContainer/ThemeContainer";
 import ThemeEditorPanel from "./components/ThemeEditorPanel/ThemeEditorPanel";
-import Expandable from "./components/Expandable/Expandable";
 import Theme from "./toxen/Theme";
 import { OptionValues } from "./components/Form/FormInputFields/FormInputSelect";
-import Remote from "./toxen/Remote";
 import AppBar from "./components/AppBar/AppBar";
 import Legacy from "./toxen/Legacy";
 import AdjustPanel from "./components/AdjustPanel/AdjustPanel";
 import TrimSongPanel from "./components/TrimSongPanel/TrimSongPanel";
-import { Tab, Tabs } from "@mantine/core";
+import { Tabs } from "@mantine/core";
+import { showNotification } from "@mantine/notifications";
 
 //#region Define variables used all over the ToxenApp process.
 /**
@@ -250,9 +246,10 @@ export class Toxen {
     ];
   }
 
-  public static showCurrentSong() {
+  public static async showCurrentSong() {
+    if (!Toxen.sidePanel.isShowing()) await Toxen.sidePanel.show(true);
+    if (Toxen.sidePanel.state.sectionId !== "songPanel") await Toxen.sidePanel.setSectionId("songPanel");
     let song = Song.getCurrent();
-
     if (song) song.scrollTo();
   }
 
@@ -264,7 +261,6 @@ export class Toxen {
   public static musicPlayer: MusicPlayer;
   public static musicControls: MusicControls;
   public static subtitles: Subtitles;
-  public static messageCards: MessageCards;
   public static themeContainer: ThemeContainer;
   public static updateSongPanels() {
     Toxen.songQueuePanel.update();
@@ -274,7 +270,14 @@ export class Toxen {
    * Send a message to the Toxen message cards.
    */
   public static notify(notification: Omit<Omit<MessageCardOptions, "createdAt">, "uniqueId">) {
-    this.messageCards.addMessage(notification);
+    // this.messageCards.addMessage(notification);
+    showNotification({
+      message: notification.content,
+      disallowClose: notification.disableClose ?? false,
+      autoClose: notification.expiresIn ?? false,
+      title: notification.title,
+      color: notification.type == "error" ? "red" : notification.type == "warning" ? "yellow" : "green",
+    });
   }
 
   // Forms
@@ -1246,7 +1249,7 @@ export default class ToxenAppRenderer extends React.Component {
         </SidepanelSection>
 
       </Sidepanel>
-      <MessageCards ref={ref => Toxen.messageCards = ref} />
+      {/* <MessageCards ref={ref => Toxen.messageCards = ref} /> */}
     </div>
   )
 }

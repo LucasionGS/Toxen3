@@ -114,11 +114,11 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
           return;
         }
         if (curSong && nextSong.uid === curSong.uid) {
-          Toxen.messageCards.addMessage({
+          Toxen.notify({
             content: "No more songs available.",
             type: "error",
             expiresIn: 3000
-          });
+          })
           Toxen.error("No more songs available.");
           return;
         }

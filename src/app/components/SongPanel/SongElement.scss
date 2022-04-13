@@ -1,3 +1,20 @@
+.song-element-container {
+  .song-element-context-menu-button {
+    display: none;
+  }
+  
+  &:hover {
+    .song-element-context-menu-button {
+      display: initial;
+    }
+
+    .song-element {
+      .song-title {
+        padding-left: 32px;
+      }
+    }
+  }
+}
 .song-element {
   width: 90%;
   border: solid 1px;
@@ -12,6 +29,14 @@
     overflow: hidden;
     text-overflow: ellipsis;
     padding-left: 8px;
+
+    transition: padding-left 0.1s ease-in-out;
+  }
+
+  &:hover {
+    .song-title {
+      padding-left: 32px;
+    }
   }
 
   &.selected {
@@ -32,8 +57,7 @@
     border-width: 10px;
     border-radius: 5px;
   }
-  
-  
+
   &:hover {
     width: 100%;
     border-top-right-radius: 10px;

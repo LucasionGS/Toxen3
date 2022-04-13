@@ -62,9 +62,8 @@ export default class Background extends Component<BackgroundProps, BackgroundSta
         onDoubleClick={() => {
           Toxen.toggleFullscreen();
         }}
-        onContextMenu={() => {
-          let cur = Song.getCurrent();
-          if (cur) cur.contextMenu();
+        onContextMenu={async () => {
+          Toxen.showCurrentSong();
         }}
         // Background will also act as a dropzone
         onDrop={e => {

@@ -66,12 +66,12 @@ export default class Discord {
     while (true) {
       if (attemptCount > 30) {
         if (this.totalFails == 5) {
-          Toxen.error("Discord Presence disabled due to too many failed attempts.\nRestart Toxen to try again.", 10000);
+          // Toxen.error("Discord Presence disabled due to too many failed attempts.\nRestart Toxen to try again.", 10000);
           return;
         }
 
         if (this.totalFails < 5) {
-          Toxen.error("Failed to set presence", 2000);
+          // Toxen.error("Failed to set presence", 2000);
           this.totalFails++;
         }
 
@@ -90,7 +90,7 @@ export default class Discord {
       let options: Presence = {
         details: `${song?.isVideo() ? "Watching a video" : "Listening to a song"}`,
         largeImageKey: "toxen",
-        largeImageText: remote.app.isPackaged ? "Toxen3 " + remote.app.getVersion() : "Toxen3 " + remote.app.getVersion() + " | Developer Mode",
+        largeImageText: remote.app.isPackaged ? "Toxen " + remote.app.getVersion() : "Toxen " + remote.app.getVersion() + " | Developer Mode",
       };
       if (Settings.get("discordPresenceDetailed") && song) {
         // options["startTimestamp"] = Date.now(); // For Time left

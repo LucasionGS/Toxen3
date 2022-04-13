@@ -10,15 +10,16 @@ body {
   height: var(--bodyHeight);
   padding: 0;
   background-color: $bgColor;
+  color: white;
 }
 
 body[fullscreen] {
   --bodyHeight: 100vh;
 }
 
-* {
-  color: white;
-}
+// * {
+//   color: white;
+// }
 
 body.inactive *.hide-on-inactive {
   opacity: 0 !important;

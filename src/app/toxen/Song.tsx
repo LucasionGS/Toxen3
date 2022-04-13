@@ -20,6 +20,9 @@ import ScreenRecorder from "./ScreenRecorder";
 import yazl from "yazl";
 import yauzl from "yauzl";
 import os from "os";
+import { useModals } from "@mantine/modals";
+import { ModalsContextProps } from "@mantine/modals/lib/context";
+import { Menu } from "@mantine/core";
 // import ToxenInteractionMode from "./ToxenInteractionMode";
 
 export default class Song implements ISong {
@@ -415,9 +418,9 @@ export default class Song implements ISong {
   }
 
   public addToQueue() {
-    Toxen.songQueue.push(this);
-    this.inQueue = true;
+    if (!Toxen.songQueue.includes(this)) Toxen.songQueue.push(this);
     // if (this.isPlaying()) this._isPlaying = false;
+    this.inQueue = true;
     this.selected = false;
     Toxen.songQueuePanel.update();
     Toxen.songPanel.update();
@@ -436,149 +439,319 @@ export default class Song implements ISong {
 
   public inQueue: boolean = false;
 
-  public contextMenu(opts?: {
-    noQueueOption?: boolean
+  public ContextMenu(props?: {
+    noQueueOption?: boolean,
+    cref?: React.RefObject<HTMLDivElement>,
+    isSelected?: boolean,
   }) {
-    opts ?? (opts = {});
+    props ?? (props = {});
     const selectedSongs = Song.getSelected();
-    // Single song context menu
-    if (!this.selected) {
-      const singleMenu: Electron.MenuItemConstructorOptions[] = [
-        {
-          label: this.getDisplayName(),
-          enabled: false
-        },
-        {
-          label: "Edit info",
-          click: () => {
+    
+    const modals = useModals();
+    
+    let isSelected = props.isSelected ?? this.selected ?? false;
+    
+    if (!isSelected) {
+      // Single song context menu
+      //   const singleMenu: Electron.MenuItemConstructorOptions[] = [
+      //     {
+      //       label: this.getDisplayName(),
+      //       enabled: false
+      //     },
+      //     {
+      //       label: "Edit info",
+      //       click: () => {
+      //         if (Toxen.isMode("ThemeEditor")) return Toxen.sendError("CURRENTLY_EDITING_THEME");
+      //         if (!Toxen.isMode("Player")) return Toxen.sendError("CURRENTLY_EDITING_SONG");
+      //         Toxen.editSong(this);
+      //       }
+      //     },
+      //     !opts.noQueueOption ? (this.inQueue ? {
+      //       label: "Remove from queue",
+      //       click: () => this.removeFromQueue()
+      //     } : {
+      //       label: "Add to queue",
+      //       click: () => this.addToQueue()
+      //     }) : undefined,
+      //     {
+      //       label: "Add to playlist",
+      //       submenu: Toxen.playlists ? Toxen.playlists.map(p => ({
+      //         label: p.name,
+      //         click: () => {
+      //           p.addSong(this);
+      //         },
+      //         visible: !p.songList.find(s => s.uid === this.uid)
+      //       })) : []
+      //     },
+      //     {
+      //       label: "Remove from playlist",
+      //       submenu: Toxen.playlists ? Toxen.playlists.map(p => ({
+      //         label: p.name,
+      //         click: () => {
+      //           p.removeSong(this);
+      //         },
+      //         visible: !!p.songList.find(s => s.uid === this.uid)
+      //       })) : []
+      //     },
+      //     {
+      //       label: "Show song in list",
+      //       click: async () => {
+      //         if (Toxen.isMode("ThemeEditor")) return Toxen.sendError("CURRENTLY_EDITING_THEME");
+      //         if (!Toxen.isMode("Player")) return Toxen.sendError("CURRENTLY_EDITING_SONG");
+      //         await Toxen.sidePanel.show(true);
+      //         await Toxen.sidePanel.setSectionId("songPanel");
+      //         this.scrollTo();
+      //       }
+      //     },
+      //     Settings.isAdvanced<Electron.MenuItemConstructorOptions>({
+      //       label: "Extra options",
+      //       submenu: [
+      //         {
+      //           label: "Copy UID",
+      //           click: () => this.copyUID()
+      //         },
+      //         {
+      //           label: "Open in file explorer",
+      //           click: () => {
+      //             remote.shell.openPath(this.dirname());
+      //           },
+      //           enabled: !Settings.isRemote(),
+      //         },
+      //         {
+      //           label: "Record (Experimental)",
+      //           click: () => {
+      //             const recorder = new ScreenRecorder();
+      //             recorder.startRecording();
+      //           }
+      //         },
+      //       ]
+      //     }),
+      //     {
+      //       type: "separator"
+      //     },
+      //     {
+      //       label: "Toxen",
+      //       enabled: false
+      //     },
+      //     {
+      //       label: "Toggle fullscreen",
+      //       click: () => {
+      //         Toxen.toggleFullscreen();
+      //       }
+      //     }
+      //   ].filter(a => a) as Electron.MenuItemConstructorOptions[];
+      //   remote.Menu.buildFromTemplate(singleMenu).popup();
+
+      return (
+        <Menu ref={props.cref} className="song-context-menu">
+          <Menu.Item disabled={true}>
+            {this.getDisplayName()}
+          </Menu.Item>
+          <Menu.Item icon={<i className="fas fa-edit"></i>} onClick={() => {
             if (Toxen.isMode("ThemeEditor")) return Toxen.sendError("CURRENTLY_EDITING_THEME");
             if (!Toxen.isMode("Player")) return Toxen.sendError("CURRENTLY_EDITING_SONG");
             Toxen.editSong(this);
-          }
-        },
-        !opts.noQueueOption ? (this.inQueue ? {
-          label: "Remove from queue",
-          click: () => this.removeFromQueue()
-        } : {
-          label: "Add to queue",
-          click: () => this.addToQueue()
-        }) : undefined,
-        {
-          label: "Add to playlist",
-          submenu: Toxen.playlists ? Toxen.playlists.map(p => ({
-            label: p.name,
-            click: () => {
-              p.addSong(this);
-            },
-            visible: !p.songList.find(s => s.uid === this.uid)
-          })) : []
-        },
-        {
-          label: "Remove from playlist",
-          submenu: Toxen.playlists ? Toxen.playlists.map(p => ({
-            label: p.name,
-            click: () => {
-              p.removeSong(this);
-            },
-            visible: !!p.songList.find(s => s.uid === this.uid)
-          })) : []
-        },
-        {
-          label: "Show song in list",
-          click: async () => {
+          }}>
+            Edit info
+          </Menu.Item>
+          {!props.noQueueOption ? (this.inQueue ? (
+            <Menu.Item icon={<i className="fas fa-minus"></i>} onClick={() => this.removeFromQueue()}>
+              Remove from queue
+            </Menu.Item>
+          ) : (
+            <Menu.Item icon={<i className="fas fa-plus"></i>} onClick={() => this.addToQueue()}>
+              Add to queue
+            </Menu.Item>
+          )) : undefined}
+          <Menu.Item icon={<i className="fas fa-search"></i>} onClick={async () => {
             if (Toxen.isMode("ThemeEditor")) return Toxen.sendError("CURRENTLY_EDITING_THEME");
             if (!Toxen.isMode("Player")) return Toxen.sendError("CURRENTLY_EDITING_SONG");
             await Toxen.sidePanel.show(true);
             await Toxen.sidePanel.setSectionId("songPanel");
             this.scrollTo();
-          }
-        },
-        Settings.isAdvanced<Electron.MenuItemConstructorOptions>({
-          label: "Extra options",
-          submenu: [
-            {
-              label: "Copy UID",
-              click: () => this.copyUID()
-            },
-            {
-              label: "Open in file explorer",
-              click: () => {
-                remote.shell.openPath(this.dirname());
+          }}>
+            Show song in list
+          </Menu.Item>
+          <Menu.Item icon={<i className="fas fa-trash-alt"></i>} color="red" onClick={() => {
+            modals.openConfirmModal({
+              title: <h2>Delete song</h2>,
+              children: `Are you sure you want to delete "${this.title}"?`,
+              onConfirm: async () => {
+                try {
+                  await this.delete();
+                } catch (error) {
+                  Toxen.error(error);
+                }
               },
-              enabled: !Settings.isRemote(),
-            },
-            {
-              label: "Record (Experimental)",
-              click: () => {
+              labels: {
+                confirm: "Delete",
+                cancel: "Cancel"
+              },
+              confirmProps: {
+                color: "red"
+              }
+            });
+          }}>
+            Delete
+          </Menu.Item>
+          {Settings.isAdvanced<JSX.Element>(
+            <>
+              <Menu.Item disabled={true}>
+                Extra options
+              </Menu.Item>
+              <Menu.Item onClick={() => this.copyUID()}>
+                Copy UID
+              </Menu.Item>
+              <Menu.Item onClick={() => remote.shell.openPath(this.dirname())}>
+                Open in file explorer
+              </Menu.Item>
+              <Menu.Item onClick={() => {
                 const recorder = new ScreenRecorder();
                 recorder.startRecording();
-              }
-            },
-          ]
-        }),
-        {
-          type: "separator"
-        },
-        {
-          label: "Toxen",
-          enabled: false
-        },
-        {
-          label: "Toggle fullscreen",
-          click: () => {
-            Toxen.toggleFullscreen();
-          }
-        }
-      ].filter(a => a) as Electron.MenuItemConstructorOptions[];
-      remote.Menu.buildFromTemplate(singleMenu).popup();
+              }}>
+                Record (Experimental)
+              </Menu.Item>
+            </>
+          )}
+        </Menu>
+      )
     }
     else if (selectedSongs.length > 0) {
       // Multi-selected song context menu
-      const multiMenu: Electron.MenuItemConstructorOptions[] = [
-        {
-          label: "Deselect all",
-          click: () => {
+      // const multiMenu: Electron.MenuItemConstructorOptions[] = [
+      //   {
+      //     label: "Deselect all",
+      //     click: () => {
+      //       Song.deselectAll();
+      //     }
+      //   },
+      //   {
+      //     type: "separator"
+      //   },
+      //   {
+      //     label: "Add to playlist",
+      //     submenu: Toxen.playlists ? Toxen.playlists.map(p => ({
+      //       label: p.name,
+      //       click: () => {
+      //         p.addSong(...selectedSongs);
+      //       }
+      //     })) : []
+      //   },
+      //   {
+      //     label: "Remove from playlist",
+      //     submenu: Toxen.playlists ? Toxen.playlists.map(p => ({
+      //       label: p.name,
+      //       click: () => {
+      //         p.removeSong(...selectedSongs);
+      //       }
+      //     })) : []
+      //   },
+      //   {
+      //     type: "separator"
+      //   },
+      //   {
+      //     label: "Add to queue",
+      //     click: () => {
+      //       selectedSongs.forEach(s => s.addToQueue());
+      //     }
+      //   },
+      //   {
+      //     label: "Remove from queue",
+      //     click: () => {
+      //       selectedSongs.forEach(s => s.removeFromQueue());
+      //     }
+      //   }
+      // ].filter(a => a) as Electron.MenuItemConstructorOptions[];
+      // remote.Menu.buildFromTemplate(multiMenu).popup();
+
+      return (
+        <Menu ref={props.cref} className="song-context-menu">
+          {/* <Menu.Item disabled={true}>
+            Multiple songs
+          </Menu.Item> */}
+          <Menu.Item icon={<i className="far fa-check-square"></i>} onClick={() => {
             Song.deselectAll();
-          }
-        },
-        {
-          type: "separator"
-        },
-        {
-          label: "Add to playlist",
-          submenu: Toxen.playlists ? Toxen.playlists.map(p => ({
-            label: p.name,
-            click: () => {
-              p.addSong(...selectedSongs);
-            }
-          })) : []
-        },
-        {
-          label: "Remove from playlist",
-          submenu: Toxen.playlists ? Toxen.playlists.map(p => ({
-            label: p.name,
-            click: () => {
-              p.removeSong(...selectedSongs);
-            }
-          })) : []
-        },
-        {
-          type: "separator"
-        },
-        {
-          label: "Add to queue",
-          click: () => {
+          }}>
+            Deselect all
+          </Menu.Item>
+          <Menu.Item icon={<i className="fas fa-plus"></i>} onClick={async () => {
+            const selectedSongs = Song.getSelected();
             selectedSongs.forEach(s => s.addToQueue());
-          }
-        },
-        {
-          label: "Remove from queue",
-          click: () => {
+          }}>
+            Add to queue
+          </Menu.Item>
+          <Menu.Item icon={<i className="fas fa-minus"></i>} onClick={() => {
+            const selectedSongs = Song.getSelected();
             selectedSongs.forEach(s => s.removeFromQueue());
-          }
-        }
-      ].filter(a => a) as Electron.MenuItemConstructorOptions[];
-      remote.Menu.buildFromTemplate(multiMenu).popup();
+          }}>
+            Remove from queue
+          </Menu.Item>
+          <Menu.Item icon={<i className="fas fa-plus"></i>} onClick={() => {
+            // const selectedSongs = Song.getSelected();
+            // selectedSongs.forEach(s => s.addToPlaylist());
+            // Currently disabled
+            Toxen.error("Not implemented yet", 5000);
+          }}>
+            Add to playlist
+          </Menu.Item>
+          <Menu.Item icon={<i className="fas fa-minus"></i>} onClick={() => {
+            // const selectedSongs = Song.getSelected();
+            // selectedSongs.forEach(s => s.removeFromPlaylist());
+            // Currently disabled
+            Toxen.error("Not implemented yet", 5000);
+          }}>
+            Remove from playlist
+          </Menu.Item>
+          <Menu.Item icon={<i className="fas fa-trash-alt"></i>} color="red" onClick={() => {
+            const selectedSongs = Song.getSelected();
+            modals.openConfirmModal({
+              title: <h2>Delete songs</h2>,
+              children: <>
+                <p>
+                  Are you sure you want to delete these {selectedSongs.length} songs?
+                  <hr />
+                  The following songs will be deleted:
+                  {
+                    selectedSongs.map(s => (
+                      <div key={s.uid}>
+                        <i className="fas fa-music"></i>
+                        &nbsp;
+                        <span>{s.getDisplayName()}</span>
+                      </div>
+                    ))
+                  }
+                </p>
+              </>,
+              onConfirm: async () => {
+                try {
+                  await this.delete();
+                } catch (error) {
+                  Toxen.error(error);
+                }
+              },
+              labels: {
+                confirm: "Delete all",
+                cancel: "Cancel"
+              },
+              confirmProps: {
+                color: "red"
+              }
+            });
+          }}>
+            Delete
+          </Menu.Item>
+        </Menu>
+      )
+    }
+    else {
+      // Empty context menu
+      return (
+        <Menu ref={props.cref} className="song-context-menu">
+          <Menu.Item disabled={true}>
+            Empty
+          </Menu.Item>
+        </Menu>
+      );
     }
   }
 
@@ -711,6 +884,36 @@ export default class Song implements ISong {
     return Song.sortSongs(songs);
   }
 
+  public async delete(force?: boolean) {
+    if (Settings.isRemote()) {
+      Toxen.notify({
+        title: "Export not implemented",
+        content: "This feature is not yet implemented for remote users.",
+        expiresIn: 5000,
+        type: "error"
+      });
+      return;
+    }
+    else {
+      // Play the next song if this is the current song
+      let cur = Song.getCurrent();
+      if (cur && cur.uid === this.uid) {
+        await Toxen.musicPlayer.playNext();
+      }
+      try {
+        await fsp.rm(this.dirname(), { recursive: true });
+      } catch (error) {
+        try {
+          await fsp.rm(this.dirname(), { recursive: true }); // Try again
+        } catch (error) {
+          Toxen.error("Failed to delete song: " + this.dirname());
+        }
+      }
+      Toxen.songList = Toxen.songList.filter(s => s !== this);
+      Toxen.songPanel.update();
+    }
+  }
+
   public async saveInfo(): Promise<void> {
     const curSong = Song.getCurrent();
     if (curSong === this) {
@@ -817,7 +1020,7 @@ export default class Song implements ISong {
       });
       return;
     }
-    
+
     // Zip all songs into one file, in separate folders
     const zip = new yazl.ZipFile();
     const zipPathTmp = Path.resolve(os.tmpdir(), "toxen-export-" + Math.random().toString().substr(2) + ".zip");

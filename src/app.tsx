@@ -11,6 +11,9 @@ import Converter from "./app/toxen/Converter";
 import Stats from "./app/toxen/Statistics";
 import navigator from "./navigator";
 import User from "./app/toxen/User";
+import { MantineProvider } from "@mantine/core";
+import { NotificationsProvider } from "@mantine/notifications";
+import { ModalsProvider } from "@mantine/modals";
 
 // Setup
 // Create menu actions/shortcuts
@@ -38,7 +41,7 @@ remote.Menu.setApplicationMenu(
               case "SELECT":
               case "BUTTON":
                 break;
-            
+
               default: // Run toggling.
                 Toxen.musicPlayer.toggle();
                 break;
@@ -130,7 +133,7 @@ Toxen.whenReady().then(async () => {
   // Count toxen times opened
   Stats.set("timesOpened", (Stats.get("timesOpened") ?? 0) + 1);
   Stats.save(); // Store when ready
-  
+
   // Interval actions
   // Store seconds played
   setInterval(() => {
@@ -144,5 +147,15 @@ Toxen.whenReady().then(async () => {
 //#endregion
 
 // Render app
-const toxenApp = <ToxenAppRenderer /> as React.ClassicElement<ToxenAppRenderer>;
+const toxenApp = (
+  <MantineProvider theme={{
+    colorScheme: "dark"
+  }}>
+    <NotificationsProvider>
+      <ModalsProvider>
+        <ToxenAppRenderer />
+      </ModalsProvider>
+    </NotificationsProvider>
+  </MantineProvider>
+);
 ReactDOM.render(toxenApp, document.querySelector("app-root"));

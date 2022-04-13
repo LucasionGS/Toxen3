@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import { ThemeStyleTemplate } from '../../toxen/Theme'
+import Theme, { ThemeStyleTemplate } from '../../toxen/Theme'
 import { Toxen } from '../../ToxenApp'
 import Button from '../Button/Button';
 import Expandable from '../Expandable/Expandable'

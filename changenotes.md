@@ -9,7 +9,20 @@ Minor changes:
 - Added something minor
 - Changed something minor
 -->
-<!-- ## Upcoming update / 1.0.21 -->
+<!-- ## Upcoming update / 1.0.22 -->
+## 1.0.21 - 2022-04-13
+Major changes:
+- Changed the design of (some) context menus
+- Changed right-clicking on the background to find the currently playing song in the song list. (Previously it opened current song's context menu)
+- Added a `Delete` function to the song context menu.
+- Changed how playlists are deleted to a confirm prompt instead of an extended context menu.
+- Completely changed the Message Card to a more modern and simple design.
+- Added a button to open the context menu on a song element. Displayed in front of the song name when hovering over it.
+
+Minor changes:
+- Fixed some miscoloring in the base theme.
+- Removed Discord error prompts when failing to connect to the Discord API, as it caused spam when Discord isn't available on the computer.
+
 ## 1.0.20 - 2022/2/15
 Major changes:
 - Added tabs to settings

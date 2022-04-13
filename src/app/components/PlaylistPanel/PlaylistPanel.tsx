@@ -1,3 +1,5 @@
+import { Menu } from '@mantine/core';
+import { useModals } from '@mantine/modals';
 import { remote } from 'electron';
 import React, { Component } from 'react'
 import Playlist from '../../toxen/Playlist';
@@ -110,25 +112,7 @@ class PlaylistItem extends Component<PlaylistItemProps, PlaylistItemState> {
   public async deletePlaylist(force = false) {
     const pl = this.props.playlist;
     const currentPlaylist = Playlist.getCurrent();
-    let resolve: (answer: boolean) => void;
-    const confirmed = new Promise<boolean>(re => resolve = re);
-    if (!force) {
-      Toxen.warn(<>
-        Are you sure you want to delete {pl.name}?
-        <Button txStyle="cancel" onClick={() => resolve(true)}>Delete</Button>
-      </>, 10000);
-      setTimeout(() => {
-        if (alreadyConfirmed) return;
-        resolve(false);
-      }, 10000);
-    }
-    else resolve(true);
-    let alreadyConfirmed = false;
-    if (!(await confirmed)) {
-      alreadyConfirmed = true;
-      return;
-    }
-    alreadyConfirmed = true;
+
     if (currentPlaylist === pl) {
       Toxen.playlist = null;
     }
@@ -141,34 +125,63 @@ class PlaylistItem extends Component<PlaylistItemProps, PlaylistItemState> {
     this.props.playlistPanel.update();
   }
 
-  private contextMenu(e: React.MouseEvent<HTMLDivElement>) {
-    e.stopPropagation();
-    e.preventDefault();
+  private ContextMenu = (props: { playlist: Playlist }) => {
 
-    remote.Menu.buildFromTemplate([
-      {
-        label: "Manage " + this.props.playlist?.name,
-        enabled: false
-      },
-      {
-        type: "separator"
-      },
-      {
-        label: "Delete",
-        // click: () => this.deletePlaylist(),
-        submenu: [
-          {
-            label: "Are you sure you want to delete " + this.props.playlist?.name + "?",
-            submenu: [
-              {
-                label: "Confirm Deletion",
-                click: () => this.deletePlaylist(true)
-              }
-            ]
-          }
-        ]
-      }
-    ]).popup();
+    // remote.Menu.buildFromTemplate([
+    //   {
+    //     label: "Manage " + this.props.playlist?.name,
+    //     enabled: false
+    //   },
+    //   {
+    //     type: "separator"
+    //   },
+    //   {
+    //     label: "Delete",
+    //     click: () => this.deletePlaylist(),
+    //     // submenu: [
+    //     //   {
+    //     //     label: "Are you sure you want to delete " + this.props.playlist?.name + "?",
+    //     //     submenu: [
+    //     //       {
+    //     //         label: "Confirm Deletion",
+    //     //         click: () => this.deletePlaylist(true)
+    //     //       }
+    //     //     ]
+    //     //   }
+    //     // ]
+    //   }
+    // ]).popup();
+
+    const pl = props.playlist;
+    const modals = useModals();
+    return (
+      <Menu>
+        <Menu.Item>
+          Manage {pl?.name}
+        </Menu.Item>
+        <Menu.Item color="red" disabled={!pl} onClick={() => {
+          modals.openConfirmModal({
+            title: `Delete playlist "${pl?.name}"`,
+            children: <>
+              <p>Are you sure you want to delete the playlist <code>{pl?.name}</code>?</p>
+              <p>This action cannot be undone.</p>
+            </>,
+            onConfirm: () => {
+              this.deletePlaylist();
+            },
+            labels: {
+              confirm: "Delete",
+              cancel: "Cancel"
+            },
+            confirmProps: {
+              color: "red"
+            },
+          });
+        }}>
+          Delete
+        </Menu.Item>
+      </Menu>
+    );
   }
 
   render() {
@@ -180,9 +193,9 @@ class PlaylistItem extends Component<PlaylistItemProps, PlaylistItemState> {
           Toxen.playlist = pl;
           this.props.playlistPanel.update();
         }}>
+          <this.ContextMenu playlist={pl} />
           <span hidden={pl == currentPlaylist}><i className={"playlist-select far fa-circle"}></i></span>
           <span hidden={pl != currentPlaylist}><i className={"playlist-select fas fa-check-circle"}></i></span>
-          <span className={!pl ? "disabled-item" : ""} onClick={this.contextMenu.bind(this)}><i className={"playlist-select fas fa-ellipsis-h"}></i></span>
           <div className="playlist-item-title">
             <h3>{pl?.name || "No playlist"}</h3>
           </div>

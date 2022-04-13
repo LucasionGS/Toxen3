@@ -1,8 +1,8 @@
 import React, { Component } from 'react';
-import { remote } from "electron";
 import Song from '../../toxen/Song';
 import { Toxen } from '../../ToxenApp';
 import "./SongElement.scss";
+import { Group } from '@mantine/core';
 
 interface SongElementProps {
   getRef?: ((ref: SongElement) => void),
@@ -13,6 +13,7 @@ interface SongElementProps {
 interface SongElementState {
   selected: boolean;
   playing: boolean;
+  showContextMenu: boolean;
 }
 
 export default class SongElement extends Component<SongElementProps, SongElementState> {
@@ -21,7 +22,8 @@ export default class SongElement extends Component<SongElementProps, SongElement
 
     this.state = {
       selected: false,
-      playing: this.props.playing ?? false
+      playing: this.props.playing ?? false,
+      showContextMenu: false,
     }
   }
 
@@ -33,8 +35,8 @@ export default class SongElement extends Component<SongElementProps, SongElement
     this.props.song.play();
   }
 
-  public contextMenu() {
-    this.props.song.contextMenu();
+  public ContextMenu(props: { cref?: React.RefObject<HTMLDivElement>, isSelected?: boolean }): JSX.Element {
+    return this.props.song.ContextMenu.call(this.props.song, props);
   }
 
   public select(force?: boolean) {
@@ -50,19 +52,37 @@ export default class SongElement extends Component<SongElementProps, SongElement
     let classes = ["song-element", this.state.selected ? "selected" : null].filter(a => a);
     const bgFile = song.backgroundFile();
     if (this.state.playing) classes.push("playing");
+
+    const ContextMenu = this.ContextMenu.bind(this);
+    const contextMenuRef = React.createRef<HTMLDivElement>();
     return (
-      <div ref={ref => this.divElement = ref} className={classes.join(" ")} style={{
-        background: `linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0)) 0% 0% / cover, url("${bgFile.replace(/\\/g, "/")}")`
-      }}
-        onClick={e => {
-          if (e.ctrlKey) return this.select()
-          this.play();
+      <div style={{
+        position: "relative",
+      }} className="song-element-container">
+        <div style={{
+          position: "absolute",
+          top: "50%",
+          left: 5,
+          transform: "translateY(-50%)",
+        }} className="song-element-context-menu-button">
+          <ContextMenu cref={contextMenuRef} isSelected={this.state.selected} />
+        </div>
+        <div ref={ref => this.divElement = ref} className={classes.join(" ")} style={{
+          background: `linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0)) 0% 0% / cover, url("${bgFile.replace(/\\/g, "/")}")`
         }}
-        onContextMenu={e => {
-          this.contextMenu();
-        }}
-      >
-        <p className="song-title" >{song.getDisplayName()}</p>
+          onClick={e => {
+            if (e.ctrlKey) return this.select();
+            this.play();
+          }}
+          onContextMenu={e => {
+            e.preventDefault();
+            contextMenuRef.current?.click();
+          }}
+        >
+          <p className="song-title" >
+            {song.getDisplayName()}
+          </p>
+        </div>
       </div>
     )
   }
