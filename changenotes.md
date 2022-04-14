@@ -9,7 +9,15 @@ Minor changes:
 - Added something minor
 - Changed something minor
 -->
-<!-- ## Upcoming update / 1.1.1 -->
+<!-- ## Upcoming update / 1.1.2 -->
+## Upcoming update / 1.1.1
+Major changes:
+- If a search is made in the song list, Toxen will only play songs that match the search.
+  This will help if you're too lazy to make a queue or playlist with all the songs you want to play if they match a search term.
+
+Minor changes:
+- Fixed search field not searching after language tag.
+
 ## 1.1.0 - 2022-04-14
 From now on, version format will follow the MAJOR.MINOR.PATCH format, instead of incrementing only the last number.
 

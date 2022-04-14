@@ -35,6 +35,7 @@ export default class SongPanel extends Component<SongPanelProps, SongPanelState>
         let sortItems = [
           s.artist ?? "", // Artist
           s.title ?? "", // Title
+          s.language ?? "", // Language
           ...(s.coArtists ?? []), // Co-Artists
           s.source ?? "",
           ...(s.tags ?? []),
@@ -42,6 +43,8 @@ export default class SongPanel extends Component<SongPanelProps, SongPanelState>
         return items.every(item => sortItems.includes(item));
       })
     }
+
+    Toxen.searchedSongList = songs;
     return (
       <>
         {Toxen.playlist ? <>Playlist: <code>{Toxen.playlist.name}</code><br /></> : ""}

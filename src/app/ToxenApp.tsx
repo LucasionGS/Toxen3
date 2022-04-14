@@ -336,6 +336,7 @@ export class Toxen {
 
   public static songSearch = "";
   public static songList: Song[];
+  public static searchedSongList: Song[];
   private static setSongList(songList: Song[]) {
     const cur = Song.getCurrent();
     if (cur) {
@@ -363,9 +364,11 @@ export class Toxen {
   }
 
   public static getPlayableSongs(): readonly Song[] {
-    if (Toxen.songQueue && Toxen.songQueue.length > 0) return Toxen.songQueue;
-    if (Toxen.playlist && Toxen.playlist.songList.length > 0) return Toxen.playlist.songList;
-    if (Toxen.songList && Toxen.songList.length > 0) return Toxen.songList;
+    // Priority
+    /* Song queue         */ if (Toxen.songQueue && Toxen.songQueue.length > 0) return Toxen.songQueue;
+    /* Search result list */ if (Toxen.searchedSongList && Toxen.searchedSongList.length > 0) return Toxen.searchedSongList;
+    /* Playlist song list */ if (Toxen.playlist && Toxen.playlist.songList.length > 0) return Toxen.playlist.songList;
+    /* Full song list     */ if (Toxen.songList && Toxen.songList.length > 0) return Toxen.songList;
     return [];
   }
 
