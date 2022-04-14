@@ -38,12 +38,16 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
 
     const ctx = this.ctx;
     const storedColor = Toxen.background.storyboard.getVisualizerColor();
+    const baseBackgroundDim = (Settings.get("backgroundDim") ?? 50) / 100; // Base opacity of the background.
     if (Settings.get("backgroundDynamicLighting")) {
       const storedColorAsRGB = hexToRgb(storedColor);
       this.ctx.fillStyle = this.dynamicDim >= 0 ? `rgba(0,0,0,${this.dynamicDim})`
         : `rgba(${storedColorAsRGB.r},${storedColorAsRGB.g},${storedColorAsRGB.b},${-this.dynamicDim / 2})`;
-      this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     }
+    else {
+      this.ctx.fillStyle = `rgba(0,0,0,${baseBackgroundDim})`;
+    }
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height); // Background dim
 
     let style = Toxen.background.storyboard.getVisualizerStyle();
 
@@ -69,8 +73,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     const getMaxWidth = (multipler?: number) => (vWidth * (multipler ?? 1)) ^ power ^ power
 
 
-    let opacity = 0.7; // Opacity of the visualizer bars.
-    const baseBackgroundDim = (Settings.get("backgroundDim") ?? 50) / 100; // Base opacity of the background.
+    const opacity = 0.7; // Opacity of the visualizer bars.
 
     const dynLight = (() => {
       const maxHeight = getMaxHeight(0.3);
@@ -85,7 +88,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
       averageHeight = Math.min(averageHeight, maxHeight);
       return (averageHeight / maxHeight);
     })();;
-    
+
     this.dynamicDim = baseBackgroundDim - dynLight;
 
     const pulseEnabled = Toxen.background.storyboard.getVisualizerPulseBackground();
@@ -93,8 +96,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     Toxen.background.updateDimScale(pulseEnabled ? dynLight : 0);
 
     // if (style === VisualizerStyle.None && !Settings.get("backgroundDynamicLighting")) return;
-    // if (style === VisualizerStyle.None) return;
-    if (style === VisualizerStyle.None || !Settings.get("backgroundDynamicLighting")) return;
+    if (style === VisualizerStyle.None) return;
 
     let useLogo = false;
     switch (style) {

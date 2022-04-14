@@ -9,7 +9,10 @@ Minor changes:
 - Added something minor
 - Changed something minor
 -->
-<!-- ## Upcoming update / 1.1.2 -->
+## Upcoming update / 1.1.2
+Minor changes:
+- Fixed background dim being removed when Dynamic Lighting is disabled.
+
 ## 1.1.1 - 2022-04-14
 Major changes:
 - If a search is made in the song list, Toxen will only play songs that match the search.
