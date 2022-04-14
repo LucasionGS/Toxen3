@@ -30,8 +30,6 @@ export default class Expandable extends Component<Props, State> {
   }
 
   render() {
-    console.log(this.props);
-
     const { expanded } = this.state;
     const classList = [
       "expandable",

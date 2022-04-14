@@ -37,6 +37,7 @@ export default class Playlist {
    */
   public static async save() {
     console.log("Saving playlists...");
+    localStorage.setItem("playlists-backup", Playlist.toString());
 
     if (Settings.isRemote()) {
       // Remote server
@@ -57,9 +58,10 @@ export default class Playlist {
     }
     else {
       try {
-        let ws = fs.createWriteStream(Playlist.filePath);
-        ws.write(Buffer.from(Playlist.toString()));
-        ws.close();
+        // let ws = fs.createWriteStream(Playlist.filePath);
+        // ws.write(Buffer.from(Playlist.toString()));
+        // ws.close();
+        fs.writeFileSync(Playlist.filePath, Playlist.toString());
       } catch (error) {
         Toxen.error(error);
       }
@@ -96,13 +98,29 @@ export default class Playlist {
           let data = await fsp.readFile(Playlist.filePath, "utf8");
           let iPlaylists: IPlaylist[] = JSON.parse(data);
           let playlists: Playlist[] = iPlaylists.map(pl => Playlist.create(pl));
-          return playlists
-            // Sort that shit
-            .sort((a, b) => a.name.localeCompare(b.name));
+          // Sort that shit
+          return playlists.sort((a, b) => a.name.localeCompare(b.name));
         } catch (error) {
-          Toxen.error("Unable to parse playlists file.\nPlaylists have been reset.");
-          Playlist.save();
-          return [];
+          // Use localStorage backup
+          if (localStorage.getItem("playlists-backup")) {
+            Toxen.warn("Using backup for playlists.", 2500);
+            try {
+              let data = localStorage.getItem("playlists-backup");
+              let iPlaylists: IPlaylist[] = JSON.parse(data);
+              let playlists: Playlist[] = iPlaylists.map(pl => Playlist.create(pl));
+              // Sort that shit
+              return playlists.sort((a, b) => a.name.localeCompare(b.name));
+            } catch (error) {
+              Toxen.error("Unable to parse playlists file.\nPlaylists have been reset.");
+              Playlist.save();
+              return [];
+            }
+          }
+          else {
+            Toxen.error("Unable to parse playlists file.\nPlaylists have been reset.");
+            Playlist.save();
+            return [];
+          }
         }
       }
     })
@@ -131,23 +149,22 @@ export default class Playlist {
     return JSON.stringify(playlists, null, 2);
   }
 
-  public addSong(song: Song): void;
-  public addSong(...songs: Song[]): void;
-  public addSong(...songs: Song[]): void {
-    const existingUIDs = this.songList.map(s => s.uid);
-    songs = songs.filter(s => !existingUIDs.includes(s.uid));
+  public async addSong(song: Song): Promise<void>;
+  public async addSong(...songs: Song[]): Promise<void>;
+  public async addSong(...songs: Song[]): Promise<void> {
+    // const existingUIDs = this.songList.map(s => s.uid);
+    // songs = songs.filter(s => !existingUIDs.includes(s.uid));
+    songs = songs.filter(s => !this.songList.includes(s));
     this.songList.push(...songs);
     this.songList = Song.sortSongs(this.songList);
-    if (Toxen.sidePanel.getSectionId() === "songPanel") Toxen.reloadSection();
-    Playlist.save();
+    if (Toxen.sidePanel.getSectionId() === "songPanel" && Toxen.playlist === this) Toxen.reloadSection();
   }
 
-  public removeSong(song: Song): void;
-  public removeSong(...songs: Song[]): void;
-  public removeSong(...songs: Song[]): void {
+  public async removeSong(song: Song): Promise<void>;
+  public async removeSong(...songs: Song[]): Promise<void>;
+  public async removeSong(...songs: Song[]): Promise<void> {
     this.songList = this.songList.filter(s => !songs.includes(s));
-    if (Toxen.sidePanel.getSectionId() === "songPanel") Toxen.reloadSection();
-    Playlist.save();
+    if (Toxen.sidePanel.getSectionId() === "songPanel" && Toxen.playlist === this) Toxen.reloadSection();await Playlist.save();
   }
 }
 

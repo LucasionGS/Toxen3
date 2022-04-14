@@ -37,7 +37,6 @@ export default class TrimSongPanel extends Component<TrimSongPanelProps, TrimSon
         <input className="tx-form-field" type="text" defaultValue={Converter.numberToTime(this.values.start).toTimestamp()} onInput={(e) => {
           const t = (e.currentTarget) as HTMLInputElement;
           this.values.start = Time.fromTimestamp(t.value).toMillseconds();
-          console.log(this.values.start);
         }} />
         <br />
         <br />
@@ -46,7 +45,6 @@ export default class TrimSongPanel extends Component<TrimSongPanelProps, TrimSon
         <input className="tx-form-field" type="text" defaultValue={Converter.numberToTime(this.values.end).toTimestamp()} onInput={(e) => {
           const t = (e.currentTarget) as HTMLInputElement;
           this.values.end = Time.fromTimestamp(t.value).toMillseconds();
-          console.log(this.values.end);
         }} />
       </div>
     )

@@ -96,6 +96,7 @@ export default class Settings {
       shuffle: false,
       visualizerRainbowMode: false,
       pauseWithClick: true,
+      visualizerPulseBackground: false
     };
 
     let toUse: Partial<ISettings> = {};
@@ -237,6 +238,7 @@ export interface ISettings {
   visualizerStyle: VisualizerStyle;
   visualizerIntensity: number;
   visualizerRainbowMode: boolean;
+  visualizerPulseBackground: boolean;
   backgroundDynamicLighting: boolean;
 
   // Backgrounds
@@ -258,6 +260,7 @@ export enum VisualizerStyle {
   Bottom = "bottom",
   Top = "top",
   TopAndBottom = "topbottom",
+  Sides = "sides",
   Center = "center",
   Singularity = "circle",
   SingularityWithLogo = "circlelogo",

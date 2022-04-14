@@ -49,7 +49,6 @@ export default class Theme implements ITheme {
   public static parseToCSS(theme: Theme) {
     let css = "";
     const selectorValuePair: { [selector: string]: (ThemeStyle[string] & { key: string } )[] } = {};
-    // debugger;
     for (const key in theme.styles) {
       if (theme.styles.hasOwnProperty(key)) {
         const style: (ThemeStyle[string] & { key: string } ) = {

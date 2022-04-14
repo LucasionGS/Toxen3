@@ -127,8 +127,6 @@ export default class ProgressBar extends Component<ProgressBarProps, ProgressBar
   }
 
   render() {
-    // console.log(this.state.bufferedRange);
-    
     const {
       max,
       min,

@@ -10,7 +10,7 @@
   & img.toxen-background-image {
     width: 100%;
     height: 100%;
-    filter: brightness(0.4);
+    // filter: brightness(0.4);
     object-fit: cover;
   }
 
@@ -20,7 +20,7 @@
     // bottom: 0;
     width: 100%;
     height: var(--bodyHeight);
-    filter: brightness(0.4);
+    // filter: brightness(0.4);
     background-color: black;
   }
 }

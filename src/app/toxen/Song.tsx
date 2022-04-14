@@ -21,8 +21,9 @@ import yazl from "yazl";
 import yauzl from "yauzl";
 import os from "os";
 import { useModals } from "@mantine/modals";
-import { ModalsContextProps } from "@mantine/modals/lib/context";
-import { Menu } from "@mantine/core";
+import { ModalsContextProps, ModalSettings } from "@mantine/modals/lib/context";
+import { Checkbox, Menu } from "@mantine/core";
+import Playlist from "./Playlist";
 // import ToxenInteractionMode from "./ToxenInteractionMode";
 
 export default class Song implements ISong {
@@ -38,6 +39,12 @@ export default class Song implements ISong {
   public visualizerStyle: VisualizerStyle;
   public visualizerIntensity: number;
   public visualizerForceRainbowMode: boolean;
+  /**
+   * `pulse` is forced pulsing.  
+   * `pulse-off` is forced no pulsing.  
+   * `null` will use the global setting.
+   */
+  public visualizerPulseBackground: "pulse" | "pulse-off" = null;
   public year: number;
   public language: string;
   public subtitleDelay: number;
@@ -446,11 +453,11 @@ export default class Song implements ISong {
   }) {
     props ?? (props = {});
     const selectedSongs = Song.getSelected();
-    
+
     const modals = useModals();
-    
+
     let isSelected = props.isSelected ?? this.selected ?? false;
-    
+
     if (!isSelected) {
       // Single song context menu
       //   const singleMenu: Electron.MenuItemConstructorOptions[] = [
@@ -553,6 +560,11 @@ export default class Song implements ISong {
             Toxen.editSong(this);
           }}>
             Edit info
+          </Menu.Item>
+          <Menu.Item icon={<i className="fas fa-th-list"></i>} onClick={() => {
+            modals.openModal(this.createManagePlaylists());
+          }}>
+            Manager playlists
           </Menu.Item>
           {!props.noQueueOption ? (this.inQueue ? (
             <Menu.Item icon={<i className="fas fa-minus"></i>} onClick={() => this.removeFromQueue()}>
@@ -674,6 +686,14 @@ export default class Song implements ISong {
           }}>
             Deselect all
           </Menu.Item>
+          <Menu.Item icon={<i className="fas fa-th-list"></i>} onClick={() => {
+            const selectedSongs = Song.getSelected();
+            // selectedSongs.forEach(s => s.addToPlaylist());
+            // Currently disabled
+            modals.openModal(Song.createManageMultiSongsPlaylists(selectedSongs));
+          }}>
+            Manage playlists
+          </Menu.Item>
           <Menu.Item icon={<i className="fas fa-plus"></i>} onClick={async () => {
             const selectedSongs = Song.getSelected();
             selectedSongs.forEach(s => s.addToQueue());
@@ -685,22 +705,6 @@ export default class Song implements ISong {
             selectedSongs.forEach(s => s.removeFromQueue());
           }}>
             Remove from queue
-          </Menu.Item>
-          <Menu.Item icon={<i className="fas fa-plus"></i>} onClick={() => {
-            // const selectedSongs = Song.getSelected();
-            // selectedSongs.forEach(s => s.addToPlaylist());
-            // Currently disabled
-            Toxen.error("Not implemented yet", 5000);
-          }}>
-            Add to playlist
-          </Menu.Item>
-          <Menu.Item icon={<i className="fas fa-minus"></i>} onClick={() => {
-            // const selectedSongs = Song.getSelected();
-            // selectedSongs.forEach(s => s.removeFromPlaylist());
-            // Currently disabled
-            Toxen.error("Not implemented yet", 5000);
-          }}>
-            Remove from playlist
           </Menu.Item>
           <Menu.Item icon={<i className="fas fa-trash-alt"></i>} color="red" onClick={() => {
             const selectedSongs = Song.getSelected();
@@ -763,6 +767,55 @@ export default class Song implements ISong {
     return this.existingElements.pop();
   }
   public currentElement: SongElement;
+
+  public createManagePlaylists(): ModalSettings {
+    return {
+      title: <h2>Manage playlists</h2>,
+      children: (
+        <>
+          {
+            Toxen.playlists.map(p => (
+              <span>
+                <Checkbox style={{ marginTop: 8 }} size={"lg"} label={p.name} defaultChecked={p.songList.includes(this)} onChange={async (e) => {
+                  e.target.checked ? p.addSong(this) : p.removeSong(this);
+                  await Playlist.save();
+                }} />
+              </span>
+            ))
+          }
+        </>
+      )
+    }
+  }
+
+  public static createManageMultiSongsPlaylists(songs: Song[]): ModalSettings {
+    return {
+      title: <h2>Manage playlists</h2>,
+      children: (
+        <>
+          {
+            Toxen.playlists.map(p => {
+              const result = songs.reduce<boolean>((prev, cur) => {
+                if (prev === null) return null;
+                const next = p.songList.includes(cur);
+
+                return prev || next;
+              }, false);
+
+              return (
+                <span>
+                  <Checkbox style={{ marginTop: 8 }} size={"lg"} label={p.name} defaultChecked={result} onChange={async (e) => {
+                    e.target.checked ? songs.forEach(s => p.addSong(s)) : songs.forEach(s => p.removeSong(s));
+                    await Playlist.save();
+                  }} />
+                </span>
+              );
+            })
+          }
+        </>
+      )
+    }
+  }
 
   public setCurrent(): void;
   public setCurrent(force: boolean): void;

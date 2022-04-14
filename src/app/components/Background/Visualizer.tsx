@@ -27,12 +27,15 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
    * Dynamic dim for the background of the visualizer.
    */
   private dynamicDim = 0;
+  public getDynamicDim() {
+    return this.dynamicDim;
+  }
   private loop(time: number) {
     if (!this.stopped) requestAnimationFrame(this.loop.bind(this));
     if (!this.ctx) return console.log("No ctx exist!");
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     if (!Toxen.musicPlayer || !Toxen.musicPlayer.media) return console.log("Player or media missing");
-    
+
     const ctx = this.ctx;
     const storedColor = Toxen.background.storyboard.getVisualizerColor();
     if (Settings.get("backgroundDynamicLighting")) {
@@ -43,8 +46,6 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     }
 
     let style = Toxen.background.storyboard.getVisualizerStyle();
-    if (style === VisualizerStyle.None && !Settings.get("backgroundDynamicLighting")) return;
-    
 
     ctx.fillStyle = ctx.strokeStyle = storedColor;
     let [vWidth, vHeight, vLeft, vTop] = [
@@ -65,13 +66,14 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     const len = this.curLen = dataArray.length;
     const power = (1 / (Settings.get("volume") / 100));
     const getMaxHeight = (multipler?: number) => (vHeight * (multipler ?? 1)) ^ power ^ power
+    const getMaxWidth = (multipler?: number) => (vWidth * (multipler ?? 1)) ^ power ^ power
 
 
     let opacity = 0.7; // Opacity of the visualizer bars.
     const baseBackgroundDim = (Settings.get("backgroundDim") ?? 50) / 100; // Base opacity of the background.
 
-    this.dynamicDim = baseBackgroundDim - (() => {
-      const maxHeight = getMaxHeight(0.30);
+    const dynLight = (() => {
+      const maxHeight = getMaxHeight(0.3);
       const unitH = maxHeight / dataSize;
       let averageHeight = 0;
       for (let i = 0; i < len; i++) {
@@ -82,9 +84,17 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
       averageHeight /= len;
       averageHeight = Math.min(averageHeight, maxHeight);
       return (averageHeight / maxHeight);
-    })();
+    })();;
+    
+    this.dynamicDim = baseBackgroundDim - dynLight;
 
-    if (style === VisualizerStyle.None) return;
+    const pulseEnabled = Toxen.background.storyboard.getVisualizerPulseBackground();
+
+    Toxen.background.updateDimScale(pulseEnabled ? dynLight : 0);
+
+    // if (style === VisualizerStyle.None && !Settings.get("backgroundDynamicLighting")) return;
+    // if (style === VisualizerStyle.None) return;
+    if (style === VisualizerStyle.None || !Settings.get("backgroundDynamicLighting")) return;
 
     let useLogo = false;
     switch (style) {
@@ -175,6 +185,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
         break;
       }
 
+      // Visualizer on the top and bottom
       case VisualizerStyle.TopAndBottom: {
         const maxHeight = getMaxHeight(0.30);
         const unitW = vWidth / len;
@@ -205,6 +216,46 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
         }
         break;
       }
+
+      // Visualizer on the left and right
+      case VisualizerStyle.Sides: {
+        const maxWidth = getMaxWidth(0.15);
+        const unitH = vHeight / (dataSize / 2);
+        const halfLen = len / 2;
+        const unitW = maxWidth / len;
+
+        for (let i = 0; i < len; i++) {
+          const data = dataArray[i];
+          let _barWidth = (data * unitW);
+          _barWidth += _barWidth / 2;
+          // Position and size
+          const [barX, barY, barWidth, barHeight] = [
+            0, // barX
+            (i * unitH), // barY
+            _barWidth, // barWidth
+            unitH // barHeight
+          ];
+
+          this.ctxAlpha(opacity, ctx => {
+
+            if (i % 2 === 0) {
+              this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, null, {
+                top: false,
+                bottom: false
+              });
+              ctx.fillRect(barX, barY / 2, barWidth, barHeight); // Left
+            }
+            else {
+              this.setRainbowIfEnabled(ctx, barX + barWidth, barY, barWidth, barHeight, i, null, {
+                top: false,
+                bottom: false
+              });
+              ctx.fillRect(vWidth - barWidth, barY / 2, barWidth, barHeight); // Right
+            }
+          });
+        }
+      }
+        break;
 
       case VisualizerStyle.Center: {
         const maxHeight = getMaxHeight(0.25);

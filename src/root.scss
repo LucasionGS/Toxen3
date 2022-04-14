@@ -11,6 +11,10 @@ body {
   padding: 0;
   background-color: $bgColor;
   color: white;
+  font-size: 18px;
+  button {
+    font-size: 18px;
+  }
 }
 
 body[fullscreen] {
@@ -21,22 +25,26 @@ body[fullscreen] {
 //   color: white;
 // }
 
+a {
+  color: white;
+}
+
 body.inactive *.hide-on-inactive {
   opacity: 0 !important;
 }
 
-*:not(
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6,
-  sup,
-  sub
-) {
-  font-size: 18px;
-}
+// *:not(
+//   h1,
+//   h2,
+//   h3,
+//   h4,
+//   h5,
+//   h6,
+//   sup,
+//   sub
+// ) {
+//   font-size: 18px;
+// }
 
 code {
   display: inline-block;

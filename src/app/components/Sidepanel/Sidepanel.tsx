@@ -44,6 +44,8 @@ export default class Sidepanel extends React.Component<Props, State> {
     }
   }
 
+  public containerRef =React.createRef<HTMLDivElement>();
+
   public async reloadSection() {
     let id = this.state.sectionId;
     await this.setSectionId("$empty");
@@ -147,7 +149,7 @@ export default class Sidepanel extends React.Component<Props, State> {
 
     let sec = this.sections.find(sec => sec?.props?.id == this.state.sectionId);
     return (
-      <div className={classList.join(" ")}
+      <div ref={this.containerRef} className={classList.join(" ")}
         style={{
           width: panelWidth,
           maxWidth: "100vw"

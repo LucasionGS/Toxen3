@@ -16,7 +16,6 @@ export default class ScreenRecorder {
     // Get own window source
     const sources = await desktopCapturer.getSources({ types: ["window", "screen"] });
 
-    debugger;
     const pid = process.pid;
     // Get the Toxen window
     const toxenWindow = sources.find(source => source.name === document.title);

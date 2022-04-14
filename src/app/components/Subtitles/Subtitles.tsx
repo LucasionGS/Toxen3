@@ -59,8 +59,6 @@ export default class Subtitles extends Component<SubtitlesProps, SubtitlesState>
           currentText: null
         });
       }
-      console.log("Previous Options", this.currentOptions);
-      console.log("Current", sub.options);
       
       let text = sub.text || "";
       function getOption<T>(key: keyof SubtitleParser.SubtitleOptions, defaultValue: T = null) {

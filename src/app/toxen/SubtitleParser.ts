@@ -43,7 +43,6 @@ namespace SubtitleParser {
       let index: number;
       if (list.length === 0) return null;
       while (true) {
-        // debugger;
         index = Math.floor(list.length / 2);
         item = list[index];
         if (list.length === 0) return null;
@@ -300,7 +299,6 @@ namespace SubtitleParser {
       }
     }
     
-    debugger
     return items;
   }
 }

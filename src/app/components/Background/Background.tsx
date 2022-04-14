@@ -16,11 +16,11 @@ import Subtitles from '../Subtitles/Subtitles';
 
 interface BackgroundProps {
   getRef?: ((ref: Background) => void),
-
 }
 
 interface BackgroundState {
   image: string;
+  dimScale: number;
 }
 
 export default class Background extends Component<BackgroundProps, BackgroundState> {
@@ -28,7 +28,8 @@ export default class Background extends Component<BackgroundProps, BackgroundSta
     super(props);
 
     this.state = {
-      image: null
+      image: null,
+      dimScale: 0
     }
   }
 
@@ -37,6 +38,9 @@ export default class Background extends Component<BackgroundProps, BackgroundSta
   }
 
   setStateAsync = Asyncifier.createSetState(this);
+  // public update() {
+  //   this.setState({});
+  // }
 
   public setBackground(source: string) {
     return this.setStateAsync({
@@ -55,10 +59,16 @@ export default class Background extends Component<BackgroundProps, BackgroundSta
   public visualizer: Visualizer;
   public storyboard: Storyboard;
 
+  public updateDimScale: (dimScale: number) => void = () => void 0;
+
   render() {
+
+    // const dim = this.state.dimScale ?? 0;
+    // Toxen.background?.visualizer?.getDynamicDim() ?? 0;
+
     return (
       <div className="toxen-background"
-        onClick={() => Settings.get("pauseWithClick") ? Toxen.musicPlayer.toggle(): null}
+        onClick={() => Settings.get("pauseWithClick") ? Toxen.musicPlayer.toggle() : null}
         onDoubleClick={() => {
           Toxen.toggleFullscreen();
         }}
@@ -74,14 +84,10 @@ export default class Background extends Component<BackgroundProps, BackgroundSta
         onDragEnter={e => e.preventDefault()}
         onDragLeave={e => e.preventDefault()}
       >
-        <img
-          // hidden={this.state.image ? false : true}
-          className="toxen-background-image"
-          src={this.getBackground() || ToxenMax}
-          alt="background" />
+        <BackgroundImage ToxenMax={ToxenMax}  backgroundObject={this} />
         {
           (() => {
-            let musicPlayer: { current : MusicPlayer } = { current: null };
+            let musicPlayer: { current: MusicPlayer } = { current: null };
             return (<>
               <MusicPlayer ref={ref => Toxen.musicPlayer = musicPlayer.current = ref} />
               <Subtitles ref={ref => Toxen.subtitles = ref} musicPlayer={musicPlayer} />
@@ -93,4 +99,16 @@ export default class Background extends Component<BackgroundProps, BackgroundSta
       </div >
     )
   }
+}
+
+function BackgroundImage(props: { ToxenMax: string, backgroundObject: Background }) {
+  const { ToxenMax, backgroundObject } = props;
+
+  const [dim, setDim] = React.useState<number>(0);
+  backgroundObject.updateDimScale = setDim;
+  
+  return (<img // hidden={this.state.image ? false : true}
+    className="toxen-background-image" src={backgroundObject.getBackground() || ToxenMax} alt="background" style={{
+      transform: dim > 0 ? `scale(${1 + (dim / 4)})` : "scale(1)"
+    }} />);
 }

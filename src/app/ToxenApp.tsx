@@ -56,7 +56,6 @@ import { showNotification } from "@mantine/notifications";
  * Handler for events during runtime.
  */
 export class Toxen {
-
   public static setTitle(title: string) {
     Toxen.setTitleBarText(title);
     document.title = title;
@@ -403,6 +402,7 @@ export class Toxen {
 
     try {
       Toxen.setPlaylists(await Playlist.load());
+      await Playlist.save();
 
       if (Toxen.playlist) {
         Toxen.playlist = Toxen.playlists.find(p => p.name === Toxen.playlist.name); // Recover last playlist
@@ -412,7 +412,6 @@ export class Toxen {
       Toxen.error(error.message);
     }
     Toxen.loadingScreen.toggleVisible(false);
-    console.log(cur);
     if (cur) {
       const equal = Toxen.songList.find(s => s.uid === cur.uid);
       if (equal) {
@@ -671,9 +670,6 @@ export default class ToxenAppRenderer extends React.Component {
             </button>
           </SidepanelSectionHeader> */}
           <Form hideSubmit ref={ref => Toxen.settingsForm = ref} saveButtonText="Save settings" onSubmit={(_, params) => {
-
-            console.log(params);
-
             // if (params.isRemote === "true") params.isRemote = true;
             // else params.isRemote = false;
             Settings.apply(params);
@@ -851,6 +847,12 @@ export default class ToxenAppRenderer extends React.Component {
                   Enables dynamic lighting in on the background image on songs.
                   <br />
                   <code>⚠ Flashing colors ⚠</code>
+                </sup>
+                <br />
+                
+                <FormInput onChange={() => Toxen.saveSettings()} type="checkbox" name="visualizerPulseBackground*boolean" displayName="Background pulsing" />
+                <sup>
+                  Enables pulsing on the background image of a song. Pulse is based off music intensity and volume.
                 </sup>
                 <br />
 
@@ -1126,6 +1128,14 @@ export default class ToxenAppRenderer extends React.Component {
             <FormInput type="checkbox" name="visualizerForceRainbowMode*boolean" displayName="Force Visualizer Rainbow Mode" getValueTemplateCallback={() => Toxen.editingSong} />
             <br />
             <sup>Enable to force Rainbow mode onto this song. If disabled, but the global settings have it enabled, this will also be enabled.</sup>
+            
+            <FormInput type="select" name="visualizerPulseBackground*string" displayName="Background pulsing" getValueTemplateCallback={() => Toxen.editingSong}>
+              <option className="tx-form-field" value={""}>{"<Default>"}</option>
+              <option className="tx-form-field" value={"pulse"}>Enabled</option>
+              <option className="tx-form-field" value={"pulse-off"}>Disabled</option>
+            </FormInput>
+            <br />
+            <sup>Enables pulsing on the background image of a song. Pulse is based off music intensity and volume.</sup>
 
             <FormInput type="select" name="visualizerStyle*string" displayName="Visualizer Style" getValueTemplateCallback={() => Toxen.editingSong}>
               {(() => {

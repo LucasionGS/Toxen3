@@ -9,7 +9,19 @@ Minor changes:
 - Added something minor
 - Changed something minor
 -->
-<!-- ## Upcoming update / 1.0.22 -->
+<!-- ## Upcoming update / 1.1.1 -->
+## 1.1.0 - 2022-04-14
+From now on, version format will follow the MAJOR.MINOR.PATCH format, instead of incrementing only the last number.
+
+Major changes:
+- Added option to have background images pulse along with the music. This can be toggled in global settings, and per song. It's `disabled` by default. Each song can choose to force enable, disable, or use the global (`<Default>`) setting.
+- Added `Sides` visualizer. It's as the name implies, similar to Top and Bottom visualizers, but it shows the sides of the window instead.
+- Added `Playlist` manager. Open it by using a song's context menu. You can also select multiple songs and manage multiple at once.
+- Made textboxes smaller with smaller text. This is subject to change depending on feedback.
+
+Minor changes:
+- Fixed `0` background dim not actually being `0%` dimmed.
+
 ## 1.0.21 - 2022-04-13
 Major changes:
 - Changed the design of (some) context menus

@@ -42,7 +42,8 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
     this.data = {
       visualizerColor: null,
       visualizerStyle: null,
-      visualizerIntensity: null
+      visualizerIntensity: null,
+      visualizerPulseBackground: null
     }
   }
 
@@ -50,28 +51,43 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
   // VisualizerColor
   public getVisualizerColor() {
     return this.data.visualizerColor
-    || (this.state.song && this.state.song.visualizerColor)
-    || Settings.get("visualizerColor")
-    || Visualizer.DEFAULT_COLOR;
+      || (this.state.song && this.state.song.visualizerColor)
+      || Settings.get("visualizerColor")
+      || Visualizer.DEFAULT_COLOR;
   }
 
   // VisualizerStyle
   public getVisualizerStyle() {
     return this.data.visualizerStyle
-    ?? (
-      (this.state.song && this.state.song.visualizerStyle)
-      || Settings.get("visualizerStyle")
-      || VisualizerStyle.ProgressBar
-    );
+      ?? (
+        (this.state.song && this.state.song.visualizerStyle)
+        || Settings.get("visualizerStyle")
+        || VisualizerStyle.ProgressBar
+      );
   }
   // VisualizerIntensity
   public getVisualizerIntensity() {
     return this.data.visualizerIntensity
-    ?? (
-      (this.state.song && this.state.song.visualizerIntensity)
-      || Settings.get("visualizerIntensity")
-      || 1
-    );
+      ?? (
+        (this.state.song && this.state.song.visualizerIntensity)
+        || Settings.get("visualizerIntensity")
+        || 1
+      );
+  }
+
+  public getVisualizerPulseBackground() {
+    if (typeof this.data.visualizerPulseBackground === "boolean") return this.data.visualizerPulseBackground;
+    
+    let result: boolean = null;
+    if (this.state.song) {
+      result = this.state.song.visualizerPulseBackground === "pulse" ? true : this.state.song.visualizerPulseBackground === "pulse-off" ? false : null;
+    }
+
+    if (result === null) {
+      result = Settings.get("visualizerPulseBackground") ?? false
+    }
+
+    return result;
   }
 }
 
@@ -79,4 +95,5 @@ interface StoryboardData {
   visualizerColor: string;
   visualizerIntensity: number;
   visualizerStyle: VisualizerStyle;
+  visualizerPulseBackground: boolean;
 }
