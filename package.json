@@ -110,7 +110,7 @@
     "file-loader": "^6.2.0",
     "fork-ts-checker-webpack-plugin": "^5.0.14",
     "node-loader": "^1.0.1",
-    "node-sass": "^5.0.0",
+    "sass": "^1.50.0",
     "sass-loader": "^10.0.5",
     "style-loader": "^1.2.1",
     "ts-loader": "^8.0.2",
