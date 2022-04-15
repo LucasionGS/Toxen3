@@ -24,6 +24,9 @@ import { useModals } from "@mantine/modals";
 import { ModalsContextProps, ModalSettings } from "@mantine/modals/lib/context";
 import { Checkbox, Menu } from "@mantine/core";
 import Playlist from "./Playlist";
+import Button from "../components/Button/Button";
+import Ffmpeg from "./Ffmpeg";
+import Time from "./Time";
 // import ToxenInteractionMode from "./ToxenInteractionMode";
 
 export default class Song implements ISong {
@@ -606,6 +609,11 @@ export default class Song implements ISong {
           }}>
             Delete
           </Menu.Item>
+          <Menu.Item icon={<i className="fas fa-cut"></i>} onClick={() => {
+            modals.openModal(this.createTrimSongModal());
+          }}>
+            Trim
+          </Menu.Item>
           {Settings.isAdvanced<JSX.Element>(
             <>
               <Menu.Item disabled={true}>
@@ -1104,6 +1112,48 @@ export default class Song implements ISong {
         console.error(error);
         return fsp.unlink(zipPathTmp);
       });
+  }
+
+  // TODO: Fix this and/or figure out a better way to have the trimmer.
+  // Use a function to create children to use useState for time values?
+  public createTrimSongModal(): ModalSettings {
+    const values = {
+      start: 0,
+      end: Toxen.musicPlayer.media.duration ? Toxen.musicPlayer.media.duration * 1000 : 60000,
+    }
+    // const curSong = Song.getCurrent();
+
+    return {
+      title: "Trim Song",
+      children: (
+        <div className="trim-song-panel">
+          <h2>Trimming {this.getDisplayName()}</h2>
+          <label>Start time</label>
+          <br />
+          <input className="tx-form-field" type="text" defaultValue={Converter.numberToTime(values.start).toTimestamp()} onInput={(e) => {
+            const t = (e.currentTarget) as HTMLInputElement;
+            values.start = Time.fromTimestamp(t.value).toMillseconds();
+          }} />
+          <br />
+          <br />
+          <label>End time</label>
+          <br />
+          <input className="tx-form-field" type="text" defaultValue={Converter.numberToTime(values.end).toTimestamp()} onInput={(e) => {
+            const t = (e.currentTarget) as HTMLInputElement;
+            values.end = Time.fromTimestamp(t.value).toMillseconds();
+          }} />
+          <br />
+          <Button onClick={async () => {
+            const result = await Ffmpeg.installFFmpeg();
+            if (!result) return Toxen.error("FFmpeg could not be installed.");
+            await Ffmpeg.trimSong(this, values.start / 1000, values.end / 1000);
+            Toxen.log("Trimmed song: " + this.getDisplayName(), 2000);
+          }}>
+            Trim
+          </Button>
+        </div>
+      )
+    }
   }
 }
 
