@@ -1,3 +1,4 @@
+import { Alert, Button, TextInput } from "@mantine/core";
 import React from "react";
 import Settings from "../../toxen/Settings";
 import User from "../../toxen/User";
@@ -7,53 +8,64 @@ import FormInput from "../Form/FormInputFields/FormInput";
 
 let attemptedInitialLogin = false;
 export default function LoginForm() {
-  // if (!Settings.isRemote()) return <>Connect to a server to login.</>
-  const [loggedIn, setLoggedIn] = React.useState(false);
-  const user = Settings.getUser();
-  if (!attemptedInitialLogin && user) {
-    User.removeCurrentUser();
-    attemptedInitialLogin = true;
-    User.login(user.token).then(loggedInUser => {
+  async function handleLogin(loginPromise: Promise<User>) {
+    setLoading(true);
+    return loginPromise.then(loggedInUser => {
       if (loggedInUser) {
         User.setCurrentUser(loggedInUser);
+        setLoading(false);
+        setError(null);
         setLoggedIn(true);
         Toxen.sidePanel.reloadSection();
         if (Settings.isRemote()) Toxen.loadSongs();
       }
+      else {
+        setLoading(false);
+        setLoggedIn(false);
+        Toxen.error("Login failed", 5000);
+        setError("Login failed");
+      }
     }).catch(e => {
-      console.error(e);
-      Toxen.error("Unable to reach Toxen server");
-      Toxen.sidePanel.reloadSection();
+      Toxen.error("Unable to reach Toxen server", 5000);
+      setError("Unable to reach Toxen server");
+      setLoading(false);
     });
   }
-  const template = () => ({
-    username: user?.username || "",
-    password: ""
-  });
+
+  // if (!Settings.isRemote()) return <>Connect to a server to login.</>
+  const [loggedIn, setLoggedIn] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string>(null);
+  const user = Settings.getUser();
+  if (!attemptedInitialLogin && user) {
+    User.removeCurrentUser();
+    attemptedInitialLogin = true;
+    handleLogin(User.login(user.token));
+  }
+
+  const [username, setUsername] = React.useState(user?.username || "");
+  const [password, setPassword] = React.useState("");
+
+  const login = () => handleLogin(User.login(username as string, password as string));
+  
   return (
-    user ? (<button onClick={() => {
-      User.removeCurrentUser();
-      Toxen.loadSongs();
-      setLoggedIn(false);
-      Toxen.reloadSection();
-    }} className="tx-btn tx-btn-warning">Log out of <b>{user.username}</b></button>) : (<Form onSubmit={async (e, values) => {
-      User.login(values.username as string, values.password as string).then(loggedInUser => {
-        if (loggedInUser) {
-          User.setCurrentUser(loggedInUser);
-          Toxen.log("Logged in user: " + loggedInUser.username, 2000);
-          setLoggedIn(true);
-          Toxen.sidePanel.reloadSection();
-          if (Settings.isRemote()) Toxen.loadSongs();
-        }
-        else Toxen.error("Login failed");
-      }).catch(e => {
-        Toxen.error("Unable to reach Toxen server");
-        console.error(e);
-      });
-    }} saveButtonText="Login">
-      <h2>Toxen server credentials</h2>
-      <FormInput name="username*string" displayName="Username" type="text" getValueTemplateCallback={template} />
-      <FormInput name="password*string" displayName="Password" type="password" getValueTemplateCallback={template} />
-    </Form>)
+    user ? (
+      <Button onClick={() => {
+        User.removeCurrentUser();
+        Toxen.loadSongs();
+        setLoggedIn(false);
+        Toxen.reloadSection();
+      }} color="yellow">Log out of <b>{user.username}</b></Button>
+    ) : (
+      <>
+        <h2>Toxen server credentials</h2>
+        <Alert color="red" title="Error" hidden={!error}>{error}</Alert>
+        <TextInput label="Username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} onSubmit={login} />
+        <TextInput label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} onSubmit={login} />
+        <Button loading={loading} onClick={login}>
+          {loading ? "Logging in..." : "Login"}
+        </Button>
+      </>
+    )
   )
 }

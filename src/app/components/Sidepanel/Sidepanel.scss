@@ -116,7 +116,7 @@ body.inactive .sidepanel:not(.show) {
     margin: auto;
     margin-top: 8px;
   }
-  
+
   &.sidepanel-icon-disabled * {
     color: rgb(124, 124, 124) !important;
     &:hover {
@@ -185,6 +185,23 @@ body.inactive .sidepanel:not(.show) {
   opacity: 1;
   overflow-x: hidden;
   overflow-y: auto;
+
+  // Customize scrollbar
+  &::-webkit-scrollbar {
+    width: 16px;
+    height: 8px;
+  }
+  &::-webkit-scrollbar-track {
+    background: #555;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 50px;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background: #f1f1f1;
+  }
+
 }
 
 .sidepanel .sidepanel-backdrop {

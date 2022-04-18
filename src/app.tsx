@@ -149,7 +149,10 @@ Toxen.whenReady().then(async () => {
 // Render app
 const toxenApp = (
   <MantineProvider theme={{
-    colorScheme: "dark"
+    colorScheme: "dark",
+    colors: {
+      white: ["fff000"],
+    }
   }}>
     <NotificationsProvider>
       <ModalsProvider>

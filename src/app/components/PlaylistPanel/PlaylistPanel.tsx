@@ -1,12 +1,8 @@
-import { Menu } from '@mantine/core';
+import { Button, Menu } from '@mantine/core';
 import { useModals } from '@mantine/modals';
-import { remote } from 'electron';
 import React, { Component } from 'react'
 import Playlist from '../../toxen/Playlist';
-import Song from '../../toxen/Song';
 import { Toxen } from '../../ToxenApp';
-import Button from '../Button/Button';
-import SidepanelSection from '../Sidepanel/SidepanelSection';
 import SidepanelSectionHeader from '../Sidepanel/SidepanelSectionHeader';
 import "./PlaylistPanel.scss";
 
@@ -82,7 +78,7 @@ export default class PlaylistPanel extends Component<PlaylistPanelProps, Playlis
             <PlaylistForm playlistPanel={this} />
             :
             <>
-              <Button txStyle="action" onClick={() => Toxen.sidePanel.setSectionId("songPanel")}>To music panel</Button>
+              <Button color="green" onClick={() => Toxen.sidePanel.setSectionId("songPanel")}>To music panel</Button>
               <Button onClick={() => this.showPlaylistForm()}>Add playlist</Button>
             </>
         }
@@ -126,32 +122,6 @@ class PlaylistItem extends Component<PlaylistItemProps, PlaylistItemState> {
   }
 
   private ContextMenu = (props: { playlist: Playlist }) => {
-
-    // remote.Menu.buildFromTemplate([
-    //   {
-    //     label: "Manage " + this.props.playlist?.name,
-    //     enabled: false
-    //   },
-    //   {
-    //     type: "separator"
-    //   },
-    //   {
-    //     label: "Delete",
-    //     click: () => this.deletePlaylist(),
-    //     // submenu: [
-    //     //   {
-    //     //     label: "Are you sure you want to delete " + this.props.playlist?.name + "?",
-    //     //     submenu: [
-    //     //       {
-    //     //         label: "Confirm Deletion",
-    //     //         click: () => this.deletePlaylist(true)
-    //     //       }
-    //     //     ]
-    //     //   }
-    //     // ]
-    //   }
-    // ]).popup();
-
     const pl = props.playlist;
     const modals = useModals();
     return (
@@ -214,8 +184,8 @@ function PlaylistForm(props: { playlistPanel: PlaylistPanel }) {
       <br />
       <input ref={nameRef} className="tx-form-field" />
       <br />
-      <Button txStyle="cancel" onClick={() => props.playlistPanel.closePlaylistForm()}>Cancel</Button>
-      <Button txStyle="action" onClick={() => props.playlistPanel.submit(nameRef.current.value)}>Create</Button>
+      <Button color="red" onClick={() => props.playlistPanel.closePlaylistForm()}>Cancel</Button>
+      <Button color="green" onClick={() => props.playlistPanel.submit(nameRef.current.value)}>Create</Button>
     </div>
   )
 }

@@ -7,6 +7,7 @@ import { PanelDirection } from "../components/Sidepanel/Sidepanel"
 import JSONX from "./JSONX";
 import { Toxen } from "../ToxenApp";
 import User from "./User";
+import { remote } from "electron";
 
 export default class Settings {
   /**
@@ -165,12 +166,12 @@ export default class Settings {
   /**
    * Applies the defined data to the ISettings.
    */
-  public static apply(data: Partial<ISettings>) {
+  public static async apply(data: Partial<ISettings>, save?: boolean) {
     if (!Settings.data) Settings.data = {} as ISettings;
     let key: keyof ISettings;
     for (key in data) {
       if (Object.prototype.hasOwnProperty.call(data, key)) {
-        const value = (data as any)[key];
+        const value = data[key];
         const preValue = JSONX.getObjectValue(Settings.data, key);
 
         JSONX.setObjectValue(Settings.data, key, value);
@@ -183,9 +184,16 @@ export default class Settings {
           else if (key === "isRemote") {
             Toxen.loadSongs();
           }
-          else if (key === "theme") Toxen.setThemeByName(value);
+          else if (key === "theme") Toxen.setThemeByName(value as typeof data[typeof key]);
         }
       }
+    }
+
+    if (save) {
+      await Settings.save({
+        suppressNotification: true
+      });
+      Toxen.updateSettings();
     }
   }
 
@@ -208,6 +216,55 @@ export default class Settings {
   public static getUser() {
     return User.getCurrentUser();
   }
+
+  /**
+   * Select a file from the file system.
+   */
+  public static async selectFile(opts?: Electron.OpenDialogOptions) {
+    opts = opts || {};
+    const file = await remote.dialog.showOpenDialog({
+      ...opts,
+      properties: ["openFile"],
+    });
+
+    if (file && file.filePaths && file.filePaths.length > 0) {
+      return file.filePaths[0];
+    }
+    return null;
+  }
+
+  /**
+   * Select multiple of files from the file system.
+   */
+  public static async selectFiles(opts?: Electron.OpenDialogOptions) {
+    opts = opts || {};
+    const file = await remote.dialog.showOpenDialog({
+      ...opts,
+      properties: ["openFile"],
+    });
+
+    if (file && file.filePaths && file.filePaths.length > 0) {
+      return file.filePaths;
+    }
+
+    return [];
+  }
+
+  /**
+   * Select a folder from the file system.
+   */
+  public static async selectFolder(opts?: Electron.OpenDialogOptions) {
+    opts = opts || {};
+    const folder = await remote.dialog.showOpenDialog({
+      ...opts,
+      properties: ["openDirectory"],
+    });
+
+    if (folder && folder.filePaths && folder.filePaths.length > 0) {
+      return folder.filePaths[0];
+    }
+    return null;
+  }
 }
 
 export interface ISettings {
@@ -223,6 +280,7 @@ export interface ISettings {
   panelDirection: PanelDirection;
   exposePanelIcons: boolean;
   panelWidth: number;
+  sidepanelBackground: string;
 
   // Window
   restoreWindowSize: boolean;

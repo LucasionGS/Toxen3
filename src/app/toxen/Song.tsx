@@ -232,6 +232,7 @@ export default class Song implements ISong {
       "visualizerStyle",
       "visualizerIntensity",
       "visualizerForceRainbowMode",
+      "visualizerPulseBackground",
       "year",
       "language",
       "subtitleDelay",
@@ -1170,6 +1171,12 @@ export interface ISong {
   visualizerStyle: VisualizerStyle;
   visualizerIntensity: number;
   visualizerForceRainbowMode: boolean;
+  /**
+   * `pulse` is forced pulsing.  
+   * `pulse-off` is forced no pulsing.  
+   * `null` will use the global setting.
+   */
+  visualizerPulseBackground: "pulse" | "pulse-off";
   paths: ISongPaths;
   year: number;
   language: string;

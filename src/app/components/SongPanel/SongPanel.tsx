@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
 import { Toxen } from '../../ToxenApp';
 import Song from '../../toxen/Song';
-import Button from '../Button/Button';
+import { Button } from '@mantine/core';
 
 interface SongPanelProps {
   getRef?: ((songPanel: SongPanel) => void)
@@ -48,7 +48,7 @@ export default class SongPanel extends Component<SongPanelProps, SongPanelState>
     return (
       <>
         {Toxen.playlist ? <>Playlist: <code>{Toxen.playlist.name}</code><br /></> : ""}
-        <Button txStyle="action" onClick={() => Toxen.sidePanel.setSectionId("playlist")}>Change Playlist</Button>
+        <Button color="green" onClick={() => Toxen.sidePanel.setSectionId("playlist")}>Change Playlist</Button>
         {songs.map(s => s.Element())}
       </>
     );

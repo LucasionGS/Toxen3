@@ -1,6 +1,7 @@
 import { remote } from 'electron';
 import React, { useState } from 'react';
 import Asyncifier from '../../toxen/Asyncifier';
+import Settings from '../../toxen/Settings';
 import { Toxen } from '../../ToxenApp';
 import "./Sidepanel.scss";
 import SidepanelSection from './SidepanelSection';
@@ -44,7 +45,7 @@ export default class Sidepanel extends React.Component<Props, State> {
     }
   }
 
-  public containerRef =React.createRef<HTMLDivElement>();
+  public containerRef = React.createRef<HTMLDivElement>();
 
   public async reloadSection() {
     let id = this.state.sectionId;
@@ -143,17 +144,27 @@ export default class Sidepanel extends React.Component<Props, State> {
         panelWidth = "0px";
       }
       else {
-        panelWidth = "3.7em" // this will show icons instead of full hide on sidebar.
+        panelWidth = "3.7em" // this will show icons instead of full hide on sidebar. Yes this is a magic number i pulled out of my ass.
       }
     }
 
     let sec = this.sections.find(sec => sec?.props?.id == this.state.sectionId);
+    const sidepanelBackground = Settings.get("sidepanelBackground");
+    console.log(sidepanelBackground?.replace(/\\+/g, "\\\\"));
     return (
       <div ref={this.containerRef} className={classList.join(" ")}
         style={{
           width: panelWidth,
-          maxWidth: "100vw"
-        }}>
+          maxWidth: "100vw",
+          backgroundImage: sidepanelBackground ?
+            `linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), url("${sidepanelBackground.replace(/\\+/g, "\\\\")}")`
+            // The backslashes are fucky with css, so has to be escape because Windows™
+            : undefined,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }
+        }
+      >
         <div className="sidepanel-backdrop" onClick={() => this.show(false)}></div>
         <div className="sidepanel-icons" onClick={() => this.state.show || this.show(true)}>
           <div className="sidepanel-icon sidepanel-icon-toggle" onClick={e => {
@@ -196,49 +207,53 @@ export default class Sidepanel extends React.Component<Props, State> {
               </div>
             </div>))}
         </div>
-        {sec ?
-          <div
-            className="sidepanel-content"
-            onScroll={e => this.scrollStorage[this.state.sectionId] = e.currentTarget.scrollTop}
-            ref={ref => {
-              if (ref) {
-                ref.scrollTo(0, this.scrollStorage[this.state.sectionId] ?? 0);
-              }
-            }}
-            style={{
-              width: this.state.show ? "100%" : "0px"
-            }}
-          >{sec}</div>
-          : ""}
-        {(() => {
-          let holding = false;
+        {
+          sec ?
+            <div
+              className="sidepanel-content"
+              onScroll={e => this.scrollStorage[this.state.sectionId] = e.currentTarget.scrollTop}
+              ref={ref => {
+                if (ref) {
+                  ref.scrollTo(0, this.scrollStorage[this.state.sectionId] ?? 0);
+                }
+              }}
+              style={{
+                width: this.state.show ? "100%" : "0px",
+              }}
+            >{sec}</div>
+            : ""
+        }
+        {
+          (() => {
+            let holding = false;
 
-          const upHandler = () => {
-            window.removeEventListener("mousemove", moveHandler);
-            window.removeEventListener("mouseup", upHandler);
-            holding = false;
-            if (typeof this.props.onResizeFinished === "function") this.props.onResizeFinished(this.state.width);
-          }
-
-          const moveHandler = (e: MouseEvent) => {
-            this.setWidth(e.clientX + 4);
-          }
-
-          return (<div className="sidepanel-resizer" onMouseDown={e => {
-            e.preventDefault();
-            holding = true;
-            window.addEventListener("mousemove", moveHandler);
-            window.addEventListener("mouseup", upHandler);
-          }}
-
-            onDoubleClick={async e => {
-              e.preventDefault();
-              await this.resetWidth();
+            const upHandler = () => {
+              window.removeEventListener("mousemove", moveHandler);
+              window.removeEventListener("mouseup", upHandler);
+              holding = false;
               if (typeof this.props.onResizeFinished === "function") this.props.onResizeFinished(this.state.width);
+            }
+
+            const moveHandler = (e: MouseEvent) => {
+              this.setWidth(e.clientX + 4);
+            }
+
+            return (<div className="sidepanel-resizer" onMouseDown={e => {
+              e.preventDefault();
+              holding = true;
+              window.addEventListener("mousemove", moveHandler);
+              window.addEventListener("mouseup", upHandler);
             }}
-          />);
-        })()}
-      </div>
+
+              onDoubleClick={async e => {
+                e.preventDefault();
+                await this.resetWidth();
+                if (typeof this.props.onResizeFinished === "function") this.props.onResizeFinished(this.state.width);
+              }}
+            />);
+          })()
+        }
+      </div >
     )
   }
 }

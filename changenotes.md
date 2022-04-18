@@ -9,7 +9,13 @@ Minor changes:
 - Added something minor
 - Changed something minor
 -->
-## Upcoming update / 1.1.2
+<!-- ## Upcoming update / 1.2.1 -->
+## 1.2.0 - 2022-04-18
+Major changes:
+- Massive overhaul of the sidepanel interactive element's design. Moved to using Mantine for the UI for certain elements, of which includes textboxes, dropdowns, buttons, sliders, and checkboxes. (You'll still find old design elements some places, but they will all be updated over time)
+- Volume control is now a more accurate slider.
+- Added customizable background for the sidepanel. It can be changed in `Settings > Sidepanel > Sidepanel Background`.
+
 Minor changes:
 - Fixed background dim being removed when Dynamic Lighting is disabled.
 

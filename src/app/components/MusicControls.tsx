@@ -1,3 +1,4 @@
+import { Slider } from '@mantine/core';
 import React, { Component } from 'react'
 import Settings from '../toxen/Settings';
 import Time from '../toxen/Time';
@@ -34,7 +35,7 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
     this.setState({});
     this.progressBar.setValue(value);
   }
-  
+
   /**
    * Sets the background value of the progress bar. This is useful for showing what part of a song is buffered.
    */
@@ -50,7 +51,7 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
 
   public setVolume(vol: number) {
     Toxen.musicPlayer.setVolume(vol);
-    this.volSlider.setValue(vol);
+    // this.volSlider.setValue(vol);
   }
 
   private volSlider: ProgressBar;
@@ -70,8 +71,8 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
             Settings.set("shuffle", !Settings.get("shuffle"));
             Settings.save({ suppressNotification: true });
           }}>
-            <span hidden={ !Settings.get("shuffle") }><i className="fas fa-random" style={styleForEnabled}></i></span>
-            <span hidden={ Settings.get("shuffle") }><i className="fas fa-random"></i></span>
+            <span hidden={!Settings.get("shuffle")}><i className="fas fa-random" style={styleForEnabled}></i></span>
+            <span hidden={Settings.get("shuffle")}><i className="fas fa-random"></i></span>
           </div>
           <div className="ctrl-btn" onClick={() => Toxen.musicPlayer.playPrev()}>
             <i className="fas fa-angle-double-left"></i>
@@ -87,8 +88,8 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
             Settings.set("repeat", !Settings.get("repeat"));
             Settings.save({ suppressNotification: true });
           }}>
-            <span hidden={ !Settings.get("repeat") }><i className="fas fa-redo" style={styleForEnabled}></i></span>
-            <span hidden={ Settings.get("repeat") }><i className="fas fa-redo"></i></span>
+            <span hidden={!Settings.get("repeat")}><i className="fas fa-redo" style={styleForEnabled}></i></span>
+            <span hidden={Settings.get("repeat")}><i className="fas fa-redo"></i></span>
           </div>
         </div>
 
@@ -110,7 +111,7 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
           <div className="toxen-music-controls-time-start">{this.currentTime.toTimestamp("hh?:mm:ss")}</div>
           <div className="toxen-music-controls-volume">
             Volume
-            <ProgressBar ref={ref => this.volSlider = ref} max={100} min={0} initialValue={Settings.get("volume") ?? 50} onDragging={(_, v, ref) => {
+            {/* <ProgressBar ref={ref => this.volSlider = ref} max={100} min={0} initialValue={Settings.get("volume") ?? 50} onDragging={(_, v, ref) => {
               this.setVolume(v);
               Settings.set("volume", v);
             }}
@@ -123,6 +124,24 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
               Settings.set("volume", v);
               Settings.save({ suppressNotification: true });
             }}
+            /> */}
+            <Slider
+              max={100}
+              min={0}
+              defaultValue={Settings.get("volume") ?? 50}
+              onChange={(v) => {
+                this.setVolume(v);
+                Settings.set("volume", v);
+              }}
+              onChangeEnd={(v) => {
+                this.setVolume(v);
+                Settings.apply({
+                  volume: v,
+                }, true);
+              }}
+              label={(v) => `${v}%`}
+              // Set fill color to white
+              color="gray"
             />
           </div>
           <div className="toxen-music-controls-time-end">{this.duration.toTimestamp("hh?:mm:ss")}</div>
