@@ -51,10 +51,10 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
 
   public setVolume(vol: number) {
     Toxen.musicPlayer.setVolume(vol);
-    // this.volSlider.setValue(vol);
+    this.setVolumeSlider(vol);
   }
 
-  private volSlider: ProgressBar;
+  public setVolumeSlider: React.Dispatch<React.SetStateAction<number>>;
 
   public progressBar: ProgressBar;
 
@@ -64,6 +64,7 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
       // outline: "3px solid green"
       filter: "drop-shadow(2px 2px 1px green) drop-shadow(-2px 2px 1px green) drop-shadow(2px -2px 1px green) drop-shadow(-2px -2px 1px green)"
     };
+    
     return (
       <div className="toxen-music-controls">
         <div className="toxen-music-controls-buttons hide-on-inactive">
@@ -125,28 +126,39 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
               Settings.save({ suppressNotification: true });
             }}
             /> */}
-            <Slider
-              max={100}
-              min={0}
-              defaultValue={Settings.get("volume") ?? 50}
-              onChange={(v) => {
-                this.setVolume(v);
-                Settings.set("volume", v);
-              }}
-              onChangeEnd={(v) => {
-                this.setVolume(v);
-                Settings.apply({
-                  volume: v,
-                }, true);
-              }}
-              label={(v) => `${v}%`}
-              // Set fill color to white
-              color="gray"
-            />
+            <VolumeSlider controller={this} />
           </div>
           <div className="toxen-music-controls-time-end">{this.duration.toTimestamp("hh?:mm:ss")}</div>
         </div>
       </div>
     )
   }
+}
+
+function VolumeSlider(props: { controller: MusicControls }) {
+  const { controller } = props;
+  const [volume, setVolume] = React.useState(Settings.get("volume") ?? 50);
+
+  controller.setVolumeSlider = (n) => setVolume(n);
+
+  return (
+    <Slider
+      max={100}
+      min={0}
+      value={volume}
+      onChange={(v) => {
+        controller.setVolume(v);
+        Settings.set("volume", v);
+      }}
+      onChangeEnd={(v) => {
+        controller.setVolume(v);
+        Settings.apply({
+          volume: v,
+        }, true);
+      }}
+      label={(v) => `${v}%`}
+      // Set fill color to white
+      color="gray"
+    />
+  )
 }

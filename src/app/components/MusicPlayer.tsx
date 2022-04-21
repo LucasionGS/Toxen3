@@ -160,7 +160,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
 
   private onEnded() {
     ToxenEvent.emit("songEnded");
-    if (Settings.get("repeat")) {
+    if (Settings.get("repeat") || Toxen.getPlayableSongs().length === 1) {
       this.play();
     }
     else {

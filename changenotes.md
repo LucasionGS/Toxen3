@@ -9,7 +9,13 @@ Minor changes:
 - Added something minor
 - Changed something minor
 -->
-<!-- ## Upcoming update / 1.2.1 -->
+## Upcoming update / 1.2.1
+Major changes:
+
+Minor changes:
+- Added support for `.webp` images for backgrounds.
+- Fixed volume bar not displaying the correct volume on startup.
+
 ## 1.2.0 - 2022-04-18
 Major changes:
 - Massive overhaul of the sidepanel interactive element's design. Moved to using Mantine for the UI for certain elements, of which includes textboxes, dropdowns, buttons, sliders, and checkboxes. (You'll still find old design elements some places, but they will all be updated over time)

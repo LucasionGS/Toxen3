@@ -150,7 +150,6 @@ export default class Sidepanel extends React.Component<Props, State> {
 
     let sec = this.sections.find(sec => sec?.props?.id == this.state.sectionId);
     const sidepanelBackground = Settings.get("sidepanelBackground");
-    console.log(sidepanelBackground?.replace(/\\+/g, "\\\\"));
     return (
       <div ref={this.containerRef} className={classList.join(" ")}
         style={{
