@@ -72,7 +72,16 @@ namespace Ffmpeg {
     });
   }
 
-  export function trimSong(song: Song, startTime: number, endTime: number): Promise<boolean> {
+  interface FfmpegProgressEvent {
+    frames: number;
+    currentFps: number;
+    currentKbps: number;
+    targetSize: number;
+    timemark: string;
+    percent: number;
+  }
+  
+  export function trimSong(song: Song, startTime: number, endTime: number, onProgress?: (progress: FfmpegProgressEvent) => void): Promise<boolean> {
     return new Promise<boolean>(async (resolve, reject) => {
       const fullPath = song.dirname(song.paths.media);
       const filename = song.paths.media.split("/").pop();
@@ -92,6 +101,9 @@ namespace Ffmpeg {
           }
           
           resolve(true);
+        })
+        .on("progress", (progress) => {
+          if (onProgress) onProgress(progress);
         })
         .on("error", err => {
           reject(err);

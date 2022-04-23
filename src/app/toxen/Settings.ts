@@ -306,6 +306,7 @@ export interface ISettings {
   // Advanced settings & UI
   showAdvancedSettings: boolean;
   remoteServer: string;
+  progressBarShowMs: boolean;
 
   // Discord
   discordPresence: boolean;

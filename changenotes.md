@@ -1,19 +1,14 @@
-<!--
-Template:
-## x.x.x
-Major changes:
-- Added something major
-- Changed something major
-
-Minor changes:
-- Added something minor
-- Changed something minor
--->
-## Upcoming update / 1.2.1
-Major changes:
-
-Minor changes:
+<!-- ## Upcoming update / 1.3.1 -->
+## 1.3.0 - 2022-04-23
+New features
+- Fully implemented song trimming feature. Right-click on a song and select `Trim` to start the quick and easy process.  
+Works for both audio and video files. It will generate a new file with the same name as the original file, but with the prefix `trimmed.` and automatically apply it.  
+You can always revert it back to the original file in the `Edit song` panel. `ffmpeg` is required for this feature to work. It will automatically download `ffmpeg` when it's required.  
+`Currently this feature only works on Windows.`
 - Added support for `.webp` images for backgrounds.
+- Added option to show song progress in milliseconds along with the standard time format: `hh:mm:ss.ms`
+
+Fixed bugs
 - Fixed volume bar not displaying the correct volume on startup.
 
 ## 1.2.0 - 2022-04-18

@@ -58,7 +58,9 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
 
   public progressBar: ProgressBar;
 
+  
   render() {
+    const format = Settings.get("progressBarShowMs") ? "hh?:mm:ss:ms" : "hh?:mm:ss";
     const styleForEnabled: React.CSSProperties = {
       // filter: "drop-shadow(0 0 20px green)",
       // outline: "3px solid green"
@@ -103,13 +105,13 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
             onClickRelease={(e, v) => Toxen.discord.setPresence()}
             toolTip={(v) => {
               const time = new Time(v * 1000);
-              return time.toTimestamp("hh?:mm:ss");
+              return time.toTimestamp(format);
             }}
           />
         </span>
 
         <div className="toxen-music-controls-time hide-on-inactive">
-          <div className="toxen-music-controls-time-start">{this.currentTime.toTimestamp("hh?:mm:ss")}</div>
+          <div className="toxen-music-controls-time-start">{this.currentTime.toTimestamp(format)}</div>
           <div className="toxen-music-controls-volume">
             Volume
             {/* <ProgressBar ref={ref => this.volSlider = ref} max={100} min={0} initialValue={Settings.get("volume") ?? 50} onDragging={(_, v, ref) => {
@@ -128,7 +130,7 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
             /> */}
             <VolumeSlider controller={this} />
           </div>
-          <div className="toxen-music-controls-time-end">{this.duration.toTimestamp("hh?:mm:ss")}</div>
+          <div className="toxen-music-controls-time-end">{this.duration.toTimestamp(format)}</div>
         </div>
       </div>
     )

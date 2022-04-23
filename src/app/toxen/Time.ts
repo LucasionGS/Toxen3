@@ -58,12 +58,29 @@ export default class Time {
    */
   public toTimestamp(format?: string) {
     let order = this.fromFormat(format ?? "hh?:mm:ss");
-
+    
     let orderStrings = order.map((o) => {
-      return o.toString().padStart(2, "0");
+      return o !== null ? o.toString().padStart(2, "0") : null;
     });
 
-    return orderStrings.join(":");
+    let endValue = "";
+    for (let i = 0; i < orderStrings.length; i++) {
+      const v = orderStrings[i];
+      if (!v) {
+        continue;
+      }
+      if (i === 3 && endValue.length > 0) {
+        endValue += `.${~~v}`;
+      }
+      else if (endValue.length > 0) {
+        endValue += `:${v}`;
+      }
+      else {
+        endValue += v;
+      }
+    }
+    // return orderStrings.join(":");
+    return endValue;
   }
 
   public toTimestampLiteral() {
@@ -91,7 +108,7 @@ export default class Time {
   }
 
   public fromFormat(format: string = "hh?:mm:ss") {
-    let order = format.toLowerCase().split(":");
+    let order = format.toLowerCase().split(/[:.]/);
     
     let optionalExpired = false;
     let formatArray: number[] = order.map(o => {
@@ -122,7 +139,7 @@ export default class Time {
       return value;
     });
 
-    formatArray = formatArray.filter(o => o !== null);
+    // formatArray = formatArray.filter(o => o !== null);
     
     return formatArray;
   }

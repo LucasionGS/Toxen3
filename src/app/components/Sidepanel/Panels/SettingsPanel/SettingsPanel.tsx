@@ -304,24 +304,6 @@ export default function SettingsPanel(props: SettingsPanelProps) {
 
         <Tabs.Tab title="Advanced" label="Advanced">
           <h2>Advanced settings</h2>
-          {/* <sup>
-              Enables the viewing of advanced settings and UI elements. This will display a few more buttons around in Toxen,
-              along with more technical settings that users usually don't have to worry about.
-            </sup>
-            <FormInput onChange={() => Toxen.saveSettings()} type="expandCheckbox" name="showAdvancedSettings*boolean" displayName="Show Advanced UI">
-              <h3>Discord Integration</h3>
-              <FormInput onChange={() => Toxen.saveSettings()} type="checkbox" name="discordPresence*boolean" displayName="Discord Presence" />
-              <sup>
-                Enables Discord presence integration. It will show you are using Toxen in your status.
-              </sup>
-              <br />
-
-              <FormInput onChange={() => Toxen.saveSettings()} type="checkbox" name="discordPresenceDetailed*boolean" displayName="Discord Presence: Show details" />
-              <sup>
-                Enables a detailed activity status in Discord presence. It'll show what song you are listening to, and how far into it you are.
-              </sup>
-              <br />
-            </FormInput> */}
           <Checkbox onClick={(e) => Settings.apply({ showAdvancedSettings: e.currentTarget.checked }, true)} defaultChecked={Settings.get("showAdvancedSettings")} name="showAdvancedSettings" label="Show Advanced UI" />
           <br />
           <sup>
@@ -337,6 +319,9 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           <br />
           <sup>Enables a detailed activity status in Discord presence. It'll show what song you are listening to, and how far into it you are.</sup>
 
+          <Checkbox onClick={(e) => Settings.apply({ progressBarShowMs: e.currentTarget.checked }, true)} defaultChecked={Settings.get("progressBarShowMs")} name="progressBarShowMs" label="Progress Bar: Show milliseconds" />
+          <br />
+          <sup>Enables showing the milliseconds in the progress bar.</sup>
         </Tabs.Tab>
       </Tabs>
     </>
