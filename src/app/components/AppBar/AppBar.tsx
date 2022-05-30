@@ -1,6 +1,9 @@
+import { Group, Image } from "@mantine/core";
 import { remote } from "electron";
 import React, { Component } from "react";
 import { Toxen } from "../../ToxenApp";
+//@ts-expect-error 
+import txnLogo from "../../../icons/toxen.png";
 import "./AppBar.scss";
 
 interface AppBarProps { }
@@ -78,7 +81,10 @@ function AppBarTitle() {
   Toxen.setTitleBarText = setTitle;
   return (
     <div className="appBarTitle">
-      <h2>{title}</h2>
+      <Group>
+        <Image src={txnLogo} height={24} width={24} />
+        <h2>{title}</h2>
+      </Group>
     </div>
   )
 }

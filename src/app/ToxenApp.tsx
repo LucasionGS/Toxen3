@@ -55,6 +55,8 @@ import SettingsPanel from "./components/Sidepanel/Panels/SettingsPanel/SettingsP
 import MigrationPanel from "./components/Sidepanel/Panels/MigrationPanel/MigrationPanel";
 import EditSong from "./components/Sidepanel/Panels/EditSong/EditSong";
 
+declare const SUBTITLE_CREATOR_WEBPACK_ENTRY: any;
+
 //#region Define variables used all over the ToxenApp process.
 /**
  * Handler for events during runtime.
@@ -479,6 +481,34 @@ export class Toxen {
   }
 
   public static discord = new Discord("647178364511191061"); // Toxen's App ID
+
+  public static async openSubtitleCreator(song: Song) {
+    const subtitleCreator = new remote.BrowserWindow({
+      width: 1280,
+      height: 768,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+        enableRemoteModule: true,
+        webSecurity: false
+      },
+      autoHideMenuBar: true,
+      frame: false,
+      center: true,
+      icon: "./src/icons/toxen.ico",
+      darkTheme: true,
+    });
+    await subtitleCreator.loadURL(SUBTITLE_CREATOR_WEBPACK_ENTRY);
+    subtitleCreator.webContents.postMessage("song_to_edit", JSON.stringify(song.toISong()));
+
+    subtitleCreator.on("closed", () => {
+      subtitleCreator.destroy();
+    });
+
+    subtitleCreator.show();
+
+    return subtitleCreator;
+  }
 }
 
 class ToxenEventEmitter extends EventEmitter {

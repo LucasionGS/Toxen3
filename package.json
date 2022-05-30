@@ -62,6 +62,11 @@
                   "html": "./src/index.html",
                   "js": "./src/renderer.ts",
                   "name": "main_window"
+                },
+                {
+                  "html": "./src/app/windows/SubtitleCreator/index.html",
+                  "js": "./src/app/windows/SubtitleCreator/renderer.tsx",
+                  "name": "subtitle_creator"
                 }
               ]
             }

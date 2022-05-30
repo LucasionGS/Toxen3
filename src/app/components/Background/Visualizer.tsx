@@ -313,8 +313,10 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
 
           this.ctxAlpha(opacity, ctx => {
             ctx.save();
+            // ctx.setTransform(1, 0, 0, 1, barX + 11, barY - 132);
             ctx.setTransform(1, 0, 0, 1, barX, barY);
             ctx.rotate((cycleIncrementer * i + (time / 20000)) * Math.PI);
+            // ctx.fillRect(-(unitW / 2), 128, barWidth, barHeight); // Draw basic visualizer
             ctx.fillRect(-(unitW / 2), 0, barWidth, barHeight); // Draw basic visualizer
             ctx.restore();
           });
