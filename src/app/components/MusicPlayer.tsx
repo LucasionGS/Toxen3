@@ -10,6 +10,7 @@ export type MediaSourceInfo = string;
 
 interface MusicPlayerProps {
   getRef?: ((ref: MusicPlayer) => void),
+  useSubtitleEditorMode?: boolean,
 }
 
 interface MusicPlayerState {
@@ -39,7 +40,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
   }
 
   componentDidUpdate() {
-    this.setVolume(Settings.get("volume"));
+    this.setVolume(this.props.useSubtitleEditorMode ? 50 : Settings.get("volume"));
   }
 
   /**
@@ -55,7 +56,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
   }) {
     options = options || {};
     this.media.currentTime = seconds;
-    if (options.updateDiscord) Toxen.discord.setPresence();
+    if (!this.props.useSubtitleEditorMode && options.updateDiscord) Toxen.discord.setPresence();
   }
 
   public setSource(src: MediaSourceInfo, playWhenReady: boolean = false) {
@@ -76,7 +77,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
 
   public play() {
     this.media.play();
-    Toxen.discord.setPresence();
+    if (!this.props.useSubtitleEditorMode) Toxen.discord.setPresence();
   }
 
   public load() {
@@ -85,7 +86,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
 
   public pause() {
     this.media.pause();
-    Toxen.discord.setPresence();
+    if (!this.props.useSubtitleEditorMode) Toxen.discord.setPresence();
   }
 
   public toggle() {
@@ -94,6 +95,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
   }
 
   public playNext() {
+    if (this.props.useSubtitleEditorMode) return;
     let nextSongFromHistory = Song.historyForward();
     if (nextSongFromHistory) {
       return nextSongFromHistory.play({ disableHistory: true });
@@ -128,11 +130,13 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
   }
 
   public playPrev() {
+    if (this.props.useSubtitleEditorMode) return;
     let prevSong = Song.historyBack();
     if (prevSong) prevSong.play({ disableHistory: true });
   }
 
   public playRandom() {
+    if (this.props.useSubtitleEditorMode) return;
     let songs = Toxen.getPlayableSongs();
     let songCount = songs.length;
     if (songCount === 0) {
@@ -159,6 +163,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
   }
 
   private onEnded() {
+    if (this.props.useSubtitleEditorMode) return;
     ToxenEvent.emit("songEnded");
     if (Settings.get("repeat") || Toxen.getPlayableSongs().length === 1) {
       this.play();
@@ -198,7 +203,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
   render() {
     let isVideo = this.isVideo(this.state.src);
     // Audio
-    if (!isVideo) return (
+    if (this.props.useSubtitleEditorMode || !isVideo) return (
       <video
         onCanPlay={e => Toxen.musicControls.setMax(this.media.duration)}
         ref={ref => this.media = ref}

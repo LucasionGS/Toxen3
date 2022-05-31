@@ -81,21 +81,12 @@ namespace SubtitleParser {
   }
 
   export function parseByExtension(data: string, extension: string) {
-    let content: SubtitleArray;
     switch (extension) {
-      case ".srt":
-        content = parseSrt(data);
-        break;
-      case ".tst":
-        content = parseTst(data);
-        break;
-      case ".lrc":
-        content = parseLrc(data);
-        break;
-      default:
-        throw new Error("Unsupported extension");
+      case ".srt": return parseSrt(data);
+      case ".tst": return parseTst(data);
+      case ".lrc": return parseLrc(data);
+      default: throw new Error("Unsupported extension");
     }
-    return content;
   }
 
   function parseSrtTime(time: string): Time {

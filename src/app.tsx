@@ -76,11 +76,12 @@ remote.Menu.setApplicationMenu(
       label: "Tools",
       submenu: [
         {
-          label: "Subtitle Editor",
-          accelerator: "F12",
+          label: "Subtitle Editor" + (remote.app.isPackaged ? " (Unavailable)" : " (Development Only)"),
+          // accelerator: "F10",
           click() {
             Toxen.openSubtitleCreator(Song.getCurrent())
-          }
+          },
+          enabled: !remote.app.isPackaged
         },
         {
           type: "separator"

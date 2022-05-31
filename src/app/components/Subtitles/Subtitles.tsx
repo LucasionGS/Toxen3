@@ -28,14 +28,14 @@ export default class Subtitles extends Component<SubtitlesProps, SubtitlesState>
 
   public setSubtitles(subtitles: SubtitleParser.SubtitleArray) {
     this.lastSub = null;
-    this.currentOptions = { };
+    this.currentOptions = {};
     this.setState({
       subtitles: subtitles,
       currentText: ""
     });
   }
 
-  private currentOptions: SubtitleParser.SubtitleItem["options"] = { };
+  private currentOptions: SubtitleParser.SubtitleItem["options"] = {};
   private lastSub: SubtitleParser.SubtitleItem = null;
   private update() {
     const self = this;
@@ -59,7 +59,7 @@ export default class Subtitles extends Component<SubtitlesProps, SubtitlesState>
           currentText: null
         });
       }
-      
+
       let text = sub.text || "";
       function getOption<T>(key: keyof SubtitleParser.SubtitleOptions, defaultValue: T = null) {
         switch (subtitles.type) {
@@ -73,7 +73,7 @@ export default class Subtitles extends Component<SubtitlesProps, SubtitlesState>
       let font = getOption("font", "Arial");
       let fontSize = getOption("fontSize", 24);
       let bold = getOption("bold", "false");
-      
+
       text = `<span style="color: ${color}; font-family: ${font}; font-size: ${fontSize + "px"};">${text}</span>`;
       if (bold === "true") {
         text = `<b>${text}</b>`;
@@ -83,7 +83,7 @@ export default class Subtitles extends Component<SubtitlesProps, SubtitlesState>
       });
     }
   }
-  
+
   render() {
     return (
       <div className="subtitle-container">

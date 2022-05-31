@@ -47,13 +47,13 @@ import { OptionValues } from "./components/Form/FormInputFields/FormInputSelect"
 import AppBar from "./components/AppBar/AppBar";
 import Legacy from "./toxen/Legacy";
 import AdjustPanel from "./components/AdjustPanel/AdjustPanel";
-import TrimSongPanel from "./components/TrimSongPanel/TrimSongPanel";
 import { Button, Tabs } from "@mantine/core";
 import { showNotification } from "@mantine/notifications";
 import Ffmpeg from "./toxen/Ffmpeg";
 import SettingsPanel from "./components/Sidepanel/Panels/SettingsPanel/SettingsPanel";
 import MigrationPanel from "./components/Sidepanel/Panels/MigrationPanel/MigrationPanel";
 import EditSong from "./components/Sidepanel/Panels/EditSong/EditSong";
+import InitialData from "./windows/SubtitleCreator/models/InitialData";
 
 declare const SUBTITLE_CREATOR_WEBPACK_ENTRY: any;
 
@@ -483,6 +483,11 @@ export class Toxen {
   public static discord = new Discord("647178364511191061"); // Toxen's App ID
 
   public static async openSubtitleCreator(song: Song) {
+    if (Settings.isRemote()) {
+      Toxen.error("Subtitles can only be created locally.", 5000);
+      return;
+    }
+    
     const subtitleCreator = new remote.BrowserWindow({
       width: 1280,
       height: 768,
@@ -497,15 +502,25 @@ export class Toxen {
       center: true,
       icon: "./src/icons/toxen.ico",
       darkTheme: true,
+      modal: true,
+      parent: remote.getCurrentWindow(),
     });
+
+    subtitleCreator.setMenu(remote.Menu.buildFromTemplate([]));
+
     await subtitleCreator.loadURL(SUBTITLE_CREATOR_WEBPACK_ENTRY);
-    subtitleCreator.webContents.postMessage("song_to_edit", JSON.stringify(song.toISong()));
+    subtitleCreator.webContents.send("song_to_edit", JSON.stringify({
+      song: song.toISong(),
+      libraryDirectory: Settings.get("libraryDirectory"),
+    } as InitialData));
 
     subtitleCreator.on("closed", () => {
       subtitleCreator.destroy();
     });
 
     subtitleCreator.show();
+
+    Toxen.musicPlayer.pause();
 
     return subtitleCreator;
   }
@@ -749,10 +764,6 @@ export default class ToxenAppRenderer extends React.Component {
           {/* Edit song Panel */}
           <SidepanelSection key="editSong" id="editSong">
             <EditSong />
-          </SidepanelSection>
-
-          <SidepanelSection key="trimSong" id="trimSong">
-            <TrimSongPanel />
           </SidepanelSection>
 
           <SidepanelSection key="storyboardEditor" id="storyboardEditor">
