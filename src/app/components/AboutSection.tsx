@@ -1,5 +1,5 @@
 import { remote } from 'electron';
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import Stats from '../toxen/Statistics';
 import Time from '../toxen/Time';
 import { Toxen } from '../ToxenApp';
@@ -21,7 +21,7 @@ export default function AboutSection() {
           <p>Toxen launched {Stats.get("timesOpened")} times</p>
           <p>{Toxen.songList.length} total songs</p>
           <p>{Stats.get("songsPlayed")} songs played</p>
-          <p>{new Time(Stats.get("secondsPlayed") * 1000).toTimestamp()} Time played</p>
+          <TimePlayed />
         </Tabs.Tab>
         <Tabs.Tab title="Technical Details" label="Technical Details">
           <h2>Technical Details</h2>
@@ -57,4 +57,15 @@ export default function AboutSection() {
       </Tabs>
     </div>
   );
+}
+function TimePlayed() {
+  const [secondsPlayed, setSecondsPlayed] = useState(Stats.get("secondsPlayed"));
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setSecondsPlayed(Stats.get("secondsPlayed"));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+  
+  return (<p>{new Time(secondsPlayed * 1000).toTimestamp()} time played</p>);
 }
