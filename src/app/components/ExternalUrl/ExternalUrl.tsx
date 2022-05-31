@@ -8,7 +8,7 @@ import { Toxen } from '../../ToxenApp';
  * On click, code executed is equalivant to:
  * ```ts
  * const { remote } = require('electron');
- * remote.shell.openExternal(props.href);
+ * remote.shell.openExternal(href);
  * ```
  */
 export default function ExternalUrl(props: React.DetailedHTMLProps<React.AnchorHTMLAttributes<HTMLAnchorElement>, HTMLAnchorElement>) {
