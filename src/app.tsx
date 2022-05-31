@@ -76,7 +76,7 @@ remote.Menu.setApplicationMenu(
       label: "Tools",
       submenu: [
         {
-          label: "Subtitle Editor" + (remote.app.isPackaged ? " (Unavailable)" : " (Development Only)"),
+          label: "Subtitle Editor" + (remote.app.isPackaged ? " (Coming soon)" : " (Development Only)"),
           // accelerator: "F10",
           click() {
             Toxen.openSubtitleCreator(Song.getCurrent())
