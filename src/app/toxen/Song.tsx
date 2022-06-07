@@ -994,11 +994,11 @@ export default class Song implements ISong {
           "Content-Type": "application/json"
         }
       }).then(() => {
-        Toxen.notify({
-          title: "Song saved",
-          content: this.getDisplayName(),
-          expiresIn: 3000
-        });
+        // Toxen.notify({
+        //   title: "Song saved",
+        //   content: this.getDisplayName(),
+        //   expiresIn: 3000
+        // });
       }).catch(error => {
         console.error(error);
         Toxen.notify({
@@ -1012,11 +1012,11 @@ export default class Song implements ISong {
     if (!this.paths || !this.paths.dirname) return;
     try {
       await fsp.writeFile(Path.resolve(this.dirname(), "info.json"), JSON.stringify(this.toISong()));
-      Toxen.notify({
-        title: "Song saved",
-        content: this.getDisplayName(),
-        expiresIn: 3000
-      });
+      // Toxen.notify({
+      //   title: "Song saved",
+      //   content: this.getDisplayName(),
+      //   expiresIn: 3000
+      // });
     } catch (error) {
       Toxen.notify({
         title: "Failed to save Song",

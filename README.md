@@ -1,5 +1,6 @@
 # Toxen
-[![Build](https://github.com/LucasionGS/Toxen3/actions/workflows/build.yml/badge.svg)](https://github.com/LucasionGS/Toxen3/actions/workflows/build.yml)
+[![Build](https://github.com/LucasionGS/Toxen3/actions/workflows/build.yml/badge.svg)](https://github.com/LucasionGS/Toxen3/actions/workflows/build.yml)  
+[Toxen Official Website](https://toxen.net/)
 ## What is Toxen?
 Toxen is a music player, built for full customizaion and management of your music collection.
 

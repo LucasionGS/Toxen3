@@ -49,7 +49,8 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     }
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height); // Background dim
 
-    let style = Toxen.background.storyboard.getVisualizerStyle();
+    const style = Toxen.background.storyboard.getVisualizerStyle();
+    const intensityMultiplier = Toxen.background.storyboard.getVisualizerIntensity();
 
     ctx.fillStyle = ctx.strokeStyle = storedColor;
     let [vWidth, vHeight, vLeft, vTop] = [
@@ -69,8 +70,8 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
 
     const len = this.curLen = dataArray.length;
     const power = (1 / (Settings.get("volume") / 100));
-    const getMaxHeight = (multipler?: number) => (vHeight * (multipler ?? 1)) ^ power ^ power
-    const getMaxWidth = (multipler?: number) => (vWidth * (multipler ?? 1)) ^ power ^ power
+    const getMaxHeight = (multipler?: number) => (intensityMultiplier * vHeight * (multipler ?? 1)) ^ power ^ power
+    const getMaxWidth = (multipler?: number) => (intensityMultiplier * vWidth * (multipler ?? 1)) ^ power ^ power
 
 
     const opacity = 0.7; // Opacity of the visualizer bars.

@@ -242,7 +242,16 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           <br />
           <sup>
             Set the base background dim level between <code>0-100%</code>.<br />
-            This is how dark the background will appear.Can be dynamically changed by having <code>Dynamic Lighting</code> enabled.
+            This is how dark the background will appear. Can be dynamically changed by having <code>Dynamic Lighting</code> enabled.
+          </sup>
+          <br />
+          
+          <Text>Visualizer Intensity</Text>
+          <Slider onChange={v => Settings.set("visualizerIntensity", v / 100)} onChangeEnd={v => Settings.apply({ visualizerIntensity: v / 100 }, true)} defaultValue={Settings.get("visualizerIntensity") * 100} name="visualizerIntensity" label={(value) => `${value}%`} min={50} max={200} />
+          <br />
+          <sup>
+            Set the base intensity level of the background. <code>0-100%</code>.<br />
+            Default is <code>100%</code><br />
           </sup>
           <br />
 

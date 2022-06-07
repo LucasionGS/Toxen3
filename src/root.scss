@@ -54,3 +54,13 @@ code {
   padding: 4px;
   color: orange;
 }
+
+// For explanations
+sup, sub {
+  padding-bottom: 16px;
+  transform: translateY(-1em);
+  display: block;
+  // color: gray;
+  color: #678f6a;
+  white-space: normal
+}

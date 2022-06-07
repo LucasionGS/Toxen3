@@ -23,11 +23,45 @@ remote.Menu.setApplicationMenu(
       label: "Toxen",
       submenu: [
         {
-          label: "Toggle menu panel",
+          label: "Toggle Menu",
           accelerator: "ESC",
           click() {
             Toxen.sidePanel.show();
             (document.activeElement as any)?.blur();
+          }
+        },
+        {
+          label: "Open Music",
+          accelerator: "CTRL + M",
+          click() {
+            Toxen.sidePanel.show(true);
+            Toxen.sidePanel.setSectionId("songPanel");
+            (document.activeElement as any)?.blur();
+          }
+        },
+        {
+          label: "Open Playlists",
+          accelerator: "CTRL + P",
+          click() {
+            Toxen.sidePanel.show(true);
+            Toxen.sidePanel.setSectionId("playlist");
+            (document.activeElement as any)?.blur();
+          }
+        },
+        {
+          label: "Open Settings",
+          accelerator: "CTRL + S",
+          click() {
+            Toxen.sidePanel.show(true);
+            Toxen.sidePanel.setSectionId("settings");
+            (document.activeElement as any)?.blur();
+          }
+        },
+        {
+          label: "Edit current song",
+          accelerator: "CTRL + E",
+          click() {
+            Toxen.editSong(Song.getCurrent());
           }
         },
         {

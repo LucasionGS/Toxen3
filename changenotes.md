@@ -1,4 +1,10 @@
-<!-- ## Upcoming update / 1.3.1 -->
+<!-- ## Upcoming update / 1.4.0 -->
+## 1.3.1 - 2022-06-07
+A couple minor fixes and improvements.
+- Added new shortcuts for opening specific panels. Can be found in the Toxen dropdown in the top right corner under `Toxen`.
+- Fixed up the remaining design changes on the Edit Song panel.
+- Changes on a the Song Edit panel now save automatically when changed, so no need to click Save.
+
 ## 1.3.0 - 2022-04-23
 New features
 - Fully implemented song trimming feature. Right-click on a song and select `Trim` to start the quick and easy process.  

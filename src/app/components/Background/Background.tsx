@@ -74,6 +74,7 @@ export default class Background extends Component<BackgroundProps, BackgroundSta
         }}
         onContextMenu={async () => {
           Toxen.showCurrentSong();
+          // Toxen.editSong(Song.getCurrent())
         }}
         // Background will also act as a dropzone
         onDrop={e => {
