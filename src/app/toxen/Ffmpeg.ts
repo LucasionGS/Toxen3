@@ -14,6 +14,7 @@ namespace Ffmpeg {
     return fs.existsSync(ffmpegPath);
   }
 
+  // Source: https://github.com/BtbN/FFmpeg-Builds
   const downloadLocations = {
     aix: "",
     android: "",
@@ -22,7 +23,7 @@ namespace Ffmpeg {
     linux: "",
     openbsd: "",
     sunos: "",
-    win32: "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2022-04-14-12-31/ffmpeg-N-106612-gea84eb2db1-win64-gpl.zip",
+    win32: "https://dl.toxen.net/tools/ffmpeg.zip",
     cygwin: "",
     netbsd: "",
   }
@@ -64,6 +65,7 @@ namespace Ffmpeg {
           zipfile.on("end", () => {
             setTimeout(() => {
               Toxen.log("FFmpeg installed!", 2000);
+              zipfile.close();
               resolve(true);
             }, 1000);
           });
@@ -83,14 +85,15 @@ namespace Ffmpeg {
   
   export function trimSong(song: Song, startTime: number, endTime: number, onProgress?: (progress: FfmpegProgressEvent) => void): Promise<boolean> {
     return new Promise<boolean>(async (resolve, reject) => {
-      const fullPath = song.dirname(song.paths.media);
+      try {
+        const fullPath = song.dirname(song.paths.media);
       const filename = song.paths.media.split("/").pop();
       const fileDirname = Path.dirname(fullPath);
       Toxen.log("Trimming song...", 2000);
-      ffmpeg(fullPath)
-        .setFfmpegPath(ffmpegPath)
-        .setStartTime(startTime)
-        .setDuration(endTime - startTime)
+      ffmpeg(fullPath).on("error", reject)
+        .setFfmpegPath(ffmpegPath).on("error", reject)
+        .setStartTime(startTime).on("error", reject)
+        .setDuration(endTime - startTime).on("error", reject)
         .output(fileDirname + "/trimmed." + filename)
         .on("end", async () => {
           song.paths.media = "trimmed." + filename;
@@ -104,11 +107,11 @@ namespace Ffmpeg {
         })
         .on("progress", (progress) => {
           if (onProgress) onProgress(progress);
-        })
-        .on("error", err => {
-          reject(err);
-        })
+        }).on("error", reject)
         .run();
+      } catch (error) {
+        reject(error);
+      }
     });
   }
 }

@@ -1,4 +1,7 @@
 <!-- ## Upcoming update / 1.4.0 -->
+## 1.3.2 - 2022-06-17
+- Fixed Toxen not downloading ffmpeg due to expired URL.
+- Auto retrying up to 3 times if trimming fails.
 ## 1.3.1 - 2022-06-07
 A couple minor fixes and improvements.
 - Added new shortcuts for opening specific panels. Can be found in the Toxen dropdown in the top right corner under `Toxen`.

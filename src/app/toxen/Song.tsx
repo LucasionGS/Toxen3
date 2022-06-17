@@ -1129,6 +1129,40 @@ export default class Song implements ISong {
       const [showMilliseconds, setShowMilliseconds] = useState(false);
       const [progress, setProgress] = useState(0);
       const modals = useModals();
+
+      let attempts = 0;
+
+      const startTrim = async () => {
+        attempts++;
+        setLoading(true);
+        const result = await Ffmpeg.installFFmpeg();
+        if (!result)
+          return Toxen.error("FFmpeg could not be installed.");
+        try {
+          await Ffmpeg.trimSong(this, start / 1000, end / 1000, p => {
+            setProgress(p.percent);
+          });
+        }
+        catch {
+          setLoading(false);
+          if (attempts <= 3) {
+            // Toxen.error("Something went wrong trimming... Retrying: " + attempts, 2000);
+            setTimeout(() => {
+              startTrim();
+            }, 1000);
+          }
+          else {
+            attempts = 0;
+            Toxen.error("Something went wrong trimming the song. Please try again", 5000);
+          }
+          return;
+        }
+        attempts = 0;
+        setLoading(false);
+        modals.closeModal("trim-song-modal");
+        Toxen.log("Trimmed song: " + this.getDisplayName(), 2000);
+      };
+      
       // const [end, setEnd] = React.useState<number>(Toxen.musicPlayer.media.duration ? Toxen.musicPlayer.media.duration * 1000 : 60000);
       return (<div className="trim-song-panel">
         <h2>Trimming {this.getDisplayName()}</h2>
@@ -1158,18 +1192,7 @@ export default class Song implements ISong {
             </>
           ) : null
         }
-        <Button loading={loading} onClick={async () => {
-          setLoading(true);
-          const result = await Ffmpeg.installFFmpeg();
-          if (!result)
-            return Toxen.error("FFmpeg could not be installed.");
-          await Ffmpeg.trimSong(this, start / 1000, end / 1000, p => {
-            setProgress(p.percent);
-          });
-          setLoading(false);
-          modals.closeModal("trim-song-modal");
-          Toxen.log("Trimmed song: " + this.getDisplayName(), 2000);
-        }}>
+        <Button loading={loading} onClick={startTrim}>
           Trim
         </Button>
       </div>)
