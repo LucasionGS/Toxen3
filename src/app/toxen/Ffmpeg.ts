@@ -50,7 +50,7 @@ namespace Ffmpeg {
 
                     // Get only filename
                     const filename = entry.fileName.split("/").pop();
-                    
+
                     readStream.pipe(fs.createWriteStream(Settings.toxenDataPath + "/" + filename));
                   });
                 }
@@ -61,7 +61,7 @@ namespace Ffmpeg {
               Toxen.error("FFmpeg is not supported on this platform.", 5000);
               return false;
           }
-  
+
           zipfile.on("end", () => {
             setTimeout(() => {
               Toxen.log("FFmpeg installed!", 2000);
@@ -82,33 +82,33 @@ namespace Ffmpeg {
     timemark: string;
     percent: number;
   }
-  
+
   export function trimSong(song: Song, startTime: number, endTime: number, onProgress?: (progress: FfmpegProgressEvent) => void): Promise<boolean> {
     return new Promise<boolean>(async (resolve, reject) => {
       try {
         const fullPath = song.dirname(song.paths.media);
-      const filename = song.paths.media.split("/").pop();
-      const fileDirname = Path.dirname(fullPath);
-      Toxen.log("Trimming song...", 2000);
-      ffmpeg(fullPath).on("error", reject)
-        .setFfmpegPath(ffmpegPath).on("error", reject)
-        .setStartTime(startTime).on("error", reject)
-        .setDuration(endTime - startTime).on("error", reject)
-        .output(fileDirname + "/trimmed." + filename)
-        .on("end", async () => {
-          song.paths.media = "trimmed." + filename;
-          await song.saveInfo();
+        const filename = song.paths.media.split("/").pop();
+        const fileDirname = Path.dirname(fullPath);
+        Toxen.log("Trimming song...", 2000);
+        ffmpeg(fullPath)
+          .setFfmpegPath(ffmpegPath)
+          .setStartTime(startTime)
+          .setDuration(endTime - startTime)
+          .output(fileDirname + "/trimmed." + filename)
+          .on("end", async () => {
+            song.paths.media = "trimmed." + filename;
+            await song.saveInfo();
 
-          if (Song.getCurrent() === song) {
-            Toxen.musicPlayer.setSource(song.dirname(song.paths.media), true);
-          }
-          
-          resolve(true);
-        })
-        .on("progress", (progress) => {
-          if (onProgress) onProgress(progress);
-        }).on("error", reject)
-        .run();
+            if (Song.getCurrent() === song) {
+              Toxen.musicPlayer.setSource(song.dirname(song.paths.media), true);
+            }
+
+            resolve(true);
+          })
+          .on("progress", (progress) => {
+            if (onProgress) onProgress(progress);
+          }).on("error", reject)
+          .run();
       } catch (error) {
         reject(error);
       }

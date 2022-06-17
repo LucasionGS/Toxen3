@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { resolve } from "path";
 import Settings, { VisualizerStyle } from "./Settings";
 import fsp from "fs/promises";
@@ -1129,6 +1129,7 @@ export default class Song implements ISong {
       const [showMilliseconds, setShowMilliseconds] = useState(false);
       const [progress, setProgress] = useState(0);
       const modals = useModals();
+      const browser = useMemo(() => remote.getCurrentWindow(), []);
 
       let attempts = 0;
 
@@ -1140,8 +1141,11 @@ export default class Song implements ISong {
           return Toxen.error("FFmpeg could not be installed.");
         try {
           await Ffmpeg.trimSong(this, start / 1000, end / 1000, p => {
+            browser.setProgressBar(p.percent / 100);
+            console.log(p.percent);
             setProgress(p.percent);
           });
+          browser.setProgressBar(0);
         }
         catch {
           setLoading(false);
@@ -1155,6 +1159,7 @@ export default class Song implements ISong {
             attempts = 0;
             Toxen.error("Something went wrong trimming the song. Please try again", 5000);
           }
+          browser.setProgressBar(0);
           return;
         }
         attempts = 0;
