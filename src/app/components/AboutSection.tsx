@@ -43,13 +43,13 @@ export default function AboutSection() {
           <p>Toxen logo designed by <ExternalUrl href="https://www.instagram.com/xrutoma">xrutoma</ExternalUrl></p>
         </Tabs.Tab>
 
-        <Tabs.Tab title="Dependancies" label="Dependancies">
+        <Tabs.Tab title="Dependencies" label="Dependencies">
           <h2>Packages used</h2>
-          <h3>Dependancies</h3>
+          <h3>Dependencies</h3>
           {Object.keys(packageJson.dependencies).map((key, index) => {
             return <p key={index}>{key}: <code>{(packageJson.dependencies as any)[key]}</code></p>
           })}
-          <h3>Developer dependancies</h3>
+          <h3>Developer dependencies</h3>
           {Object.keys(packageJson.devDependencies).map((key, index) => {
             return <p key={index}>{key}: <code>{(packageJson.devDependencies as any)[key]}</code></p>
           })}

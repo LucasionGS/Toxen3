@@ -26,7 +26,9 @@
     overflow: hidden;
     
     * {
-      font-size: 1.2em;
+      font-size: 1.1em !important;
+      vertical-align: top;
+      line-height: 110%;
       // Remove extra space from le text
       margin: 0;
       padding: 0;

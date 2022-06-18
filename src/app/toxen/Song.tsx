@@ -1142,7 +1142,6 @@ export default class Song implements ISong {
         try {
           await Ffmpeg.trimSong(this, start / 1000, end / 1000, p => {
             browser.setProgressBar(p.percent / 100);
-            console.log(p.percent);
             setProgress(p.percent);
           });
           browser.setProgressBar(0);

@@ -25,7 +25,7 @@ const createWindow = (): void => {
     autoHideMenuBar: true,
     frame: false,
     center: true,
-    icon: "./src/icons/toxen.ico",
+    icon: "./src/icons/tox.ico",
     darkTheme: true,
   });
 

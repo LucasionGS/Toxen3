@@ -3,7 +3,8 @@ import { remote } from "electron";
 import React, { Component } from "react";
 import { Toxen } from "../../ToxenApp";
 //@ts-expect-error 
-import txnLogo from "../../../icons/toxen.png";
+// import txnLogo from "../../../icons/toxen.png";
+import txnLogo from "../../../icons/tox128.png";
 import "./AppBar.scss";
 
 interface AppBarProps { }
@@ -82,8 +83,13 @@ function AppBarTitle() {
   return (
     <div className="appBarTitle">
       <Group>
-        <Image src={txnLogo} height={24} width={24} />
-        <h2>{title}</h2>
+        <h2>
+          <Image src={txnLogo} height={24} width={24} style={{ display: "inline-block" }} />
+          &nbsp;
+          <span style={{marginLeft: 2 }}>
+            {title}
+          </span>
+        </h2>
       </Group>
     </div>
   )
