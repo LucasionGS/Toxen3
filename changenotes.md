@@ -1,4 +1,7 @@
 <!-- ## Upcoming update / 1.4.0 -->
+## 1.3.3 - 2022-06-17
+- Added alternative Toxen icon.
+- Fixed Appbar title overflowing.
 ## 1.3.2 - 2022-06-17
 - Fixed Toxen not downloading ffmpeg due to expired URL.
 - Auto retrying up to 3 times if trimming fails.
