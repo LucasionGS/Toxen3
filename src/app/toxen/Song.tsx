@@ -27,6 +27,7 @@ import Playlist from "./Playlist";
 import TButton from "../components/Button/Button";
 import Ffmpeg from "./Ffmpeg";
 import Time from "./Time";
+import StoryboardParser from "./StoryboardParser";
 // import ToxenInteractionMode from "./ToxenInteractionMode";
 
 export default class Song implements ISong {
@@ -164,6 +165,34 @@ export default class Song implements ISong {
   public storyboardFile() {
     if (Settings.isRemote()) return `${this.dirname()}/${this.paths.storyboard}`;
     else return (this.paths && this.paths.storyboard) ? resolve(this.dirname(), this.paths.storyboard) : "";
+  }
+
+  public readStoryboardFile() {
+    return new Promise<StoryboardParser.StoryboardArray>((resolve, reject) => {
+      if (!this.storyboardFile()) {
+        resolve(null);
+        return;
+      }
+
+      if (Settings.isRemote()) {
+        Toxen.fetch(this.storyboardFile()).then(async res => {
+          if (res.status === 200) {
+            resolve(new StoryboardParser.StoryboardArray(...await res.json()));
+          } else {
+            Toxen.error("Failed to fetch storyboard from server.");
+            resolve(null);
+          }
+        });
+      }
+      else {
+        fsp.readFile(this.storyboardFile(), "utf8").then(data => {
+          resolve(new StoryboardParser.StoryboardArray(...JSON.parse(data)));
+        }).catch(err => {
+          Toxen.error("Failed to load storyboard from storage.");
+          resolve(null);
+        });
+      }
+    });
   }
 
   public getDisplayName() {

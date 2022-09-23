@@ -6,7 +6,7 @@ import "./Visualizer.scss";
 import System from '../../toxen/System';
 //@ts-expect-error 
 import txnLogo from "../../../icons/toxen.png";
-import { hexToRgb } from '../Form/FormInputFields/FormInputColorPicker';
+import { hexToRgb, rgbToHex } from '../Form/FormInputFields/FormInputColorPicker';
 
 const imgSize = 256;
 const toxenLogo = new Image(imgSize, imgSize);
@@ -39,8 +39,8 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     const ctx = this.ctx;
     const storedColor = Toxen.background.storyboard.getVisualizerColor();
     const baseBackgroundDim = (Settings.get("backgroundDim") ?? 50) / 100; // Base opacity of the background.
+    const storedColorAsRGB = hexToRgb(storedColor);
     if (Settings.get("backgroundDynamicLighting")) {
-      const storedColorAsRGB = hexToRgb(storedColor);
       this.ctx.fillStyle = this.dynamicDim >= 0 ? `rgba(0,0,0,${this.dynamicDim})`
         : `rgba(${storedColorAsRGB.r},${storedColorAsRGB.g},${storedColorAsRGB.b},${-this.dynamicDim / 2})`;
     }
@@ -53,6 +53,12 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     const intensityMultiplier = Toxen.background.storyboard.getVisualizerIntensity();
 
     ctx.fillStyle = ctx.strokeStyle = storedColor;
+    // let dimLowHigh = 1.25 - this.dynamicDim;
+    // ctx.fillStyle = ctx.strokeStyle = rgbToHex({
+    //   r: Math.min(255, Math.round(storedColorAsRGB.r * dimLowHigh)),
+    //   g: Math.min(255, Math.round(storedColorAsRGB.g * dimLowHigh)),
+    //   b: Math.min(255, Math.round(storedColorAsRGB.b * dimLowHigh)),
+    // });
     let [vWidth, vHeight, vLeft, vTop] = [
       this.canvas.width,
       this.canvas.height,

@@ -21,6 +21,8 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
   }
 
   public setSong(song: Song) {
+    // if (song.storyboardFile())
+    this.resetData(); 
     this.setState({ song });
   }
 
@@ -88,6 +90,10 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
     }
 
     return result;
+  }
+
+  public storyboardUpdate() {
+    
   }
 }
 

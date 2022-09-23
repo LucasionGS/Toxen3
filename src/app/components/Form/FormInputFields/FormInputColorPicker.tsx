@@ -88,7 +88,8 @@ export function rgbToGrayscale(rgb: { r: number, g: number, b: number }) {
   };
 }
 
-export function rgbToHex(rgb: { r: number, g: number, b: number }) {
-  const { r, g, b } = rgb ?? { r: 0, g: 0, b: 0 };
-  return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+export function rgbToHex(rgb: { r: number, g: number, b: number, a?: number }) {
+  const { r, g, b, a } = rgb ?? { r: 0, g: 0, b: 0, a: 255 };
+  // return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+  return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1) + (a ? "" : a.toString(16));
 }
