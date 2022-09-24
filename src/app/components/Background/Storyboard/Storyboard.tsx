@@ -45,7 +45,9 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
       visualizerColor: null,
       visualizerStyle: null,
       visualizerIntensity: null,
-      visualizerPulseBackground: null
+      visualizerPulseBackground: null,
+      backgroundDim: null,
+      backgroundDynamicLighting: null,
     }
   }
 
@@ -92,6 +94,25 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
     return result;
   }
 
+  public getBackgroundDim() {
+    return this.data.backgroundDim
+      ?? (
+        // (this.state.song && this.state.song.backgroundDim) || // TODO: Add support for this
+        Settings.get("backgroundDim")
+        || 0
+      );
+  }
+
+  public getDynamicLighting() {
+    return this.data.backgroundDynamicLighting
+      ?? (
+        // (this.state.song && this.state.song.backgroundDynamicLighting) || // TODO: Add support for this
+        Settings.get("backgroundDynamicLighting")
+        || false
+      );
+  }
+
+
   public storyboardUpdate() {
     
   }
@@ -102,4 +123,6 @@ interface StoryboardData {
   visualizerIntensity: number;
   visualizerStyle: VisualizerStyle;
   visualizerPulseBackground: boolean;
+  backgroundDim: number;
+  backgroundDynamicLighting: boolean;
 }

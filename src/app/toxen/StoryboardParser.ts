@@ -1,5 +1,6 @@
-import { rgbToHex } from "../components/Form/FormInputFields/FormInputColorPicker";
+import { hexToRgb, hexToRgbArray, rgbArrayToHex, rgbToHex } from "../components/Form/FormInputFields/FormInputColorPicker";
 import { Toxen } from "../ToxenApp";
+import { VisualizerStyle } from "./Settings";
 import Time from "./Time";
 
 namespace StoryboardParser {
@@ -8,7 +9,7 @@ namespace StoryboardParser {
       super(...storyboardObjects);
 
       // Sort by start time
-      
+
     }
 
     public getById(id: number): StoryboardItem {
@@ -34,9 +35,9 @@ namespace StoryboardParser {
     public getByTime(time: Time): StoryboardItem[] {
       // Get all items that has Time in range
       let list: StoryboardItem[] = this.slice();
-      
+
       let items: StoryboardItem[] = [];
-      
+
       for (let i = 0; i < list.length; i++) {
         const item = list[i];
         if (item.end < time) return items;
@@ -67,11 +68,18 @@ namespace StoryboardParser {
      */
     name: string;
     arguments: Arguments;
+    /**
+     * This function will be executed BEFORE the background dim is applied.
+     * 
+     * To draw after the background dim, return a another function from this function.
+     * All actions in the returned function will be executed after the background dim.
+     */
     action(
       args: { [Property in Arguments[number]as Property["identifier"]]: ComponentArgumentTypes[Property["type"]] },
-      currentTime: number,
-      duration: number,
-    ): void;
+      info: EventInfo,
+      stateManager: StateManager,
+      ctx: CanvasRenderingContext2D,
+    ): void | (() => void);
   }
 
   interface ComponentArgument {
@@ -93,6 +101,8 @@ namespace StoryboardParser {
     String: string;
     Number: number;
     Color: [number, number, number, number?];
+    VisualizerStyle: VisualizerStyle;
+    Boolean: boolean;
   }
 
   /**
@@ -100,12 +110,194 @@ namespace StoryboardParser {
    */
   export const components: { [componentName: string]: Component<ComponentArgument[]> } = {};
 
+  /**
+   * Adds a component to be usable in the storyboard.
+   * @param name Name of the component.
+   * @param component The component object.
+   */
   function addComponent<Arguments extends ComponentArgument[]>(name: string, component: Component<Arguments>) {
     components[name] = component;
   }
 
   function getAsType<T extends keyof ComponentArgumentTypes>(value: any) { return value as ComponentArgumentTypes[T]; }
 
+  class SBEvent {
+    constructor(
+      // Time is in seconds. Can be decimal.
+      public startTime: number,
+      public endTime: number,
+      public component: string,
+      public data: { [key: string]: ComponentArgumentTypes[keyof ComponentArgumentTypes] },
+      once: boolean = false) {
+      this.once = once;
+    }
+
+    private state: any = null;
+    public setState = (state: any) => { this.state = state; }
+    public getState = <T = any>(): T => { return this.state; }
+
+    /**
+     * Whether the event should be executed once instead of every frame during it's duration.
+     */
+    public once = false;
+    /**
+     * Whether the event has been executed. Used for `once` events.
+     */
+    public done = false;
+  }
+
+  let eventIndex = 0;
+  // `index` will be reset to 0 when the storyboard is finished.
+  // `index` will be set to first event that intersects with the current time, when user skips to a different time.
+  // `index` will be incremented by 1 every time a new event is added to `currentEvents`
+  // `index` will be checked every frame to see if it needs to be incremented. Check if storyboardTimeline[index].endTime < currentTime
+  const storyboardTimeline: SBEvent[] = [];
+
+  export function setStoryboardTimeline(timeline: SBEvent[]) {
+    storyboardTimeline.length = 0;
+    storyboardTimeline.push(...(timeline.sort((a, b) => a.startTime - b.startTime)));
+    eventIndex = 0;
+  }
+
+
+  // These events are for debugging and testing purposes.
+  setStoryboardTimeline([
+    // new SBEvent(0, 7, "backgroundDim", {
+    //   dim: 100
+    // }),
+    // new SBEvent(0, 7, "dynamicLighting", {
+    //   state: false
+    // }),
+
+    // new SBEvent(7, 150, "visualizerColorTransition", {
+    //   fromColor: [0, 0, 0],
+    //   toColor: [255, 0, 0],
+    //   duration: 0.5
+    // }),
+
+    // new SBEvent(0, 150, "visualizerStyle", {
+    //   style: VisualizerStyle.ProgressBar
+    // }),
+
+    // new SBEvent(0, 7, "visualizerIntensity", {
+    //   intensity: 0
+    // }),
+
+    // new SBEvent(7, 150, "visualizerIntensityTransition", {
+    //   fromIntensity: 0,
+    //   toIntensity: 1,
+    //   duration: 0.1
+    // }),
+
+    // new SBEvent(7, 140, "pulse", {
+    //   color: [255, 255, 255],
+    //   intensity: 0.5,
+    //   bpm: 180 // Beats per minute
+    // }),
+  ]);
+
+  // `currentEvents` will be iterated over every frame, and the events will be executed.
+  // `currentEvents` will be cleared when the storyboard is finished.
+  // `currentEvents` will be cleared when the user skips to a different time.
+  // `currentEvents` will remove events that are finished (endTime < currentTime)
+  const currentEvents: SBEvent[] = [];
+
+  // On each frame
+  export const onFrame = (ctx: CanvasRenderingContext2D, info: SongInfo) => {
+    let tlEvent = storyboardTimeline[eventIndex];
+    const { currentSongTime: currentTime } = info;
+    if (tlEvent) {
+      do {
+        if (currentTime > tlEvent.startTime) {
+          if (currentTime < tlEvent.endTime) {
+            currentEvents.push(tlEvent);
+          }
+          eventIndex++;
+        }
+      } while (currentTime > (tlEvent = storyboardTimeline[eventIndex])?.startTime);
+    }
+
+    tlEvent = null;
+
+    // Execute the current events
+    return currentEvents.map(e => {
+      if (e.endTime < currentTime) {
+        // Remove the event from the currentEvents array
+        currentEvents.splice(currentEvents.indexOf(e), 1);
+      } else {
+        // Execute the event
+        const eventHandler = components[e.component];
+        if (!e.once || (e.once && !e.done)) {
+          // If the event is a one-time event, mark it as done
+          if (e.once) {
+            e.done = true;
+          }
+          return eventHandler?.action(e.data, {
+            ...info,
+            eventStartTime: e.startTime,
+            eventEndTime: e.endTime,
+          }, {
+            getState: e.getState,
+            setState: e.setState,
+          }, ctx);
+        }
+      }
+    });
+  };
+
+  // Reset current events -> will be used when the user skips to a different time and song end.
+  export const resetCurrentEvents = (time: number) => {
+    // Reset the index
+    eventIndex = 0;
+    // Clear the current events
+    currentEvents.length = 0;
+
+    // Clean events
+    storyboardTimeline.forEach(tlEvent => {
+      tlEvent.setState(null);
+      if (tlEvent.once) {
+        tlEvent.done = false;
+      }
+    });
+  };
+
+  interface SongInfo {
+    currentSongTime: number;
+    songDuration: number;
+
+    isPaused: boolean;
+  }
+
+  interface EventInfo extends SongInfo {
+    eventStartTime: number;
+    eventEndTime: number;
+  }
+
+  interface StateManager {
+    /**
+     * Sets the state of the component.
+     * @param state The state to set.
+     */
+    setState: (state: any) => void;
+    /**
+     * Gets the state of the component.
+     * 
+     * !Warning! - The state will be reset when the user skips to a different time. Use states that are time-dependent for best results.
+     * 
+     * 
+     * !Warning! - This function will return `null` if the state has not been set.
+     * @returns The state of the component.
+     */
+    getState: <T = any>() => T;
+  }
+
+  export function drawStoryboard(ctx: CanvasRenderingContext2D, info: SongInfo) {
+    // Draw the storyboard
+    return onFrame(ctx, info).filter(e => e) as (() => void)[];
+  }
+
+
+  // Creating components
   addComponent("visualizerColor", {
     name: "Visualizer Color",
     arguments: [
@@ -115,23 +307,283 @@ namespace StoryboardParser {
         type: "Color"
       },
       {
-        name: "Duration",
-        identifier: "color",
-        type: "String"
+        name: "Duration for transition",
+        identifier: "duration",
+        type: "Number"
       },
     ],
-    action: (args, c, d) => {
+    action: (args) => {
       let color = getAsType<"Color">(args.color);
-      Toxen.background.storyboard.data.visualizerColor = rgbToHex({
+      const hex = rgbToHex({
         r: color[0],
         g: color[1],
         b: color[2],
         a: color[3]
       });
-      // Toxen.setAllVisualColors(args.color);
+
+      Toxen.background.storyboard.data.visualizerColor = hex;
     }
   });
 
+  addComponent("visualizerColorTransition", {
+    name: "Visualizer Color Transition",
+    arguments: [
+      {
+        name: "From Color",
+        identifier: "fromColor",
+        type: "Color"
+      },
+      {
+        name: "To Color",
+        identifier: "toColor",
+        type: "Color"
+      },
+      {
+        name: "Duration for transition in seconds",
+        identifier: "duration",
+        type: "Number"
+      },
+    ],
+    action: (args, { currentSongTime, eventStartTime }, { setState, getState }) => {
+      let state = getState<string>();
+      if (state) {
+        Toxen.background.storyboard.data.visualizerColor = state;
+        return;
+      }
+      const fromColor = getAsType<"Color">(args.fromColor);
+      const toColor = getAsType<"Color">(args.toColor);
+      let color: [number, number, number, number?] = toColor;
+      let duration = getAsType<"Number">(args.duration);
+      if (duration > 0) {
+        let fadeProgress = (currentSongTime - eventStartTime) / duration;
+        if (fadeProgress >= 1) {
+          fadeProgress = 1;
+          setState(rgbArrayToHex(color));
+        }
+        if (fadeProgress < 1) {
+          color = [
+            fromColor[0] + (toColor[0] - fromColor[0]) * fadeProgress,
+            fromColor[1] + (toColor[1] - fromColor[1]) * fadeProgress,
+            fromColor[2] + (toColor[2] - fromColor[2]) * fadeProgress,
+            (fromColor[3] ?? 255) + ((toColor[3] ?? 255) - (fromColor[3] ?? 255)) * fadeProgress,
+          ];
+        }
+      }
+      const hex = rgbArrayToHex(color);
+      Toxen.background.storyboard.data.visualizerColor = hex;
+    }
+  });
+
+  addComponent("visualizerStyle", {
+    name: "Visualizer Style",
+    arguments: [
+      {
+        name: "Style",
+        identifier: "style",
+        type: "VisualizerStyle"
+      },
+    ],
+    action: (args) => {
+      let style = getAsType<"VisualizerStyle">(args.style);
+      Toxen.background.storyboard.data.visualizerStyle = style;
+    }
+  });
+
+  addComponent("visualizerIntensity", {
+    name: "Visualizer Intensity",
+    arguments: [
+      {
+        name: "Intensity",
+        identifier: "intensity",
+        type: "Number"
+      },
+    ],
+    action: (args) => {
+      let intensity = getAsType<"Number">(args.intensity);
+      Toxen.background.storyboard.data.visualizerIntensity = intensity;
+    }
+  });
+
+  addComponent("visualizerIntensityTransition", {
+    name: "Visualizer Intensity Transition",
+    arguments: [
+      {
+        name: "From Intensity",
+        identifier: "fromIntensity",
+        type: "Number"
+      },
+      {
+        name: "To Intensity",
+        identifier: "toIntensity",
+        type: "Number"
+      },
+      {
+        name: "Duration for transition in seconds",
+        identifier: "duration",
+        type: "Number"
+      },
+    ],
+    action: (args, { currentSongTime, eventStartTime }, { setState, getState }) => {
+      let state = getState<number>();
+      if (state) {
+        Toxen.background.storyboard.data.visualizerIntensity = state;
+        return;
+      }
+      let fromIntensity = getAsType<"Number">(args.fromIntensity);
+      fromIntensity = Math.max(0.001, Math.min(1, fromIntensity)); // Clamp to 0.001 - 1, this is to prevent the visualizer from breaking when reaching 0
+      let toIntensity = getAsType<"Number">(args.toIntensity);
+      toIntensity = Math.max(0.001, Math.min(1, toIntensity));
+      let intensity = toIntensity;
+      let duration = getAsType<"Number">(args.duration);
+      if (duration > 0) {
+        let fadeProgress = (currentSongTime - eventStartTime) / duration;
+        if (fadeProgress >= 1) {
+          fadeProgress = 1;
+          setState(toIntensity);
+        }
+        if (fadeProgress < 1) {
+          intensity = fromIntensity + (toIntensity - fromIntensity) * fadeProgress;
+        }
+      }
+      Toxen.background.storyboard.data.visualizerIntensity = intensity;
+    }
+  });
+
+  addComponent("pulse", {
+    name: "Pulse",
+    arguments: [
+      {
+        name: "Color",
+        identifier: "color",
+        type: "Color"
+      },
+      {
+        name: "Intensity",
+        identifier: "intensity",
+        type: "Number"
+      },
+      {
+        name: "Recurring every X seconds",
+        identifier: "bpm",
+        type: "Number"
+      },
+    ],
+    action: (args, { currentSongTime, eventStartTime }, { setState, getState }, ctx) => {
+      // Draw a pulse on the visualizer
+      let state = getState<{ lastPulse: number }>() ?? { lastPulse: null };
+      let color = getAsType<"Color">(args.color);
+      let intensity = getAsType<"Number">(args.intensity);
+      let bpm = getAsType<"Number">(args.bpm);
+
+      const currentSongTimeMs = Math.round(currentSongTime * 1000);
+      let recurring = bpm > 0 ? Math.round(60 / bpm * 1000) : 0;
+      const animateInTime = (recurring * 0.1) / 1000;
+      const animateOutTime = (recurring * 0.3) / 1000;
+
+      // Animate using ctx, this function is run every frame.
+      if (state.lastPulse === null) {
+        
+        state.lastPulse = (eventStartTime * 1000) - (animateInTime * 1000);
+      }
+      else if (currentSongTimeMs - state.lastPulse >= recurring) {
+        if (recurring > 0) {
+          state.lastPulse = currentSongTimeMs;
+        }
+        return;
+      }
+
+      let progress = (currentSongTimeMs - state.lastPulse) / recurring;
+      if (progress < animateInTime) {
+        intensity *= progress / animateInTime;
+      }
+      else if (progress > animateOutTime) {
+        intensity *= (1 - progress) / (1 - animateOutTime);
+      }
+
+      setState(state);
+
+      return () => {
+        let hex = rgbArrayToHex(color);
+        ctx.fillStyle = hex;
+        ctx.globalAlpha = intensity;
+        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.globalAlpha = 1;
+      }
+    }
+  });
+
+  addComponent("backgroundDim", {
+    name: "Background Dim",
+    arguments: [
+      {
+        name: "Dim",
+        identifier: "dim",
+        type: "Number"
+      },
+    ],
+    action: (args) => {
+      let dim = getAsType<"Number">(args.dim);
+      Toxen.background.storyboard.data.backgroundDim = dim;
+    }
+  });
+
+  addComponent("backgroundDimTransition", {
+    name: "Background Dim Transition",
+    arguments: [
+      {
+        name: "From Dim",
+        identifier: "fromDim",
+        type: "Number"
+      },
+      {
+        name: "To Dim",
+        identifier: "toDim",
+        type: "Number"
+      },
+      {
+        name: "Duration for transition in seconds",
+        identifier: "duration",
+        type: "Number"
+      },
+    ],
+    action: (args, { currentSongTime, eventStartTime }, { setState, getState }) => {
+      let state = getState<number>();
+      if (state) {
+        Toxen.background.storyboard.data.backgroundDim = state;
+        return;
+      }
+      let fromDim = getAsType<"Number">(args.fromDim);
+      let toDim = getAsType<"Number">(args.toDim);
+      let dim = toDim;
+      let duration = getAsType<"Number">(args.duration);
+      if (duration > 0) {
+        let fadeProgress = (currentSongTime - eventStartTime) / duration;
+        if (fadeProgress >= 1) {
+          fadeProgress = 1;
+          setState(toDim);
+        }
+        if (fadeProgress < 1) {
+          dim = fromDim + (toDim - fromDim) * fadeProgress;
+        }
+      }
+      Toxen.background.storyboard.data.backgroundDim = dim;
+    }
+  });
+
+  addComponent("dynamicLighting", {
+    name: "Dynamic Lighting",
+    arguments: [
+      {
+        name: "Force state",
+        identifier: "state",
+        type: "Boolean"
+      },
+    ],
+    action: (args) => {
+      let state = getAsType<"Boolean">(args.state);
+      Toxen.background.storyboard.data.backgroundDynamicLighting = state;
+    }
+  });
 }
 
 export default StoryboardParser;

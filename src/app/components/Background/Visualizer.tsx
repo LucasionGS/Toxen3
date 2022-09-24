@@ -7,6 +7,7 @@ import System from '../../toxen/System';
 //@ts-expect-error 
 import txnLogo from "../../../icons/toxen.png";
 import { hexToRgb, rgbToHex } from '../Form/FormInputFields/FormInputColorPicker';
+import StoryboardParser from '../../toxen/StoryboardParser';
 
 const imgSize = 256;
 const toxenLogo = new Image(imgSize, imgSize);
@@ -22,6 +23,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     this.state = {};
   }
 
+  private lastColor: string = "";
   private curLen: number = 0;
   /**
    * Dynamic dim for the background of the visualizer.
@@ -37,18 +39,39 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     if (!Toxen.musicPlayer || !Toxen.musicPlayer.media) return console.log("Player or media missing");
 
     const ctx = this.ctx;
-    const storedColor = Toxen.background.storyboard.getVisualizerColor();
-    const baseBackgroundDim = (Settings.get("backgroundDim") ?? 50) / 100; // Base opacity of the background.
+
+    const storyboardCallbacks = StoryboardParser.drawStoryboard(ctx, {
+      currentSongTime: Toxen.musicPlayer.media.currentTime,
+      songDuration: Toxen.musicPlayer.media.duration,
+      isPaused: Toxen.musicPlayer.media.paused,
+    });
+
+    let storedColor = Toxen.background.storyboard.getVisualizerColor();
+    const baseBackgroundDim = (Toxen.background.storyboard.getBackgroundDim() ?? 50) / 100; // Base opacity of the background.
     const storedColorAsRGB = hexToRgb(storedColor);
-    if (Settings.get("backgroundDynamicLighting")) {
+    if (Toxen.background.storyboard.getDynamicLighting()) {
       this.ctx.fillStyle = this.dynamicDim >= 0 ? `rgba(0,0,0,${this.dynamicDim})`
         : `rgba(${storedColorAsRGB.r},${storedColorAsRGB.g},${storedColorAsRGB.b},${-this.dynamicDim / 2})`;
+      // this.ctx.fillStyle = `rgba(0,0,0,${this.dynamicDim >= 0 ? this.dynamicDim : baseBackgroundDim})` // Disable dynamic lighting for now.
+      console.log(this.dynamicDim, baseBackgroundDim);
+      
     }
     else {
       this.ctx.fillStyle = `rgba(0,0,0,${baseBackgroundDim})`;
     }
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height); // Background dim
 
+    if (storyboardCallbacks.length > 0) {
+      for (const callback of storyboardCallbacks) {
+        callback();
+      }
+    }
+    
+    storedColor = Toxen.background.storyboard.getVisualizerColor();
+    if (this.lastColor !== storedColor) {
+      Toxen.musicControls.progressBar.setFillColor(storedColor);
+    }
+    this.lastColor = storedColor ?? this.lastColor;
     const style = Toxen.background.storyboard.getVisualizerStyle();
     const intensityMultiplier = Toxen.background.storyboard.getVisualizerIntensity();
 
@@ -83,7 +106,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     const opacity = 0.7; // Opacity of the visualizer bars.
 
     const dynLight = (() => {
-      const maxHeight = getMaxHeight(0.3);
+      const maxHeight = getMaxHeight(0.3) || 1;
       const unitH = maxHeight / dataSize;
       let averageHeight = 0;
       for (let i = 0; i < len; i++) {
@@ -429,6 +452,9 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
         break;
       }
     }
+
+    // Reset storyboard specifics after drawing.
+    Toxen.background.storyboard.resetData();
   }
 
   /**

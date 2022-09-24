@@ -5,6 +5,7 @@ import Path from "path";
 import Settings from '../toxen/Settings';
 import Time from '../toxen/Time';
 import PulsingLogo from './PulsingLogo/PulsingLogo';
+import StoryboardParser from '../toxen/StoryboardParser';
 
 export type MediaSourceInfo = string;
 
@@ -56,10 +57,13 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
   }) {
     options = options || {};
     this.media.currentTime = seconds;
+    StoryboardParser.resetCurrentEvents(seconds);
     if (!this.props.useSubtitleEditorMode && options.updateDiscord) Toxen.discord.setPresence();
   }
 
   public setSource(src: MediaSourceInfo, playWhenReady: boolean = false) {
+    // Reset storyboard on song change
+    StoryboardParser.resetCurrentEvents(0);
     this.setState({
       src
     }, () => playWhenReady ? this.play() : this.load()
