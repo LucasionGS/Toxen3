@@ -755,7 +755,8 @@ export default class ToxenAppRenderer extends React.Component {
             }} />
 
           {/* Toxen2 Migration */}
-          <SidepanelSection advancedOnly key="migration" id="migration" title="Migration" icon={<i className="fas fa-exchange-alt"></i>}
+          <SidepanelSection key="migration" id="migration" 
+          // title="Migration" icon={<i className="fas fa-exchange-alt"></i>}
             dynamicContent={async (section) => {
               return (<MigrationPanel />);
             }} />

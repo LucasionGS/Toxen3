@@ -70,7 +70,7 @@ export default class Time {
         continue;
       }
       if (i === 3 && endValue.length > 0) {
-        endValue += `.${~~v}`;
+        endValue += `.${(~~v).toString().padStart(3, "0")}`;
       }
       else if (endValue.length > 0) {
         endValue += `:${v}`;

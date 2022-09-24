@@ -2,62 +2,11 @@ import { hexToRgb, hexToRgbArray, rgbArrayToHex, rgbToHex } from "../components/
 import { Toxen } from "../ToxenApp";
 import { VisualizerStyle } from "./Settings";
 import Time from "./Time";
+import yaml from "js-yaml";
 
 namespace StoryboardParser {
-  export class StoryboardArray extends Array<StoryboardItem> {
-    constructor(...storyboardObjects: StoryboardItem[]) {
-      super(...storyboardObjects);
-
-      // Sort by start time
-
-    }
-
-    public getById(id: number): StoryboardItem {
-      return this.find(item => item.id === id);
-    }
-
-    // public getByTime(time: Time): StoryboardItem {
-    //   let item: StoryboardItem;
-    //   let list: StoryboardItem[] = this.slice();
-    //   let index: number;
-    //   if (list.length === 0) return null;
-    //   while (true) {
-    //     index = Math.floor(list.length / 2);
-    //     item = list[index];
-    //     if (list.length === 0) return null;
-    //     else if (!item) list.splice(index, 1);
-    //     else if (item.start > time) list = list.slice(0, index);
-    //     else if (item.end <= time) list = list.slice(index + 1);
-    //     else return item;
-    //   }
-    // }
-
-    public getByTime(time: Time): StoryboardItem[] {
-      // Get all items that has Time in range
-      let list: StoryboardItem[] = this.slice();
-
-      let items: StoryboardItem[] = [];
-
-      for (let i = 0; i < list.length; i++) {
-        const item = list[i];
-        if (item.end < time) return items;
-        if (item.start <= time && item.end > time) {
-          items.push(item);
-        }
-      }
-
-      return items;
-    }
-  }
-
-  export class StoryboardItem {
-    public id: number;
-    public start: Time;
-    public end: Time;
-    public text: string;
-    public options: Action[];
-  }
-
+  export const version = 1;
+  
   interface Action {
     [key: string]: any;
   }
@@ -95,6 +44,11 @@ namespace StoryboardParser {
      * Type of the argument. Determinds how the argument is parsed and the type of input shown to the user.
      */
     type: keyof ComponentArgumentTypes;
+
+    /**
+     * Is this argument required?
+     */
+    required?: boolean;
   }
 
   interface ComponentArgumentTypes {
@@ -121,7 +75,7 @@ namespace StoryboardParser {
 
   function getAsType<T extends keyof ComponentArgumentTypes>(value: any) { return value as ComponentArgumentTypes[T]; }
 
-  class SBEvent {
+  export class SBEvent {
     constructor(
       // Time is in seconds. Can be decimal.
       public startTime: number,
@@ -144,6 +98,88 @@ namespace StoryboardParser {
      * Whether the event has been executed. Used for `once` events.
      */
     public done = false;
+
+    public static fromConfig(config: SBEventConfig, variables?: { [key: string]: any }, debugIndex?: number) {
+      const throwError = (message: string) => {
+        throw new Error(`${typeof debugIndex === "number" ? `Object Index #${debugIndex}: ` : ""}${message}`);
+      }
+
+      if (!config) throwError("Event config is undefined.");
+
+      // Validate the component
+      if (!config.component) throwError(`Property "component" must be defined.`);
+      if (!components[config.component]) throwError(`Component "${config.component}" does not exist.`);
+      
+      // Validate the arguments
+      const component = components[config.component];
+      const args = config.data;
+      
+      // Parse the variables
+      if (variables) {
+        // Parse for properties
+        for (const key in config) {
+          type Key = keyof typeof config;
+          const value = config[key as Key];
+          if (typeof value === "string") {
+            if (value.startsWith("$")) {
+              const variableName = value.slice(1);
+              if (variables[variableName] === undefined) throwError(`Variable "${variableName}" does not exist.`);
+              (config[key as Key] as any) = variables[variableName];
+            }
+          }
+        }
+        
+        // Parse for arguments
+        for (const arg of component.arguments) {
+          const value = args[arg.identifier];
+          if (value === "string") {
+            if (value.startsWith("$")) {
+              const variableName = value.substring(1);
+              if (variables[variableName] === undefined) throwError(`Variable "${variableName}" is not defined.`);
+              args[arg.identifier] = variables[variableName];
+            }
+          }
+        }
+      }
+
+      for (const arg of component.arguments) {
+        const value = args[arg.identifier]
+        if (arg.required && value === undefined) throwError(`Argument "${arg.identifier}" is missing.`);
+        if (arg.type === "Color" && typeof value === "string" && value.startsWith("#")) {
+          args[arg.identifier] = hexToRgbArray(value as string); // Convert hex to rgb
+        }
+      }
+      
+      // Validate the timing
+      const startTime = typeof config.start === "number" ? config.start : (Time.fromTimestamp(config.start).toMillseconds() / 1000);
+      const endTime = typeof config.end === "number" ? config.end : (Time.fromTimestamp(config.end).toMillseconds() / 1000);
+      if (startTime < 0) throwError(`Property "start" must be defined and cannot be less than 0.`);
+      if (endTime < 0) throwError(`Property "end" must be defined and cannot be less than 0.`);
+      
+      
+      return new SBEvent(startTime, endTime, config.component, config.data, config.once);
+    }
+  }
+
+  export interface SBEventConfig {
+    start: number | string;
+    end: number | string;
+    component: string;
+    data: { [key: string]: ComponentArgumentTypes[keyof ComponentArgumentTypes] };
+    once?: boolean;
+  }
+
+  interface PreparseStoryboardConfig {
+    storyboard: SBEventConfig[];
+    variables?: { [key: string]: any };
+    version?: number;
+    author?: string;
+  }
+
+  export interface StoryboardConfig {
+    storyboard: SBEvent[];
+    version?: number;
+    author?: string;
   }
 
   let eventIndex = 0;
@@ -151,50 +187,77 @@ namespace StoryboardParser {
   // `index` will be set to first event that intersects with the current time, when user skips to a different time.
   // `index` will be incremented by 1 every time a new event is added to `currentEvents`
   // `index` will be checked every frame to see if it needs to be incremented. Check if storyboardTimeline[index].endTime < currentTime
-  const storyboardTimeline: SBEvent[] = [];
+  let loadedStoryboard: StoryboardConfig = {
+    storyboard: [],
+  };
 
-  export function setStoryboardTimeline(timeline: SBEvent[]) {
-    storyboardTimeline.length = 0;
-    storyboardTimeline.push(...(timeline.sort((a, b) => a.startTime - b.startTime)));
+  export function setStoryboard(config: StoryboardConfig) {
+    // loadedStoryboard.storyboard.length = 0;
+    loadedStoryboard = config;
+    if (loadedStoryboard) loadedStoryboard.storyboard.sort((a, b) => a.startTime - b.startTime);
     eventIndex = 0;
   }
 
+  export function parseStoryboard(storyboardYaml: string): StoryboardConfig {
+    const storyboardConfig = yaml.load(storyboardYaml) as PreparseStoryboardConfig;
+
+    if (!storyboardConfig.storyboard) throw new Error("Storyboard is missing `storyboard` property.");
+    if (typeof storyboardConfig.version === "number" && storyboardConfig.version !== version) throw new Error(`Storyboard version is not supported. Expected ${version}, got ${storyboardConfig.version}`);
+
+    try {
+      const events = storyboardConfig.storyboard.map((e, i) => SBEvent.fromConfig(e, storyboardConfig.variables, i));
+      return {
+        storyboard: events,
+        version: storyboardConfig.version,
+        author: storyboardConfig.author,
+      }
+    } catch (error: any) {
+      Toxen.notify({
+        title: "Failed to parse storyboard",
+        content: error.message ?? error.toString(),
+        type: "error",
+      });
+      console.error(error);
+    }
+  }
+
+  export function loadStoryboard(storyboard: string) {
+    const timeline = parseStoryboard(storyboard);
+    setStoryboard(timeline);
+  }
+
+
 
   // These events are for debugging and testing purposes.
-  setStoryboardTimeline([
-    // new SBEvent(0, 7, "backgroundDim", {
-    //   dim: 100
-    // }),
-    // new SBEvent(0, 7, "dynamicLighting", {
-    //   state: false
-    // }),
-
-    // new SBEvent(7, 150, "visualizerColorTransition", {
-    //   fromColor: [0, 0, 0],
-    //   toColor: [255, 0, 0],
-    //   duration: 0.5
-    // }),
-
-    // new SBEvent(0, 150, "visualizerStyle", {
-    //   style: VisualizerStyle.ProgressBar
-    // }),
-
-    // new SBEvent(0, 7, "visualizerIntensity", {
-    //   intensity: 0
-    // }),
-
-    // new SBEvent(7, 150, "visualizerIntensityTransition", {
-    //   fromIntensity: 0,
-    //   toIntensity: 1,
-    //   duration: 0.1
-    // }),
-
-    // new SBEvent(7, 140, "pulse", {
-    //   color: [255, 255, 255],
-    //   intensity: 0.5,
-    //   bpm: 180 // Beats per minute
-    // }),
-  ]);
+  // setStoryboardTimeline([
+  //   new SBEvent(0, 7, "backgroundDim", {
+  //     dim: 100
+  //   }),
+  //   new SBEvent(0, 7, "dynamicLighting", {
+  //     state: false
+  //   }),
+  //   new SBEvent(7, 150, "visualizerColorTransition", {
+  //     fromColor: [0, 0, 0],
+  //     toColor: [255, 0, 0],
+  //     duration: 0.5
+  //   }),
+  //   new SBEvent(0, 150, "visualizerStyle", {
+  //     style: VisualizerStyle.ProgressBar
+  //   }),
+  //   new SBEvent(0, 7, "visualizerIntensity", {
+  //     intensity: 0
+  //   }),
+  //   new SBEvent(7, 150, "visualizerIntensityTransition", {
+  //     fromIntensity: 0,
+  //     toIntensity: 1,
+  //     duration: 0.1
+  //   }),
+  //   new SBEvent(7, 140, "pulse", {
+  //     color: [255, 255, 255],
+  //     intensity: 0.5,
+  //     bpm: 180 // Beats per minute
+  //   }),
+  // ]);
 
   // `currentEvents` will be iterated over every frame, and the events will be executed.
   // `currentEvents` will be cleared when the storyboard is finished.
@@ -204,7 +267,7 @@ namespace StoryboardParser {
 
   // On each frame
   export const onFrame = (ctx: CanvasRenderingContext2D, info: SongInfo) => {
-    let tlEvent = storyboardTimeline[eventIndex];
+    let tlEvent = loadedStoryboard.storyboard[eventIndex];
     const { currentSongTime: currentTime } = info;
     if (tlEvent) {
       do {
@@ -214,33 +277,36 @@ namespace StoryboardParser {
           }
           eventIndex++;
         }
-      } while (currentTime > (tlEvent = storyboardTimeline[eventIndex])?.startTime);
+      } while (currentTime > (tlEvent = loadedStoryboard.storyboard[eventIndex])?.startTime);
     }
 
     tlEvent = null;
 
     // Execute the current events
     return currentEvents.map(e => {
-      if (e.endTime < currentTime) {
-        // Remove the event from the currentEvents array
-        currentEvents.splice(currentEvents.indexOf(e), 1);
-      } else {
-        // Execute the event
-        const eventHandler = components[e.component];
-        if (!e.once || (e.once && !e.done)) {
-          // If the event is a one-time event, mark it as done
-          if (e.once) {
-            e.done = true;
-          }
-          return eventHandler?.action(e.data, {
-            ...info,
-            eventStartTime: e.startTime,
-            eventEndTime: e.endTime,
-          }, {
-            getState: e.getState,
-            setState: e.setState,
-          }, ctx);
+      // Execute the event
+      const eventHandler = components[e.component];
+      if (!e.once || (e.once && !e.done)) {
+        // If the event is a one-time event, mark it as done
+        if (e.once) {
+          e.done = true;
         }
+        
+        const cb = eventHandler?.action(e.data, {
+          ...info,
+          eventStartTime: e.startTime,
+          eventEndTime: e.endTime,
+        }, {
+          getState: e.getState,
+          setState: e.setState,
+        }, ctx);
+
+        if (e.endTime < currentTime) {
+          // Remove the event from the currentEvents array
+          currentEvents.splice(currentEvents.indexOf(e), 1);
+        }
+        
+        return cb;
       }
     });
   };
@@ -253,7 +319,7 @@ namespace StoryboardParser {
     currentEvents.length = 0;
 
     // Clean events
-    storyboardTimeline.forEach(tlEvent => {
+    if (loadedStoryboard) loadedStoryboard.storyboard.forEach(tlEvent => {
       tlEvent.setState(null);
       if (tlEvent.once) {
         tlEvent.done = false;
@@ -293,6 +359,10 @@ namespace StoryboardParser {
 
   export function drawStoryboard(ctx: CanvasRenderingContext2D, info: SongInfo) {
     // Draw the storyboard
+    if (!loadedStoryboard) {
+      // No storyboard loaded
+      return [];
+    }
     return onFrame(ctx, info).filter(e => e) as (() => void)[];
   }
 
@@ -380,7 +450,8 @@ namespace StoryboardParser {
       {
         name: "Style",
         identifier: "style",
-        type: "VisualizerStyle"
+        type: "VisualizerStyle",
+        required: true
       },
     ],
     action: (args) => {
@@ -430,9 +501,9 @@ namespace StoryboardParser {
         return;
       }
       let fromIntensity = getAsType<"Number">(args.fromIntensity);
-      fromIntensity = Math.max(0.001, Math.min(1, fromIntensity)); // Clamp to 0.001 - 1, this is to prevent the visualizer from breaking when reaching 0
+      fromIntensity = Math.max(0.001, Math.min(2, fromIntensity)); // Clamp to 0.001 - 1, this is to prevent the visualizer from breaking when reaching 0
       let toIntensity = getAsType<"Number">(args.toIntensity);
-      toIntensity = Math.max(0.001, Math.min(1, toIntensity));
+      toIntensity = Math.max(0.001, Math.min(2, toIntensity));
       let intensity = toIntensity;
       let duration = getAsType<"Number">(args.duration);
       if (duration > 0) {

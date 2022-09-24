@@ -53,8 +53,6 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
       this.ctx.fillStyle = this.dynamicDim >= 0 ? `rgba(0,0,0,${this.dynamicDim})`
         : `rgba(${storedColorAsRGB.r},${storedColorAsRGB.g},${storedColorAsRGB.b},${-this.dynamicDim / 2})`;
       // this.ctx.fillStyle = `rgba(0,0,0,${this.dynamicDim >= 0 ? this.dynamicDim : baseBackgroundDim})` // Disable dynamic lighting for now.
-      console.log(this.dynamicDim, baseBackgroundDim);
-      
     }
     else {
       this.ctx.fillStyle = `rgba(0,0,0,${baseBackgroundDim})`;

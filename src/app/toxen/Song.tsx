@@ -12,7 +12,7 @@ import { Failure, Result, Success } from "./Result";
 import System, { ToxenFile } from "./System";
 import Converter from "./Converter";
 import Stats from "./Statistics";
-import navigator, { MediaMetadata } from "../../navigator";
+// import navigator, { MediaMetadata } from "../../navigator";
 import SubtitleParser from "./SubtitleParser";
 //@ts-expect-error 
 import ToxenMax from "../../icons/skull_max.png";
@@ -168,7 +168,7 @@ export default class Song implements ISong {
   }
 
   public readStoryboardFile() {
-    return new Promise<StoryboardParser.StoryboardArray>((resolve, reject) => {
+    return new Promise<StoryboardParser.StoryboardConfig>((resolve, reject) => {
       if (!this.storyboardFile()) {
         resolve(null);
         return;
@@ -177,7 +177,7 @@ export default class Song implements ISong {
       if (Settings.isRemote()) {
         Toxen.fetch(this.storyboardFile()).then(async res => {
           if (res.status === 200) {
-            resolve(new StoryboardParser.StoryboardArray(...await res.json()));
+            resolve(StoryboardParser.parseStoryboard(await res.text()));
           } else {
             Toxen.error("Failed to fetch storyboard from server.");
             resolve(null);
@@ -186,13 +186,20 @@ export default class Song implements ISong {
       }
       else {
         fsp.readFile(this.storyboardFile(), "utf8").then(data => {
-          resolve(new StoryboardParser.StoryboardArray(...JSON.parse(data)));
+          resolve(StoryboardParser.parseStoryboard(data));
         }).catch(err => {
           Toxen.error("Failed to load storyboard from storage.");
           resolve(null);
         });
       }
     });
+  }
+
+  public async applyStoryboard() {
+    let storyboard = await this.readStoryboardFile();
+    if (!storyboard) return StoryboardParser.setStoryboard(null);
+
+    StoryboardParser.setStoryboard(storyboard);
   }
 
   public getDisplayName() {
@@ -372,6 +379,7 @@ export default class Song implements ISong {
       if (this.lastBlobUrl) URL.revokeObjectURL(this.lastBlobUrl);
       let bg = this.backgroundFile();
       this.applySubtitles();
+      this.applyStoryboard();
       if (!options.disableHistory) Song.historyAdd(this);
       Toxen.musicPlayer.setSource(src, true);
       await Toxen.background.setBackground(bg);

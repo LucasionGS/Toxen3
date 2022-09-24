@@ -9,7 +9,7 @@ import Settings from "./app/toxen/Settings";
 import Song from "./app/toxen/Song";
 import Converter from "./app/toxen/Converter";
 import Stats from "./app/toxen/Statistics";
-import navigator from "./navigator";
+// import navigator from "./navigator";
 import User from "./app/toxen/User";
 import { MantineProvider } from "@mantine/core";
 import { NotificationsProvider } from "@mantine/notifications";
@@ -90,6 +90,21 @@ remote.Menu.setApplicationMenu(
           accelerator: "CTRL + SHIFT + T",
           click() {
             Toxen.loadThemes();
+            Toxen.notify({
+              content: "Themes reloaded",
+              expiresIn: 1000
+            });
+          }
+        },
+        {
+          label: "Reload Theme",
+          accelerator: "CTRL + SHIFT + S",
+          click() {
+            Song.getCurrent()?.applyStoryboard();
+            Toxen.notify({
+              content: "Storyboard reloaded",
+              expiresIn: 1000
+            });
           }
         }
       ]
