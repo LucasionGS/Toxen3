@@ -71,9 +71,12 @@ export class Toxen {
 
   private static mode: ToxenInteractionMode = ToxenInteractionMode.Player;
 
-  public static setMode(mode: ToxenInteractionMode | keyof typeof ToxenInteractionMode) {
+  public static setMode(mode: "StoryboardEditor", song: Song): void;
+  public static setMode(mode: ToxenInteractionMode.StoryboardEditor, song: Song): void;
+  public static setMode(mode: ToxenInteractionMode | keyof typeof ToxenInteractionMode): void;
+  public static setMode(mode: ToxenInteractionMode | keyof typeof ToxenInteractionMode, data?: any) {
     if (typeof mode == "string") {
-      mode = ToxenInteractionMode[mode as keyof typeof ToxenInteractionMode];
+      mode = ToxenInteractionMode[mode];
     }
     Toxen.mode = mode;
     // Actions on specific modes
@@ -84,8 +87,7 @@ export class Toxen {
       }
 
       case ToxenInteractionMode.StoryboardEditor: {
-        const curSong = Song.getCurrent();
-        if (Toxen.editingSong && curSong && Toxen.editingSong.uid !== curSong.uid) Toxen.editingSong.play();
+        (Toxen.editingSong = data as Song).play();
         Toxen.sidePanel.setSectionId("storyboardEditor");
         break;
       }
@@ -602,6 +604,7 @@ export default class ToxenAppRenderer extends React.Component {
           });
 
           remote.autoUpdater.on("error", (error) => {
+            console.error(error);
             Toxen.error(`Error while updating: ${error.message}`);
           });
         } catch (error) {

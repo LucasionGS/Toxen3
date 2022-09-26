@@ -16,6 +16,7 @@ import Path from "path";
 import { Button, Checkbox, ColorInput, NumberInput, Select, TextInput } from "@mantine/core";
 import ListInput from "../../../ListInput/ListInput";
 import SelectAsync from "../../../SelectAsync/SelectAsync";
+import ToxenInteractionMode from "../../../../toxen/ToxenInteractionMode";
 
 interface EditSongProps { }
 
@@ -48,8 +49,6 @@ export default function EditSong(props: EditSongProps) {
       </SidepanelSectionHeader>
       <>
         <h2>General information</h2>
-        {/* <FormInput displayName="Location" name="paths.dirname*string" getValueTemplateCallback={() => Toxen.editingSong} type="text" readOnly /> */}
-        {/* <FormInput displayName="Artist" name="artist*string" getValueTemplateCallback={() => Toxen.editingSong} type="text" /> */}
         <TextInput
           label="Artist"
           name="artist"
@@ -58,7 +57,6 @@ export default function EditSong(props: EditSongProps) {
           onBlur={() => Toxen.editingSong.saveInfo()}
           onKeyDown={textInputSaveOnEnter}
         />
-        {/* <FormInput displayName="Title" name="title*string" getValueTemplateCallback={() => Toxen.editingSong} type="text" /> */}
         <TextInput
           label="Title"
           name="title"
@@ -67,14 +65,12 @@ export default function EditSong(props: EditSongProps) {
           onBlur={() => Toxen.editingSong.saveInfo()}
           onKeyDown={textInputSaveOnEnter}
         />
-        {/* <FormInput displayName="Co-Artists" name="coArtists*array" getValueTemplateCallback={() => Toxen.editingSong} type="list" /> */}
         <ListInput
           label="Co-Artists"
           name="coArtists"
           onChange={(list) => (Toxen.editingSong.coArtists = list) && Toxen.editingSong.saveInfo()}
           defaultValue={Toxen.editingSong.coArtists}
         />
-        {/* <FormInput displayName="Album" name="album*string" getValueTemplateCallback={() => Toxen.editingSong} type="text" /> */}
         <TextInput
           label="Album"
           name="album"
@@ -83,7 +79,6 @@ export default function EditSong(props: EditSongProps) {
           onBlur={() => Toxen.editingSong.saveInfo()}
           onKeyDown={textInputSaveOnEnter}
         />
-        {/* <FormInput displayName="Source" name="source*string" getValueTemplateCallback={() => Toxen.editingSong} type="text" /> */}
         <TextInput
           label="Source"
           name="source"
@@ -92,7 +87,6 @@ export default function EditSong(props: EditSongProps) {
           onBlur={() => Toxen.editingSong.saveInfo()}
           onKeyDown={textInputSaveOnEnter}
         />
-        {/* <FormInput displayName="Language" name="language*string" getValueTemplateCallback={() => Toxen.editingSong} type="text" /> */}
         <TextInput
           label="Language"
           name="language"
@@ -101,7 +95,6 @@ export default function EditSong(props: EditSongProps) {
           onBlur={() => Toxen.editingSong.saveInfo()}
           onKeyDown={textInputSaveOnEnter}
         />
-        {/* <FormInput displayName="Release Year" name="year*number" getValueTemplateCallback={() => Toxen.editingSong} type="number" /> */}
         <NumberInput
           label="Release Year"
           name="year"
@@ -110,7 +103,6 @@ export default function EditSong(props: EditSongProps) {
           onBlur={() => Toxen.editingSong.saveInfo()}
           onKeyDown={textInputSaveOnEnter}
         />
-        {/* <FormInput displayName="Tags" name="tags*array" getValueTemplateCallback={() => Toxen.editingSong} type="list" /> */}
         <ListInput
           label="Tags"
           name="tags"
@@ -118,16 +110,6 @@ export default function EditSong(props: EditSongProps) {
           defaultValue={Toxen.editingSong.tags}
         />
         <br />
-        {/* <FormInput displayName="Media File" name="paths.media*string" getValueTemplateCallback={() => Toxen.editingSong} type="selectAsync"
-          values={(async () => {
-            let song = Toxen.editingSong;
-            if (!song)
-              return [];
-            let path = song.dirname();
-
-            let supported = Toxen.getSupportedMediaFiles();
-            return await Toxen.filterSupportedFiles(path, supported);
-          })} /> */}
         <SelectAsync
           label="Media File"
           name="paths.media"
@@ -150,16 +132,6 @@ export default function EditSong(props: EditSongProps) {
             }
           }}
         />
-        {/* <FormInput nullable displayName="Background file" name="paths.background*string" getValueTemplateCallback={() => Toxen.editingSong} type="selectAsync"
-          values={(async () => {
-            let song = Toxen.editingSong;
-            if (!song)
-              return [];
-            let path = song.dirname();
-
-            let supported = Toxen.getSupportedImageFiles();
-            return await Toxen.filterSupportedFiles(path, supported);
-          })} /> */}
         <SelectAsync
           label="Background file"
           name="paths.background"
@@ -182,20 +154,6 @@ export default function EditSong(props: EditSongProps) {
             }
           }}
         />
-        {/* <FormInput nullable displayName="Subtitle file" name="paths.subtitles*string" getValueTemplateCallback={() => Toxen.editingSong} type="selectAsync"
-          values={(async () => {
-            let song = Toxen.editingSong;
-            if (!song)
-              return [];
-            let path = song.dirname();
-
-            let supported = Toxen.getSupportedSubtitleFiles();
-            return await Toxen.filterSupportedFiles(path, supported);
-          })}
-        >
-          <br />
-          <FormInput displayName="Subtitle Offset (ms)" name="subtitleDelay*number" getValueTemplateCallback={() => Toxen.editingSong} type="number" />
-        </FormInput> */}
         <SelectAsync
           label="Subtitle file"
           name="paths.subtitles"
@@ -228,25 +186,6 @@ export default function EditSong(props: EditSongProps) {
           onBlur={() => Toxen.editingSong.saveInfo()}
           onKeyDown={textInputSaveOnEnter}
         />
-        {/* <FormInput nullable displayName="Storyboard file" name="paths.storyboard*string" getValueTemplateCallback={() => Toxen.editingSong} type="selectAsync"
-          values={(async () => {
-            let song = Toxen.editingSong;
-            if (!song)
-              return [];
-            let path = song.dirname();
-
-            let supported = Toxen.getSupportedStoryboardFiles();
-            return await Toxen.filterSupportedFiles(path, supported);
-          })}
-        >
-          <button className="tx-btn tx-btn-action" onClick={() => {
-            if (!Toxen.editingSong) {
-              return Toxen.error("No song has been selected for editing.", 5000);
-            }
-
-            Toxen.setMode("StoryboardEditor");
-          }}>Edit Storyboard</button>
-        </FormInput> */}
         <SelectAsync
           label="Storyboard file"
           name="paths.storyboard"
@@ -265,14 +204,18 @@ export default function EditSong(props: EditSongProps) {
             Toxen.editingSong.saveInfo();
             let current = Song.getCurrent();
             if (Toxen.editingSong == current) {
-              // Not implemented yet
+              current.applyStoryboard();
             }
           }}
         />
+        <Button onClick={() => {
+          Toxen.setMode("StoryboardEditor", Toxen.editingSong);
+        }}>
+          Edit storyboard
+        </Button>
+        
         <hr />
         <h2>Song-specific visuals</h2>
-        {/* <FormInput nullable displayName="Visualizer Color" name="visualizerColor*string" getValueTemplateCallback={() => Toxen.editingSong} type="color"
-          onChange={v => Toxen.setAllVisualColors(v)} /> */}
         <ColorInput
           label="Visualizer Color"
           name="visualizerColor"
@@ -288,7 +231,6 @@ export default function EditSong(props: EditSongProps) {
           }}
         />
         <br />
-        {/* <FormInput type="checkbox" name="visualizerForceRainbowMode*boolean" displayName="Force Visualizer Rainbow Mode" getValueTemplateCallback={() => Toxen.editingSong} /> */}
         <Checkbox
           label="Force Visualizer Rainbow Mode"
           name="visualizerForceRainbowMode"
@@ -302,11 +244,6 @@ export default function EditSong(props: EditSongProps) {
         <br />
         <sup>Enable to force Rainbow mode onto this song. If disabled, but the global settings have it enabled, this will also be enabled.</sup>
 
-        {/* <FormInput type="select" name="visualizerPulseBackground*string" displayName="Background pulsing" getValueTemplateCallback={() => Toxen.editingSong}>
-          <option className="tx-form-field" value={""}>{"<Default>"}</option>
-          <option className="tx-form-field" value={"pulse"}>Enabled</option>
-          <option className="tx-form-field" value={"pulse-off"}>Disabled</option>
-        </FormInput> */}
         <Select
           label="Background pulsing"
           name="visualizerPulseBackground"
@@ -324,20 +261,6 @@ export default function EditSong(props: EditSongProps) {
         <br />
         <sup>Enables pulsing on the background image of a song. Pulse is based off music intensity and volume.</sup>
 
-        {/* <FormInput type="select" name="visualizerStyle*string" displayName="Visualizer Style" getValueTemplateCallback={() => Toxen.editingSong}>
-          {(() => {
-            let objs: JSX.Element[] = [
-              <option key={null} className="tx-form-field" value={""}>{"<Default>"}</option>
-            ];
-            for (const key in VisualizerStyle) {
-              if (Object.prototype.hasOwnProperty.call(VisualizerStyle, key)) {
-                const v = (VisualizerStyle as any)[key];
-                objs.push(<option key={key} className="tx-form-field" value={v}>{Converter.camelCaseToSpacing(key)}</option>);
-              }
-            }
-            return objs;
-          })()}
-        </FormInput> */}
         <Select
           label="Visualizer Style"
           name="visualizerStyle"

@@ -163,11 +163,11 @@ export default class Song implements ISong {
    * Return the full path of the storyboard file.
    */
   public storyboardFile() {
-    if (Settings.isRemote()) return `${this.dirname()}/${this.paths.storyboard}`;
+    if (Settings.isRemote()) return (this.paths && this.paths.storyboard) ? `${this.dirname()}/${this.paths.storyboard}` : "";
     else return (this.paths && this.paths.storyboard) ? resolve(this.dirname(), this.paths.storyboard) : "";
   }
 
-  public readStoryboardFile() {
+  public readStoryboardFile(validateFields: boolean = true) {
     return new Promise<StoryboardParser.StoryboardConfig>((resolve, reject) => {
       if (!this.storyboardFile()) {
         resolve(null);
@@ -177,7 +177,7 @@ export default class Song implements ISong {
       if (Settings.isRemote()) {
         Toxen.fetch(this.storyboardFile()).then(async res => {
           if (res.status === 200) {
-            resolve(StoryboardParser.parseStoryboard(await res.text()));
+            resolve(StoryboardParser.parseStoryboard(await res.text(), validateFields));
           } else {
             Toxen.error("Failed to fetch storyboard from server.");
             resolve(null);
@@ -186,7 +186,7 @@ export default class Song implements ISong {
       }
       else {
         fsp.readFile(this.storyboardFile(), "utf8").then(data => {
-          resolve(StoryboardParser.parseStoryboard(data));
+          resolve(StoryboardParser.parseStoryboard(data, validateFields));
         }).catch(err => {
           Toxen.error("Failed to load storyboard from storage.");
           resolve(null);
@@ -500,96 +500,6 @@ export default class Song implements ISong {
     let isSelected = props.isSelected ?? this.selected ?? false;
 
     if (!isSelected) {
-      // Single song context menu
-      //   const singleMenu: Electron.MenuItemConstructorOptions[] = [
-      //     {
-      //       label: this.getDisplayName(),
-      //       enabled: false
-      //     },
-      //     {
-      //       label: "Edit info",
-      //       click: () => {
-      //         if (Toxen.isMode("ThemeEditor")) return Toxen.sendError("CURRENTLY_EDITING_THEME");
-      //         if (!Toxen.isMode("Player")) return Toxen.sendError("CURRENTLY_EDITING_SONG");
-      //         Toxen.editSong(this);
-      //       }
-      //     },
-      //     !opts.noQueueOption ? (this.inQueue ? {
-      //       label: "Remove from queue",
-      //       click: () => this.removeFromQueue()
-      //     } : {
-      //       label: "Add to queue",
-      //       click: () => this.addToQueue()
-      //     }) : undefined,
-      //     {
-      //       label: "Add to playlist",
-      //       submenu: Toxen.playlists ? Toxen.playlists.map(p => ({
-      //         label: p.name,
-      //         click: () => {
-      //           p.addSong(this);
-      //         },
-      //         visible: !p.songList.find(s => s.uid === this.uid)
-      //       })) : []
-      //     },
-      //     {
-      //       label: "Remove from playlist",
-      //       submenu: Toxen.playlists ? Toxen.playlists.map(p => ({
-      //         label: p.name,
-      //         click: () => {
-      //           p.removeSong(this);
-      //         },
-      //         visible: !!p.songList.find(s => s.uid === this.uid)
-      //       })) : []
-      //     },
-      //     {
-      //       label: "Show song in list",
-      //       click: async () => {
-      //         if (Toxen.isMode("ThemeEditor")) return Toxen.sendError("CURRENTLY_EDITING_THEME");
-      //         if (!Toxen.isMode("Player")) return Toxen.sendError("CURRENTLY_EDITING_SONG");
-      //         await Toxen.sidePanel.show(true);
-      //         await Toxen.sidePanel.setSectionId("songPanel");
-      //         this.scrollTo();
-      //       }
-      //     },
-      //     Settings.isAdvanced<Electron.MenuItemConstructorOptions>({
-      //       label: "Extra options",
-      //       submenu: [
-      //         {
-      //           label: "Copy UID",
-      //           click: () => this.copyUID()
-      //         },
-      //         {
-      //           label: "Open in file explorer",
-      //           click: () => {
-      //             remote.shell.openPath(this.dirname());
-      //           },
-      //           enabled: !Settings.isRemote(),
-      //         },
-      //         {
-      //           label: "Record (Experimental)",
-      //           click: () => {
-      //             const recorder = new ScreenRecorder();
-      //             recorder.startRecording();
-      //           }
-      //         },
-      //       ]
-      //     }),
-      //     {
-      //       type: "separator"
-      //     },
-      //     {
-      //       label: "Toxen",
-      //       enabled: false
-      //     },
-      //     {
-      //       label: "Toggle fullscreen",
-      //       click: () => {
-      //         Toxen.toggleFullscreen();
-      //       }
-      //     }
-      //   ].filter(a => a) as Electron.MenuItemConstructorOptions[];
-      //   remote.Menu.buildFromTemplate(singleMenu).popup();
-
       return (
         <Menu ref={props.cref} className="song-context-menu">
           <Menu.Item disabled={true}>
@@ -675,53 +585,6 @@ export default class Song implements ISong {
       )
     }
     else if (selectedSongs.length > 0) {
-      // Multi-selected song context menu
-      // const multiMenu: Electron.MenuItemConstructorOptions[] = [
-      //   {
-      //     label: "Deselect all",
-      //     click: () => {
-      //       Song.deselectAll();
-      //     }
-      //   },
-      //   {
-      //     type: "separator"
-      //   },
-      //   {
-      //     label: "Add to playlist",
-      //     submenu: Toxen.playlists ? Toxen.playlists.map(p => ({
-      //       label: p.name,
-      //       click: () => {
-      //         p.addSong(...selectedSongs);
-      //       }
-      //     })) : []
-      //   },
-      //   {
-      //     label: "Remove from playlist",
-      //     submenu: Toxen.playlists ? Toxen.playlists.map(p => ({
-      //       label: p.name,
-      //       click: () => {
-      //         p.removeSong(...selectedSongs);
-      //       }
-      //     })) : []
-      //   },
-      //   {
-      //     type: "separator"
-      //   },
-      //   {
-      //     label: "Add to queue",
-      //     click: () => {
-      //       selectedSongs.forEach(s => s.addToQueue());
-      //     }
-      //   },
-      //   {
-      //     label: "Remove from queue",
-      //     click: () => {
-      //       selectedSongs.forEach(s => s.removeFromQueue());
-      //     }
-      //   }
-      // ].filter(a => a) as Electron.MenuItemConstructorOptions[];
-      // remote.Menu.buildFromTemplate(multiMenu).popup();
-
       return (
         <Menu ref={props.cref} className="song-context-menu">
           {/* <Menu.Item disabled={true}>

@@ -34,34 +34,40 @@ remote.Menu.setApplicationMenu(
           label: "Open Music",
           accelerator: "CTRL + M",
           click() {
-            Toxen.sidePanel.show(true);
-            Toxen.sidePanel.setSectionId("songPanel");
-            (document.activeElement as any)?.blur();
+            if (Toxen.isMode("Player")) {
+              Toxen.sidePanel.show(true);
+              Toxen.sidePanel.setSectionId("songPanel");
+              (document.activeElement as any)?.blur();
+            }
           }
         },
         {
           label: "Open Playlists",
           accelerator: "CTRL + P",
           click() {
-            Toxen.sidePanel.show(true);
-            Toxen.sidePanel.setSectionId("playlist");
-            (document.activeElement as any)?.blur();
+            if (Toxen.isMode("Player")) {
+              Toxen.sidePanel.show(true);
+              Toxen.sidePanel.setSectionId("playlist");
+              (document.activeElement as any)?.blur();
+            }
           }
         },
         {
           label: "Open Settings",
           accelerator: "CTRL + S",
           click() {
-            Toxen.sidePanel.show(true);
-            Toxen.sidePanel.setSectionId("settings");
-            (document.activeElement as any)?.blur();
+            if (Toxen.isMode("Player")) {
+              Toxen.sidePanel.show(true);
+              Toxen.sidePanel.setSectionId("settings");
+              (document.activeElement as any)?.blur();
+            }
           }
         },
         {
           label: "Edit current song",
           accelerator: "CTRL + E",
           click() {
-            Toxen.editSong(Song.getCurrent());
+            if (Toxen.isMode("Player")) Toxen.editSong(Song.getCurrent());
           }
         },
         {
@@ -118,7 +124,14 @@ remote.Menu.setApplicationMenu(
           click() {
             remote.getCurrentWindow().reload();
           }
-        }
+        },
+        {
+          label: "Full screen",
+          accelerator: "F11",
+          click() {
+            Toxen.toggleFullscreen();
+          }
+        },
       ]
     },
     {

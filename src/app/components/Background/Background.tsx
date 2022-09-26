@@ -69,12 +69,13 @@ export default class Background extends Component<BackgroundProps, BackgroundSta
     return (
       <div className="toxen-background"
         onClick={() => Settings.get("pauseWithClick") ? Toxen.musicPlayer.toggle() : null}
-        onDoubleClick={() => {
-          Toxen.toggleFullscreen();
-        }}
+        // onDoubleClick={() => {
+        //   Toxen.toggleFullscreen();
+        // }}
         onContextMenu={async () => {
-          Toxen.showCurrentSong();
+          // Toxen.showCurrentSong();
           // Toxen.editSong(Song.getCurrent())
+          if (!Toxen.sidePanel.isShowing()) Toxen.sidePanel.show();
         }}
         // Background will also act as a dropzone
         onDrop={e => {

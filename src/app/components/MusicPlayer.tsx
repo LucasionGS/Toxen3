@@ -57,17 +57,25 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
   }) {
     options = options || {};
     this.media.currentTime = seconds;
-    StoryboardParser.resetCurrentEvents(seconds);
+    StoryboardParser.resetCurrentEvents();
     if (!this.props.useSubtitleEditorMode && options.updateDiscord) Toxen.discord.setPresence();
   }
 
   public setSource(src: MediaSourceInfo, playWhenReady: boolean = false) {
     // Reset storyboard on song change
-    StoryboardParser.resetCurrentEvents(0);
+    StoryboardParser.resetCurrentEvents();
     this.setState({
       src
     }, () => playWhenReady ? this.play() : this.load()
     );
+  }
+
+  public setPlaybackRate(rate: number) {
+    this.media.playbackRate = rate;
+  }
+
+  public get playbackRate() {
+    return this.media.playbackRate;
   }
 
   public isVideo(src: string) {
@@ -169,6 +177,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
   private onEnded() {
     if (this.props.useSubtitleEditorMode) return;
     ToxenEvent.emit("songEnded");
+    StoryboardParser.resetCurrentEvents();
     if (Settings.get("repeat") || Toxen.getPlayableSongs().length === 1) {
       this.play();
     }
