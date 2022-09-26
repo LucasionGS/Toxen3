@@ -11,6 +11,7 @@ import { useClipboard, useForceUpdate } from "@mantine/hooks";
 import { hexToRgbArray, rgbArrayToHex } from "../Form/FormInputFields/FormInputColorPicker";
 import { VisualizerStyle } from "../../toxen/Settings";
 import Path from "path";
+import "./StoryboardEditorPanel.scss";
 
 interface StoryboardEditorPanelProps { }
 
@@ -157,13 +158,14 @@ function EventElement(props: { config: StoryboardParser.StoryboardConfig, event:
           userSelect: "none", cursor: "pointer",
           color: isNew ? "lightgreen" : undefined,
         }}
+        className="sbevent-header"
       >
         {
-          isNew ? <IconStar />
+          isNew ? <IconStar style={{ transform: "translateY(5px)" }} />
             : opened ?
-              <IconArrowDownCircle />
+              <IconArrowDownCircle style={{ transform: "translateY(5px)" }} />
               :
-              <IconArrowUpCircle />
+              <IconArrowUpCircle style={{ transform: "translateY(5px)" }} />
         } [<code>{
           Time.fromTimestamp(startTime, () => null)?.toTimestamp(Time.FORMATS.STANDARD_WITH_MS) ?? "INVALID"
         } - {
@@ -221,11 +223,26 @@ function EventElement(props: { config: StoryboardParser.StoryboardConfig, event:
             )
           }
         </div>
-        <Button color="red" onClick={() => {
-          config.storyboard.splice(config.storyboard.indexOf(event), 1);
-          StoryboardParser.resetCurrentEvents();
-          updateParent?.();
-        }}>Delete</Button>
+        <br />
+        <Group position="apart">
+          <Button color="blue" onClick={() => {
+            config.storyboard.push(StoryboardParser.SBEvent.fromConfig({
+              start: event.startTime,
+              end: event.endTime,
+              component: event.component,
+              data: Object.create(event.data),
+              once: event.once,
+            }, {}, null, false));
+            updateParent();
+          }}>+ Duplicate</Button>
+
+          <Button variant="outline" color="red" onClick={() => {
+            config.storyboard.splice(config.storyboard.indexOf(event), 1);
+            StoryboardParser.resetCurrentEvents();
+            updateParent?.();
+          }}>Delete</Button>
+        </Group>
+        <hr />
       </Collapse>
     </div>
   )
@@ -282,7 +299,7 @@ function ComponentButton(props: { event: StoryboardParser.SBEvent, component: St
     case "Number": return (
       <div>
         <NumberInput
-          precision={3}
+          precision={2}
           decimalSeparator="."
           label={dataName + (required ? " *" : "")}
           value={value as number}
@@ -329,7 +346,25 @@ function ComponentButton(props: { event: StoryboardParser.SBEvent, component: St
           })}
           value={value as string}
           onChange={(value) => {
-            setValue(event.data[dataId] = VisualizerStyle[value as keyof typeof VisualizerStyle]);
+            setValue(event.data[dataId] = value as VisualizerStyle);
+          }}
+        />
+      </div>
+    );
+
+    case "Select": return (
+      <div>
+        <Select
+          label={dataName + (required ? " *" : "")}
+          data={comp.selectData.map(([key, value]) => {
+            return {
+              label: key,
+              value: value ?? key,
+            }
+          })}
+          value={value as string}
+          onChange={(value) => {
+            setValue(event.data[dataId] = value as string);
           }}
         />
       </div>

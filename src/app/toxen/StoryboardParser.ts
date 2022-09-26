@@ -47,6 +47,13 @@ namespace StoryboardParser {
     type: keyof ComponentArgumentTypes;
 
     /**
+     * Selectable options for the argument.
+     * 
+     * @for Select
+     */
+    selectData?: [string, string?][];
+
+    /**
      * Is this argument required?
      */
     required?: boolean;
@@ -58,6 +65,7 @@ namespace StoryboardParser {
     Color: [number, number, number, number?];
     VisualizerStyle: VisualizerStyle;
     Boolean: boolean;
+    Select: string;
   }
 
   /**
@@ -552,25 +560,63 @@ namespace StoryboardParser {
       {
         name: "Color",
         identifier: "color",
-        type: "Color"
-      },
-      {
-        name: "Intensity",
-        identifier: "intensity",
-        type: "Number"
+        type: "Color",
+        required: true
       },
       {
         name: "BPM",
         identifier: "bpm",
-        type: "Number"
+        type: "Number",
+        required: true
       },
+      {
+        name: "Intensity",
+        identifier: "intensity",
+        type: "Number",
+      },
+      {
+        name: "Beat scale",
+        identifier: "beatScale",
+        type: "Select",
+        selectData: [
+          ["4/1"],
+          ["2/1"],
+          ["1/1"],
+          ["1/2"],
+          ["1/4"],
+          ["1/8"],
+        ]
+      }
     ],
     action: (args, { currentSongTime, eventStartTime }, { setState, getState }, ctx) => {
       // Draw a pulse on the visualizer
       let state = getState<{ lastPulse: number }>() ?? { lastPulse: null };
       let color = getAsType<"Color">(args.color);
-      let intensity = getAsType<"Number">(args.intensity);
+      let intensity = getAsType<"Number">(args.intensity) / 0.5;
       let bpm = getAsType<"Number">(args.bpm);
+      let beatScale = getAsType<"Select">(args.beatScale);
+
+      switch (beatScale) {
+        case "4/1":
+          bpm /= 4;
+          break;
+        case "2/1":
+          bpm /= 2;
+          break;
+        case "1/1":
+          // @default
+          bpm *= 1;
+          break;
+        case "1/2":
+          bpm *= 2;
+          break;
+        case "1/4":
+          bpm *= 4;
+          break;
+        case "1/8":
+          bpm *= 8;
+          break;
+      }
 
       const currentSongTimeMs = Math.round(currentSongTime * 1000);
       let recurring = bpm > 0 ? Math.round(60 / bpm * 1000) : 0;
