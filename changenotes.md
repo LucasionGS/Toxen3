@@ -2,7 +2,7 @@
 ## Upcoming update / 1.4.0
 - WIP version of the storyboard implementation!
   - Songs with a stoyboard file (.tsb) can be selected in the song details panel. More documentation will be added later how this can be created.
-  - An editor for the storyboard will be added later as well.
+  - An editor is available when pressing edit song. There's a button under where you would select Storyboard file.
 - Removed `Migration` button from advanced mode sidebar
 ## 1.3.3 - 2022-06-17
 - Added alternative Toxen icon.
