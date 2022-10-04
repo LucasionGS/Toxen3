@@ -54,6 +54,7 @@ import SettingsPanel from "./components/Sidepanel/Panels/SettingsPanel/SettingsP
 import MigrationPanel from "./components/Sidepanel/Panels/MigrationPanel/MigrationPanel";
 import EditSong from "./components/Sidepanel/Panels/EditSong/EditSong";
 import InitialData from "./windows/SubtitleCreator/models/InitialData";
+import User from "./toxen/User";
 
 declare const SUBTITLE_CREATOR_WEBPACK_ENTRY: any;
 
@@ -62,12 +63,16 @@ declare const SUBTITLE_CREATOR_WEBPACK_ENTRY: any;
  * Handler for events during runtime.
  */
 export class Toxen {
+  public static async getBlob(src: string) {
+    return fetch(src).then((r) => r.blob());
+  }
   public static setTitle(title: string) {
-    Toxen.setTitleBarText(title);
+    Toxen.setAppBarText(title);
     document.title = title;
   }
 
-  public static setTitleBarText: (text: string) => void = () => void 0;
+  public static setAppBarText: (text: string) => void = () => void 0;
+  public static setAppBarUser: (user: User) => void = () => void 0;
 
   private static mode: ToxenInteractionMode = ToxenInteractionMode.Player;
 

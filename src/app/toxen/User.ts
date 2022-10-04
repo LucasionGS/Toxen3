@@ -4,25 +4,22 @@ import Settings from "./Settings";
 export default class User {
   constructor() { }
 
-  public getUserDirectoryPath() {
-    return Settings.getServer() + "/" + this.token;
-  }
+  // public getUserDirectoryPath() {
+  //   return Settings.getServer() + "/" + this.token;
+  // }
   
-  public getUserCollectionPath() {
-    return this.getUserDirectoryPath() + "/collection";
+  public getCollectionPath() {
+    return Settings.getServer() + "/track";
   }
   
   public getPlaylistsPath() {
-    return this.getUserDirectoryPath() + "/collection/playlists.json";
+    return Settings.getServer() + "/playlist";
   }
 
   public static async login(token: string): Promise<User>;
   public static async login(username: string, password: string): Promise<User>;
   public static async login(username: string, password?: string) {
-    let loginUrl = Settings.getServer();
-    while (loginUrl.endsWith("/")) {
-      loginUrl = loginUrl.substring(0, loginUrl.length - 1);
-    }
+    const loginUrl = Settings.getServer();
 
     let data: any;
     if (username && password) data = {
@@ -32,7 +29,7 @@ export default class User {
     else if (username && !password) data = {
       token: username
     };
-    return await Toxen.fetch(loginUrl + "/login", {
+    return await Toxen.fetch(loginUrl + "/user/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -71,11 +68,19 @@ export default class User {
   }
   
   public static setCurrentUser(user: User) {
+
+    if (!user) return User.logout();
+    
+    Toxen.setAppBarUser(user);
     window.localStorage.setItem("user", JSON.stringify(user));
   }
   
-  public static removeCurrentUser() {
+  public static logout() {
+    Toxen.setAppBarUser(null);
     window.localStorage.removeItem("user");
+    Toxen.fetch(Settings.getServer() + "/user/logout", {
+      method: "POST"
+    });
   }
 
   public static create(info: IUser) {
@@ -87,7 +92,8 @@ export default class User {
     user.token = info.token;
     user.premium = info.premium;
     user.premium_expire = (info.premium_expire ? new Date(info.premium_expire) : null);
-    user.remote_max_size = info.remote_max_size;
+    user.tracks = info.tracks;
+    user.maxTracks = info.maxTracks;
 
     return user;
   }
@@ -97,7 +103,8 @@ export default class User {
   token: string;
   premium: boolean;
   premium_expire: Date;
-  remote_max_size: number;
+  tracks: number;
+  maxTracks: number;
 }
 
 interface IUser {
@@ -106,5 +113,6 @@ interface IUser {
   token: string;
   premium: boolean;
   premium_expire: string;
-  remote_max_size: number;
+  tracks: number;
+  maxTracks: number;
 }

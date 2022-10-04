@@ -7,11 +7,13 @@ import Form from "../Form/Form";
 import FormInput from "../Form/FormInputFields/FormInput";
 
 let attemptedInitialLogin = false;
-export default function LoginForm() {
+export default function LoginForm(props: { onSuccessfulLogin?: () => void }) {
+  const { onSuccessfulLogin } = props;
   async function handleLogin(loginPromise: Promise<User>) {
     setLoading(true);
     return loginPromise.then(loggedInUser => {
       if (loggedInUser) {
+        if (onSuccessfulLogin) onSuccessfulLogin();
         User.setCurrentUser(loggedInUser);
         setLoading(false);
         setError(null);
@@ -38,7 +40,7 @@ export default function LoginForm() {
   const [error, setError] = React.useState<string>(null);
   const user = Settings.getUser();
   if (!attemptedInitialLogin && user) {
-    User.removeCurrentUser();
+    User.logout();
     attemptedInitialLogin = true;
     handleLogin(User.login(user.token));
   }
@@ -51,17 +53,18 @@ export default function LoginForm() {
   return (
     user ? (
       <Button onClick={() => {
-        User.removeCurrentUser();
+        User.logout();
         Toxen.loadSongs();
         setLoggedIn(false);
         Toxen.reloadSection();
       }} color="yellow">Log out of <b>{user.username}</b></Button>
     ) : (
       <>
-        <h2>Toxen server credentials</h2>
+        <h2>Toxen login</h2>
         <Alert color="red" title="Error" hidden={!error}>{error}</Alert>
         <TextInput label="Username" type="text" value={username} onChange={(e) => setUsername(e.target.value)} onSubmit={login} />
         <TextInput label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} onSubmit={login} />
+        <br />
         <Button loading={loading} onClick={login}>
           {loading ? "Logging in..." : "Login"}
         </Button>

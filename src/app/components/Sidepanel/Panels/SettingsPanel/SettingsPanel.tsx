@@ -307,9 +307,9 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           <br />
         </Tabs.Tab>
 
-        <Tabs.Tab title="Account" label="Account">
+        {/* <Tabs.Tab title="Account" label="Account">
           <LoginForm />
-        </Tabs.Tab>
+        </Tabs.Tab> */}
 
         <Tabs.Tab title="Advanced" label="Advanced">
           <h2>Advanced settings</h2>

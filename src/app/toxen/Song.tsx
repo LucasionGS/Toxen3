@@ -28,6 +28,8 @@ import TButton from "../components/Button/Button";
 import Ffmpeg from "./Ffmpeg";
 import Time from "./Time";
 import StoryboardParser from "./StoryboardParser";
+import archiver from "archiver";
+import {  } from "buffer";
 // import ToxenInteractionMode from "./ToxenInteractionMode";
 
 export default class Song implements ISong {
@@ -97,7 +99,7 @@ export default class Song implements ISong {
   public dirname(relativePath?: string) {
     let user = Settings.getUser();
     if (Settings.isRemote() && !user) return null;
-    if (Settings.isRemote()) return `${user.getUserCollectionPath()}/${this.uid}${relativePath ? "/" + relativePath : ""}`;
+    if (Settings.isRemote()) return `${user.getCollectionPath()}/${this.uid}${relativePath ? "/" + relativePath : ""}`;
     return (this.paths && this.paths.dirname) ? resolve(Settings.get("libraryDirectory"), this.paths.dirname, relativePath ?? ".") : null;
   }
 
@@ -378,8 +380,9 @@ export default class Song implements ISong {
       if (Settings.isRemote() && this.isVideo()) Toxen.log("Streaming a video can take some time to load... Using audio files is much faster.", 3000);
       if (this.lastBlobUrl) URL.revokeObjectURL(this.lastBlobUrl);
       let bg = this.backgroundFile();
-      this.applySubtitles();
-      this.applyStoryboard();
+      
+      await this.applySubtitles();
+      await this.applyStoryboard();
       if (!options.disableHistory) Song.historyAdd(this);
       Toxen.musicPlayer.setSource(src, true);
       await Toxen.background.setBackground(bg);
@@ -504,6 +507,11 @@ export default class Song implements ISong {
         <Menu ref={props.cref} className="song-context-menu">
           <Menu.Item disabled={true}>
             {this.getDisplayName()}
+          </Menu.Item>
+          <Menu.Item icon={<i className="fas fa-edit"></i>} onClick={() => {
+            this.sync();
+          }}>
+            SYNC
           </Menu.Item>
           <Menu.Item icon={<i className="fas fa-edit"></i>} onClick={() => {
             if (Toxen.isMode("ThemeEditor")) return Toxen.sendError("CURRENTLY_EDITING_THEME");
@@ -763,7 +771,7 @@ export default class Song implements ISong {
       if (!user) {
         return 0;
       }
-      let iSongs: ISong[] = await Toxen.fetch(user.getUserCollectionPath()).then(res => res.json()).catch(() => []);
+      let iSongs: ISong[] = await Toxen.fetch(user.getCollectionPath()).then(res => res.json()).catch(() => []);
       return iSongs.length;
     }
     else {
@@ -838,7 +846,7 @@ export default class Song implements ISong {
     if (!user) {
       return [];
     }
-    let iSongs: ISong[] = await Toxen.fetch(user.getUserCollectionPath()).then(res => res.json());
+    let iSongs: ISong[] = await Toxen.fetch(user.getCollectionPath()).then(res => res.json());
     const songs: Song[] = iSongs.map(iSong => Song.create(iSong)).filter(s => s.paths && s.paths.media);
     if (forEach) {
       songs.forEach(forEach);
@@ -887,7 +895,7 @@ export default class Song implements ISong {
       if (!user) {
         return;
       }
-      return await Toxen.fetch(user.getUserCollectionPath() + "/" + this.uid + "/info.json", {
+      return await Toxen.fetch(user.getCollectionPath() + "/" + this.uid + "/info.json", {
         method: "PUT",
         body: JSON.stringify(info),
         headers: {
@@ -1013,6 +1021,83 @@ export default class Song implements ISong {
         console.error(error);
         return fsp.unlink(zipPathTmp);
       });
+  }
+
+  public async sync() {
+    const user = Settings.getUser();
+    if (!user.premium) return Toxen.notify({
+      title: "Sync failed",
+      content: "You must be a premium user to sync songs.",
+      expiresIn: 5000,
+      type: "error"
+    });
+
+    if (!Settings.isRemote()) {
+      // Sync from disk to remote (Using archiver to zip the folder in memory)
+      const zip = new yazl.ZipFile();
+
+      const zipPathTmp = Path.resolve(os.tmpdir(), "toxen-sync-" + Math.random().toString().substring(2) + ".zip");
+      const zipStream = createWriteStream(zipPathTmp);
+
+      console.log("Packing...", this.dirname());
+      const addFiles = async (dir: string, startingDir: string = dir) => {
+        const files = await fsp.readdir(dir);
+        for (const file of files) {
+          const filePath = Path.resolve(dir, file);
+          const stat = await fsp.stat(filePath);
+          const relativePath = Path.relative(startingDir, filePath);
+          if (stat.isDirectory()) {
+            console.log("Adding directory", relativePath);
+            zip.addEmptyDirectory(relativePath);
+            await addFiles(filePath, startingDir);
+          } else {
+            console.log("Adding file", relativePath);
+            zip.addReadStream(createReadStream(filePath), relativePath);
+          }
+        }
+      };
+      
+      await addFiles(this.dirname());
+
+      zip.outputStream.pipe(zipStream);
+
+      zip.end();
+
+      return await new Promise((resolve, reject) => {
+        zipStream.on("finish", resolve);
+        zipStream.on("error", reject);
+      }).then(async () => {
+        console.log("Packed...", this.dirname());
+        const formData = new FormData();
+        // Insert as blob
+        formData.append("file", new Blob([await fsp.readFile(zipPathTmp)]), "sync.zip");
+        formData.append("data", JSON.stringify(this.toISong()));
+        return Toxen.fetch(user.getCollectionPath() + "/" + this.uid, {
+          method: "PUT",
+          body: formData
+        });
+      }).then(async res => {
+        if (res.ok) {
+          Toxen.notify({
+            title: "Synced",
+            content: this.getDisplayName(),
+            expiresIn: 5000
+          });
+          return fsp.unlink(zipPathTmp);
+        } else {
+          Toxen.notify({
+            title: "Sync failed",
+            content: await res.text(),
+            expiresIn: 5000,
+            type: "error"
+          });
+        }
+      }).catch(error => {
+        Toxen.error("Something went wrong writing the exported zip file.");
+        console.error(error);
+        return fsp.unlink(zipPathTmp);
+      });
+    }
   }
 
   // TODO: Fix this and/or figure out a better way to have the trimmer.

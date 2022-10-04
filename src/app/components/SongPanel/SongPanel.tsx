@@ -2,6 +2,8 @@ import React, { Component } from 'react'
 import { Toxen } from '../../ToxenApp';
 import Song from '../../toxen/Song';
 import { Button } from '@mantine/core';
+import Settings from '../../toxen/Settings';
+import { remote } from "electron";
 
 interface SongPanelProps {
   getRef?: ((songPanel: SongPanel) => void)
@@ -28,7 +30,7 @@ export default class SongPanel extends Component<SongPanelProps, SongPanelState>
     let songs = (songList ?? []).map(s => s);
     if (Toxen.songQueue.length > 0)
       songs = songs.filter(s => !Toxen.songQueue.some(s2 => s2.uid === s.uid)); // Remove queued items from the main list
-      
+
     if (Toxen.songSearch) {
       let items = Toxen.songSearch.toLowerCase().replace(/_/g, " ").split(" ");
       songs = songs.filter(s => {
@@ -49,6 +51,29 @@ export default class SongPanel extends Component<SongPanelProps, SongPanelState>
       <>
         {Toxen.playlist ? <>Playlist: <code>{Toxen.playlist.name}</code><br /></> : ""}
         <Button color="green" onClick={() => Toxen.sidePanel.setSectionId("playlist")}>Change Playlist</Button>
+        {!Settings.get("isRemote") && (
+          <Button color="blue" onClick={async () => {
+            
+            // Sync all
+            const user = Settings.getUser();
+            if (user && user.premium) {
+              const win = remote.getCurrentWindow();
+
+              
+              for (let i = 0; i < songs.length; i++) {
+                win.setProgressBar(i / songs.length);
+                const s = songs[i];
+                await s.sync();
+              }
+              win.setProgressBar(-1);
+              Toxen.notify({
+                title: "Synced all songs",
+                content: "All songs have been synced.",
+                expiresIn: 5000
+              })
+            }
+          }}>Sync all</Button>
+        )}
         {songs.map(s => s.Element())}
       </>
     );
