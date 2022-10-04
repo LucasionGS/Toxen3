@@ -29,7 +29,9 @@ import Ffmpeg from "./Ffmpeg";
 import Time from "./Time";
 import StoryboardParser from "./StoryboardParser";
 import archiver from "archiver";
-import {  } from "buffer";
+import { } from "buffer";
+import { hashElement } from "folder-hash";
+import User from "./User";
 // import ToxenInteractionMode from "./ToxenInteractionMode";
 
 export default class Song implements ISong {
@@ -380,7 +382,7 @@ export default class Song implements ISong {
       if (Settings.isRemote() && this.isVideo()) Toxen.log("Streaming a video can take some time to load... Using audio files is much faster.", 3000);
       if (this.lastBlobUrl) URL.revokeObjectURL(this.lastBlobUrl);
       let bg = this.backgroundFile();
-      
+
       await this.applySubtitles();
       await this.applyStoryboard();
       if (!options.disableHistory) Song.historyAdd(this);
@@ -509,11 +511,6 @@ export default class Song implements ISong {
             {this.getDisplayName()}
           </Menu.Item>
           <Menu.Item icon={<i className="fas fa-edit"></i>} onClick={() => {
-            this.sync();
-          }}>
-            SYNC
-          </Menu.Item>
-          <Menu.Item icon={<i className="fas fa-edit"></i>} onClick={() => {
             if (Toxen.isMode("ThemeEditor")) return Toxen.sendError("CURRENTLY_EDITING_THEME");
             if (!Toxen.isMode("Player")) return Toxen.sendError("CURRENTLY_EDITING_SONG");
             Toxen.editSong(this);
@@ -570,6 +567,15 @@ export default class Song implements ISong {
           }}>
             Trim
           </Menu.Item>
+          {
+            User.getCurrentUser()?.premium && !Settings.isRemote() && (
+              <Menu.Item icon={<i className="fas fa-sync"></i>} onClick={() => {
+                this.sync();
+              }}>
+                Sync to remote
+              </Menu.Item>
+            )
+          }
           {Settings.isAdvanced<JSX.Element>(
             <>
               <Menu.Item disabled={true}>
@@ -1023,7 +1029,7 @@ export default class Song implements ISong {
       });
   }
 
-  public async sync() {
+  public async sync({ silenceValidated = false } = {}): Promise<void> {
     const user = Settings.getUser();
     if (!user.premium) return Toxen.notify({
       title: "Sync failed",
@@ -1033,6 +1039,26 @@ export default class Song implements ISong {
     });
 
     if (!Settings.isRemote()) {
+      try {
+        const upToDate = await this.validateAgainstRemote();
+
+        if (upToDate && !silenceValidated) {
+          Toxen.notify({
+            title: "Update-to-date",
+            content: <p><code>{this.getDisplayName()}</code> is already up to date.</p>,
+            expiresIn: 1000
+          });
+          return
+        }
+      } catch (error) {
+        return Toxen.notify({
+          title: "Failed to validate against remote",
+          content: error.message,
+          expiresIn: 5000,
+          type: "error"
+        });
+      }
+
       // Sync from disk to remote (Using archiver to zip the folder in memory)
       const zip = new yazl.ZipFile();
 
@@ -1056,7 +1082,7 @@ export default class Song implements ISong {
           }
         }
       };
-      
+
       await addFiles(this.dirname());
 
       zip.outputStream.pipe(zipStream);
@@ -1098,6 +1124,28 @@ export default class Song implements ISong {
         return fsp.unlink(zipPathTmp);
       });
     }
+  }
+
+  public async validateAgainstRemote() {
+    const user = Settings.getUser();
+    if (!user.premium) throw new Error("You must be a premium user to validate a synced song.");
+
+    if (!Settings.isRemote()) {
+      // Has from disk to remote
+      const { hash: localHash } = await hashElement(this.dirname(), {
+        folders: {
+          ignoreBasename: true,
+        }
+      });
+      console.log("Local hash", localHash);
+      const remoteHash: string = await Toxen.fetch(user.getCollectionPath() + "/" + this.uid, {
+        method: "OPTIONS"
+      }).then(res => res.json()).then(res => res.hash).catch(() => null);
+      console.log("Remote hash", remoteHash);
+      return localHash === remoteHash;
+    }
+
+    throw new Error("You must be on your local machine to validate a synced song.");
   }
 
   // TODO: Fix this and/or figure out a better way to have the trimmer.
@@ -1151,7 +1199,7 @@ export default class Song implements ISong {
         modals.closeModal("trim-song-modal");
         Toxen.log("Trimmed song: " + this.getDisplayName(), 2000);
       };
-      
+
       // const [end, setEnd] = React.useState<number>(Toxen.musicPlayer.media.duration ? Toxen.musicPlayer.media.duration * 1000 : 60000);
       return (<div className="trim-song-panel">
         <h2>Trimming {this.getDisplayName()}</h2>
@@ -1176,8 +1224,8 @@ export default class Song implements ISong {
         {
           progress > 0 ? (
             <>
-            <Progress value={progress} animate color="green" />
-            <br />
+              <Progress value={progress} animate color="green" />
+              <br />
             </>
           ) : null
         }
@@ -1238,7 +1286,7 @@ interface ISongPaths {
    */
   subtitles: string;
   /**
-   * A *.tsb (Toxen Storyboard) file. Actual format is JSON data.
+   * A *.tsb (Toxen Storyboard) file. Actual format is YAML data.
    */
   storyboard: string;
 }

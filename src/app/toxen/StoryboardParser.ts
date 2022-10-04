@@ -1,9 +1,10 @@
 import { hexToRgb, hexToRgbArray, rgbArrayToHex, rgbToHex } from "../components/Form/FormInputFields/FormInputColorPicker";
 import { Toxen } from "../ToxenApp";
-import { VisualizerStyle } from "./Settings";
+import Settings, { VisualizerStyle } from "./Settings";
 import Time from "./Time";
 import yaml from "js-yaml";
 import fsp from "fs/promises";
+import User from "./User";
 
 namespace StoryboardParser {
   export const version = 1;
@@ -197,8 +198,8 @@ namespace StoryboardParser {
     variables?: { [key: string]: any };
   }
 
-  export function save(path: string, config: StoryboardConfig) {
-    const data = yaml.dump({
+  export async function save(path: string, config: StoryboardConfig) {
+    const cData = {
       version: config.version,
       author: config.author,
       variables: config.variables,
@@ -209,8 +210,30 @@ namespace StoryboardParser {
         data: event.data,
         once: event.once
       }))
-    } as PreparseStoryboardConfig);
-    return fsp.writeFile(path, data);
+    } as PreparseStoryboardConfig;
+    
+    const data = yaml.dump(cData);
+    
+    if (Settings.isRemote()) {
+      const user = Settings.getUser();
+      if (!user) throw new Error("Cannot save storyboard. User is not logged in.");
+      // const userPath = user.getCollectionPath();
+      // const relative = path.replace(userPath, "");
+      console.log("Saving to", path);
+      return Toxen.fetch(`${path}`, {
+        method: "PUT",
+        body: data,
+        headers: {
+          "Content-Type": "application/json"
+        }
+      }).then(res => {
+        if (!res.ok) throw new Error(`Failed to save storyboard. Status: ${res.status} ${res.statusText}`);
+      });
+    }
+    else {
+      return fsp.writeFile(path, data);
+    }
+    
   }
 
   let eventIndex = 0;

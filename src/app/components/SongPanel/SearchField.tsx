@@ -1,5 +1,6 @@
 import { Toxen } from "../../ToxenApp";
 import React, { useState } from "react";
+import { TextInput } from "@mantine/core";
 
 const SearchField = () => {
   const [value, setValue] = useState(Toxen.songSearch ?? "");
@@ -8,9 +9,9 @@ const SearchField = () => {
     Toxen.songPanel.update();
   };
   return (
-    <div>
-      <input spellCheck={false} type="search" className="tx-form-field tx-form-field-search" value={value} onChange={handleChange} />
-    </div>
+    <TextInput placeholder="Search..." spellCheck={false} type="search" value={value} onChange={handleChange} style={{
+      width: "85%",
+    }} />
   );
 };
 

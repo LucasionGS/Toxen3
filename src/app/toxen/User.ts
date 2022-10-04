@@ -8,8 +8,8 @@ export default class User {
   //   return Settings.getServer() + "/" + this.token;
   // }
   
-  public getCollectionPath() {
-    return Settings.getServer() + "/track";
+  public getCollectionPath(append?: string) {
+    return Settings.getServer() + "/track" + (append ? "/" + append : "");
   }
   
   public getPlaylistsPath() {

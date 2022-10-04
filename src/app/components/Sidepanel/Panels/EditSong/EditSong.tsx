@@ -191,6 +191,8 @@ export default function EditSong(props: EditSongProps) {
           name="paths.storyboard"
           defaultValue={Toxen.editingSong.paths.storyboard}
           data={(async () => {
+            console.log(Toxen.editingSong.paths.storyboard);
+            
             let song = Toxen.editingSong;
             if (!song)
               return [];
@@ -200,6 +202,7 @@ export default function EditSong(props: EditSongProps) {
             return await Toxen.filterSupportedFiles(path, supported);
           })}
           onChange={(v) => {
+            console.log("changed", v);
             Toxen.editingSong.paths.storyboard = v;
             Toxen.editingSong.saveInfo();
             let current = Song.getCurrent();

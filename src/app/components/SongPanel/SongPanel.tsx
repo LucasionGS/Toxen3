@@ -63,7 +63,9 @@ export default class SongPanel extends Component<SongPanelProps, SongPanelState>
               for (let i = 0; i < songs.length; i++) {
                 win.setProgressBar(i / songs.length);
                 const s = songs[i];
-                await s.sync();
+                await s.sync({
+                  silenceValidated: true,
+                });
               }
               win.setProgressBar(-1);
               Toxen.notify({

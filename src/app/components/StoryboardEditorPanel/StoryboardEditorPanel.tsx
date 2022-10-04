@@ -9,7 +9,7 @@ import SidepanelSectionHeader from "../Sidepanel/SidepanelSectionHeader";
 import { IconArrowDownCircle, IconArrowLeftBar, IconArrowRightBar, IconArrowUpCircle, IconPlayerPause, IconPlayerPlay, IconStar } from "@tabler/icons";
 import { useClipboard, useForceUpdate } from "@mantine/hooks";
 import { hexToRgbArray, rgbArrayToHex } from "../Form/FormInputFields/FormInputColorPicker";
-import { VisualizerStyle } from "../../toxen/Settings";
+import Settings, { VisualizerStyle } from "../../toxen/Settings";
 import Path from "path";
 import "./StoryboardEditorPanel.scss";
 
@@ -42,11 +42,22 @@ export default function StoryboardEditorPanel() {
     <>
       <SidepanelSectionHeader>
         <h1>Storyboard Editor</h1>
-        <Button color="green" onClick={() => {
+        <Button color="green" onClick={async () => {
           const saveLocation = song.storyboardFile() || song.dirname("storyboard.tsb");
           StoryboardParser.save(saveLocation, config);
           if (saveLocation !== song.storyboardFile()) {
-            song.paths.storyboard = Path.relative(song.dirname(), saveLocation);
+            if (Settings.isRemote()) {
+              song.paths.storyboard = saveLocation.replace(song.dirname(), "");
+              while (song.paths.storyboard.startsWith("/")) {
+                song.paths.storyboard = song.paths.storyboard.substring(1);
+              }
+              while (song.paths.storyboard.endsWith("/")) {
+                song.paths.storyboard = song.paths.storyboard.substring(0, song.paths.storyboard.length - 1);
+              }
+            }
+            else {
+              song.paths.storyboard = Path.relative(song.dirname(), saveLocation);
+            }
             song.saveInfo();
           }
           Toxen.log("Saved storyboard", 2000);

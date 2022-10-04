@@ -494,7 +494,7 @@ export class Toxen {
       Toxen.error("Subtitles can only be created locally.", 5000);
       return;
     }
-    
+
     const subtitleCreator = new remote.BrowserWindow({
       width: 1280,
       height: 768,
@@ -663,6 +663,7 @@ export default class ToxenAppRenderer extends React.Component {
           <SidepanelSection key="songPanel" id="songPanel" title="Music" icon={<i className="fas fa-music"></i>}>
             <SidepanelSectionHeader>
               <h1>Tracks</h1>
+              {/* <Button.Group> */}
               <Button
                 leftIcon={<i className="fas fa-redo"></i>}
                 onClick={async () => {
@@ -679,6 +680,8 @@ export default class ToxenAppRenderer extends React.Component {
                   Toxen.showCurrentSong();
                 }}
               >&nbsp;Show playing track</Button>
+              {/* </Button.Group> */}
+              <br />
               <br />
               <SearchField />
             </SidepanelSectionHeader>
@@ -700,7 +703,7 @@ export default class ToxenAppRenderer extends React.Component {
           <SidepanelSection key="importSong" id="importSong" title="Import" icon={<i className="fas fa-file-import"></i>}>
             <h1>Import music</h1>
             <Button
-            leftIcon={<i className="fas fa-file-import"></i>}
+              leftIcon={<i className="fas fa-file-import"></i>}
               onClick={() => {
                 let paths = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
                   properties: [
@@ -763,8 +766,8 @@ export default class ToxenAppRenderer extends React.Component {
             }} />
 
           {/* Toxen2 Migration */}
-          <SidepanelSection key="migration" id="migration" 
-          // title="Migration" icon={<i className="fas fa-exchange-alt"></i>}
+          <SidepanelSection key="migration" id="migration"
+            // title="Migration" icon={<i className="fas fa-exchange-alt"></i>}
             dynamicContent={async (section) => {
               return (<MigrationPanel />);
             }} />
