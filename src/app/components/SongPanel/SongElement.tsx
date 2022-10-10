@@ -104,6 +104,7 @@ export default class SongElement extends Component<SongElementProps, SongElement
   }
 
   public divElement: HTMLDivElement;
+  public divPermanentElement: HTMLDivElement;
 
   render() {
     return <SongElementDiv songElement={this} />;

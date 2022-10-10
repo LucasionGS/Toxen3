@@ -48,7 +48,7 @@ import AppBar from "./components/AppBar/AppBar";
 import Legacy from "./toxen/Legacy";
 import AdjustPanel from "./components/AdjustPanel/AdjustPanel";
 import { Button, Tabs } from "@mantine/core";
-import { showNotification } from "@mantine/notifications";
+import { showNotification, hideNotification, updateNotification } from "@mantine/notifications";
 import Ffmpeg from "./toxen/Ffmpeg";
 import SettingsPanel from "./components/Sidepanel/Panels/SettingsPanel/SettingsPanel";
 import MigrationPanel from "./components/Sidepanel/Panels/MigrationPanel/MigrationPanel";
@@ -215,12 +215,21 @@ export class Toxen {
       }).map(f => f.name);
   }
 
+  public static getSupportedConvertableAudioFiles() {
+    return [
+      ".wma",
+    ];
+  }
+
   public static getSupportedAudioFiles() {
     return [
       ".mp3",
       ".flac",
       ".ogg",
-      ".wav"
+      ".wav",
+
+      // To be converted
+      ...Toxen.getSupportedConvertableAudioFiles(),
     ];
   }
 
@@ -284,13 +293,16 @@ export class Toxen {
    */
   public static notify(notification: Omit<Omit<MessageCardOptions, "createdAt">, "uniqueId">) {
     // this.messageCards.addMessage(notification);
+    const id = Math.random().toString(36).substring(2);
     showNotification({
+      id,
       message: notification.content,
       disallowClose: notification.disableClose ?? false,
       autoClose: notification.expiresIn ?? false,
       title: notification.title,
       color: notification.type == "error" ? "red" : notification.type == "warning" ? "yellow" : "green",
     });
+    return id;
   }
 
   // Forms

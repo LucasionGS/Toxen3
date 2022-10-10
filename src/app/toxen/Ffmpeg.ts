@@ -114,6 +114,36 @@ namespace Ffmpeg {
       }
     });
   }
+
+  export function convertToMp3(song: Song, onProgress?: (progress: FfmpegProgressEvent) => void): Promise<boolean> {
+    return new Promise<boolean>(async (resolve, reject) => {
+      try {
+        const fullPath = song.dirname(song.paths.media);
+        const filename = song.paths.media.split("/").pop();
+        const filenameWithoutExt = filename.split(".").slice(0, -1).join(".");
+        const fileDirname = Path.dirname(fullPath);
+        ffmpeg(fullPath)
+          .setFfmpegPath(ffmpegPath)
+          .output(`${fileDirname}/${filenameWithoutExt}.mp3`)
+          .on("end", async () => {
+            song.paths.media = `${filenameWithoutExt}.mp3`;
+            await song.saveInfo();
+
+            if (Song.getCurrent() === song) {
+              Toxen.musicPlayer.setSource(song.dirname(song.paths.media), true);
+            }
+
+            resolve(true);
+          })
+          .on("progress", (progress) => {
+            if (onProgress) onProgress(progress);
+          }).on("error", reject)
+          .run();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
 }
 
 export default Ffmpeg;

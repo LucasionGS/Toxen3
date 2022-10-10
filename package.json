@@ -144,6 +144,7 @@
     "react": "^17.0.2",
     "react-bootstrap": "^1.5.2",
     "react-dom": "^17.0.2",
+    "react-render-if-visible": "^2.1.1",
     "react-select": "^4.3.0",
     "showdown": "^1.9.1",
     "update-electron-app": "^2.0.1",

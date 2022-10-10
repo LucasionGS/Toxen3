@@ -32,6 +32,7 @@ import archiver from "archiver";
 import { } from "buffer";
 import { hashElement } from "folder-hash";
 import User from "./User";
+import { updateNotification } from "@mantine/notifications";
 // import ToxenInteractionMode from "./ToxenInteractionMode";
 
 export default class Song implements ISong {
@@ -219,7 +220,7 @@ export default class Song implements ISong {
    */
   public Element() {
     return (
-      <SongElement playing={this.isPlaying()} key={this.uid} song={this} ref={ref => this.currentElement = ref} />
+      <SongElement playing={this.isPlaying()} song={this} ref={ref => this.currentElement = ref} />
     );
   }
 
@@ -383,6 +384,27 @@ export default class Song implements ISong {
       if (this.lastBlobUrl) URL.revokeObjectURL(this.lastBlobUrl);
       let bg = this.backgroundFile();
 
+      if (!Settings.isRemote()) {
+        // Check if needs conversion
+        const convertable = Toxen.getSupportedConvertableAudioFiles();
+        if (convertable.includes(Path.extname(src).toLowerCase())) {
+          const id = Toxen.notify({
+            title: "Converting " + this.getDisplayName() + " to MP3",
+            content: `0% complete`,
+          });
+          Ffmpeg.convertToMp3(this, (progress) => { // Purposely don't await, let it run in the background
+            updateNotification({
+              id,
+              message: <div>
+                {Math.round(progress.percent)}% complete
+                <br />
+                {progress.timemark}
+              </div>,
+            });
+          });
+        }
+      }
+
       await this.applySubtitles();
       await this.applyStoryboard();
       if (!options.disableHistory) Song.historyAdd(this);
@@ -423,6 +445,89 @@ export default class Song implements ISong {
         img.addEventListener("load", onLoad);
       }
       else addToMetadata();
+    }
+  }
+
+  public static async convertAllNecessary(songs: Song[]) {
+    if (!Settings.isRemote()) {
+      // Check if needs conversion
+
+      const globalId = Toxen.notify({
+        title: "Converting all necessary",
+        content: `0% complete`,
+      });
+
+      async function convertSong(song: Song) {
+        const id = Toxen.notify({
+          title: "Converting " + song.getDisplayName() + " to MP3",
+          content: `0% complete`
+        });
+        await Ffmpeg.convertToMp3(song, (progress) => {
+          updateNotification({
+            id,
+            title: "Converting " + song.getDisplayName() + " to MP3",
+            message: <div>
+              {Math.round(progress.percent)}% complete
+              <br />
+              {progress.timemark}
+            </div>,
+            autoClose: false,
+          });
+        });
+
+        updateNotification({
+          id,
+          title: "Converting " + song.getDisplayName() + " to MP3",
+          message: <div>
+            100% complete
+          </div>,
+          autoClose: 500,
+        });
+        
+        updateNotification({
+          id: globalId,
+          title: "Converting all necessary",
+          message: <div>
+            {Math.round((songs.indexOf(song) / songs.length) * 100)}% complete
+          </div>,
+          color: "green",
+          autoClose: false
+        });
+      }
+
+      const convertable = Toxen.getSupportedConvertableAudioFiles();
+      songs = songs.filter(s => convertable.includes(Path.extname(s.mediaFile()).toLowerCase()))
+
+      // Convert 3 at a time
+      let i = 0;
+      let active = 0;
+      while (i < songs.length) {
+        const song = songs[i];
+        if (active < 3) {
+          i++;
+          active++;
+          convertSong(song).then(() => {
+            active--;
+          });
+        }
+        if (active >= 3) await new Promise(r => setTimeout(r, 1000));
+      }
+
+      while (active > 0) await new Promise(r => setTimeout(r, 1000));
+      
+      updateNotification({
+        id: globalId,
+        title: "Converting all necessary",
+        message: <div>
+          100% complete
+          <br />
+          {i} / {songs.length}
+        </div>,
+        color: "green",
+        autoClose: 2000,
+      });
+
+      return songs.length;
     }
   }
 
@@ -1036,7 +1141,7 @@ export default class Song implements ISong {
       content: "You must be a premium user to sync songs.",
       expiresIn: 5000,
       type: "error"
-    });
+    }) && null;
 
     if (!Settings.isRemote()) {
       try {
@@ -1056,7 +1161,7 @@ export default class Song implements ISong {
           content: error.message,
           expiresIn: 5000,
           type: "error"
-        });
+        }) && null;
       }
 
       // Sync from disk to remote (Using archiver to zip the folder in memory)

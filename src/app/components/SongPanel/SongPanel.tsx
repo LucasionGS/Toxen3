@@ -4,6 +4,7 @@ import Song from '../../toxen/Song';
 import { Button } from '@mantine/core';
 import Settings from '../../toxen/Settings';
 import { remote } from "electron";
+import RenderIfVisible from "react-render-if-visible";
 
 interface SongPanelProps {
   getRef?: ((songPanel: SongPanel) => void)
@@ -76,7 +77,9 @@ export default class SongPanel extends Component<SongPanelProps, SongPanelState>
             }
           }}>Sync all</Button>
         )}
-        {songs.map(s => s.Element())}
+        {songs.map(s => <RenderIfVisible defaultHeight={64} visibleOffset={500} key={s.uid}>
+          {s.Element()}
+        </RenderIfVisible>)}
       </>
     );
   }

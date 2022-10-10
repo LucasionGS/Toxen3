@@ -6800,6 +6800,11 @@ react-property@1.0.1:
   resolved "https://registry.npmjs.org/react-property/-/react-property-1.0.1.tgz"
   integrity sha512-1tKOwxFn3dXVomH6pM9IkLkq2Y8oh+fh/lYW3MJ/B03URswUTqttgckOlbxY2XHF3vPG6uanSc4dVsLW/wk3wQ==
 
+react-render-if-visible@^2.1.1:
+  version "2.1.1"
+  resolved "https://registry.yarnpkg.com/react-render-if-visible/-/react-render-if-visible-2.1.1.tgz#b67d8a6d230d8e1e8986212a1d4098425a26810b"
+  integrity sha512-dl6OZkF+ktKi/pMNt5Upn99gSWnOCAQdFp/WBclMsPs4dV/RLeE40lab8tixoHB4UEKsspv0jFR13HF4fxmPHw==
+
 react-select@^4.3.0:
   version "4.3.0"
   resolved "https://registry.npmjs.org/react-select/-/react-select-4.3.0.tgz"

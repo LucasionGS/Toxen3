@@ -3,6 +3,7 @@ import { remote } from "electron";
 import React from "react";
 import Converter from "../../../../toxen/Converter";
 import Settings, { VisualizerStyle } from "../../../../toxen/Settings";
+import Song from "../../../../toxen/Song";
 import { Toxen } from "../../../../ToxenApp";
 import TButton from "../../../Button/Button";
 import Form from "../../../Form/Form";
@@ -331,6 +332,20 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           <Checkbox onClick={(e) => Settings.apply({ progressBarShowMs: e.currentTarget.checked }, true)} defaultChecked={Settings.get("progressBarShowMs")} name="progressBarShowMs" label="Progress Bar: Show milliseconds" />
           <br />
           <sup>Enables showing the milliseconds in the progress bar.</sup>
+
+          <Button onClick={() => {
+            const songs = Toxen.getAllSongs();
+
+            Song.convertAllNecessary(songs).then((changedSongs) => {
+              Toxen.updateSongPanels();
+              Toxen.notify({
+                title: "Converted all songs",
+                content: `Converted ${changedSongs} songs to the new format.`
+              })
+            });
+          }} color="green">
+            Convert all necessary audio files
+          </Button>
         </Tabs.Tab>
       </Tabs>
     </>

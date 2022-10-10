@@ -5,13 +5,29 @@ import { TextInput } from "@mantine/core";
 const SearchField = () => {
   const [value, setValue] = useState(Toxen.songSearch ?? "");
   const handleChange: React.ChangeEventHandler<HTMLInputElement> = (e) => {
-    setValue(Toxen.songSearch = e.target.value);
-    Toxen.songPanel.update();
+    const newValue = e.target.value;
+    setValue(Toxen.songSearch = newValue);
+
+    if (newValue === "") Toxen.songPanel.update();
   };
   return (
-    <TextInput placeholder="Search..." spellCheck={false} type="search" value={value} onChange={handleChange} style={{
-      width: "85%",
-    }} />
+    <TextInput
+      placeholder="Search..."
+      spellCheck={false}
+      type="search"
+      value={value}
+      onChange={handleChange}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          e.stopPropagation();
+          Toxen.songPanel.update();
+        }
+      }}
+      style={{
+        width: "85%",
+      }}
+    />
   );
 };
 
