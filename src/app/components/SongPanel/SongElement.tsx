@@ -4,7 +4,7 @@ import { Toxen } from '../../ToxenApp';
 import "./SongElement.scss";
 import { Group } from '@mantine/core';
 import { useIntersection } from '@mantine/hooks';
-
+import RenderIfVisible from "react-render-if-visible";
 
 function SongElementDiv(props: { songElement: SongElement }) {
   /// Observer object is cool and all but holy shit it makes this laggy
@@ -13,7 +13,7 @@ function SongElementDiv(props: { songElement: SongElement }) {
   //   threshold: 1,
   //   rootMargin: "-128px 256px 0px 256px",
   // });
-  
+
   const { songElement } = props;
   let song = songElement.props.song;
   let classes = ["song-element", songElement.state.selected ? "selected" : null].filter(a => a);
@@ -22,7 +22,7 @@ function SongElementDiv(props: { songElement: SongElement }) {
 
   const ContextMenu = songElement.ContextMenu.bind(songElement);
   const contextMenuRef = React.createRef<HTMLDivElement>();
-  
+
   return (
     <div style={{
       position: "relative",
@@ -37,7 +37,7 @@ function SongElementDiv(props: { songElement: SongElement }) {
       </div>
       <div ref={ref => songElement.divElement = ref} className={classes.join(" ")} style={{
         background: `linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0)) 0% 0% / cover, url("${bgFile.replace(/\\/g, "/")}")`,
-        
+
         /// Style if using Observer object
         // background: observer?.isIntersecting ? `linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0)) 0% 0% / cover, url("${bgFile.replace(/\\/g, "/")}")`: null,
         // opacity: observer?.isIntersecting ? 1 : 0,
@@ -63,9 +63,9 @@ function SongElementDiv(props: { songElement: SongElement }) {
 
 
 interface SongElementProps {
-  getRef?: ((ref: SongElement) => void),
+  getRef?: ((ref: SongElement) => void);
   song: Song;
-  playing?: boolean,
+  playing?: boolean;
 }
 
 interface SongElementState {
@@ -107,6 +107,12 @@ export default class SongElement extends Component<SongElementProps, SongElement
   public divPermanentElement: HTMLDivElement;
 
   render() {
-    return <SongElementDiv songElement={this} />;
+    return (
+      <div ref={ref => this.divPermanentElement = ref}>
+        <RenderIfVisible defaultHeight={64} visibleOffset={500}>
+          <SongElementDiv songElement={this} />
+        </RenderIfVisible>
+      </div>
+    );
   }
 }

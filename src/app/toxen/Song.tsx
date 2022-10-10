@@ -483,7 +483,7 @@ export default class Song implements ISong {
           </div>,
           autoClose: 500,
         });
-        
+
         updateNotification({
           id: globalId,
           title: "Converting all necessary",
@@ -514,7 +514,7 @@ export default class Song implements ISong {
       }
 
       while (active > 0) await new Promise(r => setTimeout(r, 1000));
-      
+
       updateNotification({
         id: globalId,
         title: "Converting all necessary",
@@ -858,7 +858,7 @@ export default class Song implements ISong {
   }
 
   public scrollTo() {
-    if (this.currentElement) (this.currentElement.divElement as any).scrollIntoViewIfNeeded();
+    if (this.currentElement) ((this.currentElement.divPermanentElement ?? this.currentElement.divElement) as any).scrollIntoViewIfNeeded();
   }
 
   public static getCurrent() {
@@ -1147,13 +1147,15 @@ export default class Song implements ISong {
       try {
         const upToDate = await this.validateAgainstRemote();
 
-        if (upToDate && !silenceValidated) {
-          Toxen.notify({
-            title: "Update-to-date",
-            content: <p><code>{this.getDisplayName()}</code> is already up to date.</p>,
-            expiresIn: 1000
-          });
-          return
+        if (upToDate) {
+          if (!silenceValidated) {
+            Toxen.notify({
+              title: "Update-to-date",
+              content: <p><code>{this.getDisplayName()}</code> is already up to date.</p>,
+              expiresIn: 1000
+            });
+          }
+          return;
         }
       } catch (error) {
         return Toxen.notify({

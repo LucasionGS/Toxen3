@@ -4,7 +4,6 @@ import Song from '../../toxen/Song';
 import { Button } from '@mantine/core';
 import Settings from '../../toxen/Settings';
 import { remote } from "electron";
-import RenderIfVisible from "react-render-if-visible";
 
 interface SongPanelProps {
   getRef?: ((songPanel: SongPanel) => void)
@@ -54,13 +53,13 @@ export default class SongPanel extends Component<SongPanelProps, SongPanelState>
         <Button color="green" onClick={() => Toxen.sidePanel.setSectionId("playlist")}>Change Playlist</Button>
         {!Settings.get("isRemote") && (
           <Button color="blue" onClick={async () => {
-            
+
             // Sync all
             const user = Settings.getUser();
             if (user && user.premium) {
               const win = remote.getCurrentWindow();
 
-              
+
               for (let i = 0; i < songs.length; i++) {
                 win.setProgressBar(i / songs.length);
                 const s = songs[i];
@@ -77,9 +76,7 @@ export default class SongPanel extends Component<SongPanelProps, SongPanelState>
             }
           }}>Sync all</Button>
         )}
-        {songs.map(s => <RenderIfVisible defaultHeight={64} visibleOffset={500} key={s.uid}>
-          {s.Element()}
-        </RenderIfVisible>)}
+        {songs.map(s => s.Element())}
       </>
     );
   }
