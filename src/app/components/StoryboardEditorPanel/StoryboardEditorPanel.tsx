@@ -12,6 +12,7 @@ import { hexToRgbArray, rgbArrayToHex } from "../Form/FormInputFields/FormInputC
 import Settings, { VisualizerStyle } from "../../toxen/Settings";
 import Path from "path";
 import "./StoryboardEditorPanel.scss";
+import BPMFinder from "../BPMFinder/BPMFinder";
 
 interface StoryboardEditorPanelProps { }
 
@@ -42,36 +43,44 @@ export default function StoryboardEditorPanel() {
     <>
       <SidepanelSectionHeader>
         <h1>Storyboard Editor</h1>
-        <Button color="green" onClick={async () => {
-          const saveLocation = song.storyboardFile() || song.dirname("storyboard.tsb");
-          StoryboardParser.save(saveLocation, config);
-          if (saveLocation !== song.storyboardFile()) {
-            if (Settings.isRemote()) {
-              song.paths.storyboard = saveLocation.replace(song.dirname(), "");
-              while (song.paths.storyboard.startsWith("/")) {
-                song.paths.storyboard = song.paths.storyboard.substring(1);
+        <Group noWrap grow>
+          <div>
+            <Button color="green" onClick={async () => {
+              const saveLocation = song.storyboardFile() || song.dirname("storyboard.tsb");
+              StoryboardParser.save(saveLocation, config);
+              if (saveLocation !== song.storyboardFile()) {
+                if (Settings.isRemote()) {
+                  song.paths.storyboard = saveLocation.replace(song.dirname(), "");
+                  while (song.paths.storyboard.startsWith("/")) {
+                    song.paths.storyboard = song.paths.storyboard.substring(1);
+                  }
+                  while (song.paths.storyboard.endsWith("/")) {
+                    song.paths.storyboard = song.paths.storyboard.substring(0, song.paths.storyboard.length - 1);
+                  }
+                }
+                else {
+                  song.paths.storyboard = Path.relative(song.dirname(), saveLocation);
+                }
+                song.saveInfo();
               }
-              while (song.paths.storyboard.endsWith("/")) {
-                song.paths.storyboard = song.paths.storyboard.substring(0, song.paths.storyboard.length - 1);
-              }
-            }
-            else {
-              song.paths.storyboard = Path.relative(song.dirname(), saveLocation);
-            }
-            song.saveInfo();
-          }
-          Toxen.log("Saved storyboard", 2000);
-        }}>Save</Button>
-        <Button color="red" onClick={() => {
-          // Check if there are unsaved changes and confirm the exit.
-          Toxen.musicPlayer.setPlaybackRate(1); // Reset playback rate
-          Toxen.setMode("Player");
-        }}>Exit editor</Button>
-        <br />
-        <Button color="blue" onClick={() => {
-          clipboard.copy(new Time(Toxen.musicPlayer.media.currentTime * 1000).toTimestamp(Time.FORMATS.STANDARD_WITH_MS));
-          Toxen.log("Copied current time to clipboard", 2000);
-        }}>Copy current time</Button>
+              Toxen.log("Saved storyboard", 2000);
+            }}>Save</Button>
+            <Button color="red" onClick={() => {
+              // Check if there are unsaved changes and confirm the exit.
+              Toxen.musicPlayer.setPlaybackRate(1); // Reset playback rate
+              Toxen.setMode("Player");
+            }}>Exit editor</Button>
+            <br />
+            <Button color="blue" onClick={() => {
+              clipboard.copy(new Time(Toxen.musicPlayer.media.currentTime * 1000).toTimestamp(Time.FORMATS.STANDARD_WITH_MS));
+              Toxen.log("Copied current time to clipboard", 2000);
+            }}>Copy current time</Button>
+          </div>
+          <div>
+            <BPMFinder />
+          </div>
+        </Group>
+
         <hr />
         <Group position="center">
           <Button title="-5s" color="blue" onClick={() => {
@@ -266,7 +275,6 @@ interface TimeInputProps extends Omit<TextInputProps, "onChange"> {
 function TimeInput(props: TimeInputProps) {
   const { onChange, ...others } = props;
   const [error, setError] = useState(false);
-  console.log("Error:", error);
   return (
     <>
       <TextInput {...others} onChange={(e) => {

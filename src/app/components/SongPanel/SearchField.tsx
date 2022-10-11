@@ -1,6 +1,7 @@
 import { Toxen } from "../../ToxenApp";
 import React, { useState } from "react";
-import { TextInput } from "@mantine/core";
+import { Button, Group, TextInput } from "@mantine/core";
+import { IconSearch } from "@tabler/icons";
 
 const SearchField = () => {
   const [value, setValue] = useState(Toxen.songSearch ?? "");
@@ -11,23 +12,36 @@ const SearchField = () => {
     if (newValue === "") Toxen.songPanel.update();
   };
   return (
-    <TextInput
-      placeholder="Search..."
-      spellCheck={false}
-      type="search"
-      value={value}
-      onChange={handleChange}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
+    <Group position="left" noWrap>
+      <Button
+        onClick={(e: any) => {
           e.preventDefault();
           e.stopPropagation();
           Toxen.songPanel.update();
-        }
-      }}
-      style={{
-        width: "85%",
-      }}
-    />
+        }}
+        variant="outline"
+      >
+        <IconSearch />
+      </Button>
+      <TextInput
+        placeholder="Search..."
+        spellCheck={false}
+        type="search"
+        value={value}
+        onChange={handleChange}
+        onKeyDown={(e) => {
+          const key = e.key?.toLowerCase();
+          if (key === "enter" || key === "return") {
+            e.preventDefault();
+            e.stopPropagation();
+            Toxen.songPanel.update();
+          }
+        }}
+        style={{
+          width: "75%",
+        }}
+      />
+    </Group>
   );
 };
 

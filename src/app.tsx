@@ -103,7 +103,7 @@ remote.Menu.setApplicationMenu(
           }
         },
         {
-          label: "Reload Theme",
+          label: "Reload Storyboard",
           accelerator: "CTRL + SHIFT + S",
           click() {
             Song.getCurrent()?.applyStoryboard();

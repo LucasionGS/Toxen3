@@ -645,6 +645,7 @@ export default class ToxenAppRenderer extends React.Component {
   }
 
   render = () => {
+    const user = User.getCurrentUser();
     return (
       <div>
         <ThemeContainer ref={ref => Toxen.themeContainer = ref} />
@@ -696,6 +697,33 @@ export default class ToxenAppRenderer extends React.Component {
               <br />
               <br />
               <SearchField />
+              <br />
+              <Button color="green" onClick={() => Toxen.sidePanel.setSectionId("playlist")}>Change Playlist</Button>
+              {!Settings.isRemote() && user?.premium && (
+                <Button color="blue" onClick={async () => {
+
+                  // Sync all
+                  const user = Settings.getUser();
+                  if (user && user.premium) {
+                    const win = remote.getCurrentWindow();
+
+                    const songs = Toxen.getAllSongs();
+                    for (let i = 0; i < songs.length; i++) {
+                      win.setProgressBar(i / songs.length);
+                      const s = songs[i];
+                      await s.sync({
+                        silenceValidated: true,
+                      });
+                    }
+                    win.setProgressBar(-1);
+                    Toxen.notify({
+                      title: "Synced all songs",
+                      content: "All songs have been synced.",
+                      expiresIn: 5000
+                    })
+                  }
+                }}>Sync all</Button>
+              )}
             </SidepanelSectionHeader>
             <SongQueuePanel ref={s => Toxen.songQueuePanel = s} />
             <SongPanel ref={s => Toxen.songPanel = s} />

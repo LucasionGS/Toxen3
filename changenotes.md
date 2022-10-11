@@ -1,9 +1,31 @@
 <!-- ## Upcoming update / 1.4.1 -->
 ## Upcoming update / 1.4.0
-- WIP version of the storyboard implementation!
-  - Songs with a stoyboard file (.tsb) can be selected in the song details panel. More documentation will be added later how this can be created.
+New features
+- First iteration of a storyboard implementation has been released!
+  - Songs with a storyboard file (.tsb) can be selected in the song details panel. (More documentation will be added later)
   - An editor is available when pressing edit song. There's a button under where you would select Storyboard file.
+  - The editor has a BPM Finder, you can tab to the beat and it will automatically calculate the BPM for you. The longer you do this for and more consistent you can keeep with the beat, the more accurate it will be.
+- (Windows only) `.wma` files are now (indirectly) supported. They are converted to .mp3 when played first time.
+  - If you have a lot of `.wma` files in your songs, you can use the button `Settings` -> `Advanced` -> `Convert all necessary audio files` to convert them all at once.
+
+Restricted access features
+- Toxen stream server has been added. This is a new way to stream songs to the client. Currently this feature is restricted to the developer, but will be opened up as a `Premium` feature later. No existing features in Toxen will be restricted by `Premium`, don't worry.
+- Login button in the top right corner has been added. This is currently only used for the stream server, but will be used for other features later. Registration is currently not possible and is restricted to a select few.
+- Added `Sync to remote` on each song on the `Context menu` (right click). This will sync the song to the remote server. This only works if you're logged in as a user with `Premium`.
+
+Changes
+- The song panel will now only render songs that are in frame. This should improve overall performance if you have a lot of songs. (This was tested with over 2000 songs)
+- Restyled the search box in the song panel.
+- Changed the search bar in the song panel to require an `Enter` press to search. This should improve performance when typing in the search box.
+  - It will still auto-reset the list when the search box is empty.
+- Moved "Change playlist" into the header of the song panel.
+
+Removed
 - Removed `Migration` button from advanced mode sidebar
+
+Bug fixes
+- Fixed `Progress bar: Show milliseconds` showing weirdly and pushing other elements when a song is playing.
+
 ## 1.3.3 - 2022-06-17
 - Added alternative Toxen icon.
 - Fixed Appbar title overflowing.

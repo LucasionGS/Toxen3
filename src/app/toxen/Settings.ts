@@ -111,8 +111,10 @@ export default class Settings {
     // if (overrideDefault) Settings.apply(overrideDefault);
   }
 
+  private static officalStreamServer = "https://stream.toxen.net";
+
   public static getServer() {
-    return (Settings.get("remoteServer") || "https://toxen.net/remote").replace(/\/+$/, ""); // Remove trailing slashes.
+    return (Settings.get("remoteServer") || Settings.officalStreamServer).replace(/\/+$/, ""); // Remove trailing slashes.
   }
 
   /**
