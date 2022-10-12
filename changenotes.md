@@ -7,6 +7,7 @@ New features
   - The editor has a BPM Finder, you can tab to the beat and it will automatically calculate the BPM for you. The longer you do this for and more consistent you can keeep with the beat, the more accurate it will be.
 - (Windows only) `.wma` files are now (indirectly) supported. They are converted to .mp3 when played first time.
   - If you have a lot of `.wma` files in your songs, you can use the button `Settings` -> `Advanced` -> `Convert all necessary audio files` to convert them all at once.
+- You can import folders with drag and drop, and Toxen will look through the folder recursively for media files and copy them to the library.
 
 Restricted access features
 - Toxen stream server has been added. This is a new way to stream songs to the client. Currently this feature is restricted to the developer, but will be opened up as a `Premium` feature later. No existing features in Toxen will be restricted by `Premium`, don't worry.
@@ -25,6 +26,7 @@ Removed
 
 Bug fixes
 - Fixed `Progress bar: Show milliseconds` showing weirdly and pushing other elements when a song is playing.
+- Fixed Toxen crashing when importing the first song in an empty music folder.
 
 ## 1.3.3 - 2022-06-17
 - Added alternative Toxen icon.
