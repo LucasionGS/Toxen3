@@ -354,7 +354,7 @@ export default class Song implements ISong {
         uid += items[Math.floor(Math.random() * items.length)];
       }
     }
-    while (!skipCheck && Toxen.songList && !Toxen.songList.some(s => s.uid));
+    while (!skipCheck && Toxen.songList && Toxen.songList.length > 0 && !Toxen.songList.some(s => s.uid));
     return uid;
   }
 
