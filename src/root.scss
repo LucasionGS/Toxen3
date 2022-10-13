@@ -17,7 +17,7 @@ body {
   }
 }
 
-body[fullscreen] {
+body[fullscreen], body[miniplayer] {
   --bodyHeight: 100vh;
 }
 
@@ -30,6 +30,10 @@ a {
 }
 
 body.inactive *.hide-on-inactive {
+  opacity: 0 !important;
+}
+
+body[miniplayer] *.hide-on-inactive {
   opacity: 0 !important;
 }
 

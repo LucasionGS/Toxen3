@@ -36,7 +36,7 @@ On the left side of the screen, you'll see a `Sidepanel` with a few icons, each 
   - Right-clicking on a song in the `Music` panel and selecting `Edit Info`.
 
 **Toggle fullscreen**:
-  - Double-clicking on the background anywhere above the song controls.
+  - `F11` will toggle fullscreen mode.
 
 ## Sidepanel
 The `Sidepanel` is the main way to navigate Toxen. It's located on the left side of the screen, and contains screens like `Music`, `Playlists`, `Settings`, `Import`, and more.

@@ -61,3 +61,13 @@ body.inactive {
     }
   }
 }
+
+body[miniplayer] .toxen-music-controls {
+  width: 100%;
+  bottom: -32px;
+  left: 0;
+  transform: translateX(0);
+  .toxen-music-controls-progress-bar > * {
+    transform: translateY(0);
+  }
+}

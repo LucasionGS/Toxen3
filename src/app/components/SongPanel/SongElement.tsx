@@ -53,6 +53,15 @@ function SongElementDiv(props: { songElement: SongElement }) {
           contextMenuRef.current?.click();
         }}
       >
+        <div style={{ // Progress bar
+          position: "absolute",
+          top: 0,
+          left: 0,
+          height: "100%",
+          width: (songElement.state.progressBar * 90) + "%",
+          backgroundColor: "rgba(0, 255, 0, 0.2)",
+          transition: "width 0.2s ease-in-out",
+        }} />
         <p className="song-title" >
           {song.getDisplayName()}
         </p>
@@ -72,6 +81,7 @@ interface SongElementState {
   selected: boolean;
   playing: boolean;
   showContextMenu: boolean;
+  progressBar: number;
 }
 
 export default class SongElement extends Component<SongElementProps, SongElementState> {
@@ -82,6 +92,7 @@ export default class SongElement extends Component<SongElementProps, SongElement
       selected: false,
       playing: this.props.playing ?? false,
       showContextMenu: false,
+      progressBar: 0,
     }
   }
 

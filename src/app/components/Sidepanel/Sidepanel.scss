@@ -33,9 +33,11 @@ body.inactive .sidepanel:not(.show) {
   }
 
   border-color: #b6ffba;
-  // * {
-  //   border-color: #b6ffba;
-  // }
+  
+}
+
+body[miniplayer] .sidepanel {
+  display: none;
 }
 
 /* For sideways transition */

@@ -55,6 +55,7 @@ import MigrationPanel from "./components/Sidepanel/Panels/MigrationPanel/Migrati
 import EditSong from "./components/Sidepanel/Panels/EditSong/EditSong";
 import InitialData from "./windows/SubtitleCreator/models/InitialData";
 import User from "./toxen/User";
+import { IconLayoutNavbarExpand } from "@tabler/icons";
 
 declare const SUBTITLE_CREATOR_WEBPACK_ENTRY: any;
 
@@ -478,8 +479,56 @@ export class Toxen {
   public static toggleFullscreen(force?: boolean) {
     const w = remote.getCurrentWindow();
     const newMode = force ?? !w.isFullScreen();
+
+    if (newMode && Toxen.isMiniplayer()) {
+      Toxen.toggleMiniplayer(false);
+    }
+    
     w.setFullScreen(newMode);
     document.body.toggleAttribute("fullscreen", newMode);
+  }
+  
+  private static _widthBeforeMiniplayer: number;
+  private static _heightBeforeMiniplayer: number;
+  private static _xBeforeMiniplayer: number;
+  private static _yBeforeMiniplayer: number;
+  
+  private static _miniplayerWidth = 300;
+  private static _miniplayerHeight = Math.floor(300 / 16 * 9);
+  
+  public static toggleMiniplayer(force?: boolean) {
+    const w = remote.getCurrentWindow();
+    const newMode = force ?? !Toxen.isMiniplayer();
+
+    if (newMode && w.isFullScreen()) {
+      Toxen.toggleFullscreen(false);
+    }
+    
+    document.body.toggleAttribute("miniplayer", newMode);
+
+    // If true, set always on top
+    if (newMode) {
+      w.setAlwaysOnTop(true);
+      w.setMaximizable(false);
+      const size = w.getSize();
+      Toxen._widthBeforeMiniplayer = size[0];
+      Toxen._heightBeforeMiniplayer = size[1];
+      const pos = w.getPosition();
+      Toxen._xBeforeMiniplayer = pos[0];
+      Toxen._yBeforeMiniplayer = pos[1];
+      w.setSize(Toxen._miniplayerWidth, Toxen._miniplayerHeight);
+      w.setPosition(screen.availWidth - Toxen._miniplayerWidth, screen.availHeight - Toxen._miniplayerHeight);
+    } else {
+      w.setAlwaysOnTop(false);
+      w.setMaximizable(true);
+      w.setSize(Toxen._widthBeforeMiniplayer, Toxen._heightBeforeMiniplayer);
+      w.setPosition(Toxen._xBeforeMiniplayer, Toxen._yBeforeMiniplayer);
+
+    }
+  }
+
+  public static isMiniplayer() {
+    return document.body.hasAttribute("miniplayer");
   }
 
   public static async reloadSection() {
@@ -645,9 +694,15 @@ export default class ToxenAppRenderer extends React.Component {
   }
 
   render = () => {
-    const user = User.getCurrentUser();
     return (
       <div>
+        <div className="miniplayer-overlay" onDoubleClick={e => {
+          e.preventDefault();
+          Toxen.toggleMiniplayer(false);
+        }}>
+          <div className="miniplayer-overlay-header" />
+          <IconLayoutNavbarExpand size="20vh" />
+        </div>
         <ThemeContainer ref={ref => Toxen.themeContainer = ref} />
         <AppBar />
         <Background ref={ref => Toxen.background = ref} />
@@ -699,10 +754,8 @@ export default class ToxenAppRenderer extends React.Component {
               <SearchField />
               <br />
               <Button color="green" onClick={() => Toxen.sidePanel.setSectionId("playlist")}>Change Playlist</Button>
-              {!Settings.isRemote() && user?.premium && (
+              {/* {!Settings.isRemote() && user?.premium && (
                 <Button color="blue" onClick={async () => {
-
-                  // Sync all
                   const user = Settings.getUser();
                   if (user && user.premium) {
                     const win = remote.getCurrentWindow();
@@ -723,7 +776,7 @@ export default class ToxenAppRenderer extends React.Component {
                     })
                   }
                 }}>Sync all</Button>
-              )}
+              )} */}
             </SidepanelSectionHeader>
             <SongQueuePanel ref={s => Toxen.songQueuePanel = s} />
             <SongPanel ref={s => Toxen.songPanel = s} />

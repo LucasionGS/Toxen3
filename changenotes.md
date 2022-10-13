@@ -8,6 +8,9 @@ New features
 - (Windows only) `.wma` files are now (indirectly) supported. They are converted to .mp3 when played first time.
   - If you have a lot of `.wma` files in your songs, you can use the button `Settings` -> `Advanced` -> `Convert all necessary audio files` to convert them all at once.
 - You can import folders with drag and drop, and Toxen will look through the folder recursively for media files and copy them to the library.
+- If you have a song folder which is missing a media file in settings, it will look for one in the folder. If none is found, Toxen will prompt you that it's missing a media file, and you'll have the option to delete the song folder.  
+![image](./docs/images/song_missing_media_file.png)
+- Added Mini-Player mode! Press `CTRL + F11` to toggle it. When in miniplayer mode, double clicking the window will go back to normal mode.
 
 Restricted access features
 - Toxen stream server has been added. This is a new way to stream songs to the client. Currently this feature is restricted to the developer, but will be opened up as a `Premium` feature later. No existing features in Toxen will be restricted by `Premium`, don't worry.

@@ -55,6 +55,6 @@
   }
 }
 
-body[fullscreen] .appBar {
+body[fullscreen] .appBar, body[miniplayer] .appBar {
   display: none;
 }

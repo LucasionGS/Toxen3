@@ -22,7 +22,7 @@ import yauzl from "yauzl";
 import os from "os";
 import { useModals } from "@mantine/modals";
 import { ModalsContextProps, ModalSettings } from "@mantine/modals/lib/context";
-import { Checkbox, Menu, RangeSlider, Button, Progress } from "@mantine/core";
+import { Checkbox, Menu, RangeSlider, Button, Progress, Group } from "@mantine/core";
 import Playlist from "./Playlist";
 import TButton from "../components/Button/Button";
 import Ffmpeg from "./Ffmpeg";
@@ -32,7 +32,7 @@ import archiver from "archiver";
 import { } from "buffer";
 import { hashElement } from "folder-hash";
 import User from "./User";
-import { updateNotification } from "@mantine/notifications";
+import { hideNotification, updateNotification } from "@mantine/notifications";
 // import ToxenInteractionMode from "./ToxenInteractionMode";
 
 export default class Song implements ISong {
@@ -734,6 +734,18 @@ export default class Song implements ISong {
           }}>
             Remove from queue
           </Menu.Item>
+          {
+            User.getCurrentUser()?.premium && !Settings.isRemote() && (
+              <Menu.Item icon={<i className="fas fa-sync"></i>} onClick={async () => {
+                const selectedSongs = Song.getSelected();
+                for (const song of selectedSongs) {
+                  await song.sync();
+                }
+              }}>
+                Sync to remote
+              </Menu.Item>
+            )
+          }
           <Menu.Item icon={<i className="fas fa-trash-alt"></i>} color="red" onClick={() => {
             const selectedSongs = Song.getSelected();
             modals.openConfirmModal({
@@ -942,8 +954,39 @@ export default class Song implements ISong {
             if (typeof forEach === "function") forEach(song);
           }
           else {
+            // Attempt Locate media file
+            const files = await System.recursive(songFolder);
+            const sMedia = Toxen.getSupportedAudioFiles();
+            let mediaFile = files.find(f => sMedia.includes(Path.extname(f.name)))?.name;
+
+            let song = Song.create(info);
+            if (mediaFile) {
+              song.paths.media = mediaFile;
+              songs.push(song);
+              song.saveInfo();
+              if (typeof forEach === "function") forEach(song);
+            }
+            
             if (typeof forEach === "function") forEach(null);
             console.warn(`Song "${songFolder}" is missing a media file. Excluding from song list.`);
+            const nId = Toxen.notify({
+              title: "Song missing media file",
+              content: <div>
+                <p>The song <b>{song.getDisplayName()}</b> is missing a media file. </p>
+                <p>Do you want to remove it from the library?</p>
+                <Group>
+                  <Button color="red" onClick={() => {
+                    hideNotification(nId);
+                    song.delete();
+                  }}>Delete</Button>
+                  <Button color="green" onClick={() => hideNotification(nId)}>Ask later</Button>
+                  <Button color="blue" onClick={() => {
+                    remote.shell.openPath(song.dirname());
+                  }}>Show Folder</Button>
+                </Group>
+              </div>,
+              type: "warning",
+            })
           }
         }
       }
@@ -985,7 +1028,7 @@ export default class Song implements ISong {
         await fsp.rm(this.dirname(), { recursive: true });
       } catch (error) {
         try {
-          await fsp.rm(this.dirname(), { recursive: true }); // Try again
+          await fsp.rm(this.dirname(), { recursive: true, }); // Try again
         } catch (error) {
           Toxen.error("Failed to delete song: " + this.dirname());
         }
@@ -1134,6 +1177,39 @@ export default class Song implements ISong {
       });
   }
 
+  /**
+   * 
+   * @param progress Progress rate from 0 to 1
+   * @param doComplete Whether to detect `1` as complete. If true, the progress bar will be hidden after 1 second.
+   */
+  public setProgressBar(progress: number, doComplete = false) {
+    if (this.currentElement) {
+      this.currentElement.setState({
+        progressBar: progress
+      });
+
+      if (doComplete && progress >= 1) {
+        this.completeProgressBar();
+      }
+    }
+  }
+
+  public resetProgressBar() {
+    this.setProgressBar(0);
+  }
+
+  /**
+   * Sets the progress bar to 100% and will be hidden after 1 second, resetting the progress bar to 0.
+   */
+  public completeProgressBar() {
+    this.setProgressBar(1);
+
+    // Reset the progress bar after a second
+    setTimeout(() => {
+      this.setProgressBar(0);
+    }, 1000);
+  }
+
   public async sync({ silenceValidated = false } = {}): Promise<void> {
     const user = Settings.getUser();
     if (!user.premium) return Toxen.notify({
@@ -1143,94 +1219,97 @@ export default class Song implements ISong {
       type: "error"
     }) && null;
 
-    if (!Settings.isRemote()) {
-      try {
-        const upToDate = await this.validateAgainstRemote();
+    if (Settings.isRemote()) return;
+    this.setProgressBar(0.10);
+    try {
+      const upToDate = await this.validateAgainstRemote();
 
-        if (upToDate) {
-          if (!silenceValidated) {
-            Toxen.notify({
-              title: "Update-to-date",
-              content: <p><code>{this.getDisplayName()}</code> is already up to date.</p>,
-              expiresIn: 1000
-            });
-          }
-          return;
+      if (upToDate) {
+        if (!silenceValidated) {
+          this.completeProgressBar();
+          Toxen.notify({
+            title: "Update-to-date",
+            content: <p><code>{this.getDisplayName()}</code> is already up to date.</p>,
+            expiresIn: 1000
+          });
         }
-      } catch (error) {
-        return Toxen.notify({
-          title: "Failed to validate against remote",
-          content: error.message,
+        return;
+      }
+    } catch (error) {
+      this.completeProgressBar();
+      return Toxen.notify({
+        title: "Failed to validate against remote",
+        content: error.message,
+        expiresIn: 5000,
+        type: "error"
+      }) && null;
+    }
+
+    // Sync from disk to remote (Using archiver to zip the folder in memory)
+    this.setProgressBar(0.25);
+    const zip = new yazl.ZipFile();
+
+    const zipPathTmp = Path.resolve(os.tmpdir(), "toxen-sync-" + Math.random().toString().substring(2) + ".zip");
+    const zipStream = createWriteStream(zipPathTmp);
+
+    const addFiles = async (dir: string, startingDir: string = dir) => {
+      const files = await fsp.readdir(dir);
+      for (const file of files) {
+        const filePath = Path.resolve(dir, file);
+        const stat = await fsp.stat(filePath);
+        const relativePath = Path.relative(startingDir, filePath);
+        if (stat.isDirectory()) {
+          zip.addEmptyDirectory(relativePath);
+          await addFiles(filePath, startingDir);
+        } else {
+          zip.addReadStream(createReadStream(filePath), relativePath);
+        }
+      }
+    };
+
+    await addFiles(this.dirname());
+
+    zip.outputStream.pipe(zipStream);
+    
+    zip.end();
+    this.setProgressBar(0.5);
+
+    return await new Promise((resolve, reject) => {
+      zipStream.on("finish", resolve);
+      zipStream.on("error", reject);
+    }).then(async () => {
+      const formData = new FormData();
+      // Insert as blob
+      formData.append("file", new Blob([await fsp.readFile(zipPathTmp)]), "sync.zip");
+      formData.append("data", JSON.stringify(this.toISong()));
+      return Toxen.fetch(user.getCollectionPath() + "/" + this.uid, {
+        method: "PUT",
+        body: formData
+      });
+    }).then(async res => {
+      if (res.ok) {
+        this.completeProgressBar();
+        Toxen.notify({
+          title: "Synced",
+          content: this.getDisplayName(),
+          expiresIn: 5000
+        });
+        return fsp.unlink(zipPathTmp);
+      } else {
+        this.setProgressBar(0);
+        Toxen.notify({
+          title: "Sync failed",
+          content: await res.text(),
           expiresIn: 5000,
           type: "error"
-        }) && null;
-      }
-
-      // Sync from disk to remote (Using archiver to zip the folder in memory)
-      const zip = new yazl.ZipFile();
-
-      const zipPathTmp = Path.resolve(os.tmpdir(), "toxen-sync-" + Math.random().toString().substring(2) + ".zip");
-      const zipStream = createWriteStream(zipPathTmp);
-
-      console.log("Packing...", this.dirname());
-      const addFiles = async (dir: string, startingDir: string = dir) => {
-        const files = await fsp.readdir(dir);
-        for (const file of files) {
-          const filePath = Path.resolve(dir, file);
-          const stat = await fsp.stat(filePath);
-          const relativePath = Path.relative(startingDir, filePath);
-          if (stat.isDirectory()) {
-            console.log("Adding directory", relativePath);
-            zip.addEmptyDirectory(relativePath);
-            await addFiles(filePath, startingDir);
-          } else {
-            console.log("Adding file", relativePath);
-            zip.addReadStream(createReadStream(filePath), relativePath);
-          }
-        }
-      };
-
-      await addFiles(this.dirname());
-
-      zip.outputStream.pipe(zipStream);
-
-      zip.end();
-
-      return await new Promise((resolve, reject) => {
-        zipStream.on("finish", resolve);
-        zipStream.on("error", reject);
-      }).then(async () => {
-        console.log("Packed...", this.dirname());
-        const formData = new FormData();
-        // Insert as blob
-        formData.append("file", new Blob([await fsp.readFile(zipPathTmp)]), "sync.zip");
-        formData.append("data", JSON.stringify(this.toISong()));
-        return Toxen.fetch(user.getCollectionPath() + "/" + this.uid, {
-          method: "PUT",
-          body: formData
         });
-      }).then(async res => {
-        if (res.ok) {
-          Toxen.notify({
-            title: "Synced",
-            content: this.getDisplayName(),
-            expiresIn: 5000
-          });
-          return fsp.unlink(zipPathTmp);
-        } else {
-          Toxen.notify({
-            title: "Sync failed",
-            content: await res.text(),
-            expiresIn: 5000,
-            type: "error"
-          });
-        }
-      }).catch(error => {
-        Toxen.error("Something went wrong writing the exported zip file.");
-        console.error(error);
-        return fsp.unlink(zipPathTmp);
-      });
-    }
+      }
+    }).catch(error => {
+      this.setProgressBar(0);
+      Toxen.error("Something went wrong writing the exported zip file.");
+      console.error(error);
+      return fsp.unlink(zipPathTmp);
+    });
   }
 
   public async validateAgainstRemote() {
@@ -1263,8 +1342,12 @@ export default class Song implements ISong {
     //   end: Toxen.musicPlayer.media.duration ? Toxen.musicPlayer.media.duration * 1000 : 60000,
     // }
     const TrimSong = () => {
-      const [start, setStart] = useState<number>(0);
-      const [end, setEnd] = useState<number>(Toxen.musicPlayer.media.currentTime * 1000);
+      const _currentTime = Toxen.musicPlayer.media.currentTime;
+      const _duration = Toxen.musicPlayer.media.duration;
+      const _overHalfWay = _currentTime > _duration / 2;
+      
+      const [start, setStart] = useState<number>(_overHalfWay ? 0 : Toxen.musicPlayer.media.currentTime * 1000);
+      const [end, setEnd] = useState<number>(_overHalfWay ? Toxen.musicPlayer.media.currentTime * 1000 : _duration * 1000);
       const [loading, setLoading] = useState(false);
       const [showMilliseconds, setShowMilliseconds] = useState(false);
       const [progress, setProgress] = useState(0);

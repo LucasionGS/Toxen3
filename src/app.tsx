@@ -132,6 +132,13 @@ remote.Menu.setApplicationMenu(
             Toxen.toggleFullscreen();
           }
         },
+        {
+          label: "Toggle Miniplayer",
+          accelerator: "CTRL + F11",
+          click() {
+            Toxen.toggleMiniplayer();
+          }
+        },
       ]
     },
     {
