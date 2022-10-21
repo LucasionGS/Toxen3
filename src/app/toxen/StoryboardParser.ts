@@ -22,7 +22,7 @@ namespace StoryboardParser {
     /**
      * This function will be executed BEFORE the background dim is applied.
      * 
-     * To draw after the background dim, return a another function from this function.
+     * To draw after the background dim, return another function from this function.
      * All actions in the returned function will be executed after the background dim.
      */
     action(
@@ -67,6 +67,7 @@ namespace StoryboardParser {
     VisualizerStyle: VisualizerStyle;
     Boolean: boolean;
     Select: string;
+    SelectImage: string;
   }
 
   /**
@@ -748,6 +749,21 @@ namespace StoryboardParser {
     action: (args) => {
       let state = getAsType<"Boolean">(args.state);
       Toxen.background.storyboard.data.backgroundDynamicLighting = state;
+    }
+  });
+
+  addComponent("setBackground", {
+    name: "Set Background",
+    arguments: [
+      {
+        name: "Background",
+        identifier: "background",
+        type: "SelectImage"
+      },
+    ],
+    action: (args) => {
+      let background = getAsType<"SelectImage">(args.background);
+      Toxen.background.storyboard.data.background = background;
     }
   });
 }

@@ -300,6 +300,7 @@ export interface ISettings {
   visualizerRainbowMode: boolean;
   visualizerPulseBackground: boolean;
   backgroundDynamicLighting: boolean;
+  fftSize: number;
 
   // Backgrounds
   defaultBackground: string;

@@ -24,6 +24,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
   }
 
   private lastColor: string = "";
+  private lastBackground: string = "";
   private curLen: number = 0;
   /**
    * Dynamic dim for the background of the visualizer.
@@ -70,6 +71,22 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
       Toxen.musicControls.progressBar.setFillColor(storedColor);
     }
     this.lastColor = storedColor ?? this.lastColor;
+    const backgroundFile = Toxen.background.storyboard.getBackground();
+    if (this.lastBackground !== backgroundFile) {
+      this.lastBackground = backgroundFile;
+      if (backgroundFile) {
+        const img = new Image();
+        const fullFile = Toxen.background.storyboard.getBackground(true);
+        img.src = fullFile;
+        img.onload = () => {
+          Toxen.background.setBackground(img.src);
+        }
+      }
+      else {
+        Toxen.background.setBackground(null);
+      }
+    }
+    
     const style = Toxen.background.storyboard.getVisualizerStyle();
     const intensityMultiplier = Toxen.background.storyboard.getVisualizerIntensity();
 
@@ -90,7 +107,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     const dataSize = 255;
 
     let dataArray = this.getFrequencyData(
-      // Settings.get("") ?? Visualizer.DEFAULT_FFTSIZE
+      Settings.get("fftSize") ? Math.pow(2, Settings.get("fftSize") + 4) : Visualizer.DEFAULT_FFTSIZE
     ).reverse();
     // dataArray = dataArray.filter((_, i) => i >= (dataArray.length / 2));
     dataArray = dataArray.slice(dataArray.length / 2);
@@ -322,8 +339,8 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
         // let smallestHeight = maxHeight;
         let smallestHeight = 0;
         const unitH = maxHeight / dataSize;
-        // const unitW = (vWidth * 1.25 + unitH) / len;
-        const unitW = unitH * 5;
+        const unitW = (vWidth * 1.25 + unitH) / len;
+        // const unitW = unitH * 5;
         for (let i = 0; i < len; i++) {
           const data = dataArray[i];
           const _barHeight = (data * unitH);
@@ -389,8 +406,8 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
         // let smallestHeight = maxHeight;
         let smallestHeight = 0;
         const unitH = maxHeight / dataSize;
-        // const unitW = (vWidth * 1.25 + unitH) / len;
-        const unitW = unitH * 5;
+        const unitW = (vWidth * 1.25 + unitH) / len;
+        // const unitW = unitH * 5;
         for (let i = 0; i < len; i++) {
           const data = newData[i];
           const _barHeight = (data * unitH);

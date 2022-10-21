@@ -248,11 +248,21 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           <br />
           
           <Text>Visualizer Intensity</Text>
-          <Slider onChange={v => Settings.set("visualizerIntensity", v / 100)} onChangeEnd={v => Settings.apply({ visualizerIntensity: v / 100 }, true)} defaultValue={Settings.get("visualizerIntensity") * 100} name="visualizerIntensity" label={(value) => `${value}%`} min={50} max={200} />
+          <Slider onChange={v => Settings.set("visualizerIntensity", v / 100)} onChangeEnd={v => Settings.apply({ visualizerIntensity: v / 100 }, true)} defaultValue={(Settings.get("visualizerIntensity") * 100) || 100} name="visualizerIntensity" label={(value) => `${value}%`} min={50} max={200} />
           <br />
           <sup>
-            Set the base intensity level of the background. <code>0-100%</code>.<br />
+            Set the base intensity level of the visualizer. <code>0-100%</code>.<br />
             Default is <code>100%</code><br />
+          </sup>
+          <br />
+          
+          <Text>Visualizer Size</Text>
+          <Slider onChange={v => Settings.set("fftSize", v)} onChangeEnd={v => Settings.apply({ fftSize: v }, true)} defaultValue={Settings.get("fftSize") || 6} name="fftSize" label={(v) => v} min={1} max={10} />
+          <br />
+          <sup>
+            Set the base size visualizer. <code>1-10</code>.<br />
+            This can have a high impact on performance. Higher numbers can cause major slow-downs.<br />
+            Default is <code>6</code><br />
           </sup>
           <br />
 

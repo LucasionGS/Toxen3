@@ -48,6 +48,7 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
       visualizerPulseBackground: null,
       backgroundDim: null,
       backgroundDynamicLighting: null,
+      background: null,
     }
   }
 
@@ -112,6 +113,23 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
       );
   }
 
+  /**
+   * @param full Whether to return the full path or just relative file path @default false
+   * @returns 
+   */
+  public getBackground(full: boolean = false) {
+    const bg = this.data.background
+      ?? (
+        (this.state.song && this.state.song.paths.background)
+        || null
+      );
+    
+    if (full) {
+      return bg ? this.state.song.dirname(bg) : null;
+    }
+    return bg;
+  }
+
 
   public storyboardUpdate() {
     
@@ -125,4 +143,5 @@ interface StoryboardData {
   visualizerPulseBackground: boolean;
   backgroundDim: number;
   backgroundDynamicLighting: boolean;
+  background: string;
 }

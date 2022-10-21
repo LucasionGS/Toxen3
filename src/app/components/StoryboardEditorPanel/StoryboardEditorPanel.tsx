@@ -13,6 +13,7 @@ import Settings, { VisualizerStyle } from "../../toxen/Settings";
 import Path from "path";
 import "./StoryboardEditorPanel.scss";
 import BPMFinder from "../BPMFinder/BPMFinder";
+import SelectAsync from "../SelectAsync/SelectAsync";
 
 interface StoryboardEditorPanelProps { }
 
@@ -295,6 +296,8 @@ function TimeInput(props: TimeInputProps) {
 }
 
 function ComponentButton(props: { event: StoryboardParser.SBEvent, component: StoryboardParser.ComponentArgument }) {
+  const song = Toxen.editingSong;
+  
   const { component: comp, event } = props;
   const dataId = comp.identifier;
   const dataName = comp.name;
@@ -380,6 +383,27 @@ function ComponentButton(props: { event: StoryboardParser.SBEvent, component: St
               label: key,
               value: value ?? key,
             }
+          })}
+          value={value as string}
+          onChange={(value) => {
+            setValue(event.data[dataId] = value as string);
+          }}
+        />
+      </div>
+    );
+    
+    case "SelectImage": return (
+      <div>
+        <SelectAsync
+          label={dataName + (required ? " *" : "")}
+          data={(async () => {
+            const song = Toxen.editingSong;
+            if (!song)
+              return [];
+            const path = song.dirname();
+
+            const supported = Toxen.getSupportedImageFiles();
+            return await Toxen.filterSupportedFiles(path, supported);
           })}
           value={value as string}
           onChange={(value) => {
