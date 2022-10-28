@@ -1,5 +1,9 @@
-<!-- ## Upcoming update / 1.4.1 -->
-## Upcoming update / 1.4.0
+<!-- ## Upcoming update / 1.4.2 -->
+## 1.4.1 - 28-10-2022
+- Added the ability to change the name of a playlist.
+- Removed playlist name length limit.
+- Changed the layout of the playlist selection screen.
+## 1.4.0 - 13-10-2022
 New features
 - First iteration of a storyboard implementation has been released!
   - Songs with a storyboard file (.tsb) can be selected in the song details panel. (More documentation will be added later)

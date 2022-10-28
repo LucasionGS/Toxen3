@@ -127,7 +127,7 @@ export default class Playlist {
   }
 
   public static getCurrent() {
-    return Toxen.playlist;
+    return Toxen.playlist ?? null;
   }
 
   public static addPlaylist(playlist: Playlist) {

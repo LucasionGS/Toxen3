@@ -1,5 +1,6 @@
-import { Button, Menu } from '@mantine/core';
+import { Button, Group, Menu, TextInput } from '@mantine/core';
 import { useModals } from '@mantine/modals';
+import { IconCheck, IconCheckbox, IconCircle, IconCircleX, IconSelect } from '@tabler/icons';
 import React, { Component } from 'react'
 import Playlist from '../../toxen/Playlist';
 import { Toxen } from '../../ToxenApp';
@@ -30,10 +31,10 @@ export default class PlaylistPanel extends Component<PlaylistPanelProps, Playlis
       Toxen.error("Playlist name cannot be empty", 3000);
       return;
     }
-    if (playlistName.length > 20) {
-      Toxen.error("Playlist name cannot be longer than 20 characters", 3000);
-      return;
-    }
+    // if (playlistName.length > 20) {
+    //   Toxen.error("Playlist name cannot be longer than 20 characters", 3000);
+    //   return;
+    // }
     if (Toxen.playlists.find(p => p.name === playlistName)) {
       Toxen.error("Playlist name already exists", 3000);
       return;
@@ -121,12 +122,56 @@ class PlaylistItem extends Component<PlaylistItemProps, PlaylistItemState> {
     this.props.playlistPanel.update();
   }
 
+  private EditPlaylistName(props: { playlist: Playlist, onClose: () => void }) {
+    const pl = props.playlist;
+    const onClose = props.onClose;
+    const [playlistName, setPlaylistName] = React.useState(pl?.name || "");
+
+    const confirm = () => {
+      pl.name = playlistName.trim();
+      setPlaylistName(pl.name);
+      Playlist.save();
+      this.props.playlistPanel.update();
+      onClose();
+    };
+    
+    return (
+      <div>
+        <TextInput label="Playlist name" value={playlistName} onChange={e => {
+          setPlaylistName(e.currentTarget.value);
+        }} onKeyDown={e => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            confirm();
+          }
+        }} />
+        <Group>
+          <Button color="gray" onClick={() => {
+            onClose();
+          }}>Save</Button>
+          <Button color="green" onClick={() => {
+            confirm();
+          }}>Save</Button>
+        </Group>
+      </div>
+    )
+  }
+
   private ContextMenu = (props: { playlist: Playlist }) => {
     const pl = props.playlist;
     const modals = useModals();
     return (
       <Menu>
-        <Menu.Item>
+        <Menu.Item disabled={!pl} onClick={() => {
+          const EditPlaylistName = this.EditPlaylistName.bind(this);
+          const closeEditModel = () => modals.closeModal(editModel);
+          const editModel = modals.openModal({
+            title: `Edit playlist "${pl?.name}"`,
+            children: <div>
+              <EditPlaylistName playlist={pl} onClose={closeEditModel} />
+            </div>,
+          });
+        }}>
           Manage {pl?.name}
         </Menu.Item>
         <Menu.Item color="red" disabled={!pl} onClick={() => {
@@ -157,15 +202,18 @@ class PlaylistItem extends Component<PlaylistItemProps, PlaylistItemState> {
   render() {
     const pl = this.props.playlist;
     const currentPlaylist = Playlist.getCurrent();
+
+    const isCurrent = currentPlaylist === pl;
     return (
       <>
-        <div className="playlist-item" onClick={() => {
+        <div className={[
+          "playlist-item",
+          isCurrent ? "playlist-item-current" : ""
+        ].join(" ")} onClick={() => {
           Toxen.playlist = pl;
           this.props.playlistPanel.update();
         }}>
           <this.ContextMenu playlist={pl} />
-          <span hidden={pl == currentPlaylist}><i className={"playlist-select far fa-circle"}></i></span>
-          <span hidden={pl != currentPlaylist}><i className={"playlist-select fas fa-check-circle"}></i></span>
           <div className="playlist-item-title">
             <h3>{pl?.name || "No playlist"}</h3>
           </div>
