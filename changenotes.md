@@ -1,4 +1,6 @@
-<!-- ## Upcoming update / 1.4.2 -->
+<!-- ## Upcoming update / 1.4.3 -->
+## 1.4.2 - 29-10-2022
+Hotfix: Fixed songs being shuffle even when the setting is disabled, when a songs ends on it's own.
 ## 1.4.1 - 28-10-2022
 Playlists:
 - Added the ability to change the name of a playlist.
