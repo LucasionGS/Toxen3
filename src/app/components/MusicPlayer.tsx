@@ -182,7 +182,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
       this.play();
     }
     else {
-      this.playRandom();
+      this.playNext();
     }
   }
 
