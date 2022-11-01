@@ -1,4 +1,5 @@
 import Settings from "./Settings";
+import Song from "./Song";
 import User from "./User";
 
 export default class Remote {
