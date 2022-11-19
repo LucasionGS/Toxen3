@@ -2,6 +2,7 @@ import { Checkbox, Tabs, TextInput, NumberInput, Select, Button, ColorInput, Ran
 import { remote } from "electron";
 import React from "react";
 import Converter from "../../../../toxen/Converter";
+import HueManager from "../../../../toxen/philipshue/HueManager";
 import Settings, { VisualizerStyle } from "../../../../toxen/Settings";
 import Song from "../../../../toxen/Song";
 import { Toxen } from "../../../../ToxenApp";
@@ -356,6 +357,30 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           }} color="green">
             Convert all necessary audio files
           </Button>
+
+          <br />
+          {/* Hue Settings */}
+          <h2>Hue Settings</h2>
+          <Checkbox onClick={(e) => Settings.apply({ hueEnabled: e.currentTarget.checked }, true)} defaultChecked={Settings.get("hueEnabled")} name="hueEnabled" label="Enable Hue" />
+          <br />
+          <sup>Enables Hue integration. This will allow you to control your Hue lights with Toxen storyboards.</sup>
+
+          <Text>Hue Bridge IP</Text>
+          <TextInput onChange={(e) => Settings.apply({ hueBridgeIp: e.currentTarget.value }, true)} defaultValue={Settings.get("hueBridgeIp")} name="hueBridgeIp" label="Hue Bridge IP" />
+          <br />
+          <sup>Set the IP address of your Hue bridge.</sup>
+
+          <Text>Hue Username</Text>
+          <TextInput onChange={(e) => Settings.apply({ hueUsername: e.currentTarget.value }, true)} defaultValue={Settings.get("hueUsername")} name="hueUsername" label="Hue Username" />
+          <br />
+          <sup>Set the username of your Hue bridge.</sup>
+
+          <Button onClick={() => {
+            
+          }} color="green">
+            Register Hue Bridge
+          </Button>
+
         </Tabs.Tab>
       </Tabs>
     </>

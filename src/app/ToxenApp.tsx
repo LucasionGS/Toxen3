@@ -56,6 +56,7 @@ import EditSong from "./components/Sidepanel/Panels/EditSong/EditSong";
 import InitialData from "./windows/SubtitleCreator/models/InitialData";
 import User from "./toxen/User";
 import { IconLayoutNavbarExpand } from "@tabler/icons";
+import HueManager from "./toxen/philipshue/HueManager";
 
 declare const SUBTITLE_CREATOR_WEBPACK_ENTRY: any;
 
@@ -338,6 +339,14 @@ export class Toxen {
 
     document.body.classList.toggle("advanced", Settings.isAdvanced());
 
+    // if (Settings.get("hueEnabled")) {
+    //   HueManager.init({
+    //     ip: Settings.get("hueBridgeIp"),
+    //     username: Settings.get("hueUsername"),
+    //     clientkey: Settings.get("hueClientkey"),
+    //   });
+    // }
+    
     Toxen.discord.setPresence();
   }
 

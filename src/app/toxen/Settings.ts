@@ -314,6 +314,12 @@ export interface ISettings {
   // Discord
   discordPresence: boolean;
   discordPresenceDetailed: boolean;
+
+  // Hue settings
+  hueEnabled: boolean;
+  hueBridgeIp: string;
+  hueUsername: string;
+  hueClientkey: string;
 }
 
 export enum VisualizerStyle {
