@@ -339,13 +339,25 @@ export class Toxen {
 
     document.body.classList.toggle("advanced", Settings.isAdvanced());
 
-    // if (Settings.get("hueEnabled")) {
-    //   HueManager.init({
-    //     ip: Settings.get("hueBridgeIp"),
-    //     username: Settings.get("hueUsername"),
-    //     clientkey: Settings.get("hueClientkey"),
-    //   });
-    // }
+    if (Settings.get("hueEnabled")) {
+      HueManager.init({
+        ip: Settings.get("hueBridgeIp"),
+        username: Settings.get("hueUsername"),
+        clientkey: Settings.get("hueClientkey"),
+      });
+
+      if (Settings.get("hueEntertainmentAreaId")) {
+        HueManager.instance.getEntertainmentArea(
+          Settings.get("hueEntertainmentAreaId")
+        ).then(area => {
+          HueManager.setCurrentArea(area);
+          Toxen.log("Hue Entertainment area set to " + area.name);
+        }).catch(err => {
+          HueManager.setCurrentArea(null);
+          Toxen.error(err);
+        });
+      }
+    }
     
     Toxen.discord.setPresence();
   }

@@ -33,6 +33,7 @@ import { } from "buffer";
 import { hashElement } from "folder-hash";
 import User from "./User";
 import { hideNotification, updateNotification } from "@mantine/notifications";
+import HueManager from "./philipshue/HueManager";
 // import ToxenInteractionMode from "./ToxenInteractionMode";
 
 export default class Song implements ISong {
@@ -380,6 +381,12 @@ export default class Song implements ISong {
     options ?? (options = {});
     let src = this.mediaFile();
     if (Toxen.musicPlayer.state.src != src) {
+      if (HueManager.isEnabled()) {
+        await HueManager.start();
+      }
+      else {
+        HueManager.stop();
+      }
       if (Settings.isRemote() && this.isVideo()) Toxen.log("Streaming a video can take some time to load... Using audio files is much faster.", 3000);
       if (this.lastBlobUrl) URL.revokeObjectURL(this.lastBlobUrl);
       let bg = this.backgroundFile();

@@ -1,5 +1,8 @@
 import { app, BrowserWindow, nativeImage, protocol } from 'electron';
 import updateElectronApp from "update-electron-app";
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; // Hue bullshit
+app.commandLine.appendSwitch('ignore-certificate-errors');
+
 updateElectronApp({
   repo: "LucasionGS/Toxen3"
 });
@@ -20,7 +23,7 @@ const createWindow = (): void => {
       nodeIntegration: true,
       contextIsolation: false,
       enableRemoteModule: true,
-      webSecurity: false
+      webSecurity: false,
     },
     autoHideMenuBar: true,
     frame: false,

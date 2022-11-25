@@ -320,6 +320,7 @@ export interface ISettings {
   hueBridgeIp: string;
   hueUsername: string;
   hueClientkey: string;
+  hueEntertainmentAreaId: string;
 }
 
 export enum VisualizerStyle {

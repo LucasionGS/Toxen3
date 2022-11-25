@@ -5,6 +5,7 @@ import Time from "./Time";
 import yaml from "js-yaml";
 import fsp from "fs/promises";
 import User from "./User";
+import HueManager from "./philipshue/HueManager";
 
 namespace StoryboardParser {
   export const version = 1;
@@ -212,9 +213,9 @@ namespace StoryboardParser {
         once: event.once
       }))
     } as PreparseStoryboardConfig;
-    
+
     const data = yaml.dump(cData);
-    
+
     if (Settings.isRemote()) {
       const user = Settings.getUser();
       if (!user) throw new Error("Cannot save storyboard. User is not logged in.");
@@ -234,7 +235,7 @@ namespace StoryboardParser {
     else {
       return fsp.writeFile(path, data);
     }
-    
+
   }
 
   let eventIndex = 0;
@@ -764,6 +765,22 @@ namespace StoryboardParser {
     action: (args) => {
       let background = getAsType<"SelectImage">(args.background);
       Toxen.background.storyboard.data.background = background;
+    }
+  });
+
+  addComponent("hueVisualizerSync", {
+    name: "Philips Hue: Visualizer Sync",
+    arguments: [],
+    action: (args) => {
+      return () => {
+        const [r, g, b] = hexToRgbArray(Toxen.background.storyboard.data.visualizerColor ?? Toxen.background.storyboard.getVisualizerColor());
+        const brightness = 1 - Math.max(Math.min(Toxen.background.visualizer.getDynamicDim(), 1), 0);
+        if (HueManager.instance) {
+          HueManager.setLightNodes(
+            HueManager.currentLightNodes.map(() => [r * brightness, g * brightness, b * brightness])
+          );
+        }
+      }
     }
   });
 }

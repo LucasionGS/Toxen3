@@ -1,6 +1,7 @@
 import { Checkbox, Tabs, TextInput, NumberInput, Select, Button, ColorInput, RangeSlider, Slider, Text } from "@mantine/core";
 import { remote } from "electron";
-import React from "react";
+import type { EntertainmentArea } from "hue-sync";
+import React, { useEffect } from "react";
 import Converter from "../../../../toxen/Converter";
 import HueManager from "../../../../toxen/philipshue/HueManager";
 import Settings, { VisualizerStyle } from "../../../../toxen/Settings";
@@ -127,17 +128,17 @@ export default function SettingsPanel(props: SettingsPanelProps) {
               <>
                 <TextInput disabled onClick={callback} value={bg} name="sidepanelBackground" label="Sidepanel Background" />
                 <Button
-                leftIcon={<i className="fas fa-folder" />}
-                onClick={callback}>
+                  leftIcon={<i className="fas fa-folder" />}
+                  onClick={callback}>
                   Change background
                 </Button>
                 <Button
-                leftIcon={<i className="fas fa-sync-alt" />}
-                color="red"
-                onClick={() => {
-                  Settings.apply({ sidepanelBackground: null }, true);
-                  setBg("");
-                }}>
+                  leftIcon={<i className="fas fa-sync-alt" />}
+                  color="red"
+                  onClick={() => {
+                    Settings.apply({ sidepanelBackground: null }, true);
+                    setBg("");
+                  }}>
                   Reset background
                 </Button>
                 <br />
@@ -247,7 +248,7 @@ export default function SettingsPanel(props: SettingsPanelProps) {
             This is how dark the background will appear. Can be dynamically changed by having <code>Dynamic Lighting</code> enabled.
           </sup>
           <br />
-          
+
           <Text>Visualizer Intensity</Text>
           <Slider onChange={v => Settings.set("visualizerIntensity", v / 100)} onChangeEnd={v => Settings.apply({ visualizerIntensity: v / 100 }, true)} defaultValue={(Settings.get("visualizerIntensity") * 100) || 100} name="visualizerIntensity" label={(value) => `${value}%`} min={50} max={200} />
           <br />
@@ -256,7 +257,7 @@ export default function SettingsPanel(props: SettingsPanelProps) {
             Default is <code>100%</code><br />
           </sup>
           <br />
-          
+
           <Text>Visualizer Size</Text>
           <Slider onChange={v => Settings.set("fftSize", v)} onChangeEnd={v => Settings.apply({ fftSize: v }, true)} defaultValue={Settings.get("fftSize") || 6} name="fftSize" label={(v) => v} min={1} max={10} />
           <br />
@@ -360,29 +361,96 @@ export default function SettingsPanel(props: SettingsPanelProps) {
 
           <br />
           {/* Hue Settings */}
-          <h2>Hue Settings</h2>
-          <Checkbox onClick={(e) => Settings.apply({ hueEnabled: e.currentTarget.checked }, true)} defaultChecked={Settings.get("hueEnabled")} name="hueEnabled" label="Enable Hue" />
-          <br />
-          <sup>Enables Hue integration. This will allow you to control your Hue lights with Toxen storyboards.</sup>
-
-          <Text>Hue Bridge IP</Text>
-          <TextInput onChange={(e) => Settings.apply({ hueBridgeIp: e.currentTarget.value }, true)} defaultValue={Settings.get("hueBridgeIp")} name="hueBridgeIp" label="Hue Bridge IP" />
-          <br />
-          <sup>Set the IP address of your Hue bridge.</sup>
-
-          <Text>Hue Username</Text>
-          <TextInput onChange={(e) => Settings.apply({ hueUsername: e.currentTarget.value }, true)} defaultValue={Settings.get("hueUsername")} name="hueUsername" label="Hue Username" />
-          <br />
-          <sup>Set the username of your Hue bridge.</sup>
-
-          <Button onClick={() => {
-            
-          }} color="green">
-            Register Hue Bridge
-          </Button>
-
+          <HueSettings />
         </Tabs.Tab>
       </Tabs>
     </>
   )
+}
+
+function HueSettings() {
+  const [areas, setAreas] = React.useState<EntertainmentArea[]>(null);
+  const [selectedArea, _setSelectedArea] = React.useState<EntertainmentArea>(HueManager.currentArea ?? null);
+  function setSelectedArea(area: EntertainmentArea) {
+    _setSelectedArea(area);
+    HueManager.setCurrentArea(area);
+    Settings.apply({ hueEntertainmentAreaId: area.id }, true);
+  }
+
+  function fetchAreas() {
+    if (HueManager.instance) {
+      HueManager.instance?.getEntertainmentAreas().then((areas) => {
+        setAreas(areas);
+        const selectedArea = areas.find(a => a.id === Settings.get("hueEntertainmentAreaId"));
+        if (selectedArea) setSelectedArea(selectedArea);
+      });
+    }
+    else {
+      // Give a popup idk
+    }
+  }
+
+  useEffect(() => {
+    if (HueManager.instance) {
+      fetchAreas();
+    }
+  }, []);
+
+  return (
+    <>
+      <h2>Philip Hue Settings</h2>
+      <Checkbox onClick={(e) => {
+        Settings.apply({ hueEnabled: e.currentTarget.checked }, true);
+        if (e.currentTarget.checked) {
+          HueManager.init({
+            ip: Settings.get("hueIp"),
+            username: Settings.get("hueUsername"),
+            clientkey: Settings.get("hueClientkey")
+          });
+        } else {
+          HueManager.dispose();
+        }
+      }} defaultChecked={Settings.get("hueEnabled")} name="hueEnabled" label="Enable Hue" />
+      <br />
+      <sup>Enables Hue integration. This will allow you to control your Hue lights with Toxen storyboards.</sup>
+
+      {/* hueBridgeIp */}
+      <TextInput onChange={(e) => Settings.apply({ hueBridgeIp: e.currentTarget.value }, true)} defaultValue={Settings.get("hueBridgeIp")} name="hueBridgeIp" label="Hue Bridge IP" />
+      <br />
+      <sup>Set the IP address of your Hue bridge.</sup>
+
+      {/* hueUsername */}
+      <TextInput onChange={(e) => Settings.apply({ hueUsername: e.currentTarget.value }, true)} defaultValue={Settings.get("hueUsername")} name="hueUsername" label="Hue Username" />
+      <br />
+      <sup>Set the username of your Hue bridge.</sup>
+
+      {/* hueClientkey */}
+      <TextInput onChange={(e) => Settings.apply({ hueClientkey: e.currentTarget.value }, true)} defaultValue={Settings.get("hueClientkey")} name="hueClientkey" label="Hue Client Key" />
+      <br />
+      <sup>Set the client key of your Hue bridge.</sup>
+
+      {/* Light entertainment areas */}
+      {/* <Carousel slideSize="70%" height={200} slideGap="md">
+        
+      </Carousel> */}
+      <div>
+        {
+          areas?.map((area) => (
+            <Button onClick={() => setSelectedArea(area)} color={selectedArea?.id === area.id ? "green" : "gray"}>
+              {area.name}
+            </Button>
+          ))
+        }
+      </div>
+      <br />
+      <Button onClick={() => {
+        fetchAreas();
+      }} color="green">
+        Fetch lights
+      </Button>
+      <br />
+      <br />
+      <sup>Fetches the lights from your Hue bridge. This should be done automatically when Toxen starts.</sup>
+    </>
+  );
 }

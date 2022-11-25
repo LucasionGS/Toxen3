@@ -15,6 +15,8 @@ import { MantineProvider } from "@mantine/core";
 import { NotificationsProvider } from "@mantine/notifications";
 import { ModalsProvider } from "@mantine/modals";
 
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; // Hue bullshit
+
 // Setup
 // Create menu actions/shortcuts
 remote.Menu.setApplicationMenu(
