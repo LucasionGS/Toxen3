@@ -58,6 +58,10 @@ export default class Song implements ISong {
   public year: number;
   public language: string;
   public subtitleDelay: number;
+  public floatingTitle: boolean;
+  public floatingTitlePosition: ISong["floatingTitlePosition"];
+  public floatingTitleReactive: boolean;
+  public floatingTitleOverrideVisualizer: boolean;
 
   private static history: Song[] = [];
   private static historyIndex = 0;
@@ -278,6 +282,10 @@ export default class Song implements ISong {
       "year",
       "language",
       "subtitleDelay",
+      "floatingTitle",
+      "floatingTitlePosition",
+      "floatingTitleReactive",
+      "floatingTitleOverrideVisualizer",
     ];
     const obj = {} as any;
     keys.forEach(key => {
@@ -382,7 +390,7 @@ export default class Song implements ISong {
     let src = this.mediaFile();
     if (Toxen.musicPlayer.state.src != src) {
       if (HueManager.isEnabled()) {
-        await HueManager.start();
+        HueManager.start().catch((error) => Toxen.error(error.message));
       }
       else {
         HueManager.stop();
@@ -973,7 +981,7 @@ export default class Song implements ISong {
               song.saveInfo();
               if (typeof forEach === "function") forEach(song);
             }
-            
+
             if (typeof forEach === "function") forEach(null);
             console.warn(`Song "${songFolder}" is missing a media file. Excluding from song list.`);
             const nId = Toxen.notify({
@@ -1277,7 +1285,7 @@ export default class Song implements ISong {
     await addFiles(this.dirname());
 
     zip.outputStream.pipe(zipStream);
-    
+
     zip.end();
     this.setProgressBar(0.5);
 
@@ -1352,7 +1360,7 @@ export default class Song implements ISong {
       const _currentTime = Toxen.musicPlayer.media.currentTime;
       const _duration = Toxen.musicPlayer.media.duration;
       const _overHalfWay = _currentTime > _duration / 2;
-      
+
       const [start, setStart] = useState<number>(_overHalfWay ? 0 : Toxen.musicPlayer.media.currentTime * 1000);
       const [end, setEnd] = useState<number>(_overHalfWay ? Toxen.musicPlayer.media.currentTime * 1000 : _duration * 1000);
       const [loading, setLoading] = useState(false);
@@ -1463,6 +1471,20 @@ export interface ISong {
   year: number;
   language: string;
   subtitleDelay: number;
+
+  floatingTitle: boolean;
+  floatingTitlePosition:
+  | 'top'
+  | 'bottom'
+  | 'left'
+  | 'right'
+  | 'top-left'
+  | 'top-right'
+  | 'bottom-left'
+  | 'bottom-right'
+  | 'center';
+  floatingTitleReactive: boolean;
+  floatingTitleOverrideVisualizer: boolean;
 }
 
 interface ISongPaths {

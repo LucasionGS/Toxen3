@@ -407,12 +407,17 @@ function HueSettings() {
             username: Settings.get("hueUsername"),
             clientkey: Settings.get("hueClientkey")
           });
+          HueManager.start().then(() => Toxen.log("Hue connected", 1000)).catch((error) => Toxen.error(error.message));
         } else {
           HueManager.dispose();
         }
       }} defaultChecked={Settings.get("hueEnabled")} name="hueEnabled" label="Enable Hue" />
       <br />
-      <sup>Enables Hue integration. This will allow you to control your Hue lights with Toxen storyboards.</sup>
+      <sup>
+        Enables Hue integration. This will allow you to control your Hue lights with Toxen storyboards.
+        <code>⚠ Experimental, stability is <b>not</b> guaranteed ⚠</code>
+      </sup>
+      
 
       {/* hueBridgeIp */}
       <TextInput onChange={(e) => Settings.apply({ hueBridgeIp: e.currentTarget.value }, true)} defaultValue={Settings.get("hueBridgeIp")} name="hueBridgeIp" label="Hue Bridge IP" />

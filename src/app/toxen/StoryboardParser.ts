@@ -6,6 +6,7 @@ import yaml from "js-yaml";
 import fsp from "fs/promises";
 import User from "./User";
 import HueManager from "./philipshue/HueManager";
+import MathX from "./MathX";
 
 namespace StoryboardParser {
   export const version = 1;
@@ -648,7 +649,6 @@ namespace StoryboardParser {
       const animateInTime = (recurring * 0.1) / 1000;
       const animateOutTime = (recurring * 0.3) / 1000;
 
-      // Animate using ctx, this function is run every frame.
       if (state.lastPulse === null) {
 
         state.lastPulse = (eventStartTime * 1000) - (animateInTime * 1000);
@@ -670,6 +670,7 @@ namespace StoryboardParser {
 
       setState(state);
 
+      // Animate using ctx, this function is run every frame.
       return () => {
         let hex = rgbArrayToHex(color);
         ctx.fillStyle = hex;
@@ -768,18 +769,125 @@ namespace StoryboardParser {
     }
   });
 
+  // Hue specific
   addComponent("hueVisualizerSync", {
     name: "Philips Hue: Visualizer Sync",
     arguments: [],
-    action: (args) => {
+    action: (args, info, sm) => {
       return () => {
         const [r, g, b] = hexToRgbArray(Toxen.background.storyboard.data.visualizerColor ?? Toxen.background.storyboard.getVisualizerColor());
-        const brightness = 1 - Math.max(Math.min(Toxen.background.visualizer.getDynamicDim(), 1), 0);
+        const brightness = MathX.clamp(
+          MathX.clamp(Toxen.background.visualizer.getDynamicDim(), 0, 1) * 2,
+          0,
+          1
+        );
         if (HueManager.instance) {
           HueManager.setLightNodes(
             HueManager.currentLightNodes.map(() => [r * brightness, g * brightness, b * brightness])
           );
         }
+      }
+    }
+  });
+
+  addComponent("huePulse", {
+    name: "Philips Hue: Pulse",
+    arguments: [
+      {
+        name: "Color",
+        identifier: "color",
+        type: "Color",
+        required: true
+      },
+      {
+        name: "BPM",
+        identifier: "bpm",
+        type: "Number",
+        required: true
+      },
+      {
+        name: "Intensity",
+        identifier: "intensity",
+        type: "Number",
+      },
+      {
+        name: "Beat scale",
+        identifier: "beatScale",
+        type: "Select",
+        selectData: [
+          ["4/1"],
+          ["2/1"],
+          ["1/1"],
+          ["1/2"],
+          ["1/4"],
+          ["1/8"],
+        ]
+      }
+    ],
+    action: (args, { currentSongTime, eventStartTime }, { setState, getState }, ctx) => {
+      // Draw a pulse on the visualizer
+      let state = getState<{ lastPulse: number }>() ?? { lastPulse: null };
+      let color = getAsType<"Color">(args.color);
+      let intensity = getAsType<"Number">(args.intensity) / 0.5;
+      let bpm = getAsType<"Number">(args.bpm);
+      let beatScale = getAsType<"Select">(args.beatScale);
+
+      switch (beatScale) {
+        case "4/1":
+          bpm /= 4;
+          break;
+        case "2/1":
+          bpm /= 2;
+          break;
+        case "1/1":
+          // @default
+          bpm *= 1;
+          break;
+        case "1/2":
+          bpm *= 2;
+          break;
+        case "1/4":
+          bpm *= 4;
+          break;
+        case "1/8":
+          bpm *= 8;
+          break;
+      }
+
+      const currentSongTimeMs = Math.round(currentSongTime * 1000);
+      let recurring = bpm > 0 ? Math.round(60 / bpm * 1000) : 0;
+      const animateInTime = (recurring * 0.1) / 1000;
+      const animateOutTime = (recurring * 0.3) / 1000;
+
+      if (state.lastPulse === null) {
+
+        state.lastPulse = (eventStartTime * 1000) - (animateInTime * 1000);
+      }
+      else if (currentSongTimeMs - state.lastPulse >= recurring) {
+        if (recurring > 0) {
+          state.lastPulse = currentSongTimeMs;
+        }
+        return;
+      }
+
+      let progress = (currentSongTimeMs - state.lastPulse) / recurring;
+      if (progress < animateInTime) {
+        intensity *= progress / animateInTime;
+      }
+      else if (progress > animateOutTime) {
+        intensity *= (1 - progress) / (1 - animateOutTime);
+      }
+
+      setState(state);
+
+      return () => {
+        intensity = MathX.clamp(intensity, 0, 1);
+        const [r, g, b] = color.map(x => x * intensity);
+        HueManager.setLightNodes(
+          HueManager.currentLightNodes.map(() => {
+            return [r, g, b] as any;
+          })
+        );
       }
     }
   });

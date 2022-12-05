@@ -1,4 +1,5 @@
 import HueSync, { EntertainmentArea } from "hue-sync";
+import { Toxen } from "../../ToxenApp";
 import Settings from "../Settings";
 
 namespace HueManager {
@@ -44,47 +45,51 @@ namespace HueManager {
 
   export let currentLightNodes: [number, number, number][] = [];
 
+  let attemptingReconnect = false;
   export function setLightNodes(nodes: [number, number, number][]) {
     currentLightNodes = nodes;
-    try {
-      instance.transition(currentLightNodes);
-    } catch (error) {
-      start();
-    }
-  }
-
-  export function setLightNode(index: number, color: [number, number, number]) {
-    currentLightNodes[index] = color;
-    try {
-      instance.transition(currentLightNodes);
-    } catch (error) {
-      start();
-    }
   }
 
   export let started = false;
-  export let starting = false;
-  export async function start() {
-    if (started || starting || !currentArea) return;
-    starting = true;
-    console.log("Starting Hue Sync");
+  export function transition() {
+    if (isEnabled() && started && !attemptingReconnect) {
+      try {
+        instance.transition(currentLightNodes);
+      } catch (error) {
+        if (!attemptingReconnect) {
+          Toxen.error("Failed to transition lights. Attempting to reconnect...", 1000);
+          attemptingReconnect = true;
+          setTimeout(() => {
+            start(true).then(() => {
+              attemptingReconnect = false;
+            });
+          }, 5000);
+        }
+      }
+    }
+  }
+
+  export async function start(bypass = false) {
+    console.log(`started: ${started}, currentArea: ${!!currentArea}, bypass: ${bypass}`);
+    if (!bypass && (started || !currentArea)) return;
+    
     try {
-      await instance.start(currentArea);
+      console.log("Starting Hue Sync");
+      await instance.start(currentArea, 5000);
       console.log("Hue Sync started");
       started = true;
-      starting = false;
     } catch (error) {
+      console.error(error);
       stop();
     }
-    return
   }
 
   export function stop() {
     if (!started) return;
     console.log("Stopping Hue Sync");
-    instance.stop();
+    console.trace("Stopping Hue Sync");
     started = false;
-    starting = false;
+    instance.stop();
   }
 }
 

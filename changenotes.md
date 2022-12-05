@@ -1,4 +1,11 @@
-<!-- ## Upcoming update / 1.4.3 -->
+<!-- ## Upcoming update / 1.5.1 -->
+## 1.5.0 - 12-05-2022
+Storyboard:
+- Added Philips Hue experimental support. This will be extended further with more features and customization.
+
+Song-Specific Background visuals:
+- Added display positions for title of the song on the background. Colors follow visualizer colors. This new feature can be found when editing a song and scrolling down to the **Song-specific visuals** section.
+
 ## 1.4.2 - 29-10-2022
 Hotfix: Fixed songs being shuffle even when the setting is disabled, when a songs ends on it's own.
 ## 1.4.1 - 28-10-2022
@@ -7,7 +14,7 @@ Playlists:
 - Removed playlist name length limit.
 - Changed the layout of the playlist selection screen.
 
-Storyboards_
+Storyboards:
 - Added background changing effect.
 
 Visualizer:

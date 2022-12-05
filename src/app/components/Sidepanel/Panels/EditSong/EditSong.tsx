@@ -192,7 +192,7 @@ export default function EditSong(props: EditSongProps) {
           defaultValue={Toxen.editingSong.paths.storyboard}
           data={(async () => {
             console.log(Toxen.editingSong.paths.storyboard);
-            
+
             let song = Toxen.editingSong;
             if (!song)
               return [];
@@ -216,7 +216,7 @@ export default function EditSong(props: EditSongProps) {
         }}>
           Edit storyboard
         </Button>
-        
+
         <hr />
         <h2>Song-specific visuals</h2>
         <ColorInput
@@ -288,10 +288,69 @@ export default function EditSong(props: EditSongProps) {
         />
         <br />
         <sup>Select which style for the visualizer to use for this song.</sup>
+
+        <Checkbox
+          label="Floating Title"
+          name="floatingTitle"
+          defaultChecked={Toxen.editingSong.floatingTitle}
+          onChange={v => {
+            Toxen.editingSong.floatingTitle = v.currentTarget.checked;
+            Toxen.editingSong.saveInfo();
+          }}
+        />
+        <br />
+        <sup>Enables the floating title for this song.</sup>
+        
+        <Select
+          data={[
+            { label: "Center", value: "center" },
+            { label: "Top", value: "top" },
+            { label: "Bottom", value: "bottom" },
+            { label: "Left", value: "left" },
+            { label: "Right", value: "right" },
+            { label: "Top left", value: "top-left" },
+            { label: "Top right", value: "top-right" },
+            { label: "Bottom left", value: "bottom-left" },
+            { label: "Bottom right", value: "bottom-right" },
+          ]}
+          label="Floating Title Position"
+          name="floatingTitlePosition"
+          defaultValue={Toxen.editingSong.floatingTitlePosition}
+          onChange={v => {
+            Toxen.editingSong.floatingTitlePosition = v as typeof Toxen.editingSong.floatingTitlePosition;
+            Toxen.editingSong.saveInfo();
+          }}
+        />
+        <br />
+        <sup>Set the position of the floating title.</sup>
+
+        <Checkbox
+          label="Floating Title Reactive"
+          name="floatingTitleReactive"
+          defaultChecked={Toxen.editingSong.floatingTitleReactive}
+          onChange={v => {
+            Toxen.editingSong.floatingTitleReactive = v.currentTarget.checked;
+            Toxen.editingSong.saveInfo();
+          }}
+        />
+        <br />
+        <sup>Enables the floating title to react to the music.</sup>
+
+        <Checkbox
+          label="Floating Title Override Visualizer"
+          name="floatingTitleOverrideVisualizer"
+          defaultChecked={Toxen.editingSong.floatingTitleOverrideVisualizer}
+          onChange={v => {
+            Toxen.editingSong.floatingTitleOverrideVisualizer = v.currentTarget.checked;
+            Toxen.editingSong.saveInfo();
+          }}
+        />
+        <br />
+        <sup>Enables the floating title to override the visualizer if necessary. Otherwise its just placed on top.</sup>
       </>
       <hr />
       <h2>Export options</h2>
-      <button className="tx-btn tx-whitespace-nowrap" onClick={async () => {
+      <Button onClick={async () => {
         remote.Menu.buildFromTemplate(
           (await Toxen.filterSupportedFiles(Toxen.editingSong.dirname(), Toxen.getSupportedMediaFiles())).map(file => {
             file = Toxen.editingSong.dirname(file);
@@ -314,11 +373,11 @@ export default function EditSong(props: EditSongProps) {
             };
           })
         ).popup();
-      }}><i className="fas fa-file-export"></i>&nbsp;Export Media File</button>
+      }}><i className="fas fa-file-export"></i>&nbsp;Export Media File</Button>
 
       <br />
 
-      <button className="tx-btn tx-whitespace-nowrap" onClick={async () => {
+      <Button onClick={async () => {
         remote.Menu.buildFromTemplate(
           (await Toxen.filterSupportedFiles(Toxen.editingSong.dirname(), Toxen.getSupportedImageFiles())).map(file => {
             file = Toxen.editingSong.dirname(file);
@@ -341,11 +400,11 @@ export default function EditSong(props: EditSongProps) {
             };
           })
         ).popup();
-      }}><i className="fas fa-file-export"></i>&nbsp;Export Image File</button>
+      }}><i className="fas fa-file-export"></i>&nbsp;Export Image File</Button>
 
       <br />
 
-      <button className="tx-btn tx-whitespace-nowrap" onClick={async () => {
+      <Button onClick={async () => {
         remote.Menu.buildFromTemplate(
           (await Toxen.filterSupportedFiles(Toxen.editingSong.dirname(), Toxen.getSupportedSubtitleFiles())).map(file => {
             file = Toxen.editingSong.dirname(file);
@@ -378,7 +437,7 @@ export default function EditSong(props: EditSongProps) {
             };
           })
         ).popup();
-      }}><i className="fas fa-file-export"></i>&nbsp;Export Subtitle File</button>
+      }}><i className="fas fa-file-export"></i>&nbsp;Export Subtitle File</Button>
     </>
   )
 }

@@ -339,7 +339,7 @@ export class Toxen {
 
     document.body.classList.toggle("advanced", Settings.isAdvanced());
 
-    if (Settings.get("hueEnabled")) {
+    if (Settings.get("hueEnabled") && !HueManager.instance) {
       HueManager.init({
         ip: Settings.get("hueBridgeIp"),
         username: Settings.get("hueUsername"),
@@ -351,7 +351,6 @@ export class Toxen {
           Settings.get("hueEntertainmentAreaId")
         ).then(area => {
           HueManager.setCurrentArea(area);
-          Toxen.log("Hue Entertainment area set to " + area.name);
         }).catch(err => {
           HueManager.setCurrentArea(null);
           Toxen.error(err);

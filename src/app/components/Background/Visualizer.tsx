@@ -8,6 +8,9 @@ import System from '../../toxen/System';
 import txnLogo from "../../../icons/toxen.png";
 import { hexToRgb, rgbToHex } from '../Form/FormInputFields/FormInputColorPicker';
 import StoryboardParser from '../../toxen/StoryboardParser';
+import HueManager from '../../toxen/philipshue/HueManager';
+import MathX from '../../toxen/MathX';
+import { ISong } from '../../toxen/Song';
 
 const imgSize = 256;
 const toxenLogo = new Image(imgSize, imgSize);
@@ -50,22 +53,17 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     let storedColor = Toxen.background.storyboard.getVisualizerColor();
     const baseBackgroundDim = (Toxen.background.storyboard.getBackgroundDim() ?? 50) / 100; // Base opacity of the background.
     const storedColorAsRGB = hexToRgb(storedColor);
+    let usedDimColor: string;
     if (Toxen.background.storyboard.getDynamicLighting()) {
-      this.ctx.fillStyle = this.dynamicDim >= 0 ? `rgba(0,0,0,${this.dynamicDim})`
+      this.ctx.fillStyle = usedDimColor = this.dynamicDim >= 0 ? `rgba(0,0,0,${this.dynamicDim})`
         : `rgba(${storedColorAsRGB.r},${storedColorAsRGB.g},${storedColorAsRGB.b},${-this.dynamicDim / 2})`;
       // this.ctx.fillStyle = `rgba(0,0,0,${this.dynamicDim >= 0 ? this.dynamicDim : baseBackgroundDim})` // Disable dynamic lighting for now.
     }
     else {
-      this.ctx.fillStyle = `rgba(0,0,0,${baseBackgroundDim})`;
+      this.ctx.fillStyle = usedDimColor = `rgba(0,0,0,${baseBackgroundDim})`;
     }
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height); // Background dim
 
-    if (storyboardCallbacks.length > 0) {
-      for (const callback of storyboardCallbacks) {
-        callback();
-      }
-    }
-    
     storedColor = Toxen.background.storyboard.getVisualizerColor();
     if (this.lastColor !== storedColor) {
       Toxen.musicControls.progressBar.setFillColor(storedColor);
@@ -86,7 +84,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
         Toxen.background.setBackground(null);
       }
     }
-    
+
     const style = Toxen.background.storyboard.getVisualizerStyle();
     const intensityMultiplier = Toxen.background.storyboard.getVisualizerIntensity();
 
@@ -140,331 +138,471 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
 
     Toxen.background.updateDimScale(pulseEnabled ? dynLight : 0);
 
+    try { HueManager.transition(); } catch (error) { }
+
     // if (style === VisualizerStyle.None && !Settings.get("backgroundDynamicLighting")) return;
-    if (style === VisualizerStyle.None) return;
+    if (style !== VisualizerStyle.None) {
+      let useLogo = false;
+      switch (style) {
+        default:
+        case VisualizerStyle.ProgressBar: { // Progress bar is default.
+          vHeight = Toxen.musicControls.progressBar.progressBarObject.getBoundingClientRect().top;
+          vLeft = Toxen.musicControls.progressBar.progressBarObject.getBoundingClientRect().left;
+          const maxHeight = getMaxHeight(0.30);
+          const unitW = ((vWidth - 20 /* Progress bar curve */) - (vLeft * 2)) / len;
+          const unitH = maxHeight / dataSize;
+          for (let i = 0; i < len; i++) {
+            const data = dataArray[i];
+            const _barHeight = (data * unitH);
+            // Position and size
+            const [barX, barY, barWidth, barHeight] = [
+              (i * unitW) + vLeft + 10 /* Progress bar curve */, // barX
+              vHeight - _barHeight - vTop, // barY
+              unitW, // barWidth
+              _barHeight // barHeight
+            ];
 
-    let useLogo = false;
-    switch (style) {
-      default:
-      case VisualizerStyle.ProgressBar: { // Progress bar is default.
-        vHeight = Toxen.musicControls.progressBar.progressBarObject.getBoundingClientRect().top;
-        vLeft = Toxen.musicControls.progressBar.progressBarObject.getBoundingClientRect().left;
-        const maxHeight = getMaxHeight(0.30);
-        const unitW = ((vWidth - 20 /* Progress bar curve */) - (vLeft * 2)) / len;
-        const unitH = maxHeight / dataSize;
-        for (let i = 0; i < len; i++) {
-          const data = dataArray[i];
-          const _barHeight = (data * unitH);
-          // Position and size
-          const [barX, barY, barWidth, barHeight] = [
-            (i * unitW) + vLeft + 10 /* Progress bar curve */, // barX
-            vHeight - _barHeight - vTop, // barY
-            unitW, // barWidth
-            _barHeight // barHeight
-          ];
-
-          // If rainbow:
-          this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, null, {
-            top: false,
-            bottom: true
-          });
-
-          this.ctxAlpha(opacity, ctx => {
-            ctx.fillRect(barX, barY, barWidth, barHeight); // Draw basic visualizer
-          });
-        }
-        break;
-      }
-
-      case VisualizerStyle.Bottom: {
-        const maxHeight = getMaxHeight(0.30);
-        const unitW = vWidth / len;
-        const unitH = maxHeight / dataSize;
-        for (let i = 0; i < len; i++) {
-          const data = dataArray[i];
-          const _barHeight = (data * unitH);
-          // Position and size
-          const [barX, barY, barWidth, barHeight] = [
-            (i * unitW), // barX
-            vHeight - _barHeight, // barY
-            unitW, // barWidth
-            _barHeight // barHeight
-          ];
-
-          // If rainbow:
-          this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, null, {
-            top: false,
-            bottom: true
-          });
-
-          this.ctxAlpha(opacity, ctx => {
-            ctx.fillRect(barX, barY, barWidth, barHeight); // Bottom visuals
-          });
-        }
-        break;
-      }
-
-      case VisualizerStyle.Top: {
-        const maxHeight = getMaxHeight(0.30);
-        const unitW = vWidth / len;
-        const unitH = maxHeight / dataSize;
-        for (let i = 0; i < len; i++) {
-          const data = dataArray[i];
-          const _barHeight = (data * unitH);
-          // Position and size
-          const [barX, barY, barWidth, barHeight] = [
-            (i * unitW), // barX
-            0, // barY
-            unitW, // barWidth
-            _barHeight // barHeight
-          ];
-
-          // If rainbow:
-          this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, null, {
-            top: true,
-            bottom: false
-          });
-
-          this.ctxAlpha(opacity, ctx => {
-            ctx.fillRect(barX, barY, barWidth, barHeight); // Top visuals
-          });
-        }
-        break;
-      }
-
-      // Visualizer on the top and bottom
-      case VisualizerStyle.TopAndBottom: {
-        const maxHeight = getMaxHeight(0.30);
-        const unitW = vWidth / len;
-        const unitH = maxHeight / dataSize;
-        for (let i = 0; i < len; i++) {
-          const data = dataArray[i];
-          const _barHeight = (data * unitH);
-          // Position and size
-          const [barX, barY, barWidth, barHeight] = [
-            (i * unitW), // barX
-            vHeight - _barHeight, // barY
-            unitW, // barWidth
-            _barHeight // barHeight
-          ];
-
-          this.ctxAlpha(opacity, ctx => {
-            this.setRainbowIfEnabled(ctx, barX, 0, barWidth, barHeight, i, null, {
-              top: true,
-              bottom: false
-            });
-            ctx.fillRect(barX, 0, barWidth, barHeight); // Top visuals
+            // If rainbow:
             this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, null, {
               top: false,
               bottom: true
             });
-            ctx.fillRect(barX, barY, barWidth, barHeight); // Bottom visuals
-          });
+
+            this.ctxAlpha(opacity, ctx => {
+              ctx.fillRect(barX, barY, barWidth, barHeight); // Draw basic visualizer
+            });
+          }
+          break;
         }
-        break;
-      }
 
-      // Visualizer on the left and right
-      case VisualizerStyle.Sides: {
-        const maxWidth = getMaxWidth(0.15);
-        const unitH = vHeight / (dataSize / 2);
-        const halfLen = len / 2;
-        const unitW = maxWidth / len;
+        case VisualizerStyle.Bottom: {
+          const maxHeight = getMaxHeight(0.30);
+          const unitW = vWidth / len;
+          const unitH = maxHeight / dataSize;
+          for (let i = 0; i < len; i++) {
+            const data = dataArray[i];
+            const _barHeight = (data * unitH);
+            // Position and size
+            const [barX, barY, barWidth, barHeight] = [
+              (i * unitW), // barX
+              vHeight - _barHeight, // barY
+              unitW, // barWidth
+              _barHeight // barHeight
+            ];
 
-        for (let i = 0; i < len; i++) {
-          const data = dataArray[i];
-          let _barWidth = (data * unitW);
-          _barWidth += _barWidth / 2;
-          // Position and size
-          const [barX, barY, barWidth, barHeight] = [
-            0, // barX
-            (i * unitH), // barY
-            _barWidth, // barWidth
-            unitH // barHeight
-          ];
+            // If rainbow:
+            this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, null, {
+              top: false,
+              bottom: true
+            });
 
-          this.ctxAlpha(opacity, ctx => {
+            this.ctxAlpha(opacity, ctx => {
+              ctx.fillRect(barX, barY, barWidth, barHeight); // Bottom visuals
+            });
+          }
+          break;
+        }
 
-            if (i % 2 === 0) {
+        case VisualizerStyle.Top: {
+          const maxHeight = getMaxHeight(0.30);
+          const unitW = vWidth / len;
+          const unitH = maxHeight / dataSize;
+          for (let i = 0; i < len; i++) {
+            const data = dataArray[i];
+            const _barHeight = (data * unitH);
+            // Position and size
+            const [barX, barY, barWidth, barHeight] = [
+              (i * unitW), // barX
+              0, // barY
+              unitW, // barWidth
+              _barHeight // barHeight
+            ];
+
+            // If rainbow:
+            this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, null, {
+              top: true,
+              bottom: false
+            });
+
+            this.ctxAlpha(opacity, ctx => {
+              ctx.fillRect(barX, barY, barWidth, barHeight); // Top visuals
+            });
+          }
+          break;
+        }
+
+        // Visualizer on the top and bottom
+        case VisualizerStyle.TopAndBottom: {
+          const maxHeight = getMaxHeight(0.30);
+          const unitW = vWidth / len;
+          const unitH = maxHeight / dataSize;
+          for (let i = 0; i < len; i++) {
+            const data = dataArray[i];
+            const _barHeight = (data * unitH);
+            // Position and size
+            const [barX, barY, barWidth, barHeight] = [
+              (i * unitW), // barX
+              vHeight - _barHeight, // barY
+              unitW, // barWidth
+              _barHeight // barHeight
+            ];
+
+            this.ctxAlpha(opacity, ctx => {
+              this.setRainbowIfEnabled(ctx, barX, 0, barWidth, barHeight, i, null, {
+                top: true,
+                bottom: false
+              });
+              ctx.fillRect(barX, 0, barWidth, barHeight); // Top visuals
               this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, null, {
                 top: false,
-                bottom: false
+                bottom: true
               });
-              ctx.fillRect(barX, barY / 2, barWidth, barHeight); // Left
-            }
-            else {
-              this.setRainbowIfEnabled(ctx, barX + barWidth, barY, barWidth, barHeight, i, null, {
-                top: false,
-                bottom: false
-              });
-              ctx.fillRect(vWidth - barWidth, barY / 2, barWidth, barHeight); // Right
-            }
-          });
-        }
-      }
-        break;
-
-      case VisualizerStyle.Center: {
-        const maxHeight = getMaxHeight(0.25);
-        const unitW = vWidth / len;
-        const unitH = maxHeight / dataSize;
-        for (let i = 0; i < len; i++) {
-          const data = dataArray[i];
-          const _barHeight = (data * unitH);
-          // Position and size
-          const [barX, barY, barWidth, barHeight] = [
-            (i * unitW), // barX
-            (vHeight / 2) - _barHeight, // barY
-            unitW, // barWidth
-            _barHeight * 2 // barHeight
-          ];
-
-          // If rainbow:
-          this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i);
-
-
-          this.ctxAlpha(opacity, ctx => {
-            ctx.fillRect(barX, barY, barWidth, barHeight); // Draw basic visualizer
-          });
-        }
-        break;
-      }
-
-      case VisualizerStyle.SingularityWithLogo:
-        // Use logo if SingularityWithLogo is selected, and fall through into the regular Singularity.
-        useLogo = true;
-      case VisualizerStyle.Singularity: {
-        let cycleIncrementer = 360 / len;
-        const maxHeight = getMaxHeight(0.50);
-        // let smallestHeight = maxHeight;
-        let smallestHeight = 0;
-        const unitH = maxHeight / dataSize;
-        const unitW = (vWidth * 1.25 + unitH) / len;
-        // const unitW = unitH * 5;
-        for (let i = 0; i < len; i++) {
-          const data = dataArray[i];
-          const _barHeight = (data * unitH);
-          // Position and size
-          const [barX, barY, barWidth, barHeight] = this.getBar(
-            (vWidth / 2) - (unitW / 2) /* Progress bar curve */, // barX
-            (vHeight / 2), // barY
-            unitW, // barWidth
-            _barHeight // barHeight
-          );
-
-          smallestHeight += barHeight;
-          // If rainbow:
-          this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, cycleIncrementer);
-
-          this.ctxAlpha(opacity, ctx => {
-            ctx.save();
-            // ctx.setTransform(1, 0, 0, 1, barX + 11, barY - 132);
-            ctx.setTransform(1, 0, 0, 1, barX, barY);
-            ctx.rotate((cycleIncrementer * i + (time / 20000)) * Math.PI);
-            // ctx.fillRect(-(unitW / 2), 128, barWidth, barHeight); // Draw basic visualizer
-            ctx.fillRect(-(unitW / 2), 0, barWidth, barHeight); // Draw basic visualizer
-            ctx.restore();
-          });
+              ctx.fillRect(barX, barY, barWidth, barHeight); // Bottom visuals
+            });
+          }
+          break;
         }
 
-        if (useLogo) {
-          smallestHeight /= len;
-          smallestHeight *= 1.5;
-          // smallestHeight += 128;
-          this.ctxAlpha(opacity, ctx => {
-            if (toxenLogo.complete) {
+        // Visualizer on the left and right
+        case VisualizerStyle.Sides: {
+          const maxWidth = getMaxWidth(0.15);
+          const unitH = vHeight / (dataSize / 2);
+          const halfLen = len / 2;
+          const unitW = maxWidth / len;
+
+          for (let i = 0; i < len; i++) {
+            const data = dataArray[i];
+            let _barWidth = (data * unitW);
+            _barWidth += _barWidth / 2;
+            // Position and size
+            const [barX, barY, barWidth, barHeight] = [
+              0, // barX
+              (i * unitH), // barY
+              _barWidth, // barWidth
+              unitH // barHeight
+            ];
+
+            this.ctxAlpha(opacity, ctx => {
+
+              if (i % 2 === 0) {
+                this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, null, {
+                  top: false,
+                  bottom: false
+                });
+                ctx.fillRect(barX, barY / 2, barWidth, barHeight); // Left
+              }
+              else {
+                this.setRainbowIfEnabled(ctx, barX + barWidth, barY, barWidth, barHeight, i, null, {
+                  top: false,
+                  bottom: false
+                });
+                ctx.fillRect(vWidth - barWidth, barY / 2, barWidth, barHeight); // Right
+              }
+            });
+          }
+        }
+          break;
+
+        case VisualizerStyle.Center: {
+          const maxHeight = getMaxHeight(0.25);
+          const unitW = vWidth / len;
+          const unitH = maxHeight / dataSize;
+          for (let i = 0; i < len; i++) {
+            const data = dataArray[i];
+            const _barHeight = (data * unitH);
+            // Position and size
+            const [barX, barY, barWidth, barHeight] = [
+              (i * unitW), // barX
+              (vHeight / 2) - _barHeight, // barY
+              unitW, // barWidth
+              _barHeight * 2 // barHeight
+            ];
+
+            // If rainbow:
+            this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i);
+
+
+            this.ctxAlpha(opacity, ctx => {
+              ctx.fillRect(barX, barY, barWidth, barHeight); // Draw basic visualizer
+            });
+          }
+          break;
+        }
+
+        case VisualizerStyle.SingularityWithLogo:
+          // Use logo if SingularityWithLogo is selected, and fall through into the regular Singularity.
+          useLogo = true;
+        case VisualizerStyle.Singularity: {
+          let cycleIncrementer = 360 / len;
+          const maxHeight = getMaxHeight(0.50);
+          // let smallestHeight = maxHeight;
+          let smallestHeight = 0;
+          const unitH = maxHeight / dataSize;
+          const unitW = (vWidth * 1.25 + unitH) / len;
+          // const unitW = unitH * 5;
+          for (let i = 0; i < len; i++) {
+            const data = dataArray[i];
+            const _barHeight = (data * unitH);
+            // Position and size
+            const [barX, barY, barWidth, barHeight] = this.getBar(
+              (vWidth / 2) - (unitW / 2) /* Progress bar curve */, // barX
+              (vHeight / 2), // barY
+              unitW, // barWidth
+              _barHeight // barHeight
+            );
+
+            smallestHeight += barHeight;
+            // If rainbow:
+            this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, cycleIncrementer);
+
+            this.ctxAlpha(opacity, ctx => {
               ctx.save();
-              ctx.setTransform(1, 0, 0, 1, (vWidth / 2) - imgSize, (vHeight / 2) - imgSize);
-              ctx.drawImage(toxenLogo,
-                0,
-                0,
-
-                imgSize,
-                imgSize,
-
-                imgSize - smallestHeight / 2,
-                imgSize - smallestHeight / 2,
-
-                smallestHeight,
-                smallestHeight
-              );
+              // ctx.setTransform(1, 0, 0, 1, barX + 11, barY - 132);
+              ctx.setTransform(1, 0, 0, 1, barX, barY);
+              ctx.rotate((cycleIncrementer * i + (time / 20000)) * Math.PI);
+              // ctx.fillRect(-(unitW / 2), 128, barWidth, barHeight); // Draw basic visualizer
+              ctx.fillRect(-(unitW / 2), 0, barWidth, barHeight); // Draw basic visualizer
               ctx.restore();
-            }
-          })
+            });
+          }
+
+          if (useLogo) {
+            smallestHeight /= len;
+            smallestHeight *= 1.5;
+            // smallestHeight += 128;
+            this.ctxAlpha(opacity, ctx => {
+              if (toxenLogo.complete) {
+                ctx.save();
+                ctx.setTransform(1, 0, 0, 1, (vWidth / 2) - imgSize, (vHeight / 2) - imgSize);
+                ctx.drawImage(toxenLogo,
+                  0,
+                  0,
+
+                  imgSize,
+                  imgSize,
+
+                  imgSize - smallestHeight / 2,
+                  imgSize - smallestHeight / 2,
+
+                  smallestHeight,
+                  smallestHeight
+                );
+                ctx.restore();
+              }
+            })
+          }
+          break;
         }
-        break;
+
+        case VisualizerStyle.MirroredSingularityWithLogo:
+          // Use logo if MirroredSingularityWithLogo is selected, and fall through into the regular MirroredSingularity.
+          useLogo = true;
+        case VisualizerStyle.MirroredSingularity: {
+          let newData = dataArray.filter(d => d > 0);
+          const len = newData.length;
+          let cycleIncrementer = 180 / len;
+          const maxHeight = getMaxHeight(0.50);
+          // let smallestHeight = maxHeight;
+          let smallestHeight = 0;
+          const unitH = maxHeight / dataSize;
+          const unitW = (vWidth * 1.25 + unitH) / len;
+          // const unitW = unitH * 5;
+          for (let i = 0; i < len; i++) {
+            const data = newData[i];
+            const _barHeight = (data * unitH);
+            // Position and size
+            const [barX, barY, barWidth, barHeight] = this.getBar(
+              (vWidth / 2) - (unitW / 2) /* Progress bar curve */, // barX
+              (vHeight / 2), // barY
+              unitW, // barWidth
+              _barHeight // barHeight
+            );
+
+            smallestHeight += barHeight;
+            // If rainbow:
+            this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, cycleIncrementer);
+
+            this.ctxAlpha(opacity, ctx => {
+              ctx.save();
+              ctx.setTransform(1, 0, 0, 1, barX, barY);
+              ctx.rotate(((cycleIncrementer * (Math.PI / 180)) * i));
+              ctx.fillRect(-(unitW / 2), 0, barWidth, barHeight); // Draw basic visualizer
+              ctx.restore();
+            });
+            this.ctxAlpha(opacity, ctx => {
+              ctx.save();
+              ctx.setTransform(1, 0, 0, 1, barX, barY);
+              ctx.rotate(0 - ((cycleIncrementer * (Math.PI / 180)) * i));
+              ctx.fillRect(-(unitW / 2), 0, barWidth, barHeight); // Draw basic visualizer
+              ctx.restore();
+            });
+          }
+
+          if (useLogo) {
+            smallestHeight /= len;
+            smallestHeight *= 1.5;
+            // smallestHeight += 128;
+            this.ctxAlpha(opacity, ctx => {
+              if (toxenLogo.complete) {
+                ctx.save();
+                ctx.setTransform(1, 0, 0, 1, (vWidth / 2) - imgSize, (vHeight / 2) - imgSize);
+                ctx.drawImage(toxenLogo,
+                  0,
+                  0,
+
+                  imgSize,
+                  imgSize,
+
+                  imgSize - smallestHeight / 2,
+                  imgSize - smallestHeight / 2,
+
+                  smallestHeight,
+                  smallestHeight
+                );
+                ctx.restore();
+              }
+            })
+          }
+          break;
+        }
+      }
+    }
+
+    // Add floating title if enabled
+    const enabled = Toxen.background.storyboard?.getFloatingTitle();
+    const reactive = Toxen.background.storyboard?.getFloatingTitleReactive();
+    const overrideVisualizer = Toxen.background.storyboard?.getFloatingTitleOverrideVisualizer();
+    const song = Toxen.background.storyboard?.getSong();
+    if (enabled && song) {
+      let shouldOverride = overrideVisualizer;
+      const title = song.title;
+      const _fontSize = 48 * (vWidth / 1280);
+      const fontSize = MathX.clamp(reactive ? _fontSize + (_fontSize - (_fontSize * this.dynamicDim * 2)) : _fontSize, _fontSize, _fontSize * 2);
+      // const font = `${fontSize}px Calibri`;
+      const font = `${fontSize}px Calibri Light`; // TODO: Make this a setting and customizable font
+      const fontColor = this.lastColor ?? '#fff';
+      const textWidth = ctx.measureText(title).width;
+      const textHeight = fontSize;
+
+      let textX: number;
+      let textY: number;
+      // let boxY: number;
+
+      type TextPosition = ISong["floatingTitlePosition"];
+
+      const position: TextPosition = Toxen.background.storyboard?.getFloatingTitlePosition() ?? "center";
+      switch (position) {
+        default: // Also center
+          textX = (vWidth / 2) - (textWidth / 2);
+          textY = (vHeight / 2) + (textHeight / 4); // It works don't touch
+          // boxY = (vHeight / 2) - (textHeight / 2);
+
+          shouldOverride = style === VisualizerStyle.Center;
+          break;
+
+        case "left":
+          textX = 0;
+          textY = (vHeight / 2) + (textHeight / 4);
+          // boxY = (vHeight / 2) - (textHeight / 2);
+
+          shouldOverride = style === VisualizerStyle.Center || style === VisualizerStyle.Sides;
+          break;
+
+        case "right":
+          textX = vWidth - textWidth;
+          textY = (vHeight / 2) + (textHeight / 4);
+          // boxY = (vHeight / 2) - (textHeight / 2);
+
+          shouldOverride = style === VisualizerStyle.Center || style === VisualizerStyle.Sides;
+          break;
+
+        case "top":
+          textX = (vWidth / 2) - (textWidth / 2);
+          textY = textHeight;
+          // boxY = 0;
+
+          shouldOverride = style === VisualizerStyle.Top || style === VisualizerStyle.TopAndBottom;
+          break;
+
+        case "bottom":
+          textX = (vWidth / 2) - (textWidth / 2);
+          textY = vHeight - (textHeight / 2);
+          // boxY = vHeight - textHeight;
+
+          shouldOverride = style === VisualizerStyle.Bottom || style === VisualizerStyle.TopAndBottom || style === VisualizerStyle.ProgressBar;
+          break;
+
+        case "top-left":
+          textX = 0;
+          textY = textHeight;
+          // boxY = 0;
+
+          shouldOverride = style === VisualizerStyle.Top || style === VisualizerStyle.TopAndBottom || style === VisualizerStyle.Sides;
+          break;
+
+        case "top-right":
+          textX = vWidth - textWidth;
+          textY = textHeight;
+          // boxY = 0;
+
+          shouldOverride = style === VisualizerStyle.Top || style === VisualizerStyle.TopAndBottom || style === VisualizerStyle.Sides;
+          break;
+
+        case "bottom-left":
+          textX = 0;
+          textY = vHeight - (textHeight / 2);
+          // boxY = vHeight - textHeight;
+
+          shouldOverride = style === VisualizerStyle.Bottom || style === VisualizerStyle.TopAndBottom || style === VisualizerStyle.ProgressBar || style === VisualizerStyle.Sides;
+          break;
+
+        case "bottom-right":
+          textX = vWidth - textWidth;
+          textY = vHeight - (textHeight / 2);
+          // boxY = vHeight - textHeight;
+
+          shouldOverride = style === VisualizerStyle.Bottom || style === VisualizerStyle.TopAndBottom || style === VisualizerStyle.ProgressBar || style === VisualizerStyle.Sides;
+          break;
       }
 
-      case VisualizerStyle.MirroredSingularityWithLogo:
-        // Use logo if MirroredSingularityWithLogo is selected, and fall through into the regular MirroredSingularity.
-        useLogo = true;
-      case VisualizerStyle.MirroredSingularity: {
-        let newData = dataArray.filter(d => d > 0);
-        const len = newData.length;
-        let cycleIncrementer = 180 / len;
-        const maxHeight = getMaxHeight(0.50);
-        // let smallestHeight = maxHeight;
-        let smallestHeight = 0;
-        const unitH = maxHeight / dataSize;
-        const unitW = (vWidth * 1.25 + unitH) / len;
-        // const unitW = unitH * 5;
-        for (let i = 0; i < len; i++) {
-          const data = newData[i];
-          const _barHeight = (data * unitH);
-          // Position and size
-          const [barX, barY, barWidth, barHeight] = this.getBar(
-            (vWidth / 2) - (unitW / 2) /* Progress bar curve */, // barX
-            (vHeight / 2), // barY
-            unitW, // barWidth
-            _barHeight // barHeight
-          );
+      // Before drawing, clear the area
+      if (overrideVisualizer && shouldOverride) {
+        ctx.fillStyle = usedDimColor;
+        ctx.clearRect(
+          Math.ceil(textX - 5),
+          0,
+          Math.ceil(textWidth + 10),
+          Math.ceil(vHeight)
+        );
+        ctx.fillRect(
+          Math.ceil(textX - 5),
+          0,
+          Math.ceil(textWidth + 10),
+          Math.ceil(vHeight)
+        );
+      }
 
-          smallestHeight += barHeight;
-          // If rainbow:
-          this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, cycleIncrementer);
+      this.ctxAlpha(opacity, ctx => {
+        ctx.font = font;
+        // Add underline
+        ctx.strokeStyle = fontColor;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(textX, textY + 10);
+        ctx.lineTo(textX + textWidth, textY + 10);
+        ctx.stroke();
+        // Add text
+        ctx.fillStyle = fontColor;
+        ctx.fillText(title, textX, textY);
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = "white";
+        ctx.strokeText(title, textX, textY);
+      });
+    }
 
-          this.ctxAlpha(opacity, ctx => {
-            ctx.save();
-            ctx.setTransform(1, 0, 0, 1, barX, barY);
-            ctx.rotate(((cycleIncrementer * (Math.PI / 180)) * i));
-            ctx.fillRect(-(unitW / 2), 0, barWidth, barHeight); // Draw basic visualizer
-            ctx.restore();
-          });
-          this.ctxAlpha(opacity, ctx => {
-            ctx.save();
-            ctx.setTransform(1, 0, 0, 1, barX, barY);
-            ctx.rotate(0 - ((cycleIncrementer * (Math.PI / 180)) * i));
-            ctx.fillRect(-(unitW / 2), 0, barWidth, barHeight); // Draw basic visualizer
-            ctx.restore();
-          });
-        }
-
-        if (useLogo) {
-          smallestHeight /= len;
-          smallestHeight *= 1.5;
-          // smallestHeight += 128;
-          this.ctxAlpha(opacity, ctx => {
-            if (toxenLogo.complete) {
-              ctx.save();
-              ctx.setTransform(1, 0, 0, 1, (vWidth / 2) - imgSize, (vHeight / 2) - imgSize);
-              ctx.drawImage(toxenLogo,
-                0,
-                0,
-
-                imgSize,
-                imgSize,
-
-                imgSize - smallestHeight / 2,
-                imgSize - smallestHeight / 2,
-
-                smallestHeight,
-                smallestHeight
-              );
-              ctx.restore();
-            }
-          })
-        }
-        break;
+    if (storyboardCallbacks.length > 0) {
+      for (const callback of storyboardCallbacks) {
+        callback();
       }
     }
 

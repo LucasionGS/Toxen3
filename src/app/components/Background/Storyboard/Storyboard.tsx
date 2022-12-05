@@ -1,6 +1,6 @@
 import React, { Component } from 'react'
 import Settings, { VisualizerStyle } from '../../../toxen/Settings';
-import Song from '../../../toxen/Song';
+import Song, { ISong } from '../../../toxen/Song';
 import { Toxen } from '../../../ToxenApp';
 import Visualizer from '../Visualizer';
 import "./Storyboard.scss";
@@ -49,6 +49,10 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
       backgroundDim: null,
       backgroundDynamicLighting: null,
       background: null,
+      floatingTitle: null,
+      floatingTitleReactive: null,
+      floatingTitleOverrideVisualizer: null,
+      floatingTitlePosition: null,
     }
   }
 
@@ -130,6 +134,19 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
     return bg;
   }
 
+  public getFloatingTitle() {
+    return this.data.floatingTitle ?? (this.state.song && this.state.song.floatingTitle || false);
+  }
+  public getFloatingTitleReactive() {
+    return this.data.floatingTitleReactive ?? (this.state.song && this.state.song.floatingTitleReactive || false);
+  }
+  public getFloatingTitleOverrideVisualizer() {
+    return this.data.floatingTitleOverrideVisualizer ?? (this.state.song && this.state.song.floatingTitleOverrideVisualizer || false);
+  }
+  public getFloatingTitlePosition(): ISong["floatingTitlePosition"] {
+    return this.data.floatingTitlePosition ?? (this.state.song && this.state.song.floatingTitlePosition || "center");
+  }
+
 
   public storyboardUpdate() {
     
@@ -144,4 +161,8 @@ interface StoryboardData {
   backgroundDim: number;
   backgroundDynamicLighting: boolean;
   background: string;
+  floatingTitle: string;
+  floatingTitleReactive: boolean;
+  floatingTitleOverrideVisualizer: boolean;
+  floatingTitlePosition: ISong["floatingTitlePosition"];
 }
