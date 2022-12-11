@@ -152,6 +152,7 @@
     "showdown": "^1.9.1",
     "update-electron-app": "^2.0.1",
     "yauzl": "^2.10.0",
-    "yazl": "^2.5.1"
+    "yazl": "^2.5.1",
+    "yt-dlp-wrap": "^2.3.11"
   }
 }

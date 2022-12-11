@@ -9005,6 +9005,11 @@ yocto-queue@^0.1.0:
   resolved "https://registry.npmjs.org/yocto-queue/-/yocto-queue-0.1.0.tgz"
   integrity sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==
 
+yt-dlp-wrap@^2.3.11:
+  version "2.3.11"
+  resolved "https://registry.yarnpkg.com/yt-dlp-wrap/-/yt-dlp-wrap-2.3.11.tgz#cb36ea1c320de1806114137f1cc3a54b6e20c564"
+  integrity sha512-B0982YLawUC6C8V6hA88bC+EvZ1Mu/dSY+4VcQ8fa60dp1ILT/YWAl4AeowTH+wrrdg6aL7vCXTxlkeacZd5kg==
+
 zip-stream@^4.1.0:
   version "4.1.0"
   resolved "https://registry.yarnpkg.com/zip-stream/-/zip-stream-4.1.0.tgz#51dd326571544e36aa3f756430b313576dc8fc79"

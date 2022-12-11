@@ -57,6 +57,7 @@ import InitialData from "./windows/SubtitleCreator/models/InitialData";
 import User from "./toxen/User";
 import { IconLayoutNavbarExpand } from "@tabler/icons";
 import HueManager from "./toxen/philipshue/HueManager";
+import ImportPanel from "./components/Sidepanel/Panels/ImportPanel/ImportPanel";
 
 declare const SUBTITLE_CREATOR_WEBPACK_ENTRY: any;
 
@@ -814,35 +815,7 @@ export default class ToxenAppRenderer extends React.Component {
 
           {/* Import Panel */}
           <SidepanelSection key="importSong" id="importSong" title="Import" icon={<i className="fas fa-file-import"></i>}>
-            <h1>Import music</h1>
-            <Button
-              leftIcon={<i className="fas fa-file-import"></i>}
-              onClick={() => {
-                let paths = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
-                  properties: [
-                    "multiSelections",
-                    "openFile"
-                  ],
-                  filters: [
-                    {
-                      name: "Media files",
-                      extensions: Toxen.getSupportedMediaFiles().map(ext => ext.replace(".", ""))
-                    },
-                  ],
-                });
-
-                if (!paths || paths.length == 0)
-                  return;
-
-                const promisedFiles: ToxenFile[] = paths.map(p => ({
-                  name: Path.basename(p),
-                  path: p
-                }));
-                Promise.all(promisedFiles).then(files => {
-                  System.handleImportedFiles(files);
-                });
-              }}
-            >Import song from Files</Button>
+            <ImportPanel />
           </SidepanelSection>
 
 

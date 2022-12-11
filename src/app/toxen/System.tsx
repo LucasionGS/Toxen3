@@ -175,8 +175,10 @@ export default class System {
         // Toxen.loadSongs();
         Toxen.songList[Toxen.songList.length - 1].play();
         Song.sortSongs(Toxen.songList);
-        Toxen.showCurrentSong();
-        Toxen.songPanel.update();
+        if (Toxen.sidePanel.getSectionId() === "songPanel") {
+          Toxen.showCurrentSong();
+          Toxen.songPanel.update();
+        }
       }
 
       return Promise.resolve();
