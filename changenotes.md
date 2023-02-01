@@ -1,4 +1,6 @@
-<!-- ## Upcoming update / 1.5.1 -->
+<!-- ## Upcoming update / 1.5.2 -->
+## 1.5.1 - 01-02-2023
+- Added support for `jfif` images.
 ## 1.5.0 - 12-05-2022
 Storyboard:
 - Added Philips Hue experimental support. This will be extended further with more features and customization.
