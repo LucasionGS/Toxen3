@@ -110,6 +110,24 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     // dataArray = dataArray.filter((_, i) => i >= (dataArray.length / 2));
     dataArray = dataArray.slice(dataArray.length / 2);
 
+
+    // Shuffle the array to make it look more random.
+    if (
+      (Settings.get("visualizerShuffle") ?? false) &&
+      Settings.get("visualizerStyle") !== VisualizerStyle.Waveform
+    ) {
+      let seed = 1;
+      // Seeded pseudo-random number generator.
+      function random() {
+        var x = Math.sin(seed++) * dataArray.length;
+        return x - Math.floor(x);
+      }
+      for (let i = dataArray.length - 1; i > 0; i--) {
+        const j = Math.floor(random() * (i + 1));
+        [dataArray[i], dataArray[j]] = [dataArray[j], dataArray[i]];
+      }
+    }
+
     const len = this.curLen = dataArray.length;
     const power = (1 / (Settings.get("volume") / 100));
     const getMaxHeight = (multipler?: number) => (intensityMultiplier * vHeight * (multipler ?? 1)) ^ power ^ power
@@ -465,6 +483,98 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           }
           break;
         }
+        case VisualizerStyle.Waveform: {
+          // Generate a smooth waveform between the higest points of each bar.
+          const maxHeight = getMaxHeight(0.25);
+          const unitW = vWidth / len;
+          const unitH = maxHeight / dataSize;
+          // const centerY = (vHeight / 4) * 3;
+          const centerY = (vHeight / 2);
+          for (let i = 0; i < len; i++) {
+            const data = dataArray[i];
+            const _barHeight = Math.max(1, data * unitH);
+            // Position and size
+            const [barX, barY, barWidth, barHeight] = [
+              (i * unitW), // barX
+              centerY - _barHeight, // barY
+              unitW, // barWidth
+              _barHeight * 2 // barHeight
+            ];
+
+            const nextData = dataArray[i + 1];
+
+            if (typeof nextData === "number") {
+              const nextBarHeight = (nextData * unitH);
+              const nextBarY = centerY - nextBarHeight;
+              const nextBarX = ((i + 1) * unitW);
+              const nextBarWidth = unitW;
+
+              // If rainbow:
+              this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i);
+
+              ctx.save();
+              ctx.beginPath();
+              this.ctxAlpha(opacity, ctx => {
+                ctx.moveTo(barX, barY);
+                ctx.lineTo(nextBarX, nextBarY);
+                ctx.lineTo(nextBarX + nextBarWidth, nextBarY);
+                ctx.lineTo(barX + barWidth, barY);
+                // ctx.closePath();
+                // ctx.fill();
+                // ctx.restore();
+                // Downward
+                const _barY = centerY + _barHeight;
+                const _nextBarY = centerY + nextBarHeight;
+                // ctx.save();
+                // ctx.beginPath();
+                ctx.moveTo(barX, _barY);
+                ctx.lineTo(nextBarX, _nextBarY);
+                ctx.lineTo(nextBarX + nextBarWidth, _nextBarY);
+                ctx.lineTo(barX + barWidth, _barY);
+              });
+              ctx.closePath();
+              ctx.fill();
+              ctx.restore();
+            }
+          }
+          break;
+        }
+        // case VisualizerStyle.WaveformCircle: {
+        //   // Combination of Waveform and singularity. Generates a smooth waveform between the higest points of each bar.
+        //   const cycleIncrementer = 360 / len;
+        //   const uniteLength = len / 360;
+        //   const maxHeight = getMaxHeight(0.50);
+        //   // let smallestHeight = maxHeight;
+        //   const unitH = maxHeight / dataSize;
+        //   const unitW = (vWidth * 1.25 + unitH) / len;
+        //   const centerY = (vHeight / 2);
+        //   for (let i = 0; i < len; i++) {
+        //     const data = dataArray[i];
+        //     const _barHeight = (data * unitH);
+        //     // Position and size
+        //     const [barX, barY, barWidth, barHeight] = this.getBar(
+        //       (vWidth / 2) - (unitW / 2) /* Progress bar curve */, // barX
+        //       (vHeight / 2), // barY
+        //       unitW, // barWidth
+        //       _barHeight // barHeight
+        //     );
+
+        //     // If rainbow:
+        //     this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, cycleIncrementer);
+
+        //     this.ctxAlpha(opacity, ctx => {
+        //       const radian = (cycleIncrementer * i) * (Math.PI / 180);
+        //       ctx.save();
+        //       // ctx.setTransform(1, 0, 0, 1, barX + 11, barY - 132);
+        //       ctx.setTransform(1, 0, 0, 1, barX, barY);
+        //       ctx.rotate(radian + (time / 20000));
+        //       // ctx.fillRect(-(unitW / 2), 128, barWidth, barHeight); // Draw basic visualizer
+        //       ctx.fillRect(-(unitW / 2), 0, barWidth, barHeight); // Draw basic visualizer
+        //       ctx.restore();
+        //     });
+        //   }
+        //   break;
+        // }
       }
     }
 
@@ -491,13 +601,14 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
       type TextPosition = ISong["floatingTitlePosition"];
 
       const position: TextPosition = Toxen.background.storyboard?.getFloatingTitlePosition() ?? "center";
+      const isCenterType = style === VisualizerStyle.Center || style === VisualizerStyle.Waveform;
       switch (position) {
         default: // Also center
           textX = (vWidth / 2) - (textWidth / 2);
           textY = (vHeight / 2) + (textHeight / 4); // It works don't touch
           // boxY = (vHeight / 2) - (textHeight / 2);
 
-          shouldOverride = style === VisualizerStyle.Center;
+          shouldOverride = isCenterType;
           break;
 
         case "left":
@@ -505,7 +616,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           textY = (vHeight / 2) + (textHeight / 4);
           // boxY = (vHeight / 2) - (textHeight / 2);
 
-          shouldOverride = style === VisualizerStyle.Center || style === VisualizerStyle.Sides;
+          shouldOverride = isCenterType || style === VisualizerStyle.Sides;
           break;
 
         case "right":
@@ -513,7 +624,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           textY = (vHeight / 2) + (textHeight / 4);
           // boxY = (vHeight / 2) - (textHeight / 2);
 
-          shouldOverride = style === VisualizerStyle.Center || style === VisualizerStyle.Sides;
+          shouldOverride = isCenterType || style === VisualizerStyle.Sides;
           break;
 
         case "top":

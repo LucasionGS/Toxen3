@@ -254,6 +254,7 @@ export class Toxen {
       ".gif",
       ".webm",
       ".webp",
+      ".jfif",
     ];
   }
 
