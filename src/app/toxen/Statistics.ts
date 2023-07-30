@@ -21,6 +21,7 @@ export default class Stats extends EventEmitter {
    */
   public static async save() {
     console.log("Saving stats...");
+    localStorage.setItem("statistics-backup", Stats.toString());
     if (!(await fsp.stat(Settings.toxenDataPath).then(() => true).catch(() => false))) {
       await fsp.mkdir(Settings.toxenDataPath, { recursive: true });
     }
@@ -60,6 +61,12 @@ export default class Stats extends EventEmitter {
         let data = await fsp.readFile(Stats.filePath, "utf8");
         return (Stats.data = JSON.parse(data));
       } catch (error) {
+        const backup = localStorage.getItem("statistics-backup");
+        if (backup) {
+          console.log("Using backup statistics file.");
+          Stats.data = JSON.parse(backup);
+          return Stats.data;
+        }
         throw "Unable to parse statistics file.";
       }
     });

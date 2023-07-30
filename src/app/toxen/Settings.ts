@@ -297,6 +297,10 @@ export interface ISettings {
   visualizerColor: string;
   visualizerStyle: VisualizerStyle;
   visualizerIntensity: number;
+  /**
+   * @unimplemented
+   */
+  visualizerShuffle: boolean;
   visualizerRainbowMode: boolean;
   visualizerPulseBackground: boolean;
   backgroundDynamicLighting: boolean;
@@ -335,4 +339,6 @@ export enum VisualizerStyle {
   SingularityWithLogo = "circlelogo",
   MirroredSingularity = "mirroredsingularity",
   MirroredSingularityWithLogo = "mirroredsingularitywithlogo",
+  Waveform = "waveform",
+  // WaveformCircle = "waveformcircle",
 };
