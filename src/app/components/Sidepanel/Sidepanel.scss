@@ -183,6 +183,7 @@ body[miniplayer] .sidepanel {
 }
 
 .sidepanel.show .sidepanel-content {
+  user-select: none;
   padding: 16px;
   opacity: 1;
   overflow-x: hidden;

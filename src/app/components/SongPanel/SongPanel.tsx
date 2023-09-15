@@ -5,6 +5,7 @@ import { Button } from '@mantine/core';
 import Settings from '../../toxen/Settings';
 import { remote } from "electron";
 import User from '../../toxen/User';
+import SongElement from './SongElement';
 
 interface SongPanelProps {
   getRef?: ((songPanel: SongPanel) => void)
@@ -51,7 +52,8 @@ export default class SongPanel extends Component<SongPanelProps, SongPanelState>
     return (
       <>
         {Toxen.playlist ? <>Playlist: <code>{Toxen.playlist.name}</code><br /></> : ""}
-        {songs.map(s => s.Element())}
+        {/* {songs.map(s => s.Element())} */}
+        {songs.map(s => <SongElement key={s.uid} playing={s.isPlaying()} song={s} ref={ref => s.currentElement = ref} />)}
       </>
     );
   }

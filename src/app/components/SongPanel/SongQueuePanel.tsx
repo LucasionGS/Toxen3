@@ -2,6 +2,7 @@ import React, { Component } from 'react'
 import { Toxen } from '../../ToxenApp';
 import Song from '../../toxen/Song';
 import { Button } from '@mantine/core';
+import SongElement from './SongElement';
 
 interface SongQueuePanelProps {
   getRef?: ((songQueuePanel: SongQueuePanel) => void)
@@ -43,7 +44,8 @@ export default class SongQueuePanel extends Component<SongQueuePanelProps, SongQ
       <>
         <h2>Current Queue</h2>
         <Button title="Remove all songs from the queue." color="red" onClick={() => Song.clearQueue()}>Clear Queue</Button>
-        {songs.map(s => s.Element())}
+        {/* {songs.map(s => s.Element())} */}
+        {songs.map(s => <SongElement key={s.uid} playing={s.isPlaying()} song={s} ref={ref => s.currentElement = ref} />)}
         <hr />
       </>
     )

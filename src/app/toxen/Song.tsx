@@ -222,6 +222,7 @@ export default class Song implements ISong {
 
   /**
    * React element of Song.
+   * @deprecated
    */
   public Element() {
     return (

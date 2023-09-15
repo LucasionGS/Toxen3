@@ -5,6 +5,7 @@ import Settings from '../../toxen/Settings';
 import { Toxen } from '../../ToxenApp';
 import "./Sidepanel.scss";
 import SidepanelSection from './SidepanelSection';
+import { DragScrollContainer } from '../DragScrollContainer/DragScrollContainer';
 
 export type PanelDirection = "left" | "right";
 
@@ -208,7 +209,7 @@ export default class Sidepanel extends React.Component<Props, State> {
         </div>
         {
           sec ?
-            <div
+            <DragScrollContainer
               className="sidepanel-content"
               onScroll={e => this.scrollStorage[this.state.sectionId] = e.currentTarget.scrollTop}
               ref={ref => {
@@ -219,7 +220,7 @@ export default class Sidepanel extends React.Component<Props, State> {
               style={{
                 width: this.state.show ? "100%" : "0px",
               }}
-            >{sec}</div>
+            >{sec}</DragScrollContainer>
             : ""
         }
         {
