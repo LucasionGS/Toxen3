@@ -1,4 +1,8 @@
 <!-- ## Upcoming update / 1.5.2 -->
+<!-- ## Upcoming update / 1.6.1 -->
+## 1.6.0 - 30-09-2023
+- Added new visualizer: `Waveform`!
+- Added Media Downloader to the import tab. It can be used to download media from Youtube or Soundcloud, and import it to the library.
 ## 1.5.1 - 01-02-2023
 - Added support for `jfif` images.
 ## 1.5.0 - 12-05-2022
