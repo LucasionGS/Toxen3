@@ -32,8 +32,10 @@ export default class System {
     return files;
   }
 
+  public static async handleImportedFiles(files: FileList | (File | ToxenFile)[], verbose?: boolean): Promise<void>;
+  public static async handleImportedFiles(files: FileList | (File | ToxenFile)[], verbose?: boolean, _initial?: boolean, _plusIndex?: number, _plusTotal?: number): Promise<void>;
   public static async handleImportedFiles(files: FileList | (File | ToxenFile)[], verbose = true, _initial = true, _plusIndex = 0, _plusTotal = 0) {
-    Promise.resolve().then(async () => {
+    return Promise.resolve().then(async () => {
       if (files instanceof FileList) files = [...files];
       let sMedia = Toxen.getSupportedMediaFiles();
       let sImage = Toxen.getSupportedImageFiles();
@@ -64,7 +66,7 @@ export default class System {
         const file = files[i];
 
         // If directory
-        const stat = await fsp.stat(file.path).then(a => a).catch(() => null);
+        const stat: fs.Stats | null = await fsp.stat(file.path).then(a => a).catch(() => null);
         if (stat?.isDirectory()) {
           mediaPack = true;
           let dirFiles = await System.recursive(file.path);

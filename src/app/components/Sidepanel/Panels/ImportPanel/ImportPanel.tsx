@@ -5,6 +5,8 @@ import System, { ToxenFile } from '../../../../toxen/System';
 import { Toxen } from '../../../../ToxenApp';
 import Path from "path";
 import Ytdlp from '../../../../toxen/Ytdlp';
+import Settings from '../../../../toxen/Settings';
+import ExternalUrl from '../../../ExternalUrl/ExternalUrl';
 
 export default function ImportPanel() {
   return (
@@ -49,6 +51,12 @@ function ImportOnlineMedia() {
   const [url, setUrl] = React.useState<string>("");
   const [importing, setImporting] = React.useState<boolean>(false);
   const [videos, setVideos] = React.useState<Ytdlp.VideoInfo[]>([]);
+  const [acceptedResponsibility, setAcceptedResponsibility] = React.useState<boolean>(() => Settings.get("acceptedResponsibility"));
+
+  React.useEffect(() => {
+    Settings.set("acceptedResponsibility", acceptedResponsibility);
+    Settings.save({ suppressNotification: true });
+  }, [acceptedResponsibility]);
 
   return (
     <>
@@ -59,32 +67,54 @@ function ImportOnlineMedia() {
         }}
       >Import from YouTube/Soundcloud</Button>
 
-      <Modal opened={modalOpen} onClose={() => setModalOpen(false)}>
-        <div>
-          <h1>Import from YouTube/Soundcloud</h1>
-          <p>Enter a YouTube or Soundcloud URL to import a song.</p>
-          <TextInput disabled={importing} placeholder="https://youtube.com/watch?v=..." value={url} onChange={e => setUrl(e.currentTarget.value)} />
+      {
+        acceptedResponsibility ? (
+          <Modal size={"80vw"} opened={modalOpen} onClose={() => setModalOpen(false)}>
+            <div>
+              <h1>Import from YouTube/Soundcloud</h1>
+              <p>Enter a YouTube or Soundcloud URL to import a song.</p>
+              <TextInput disabled={importing} placeholder="https://youtube.com/watch?v=..." value={url} onChange={e => setUrl(e.currentTarget.value)} />
 
-          <Button loading={importing} onClick={async () => {
-            setImporting(true);
-            const videos = await Ytdlp.getVideoInfo(url);
-            console.log(videos);
-            setImporting(false);
-            setVideos(videos);
-          }}>
-            {importing ? "Loading..." : "Load"}
-          </Button>
+              <Button loading={importing} onClick={async () => {
+                setImporting(true);
+                const videos = await Ytdlp.getVideoInfo(url);
+                console.log(videos);
+                setImporting(false);
+                setVideos(videos);
+              }}>
+                {importing ? "Loading..." : "Load"}
+              </Button>
 
-          <div style={{
-            maxHeight: 500,
-            overflowY: "auto",
-          }}>
-            {videos.map(v => (
-              <Video video={v} />
-            ))}
-          </div>
-        </div>
-      </Modal>
+              <div style={{
+                maxHeight: 500,
+                overflowY: "auto",
+              }}>
+                {videos.map(v => (
+                  <Video key={v.original_url} video={v} />
+                ))}
+              </div>
+            </div>
+          </Modal>
+        ) : (
+          <Modal size={"80vw"} opened={modalOpen} onClose={() => setModalOpen(false)}>
+            <div>
+              <h1>Importing using the Media Downloader</h1>
+              <p>By using this feature, you agree that you are responsible for the content you import.</p>
+              <p>Importing content from these providers may be illegal in your country.</p>
+              <p>Do not import content you do not have the rights to.</p>
+              <p>Do not import content that is illegal in your country.</p>
+              <p>Do not import content that is against the used provider's Terms of Service.</p>
+              <p>Toxen is not responsible for any content you import.</p>
+              <br />
+              <p>Using this feature will download a program called <ExternalUrl href="https://github.com/yt-dlp/yt-dlp"><code>yt-dlp</code></ExternalUrl> and <ExternalUrl href="https://ffmpeg.org/"><code>ffmpeg</code></ExternalUrl> to your system.</p>
+              <p>These programs are used to download and convert the content you import so Toxen can play it.</p>
+              <p>By clicking "I understand", you agree to the above.</p>
+              <Button color="green" onClick={() => setAcceptedResponsibility(true)}>I understand</Button>
+              <Button color="red" onClick={() => setModalOpen(false)}>Cancel</Button>
+            </div>
+          </Modal>
+        )
+      }
     </>
   )
 }
@@ -123,18 +153,18 @@ function Video(props: { video: Ytdlp.VideoInfo }) {
           console.log(
             `\n${p.percent}% Downloaded\n`
           );
-          
+
         });
         setImporting(false);
         setImported(true);
       }} loading={importing} disabled={importing || imported} >
-        {
-          progress > 0 && progress < 100 ?
-            <Progress value={progress} size="xs" style={{ width: "100%" }} />
-            : null
-        }
-        {importing ? "Importing..." : imported ? "Imported" : "Import"}
+        {progress === 100 && !imported ? "Converting..." : importing ? "Importing..." : imported ? "Imported" : "Import"}
       </Button>
+      {
+        progress > 0 && progress < 100 ?
+          <Progress value={progress} size="xs" style={{ width: "100%" }} />
+          : null
+      }
     </div>
   )
 }

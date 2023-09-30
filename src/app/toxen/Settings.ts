@@ -97,7 +97,8 @@ export default class Settings {
       shuffle: false,
       visualizerRainbowMode: false,
       pauseWithClick: true,
-      visualizerPulseBackground: false
+      visualizerPulseBackground: false,
+      acceptedResponsibility: false,
     };
 
     let toUse: Partial<ISettings> = {};
@@ -325,6 +326,9 @@ export interface ISettings {
   hueUsername: string;
   hueClientkey: string;
   hueEntertainmentAreaId: string;
+
+  // Media downloader
+  acceptedResponsibility: boolean;
 }
 
 export enum VisualizerStyle {

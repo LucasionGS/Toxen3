@@ -4,6 +4,8 @@ import fs from "fs";
 import os from "os";
 import { Toxen } from "../ToxenApp";
 import System, { ToxenFile } from "./System";
+import {  } from "@mantine/modals";
+import { useModals } from "@mantine/modals";
 
 namespace Ytdlp {
   export const ytdlpPath = Settings.toxenDataPath + (os.platform() === "win32" ? "/ytdlp.exe" : "/ytdlp");
@@ -12,11 +14,18 @@ namespace Ytdlp {
     return fs.existsSync(ytdlpPath);
   }
 
-  export async function installYtdlp(): Promise<boolean> {
+  export async function installYtdlp(force = false): Promise<boolean> {
     return Promise.resolve().then(async () => {
-      if (isYtdlpInstalled()) return true;
+      if (!force && isYtdlpInstalled()) return true;
       Toxen.log("Downloading ytdlp...", 2000);
       try {
+
+        if (!force) {
+          
+        }
+        // Confirm responsibility
+        
+        if (fs.existsSync(ytdlpPath)) fs.unlinkSync(ytdlpPath);
         await YTDlpWrap.downloadFromGithub(ytdlpPath);
         await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait for the file to be written
         return true;
@@ -29,7 +38,10 @@ namespace Ytdlp {
 
   export async function getYtdlp(): Promise<YTDlpWrap> {
     if (!isYtdlpInstalled()) await installYtdlp();
-    return new YTDlpWrap(ytdlpPath);
+    // Check version
+    const ytd = new YTDlpWrap(ytdlpPath);
+    
+    return ytd;
   }
 
   export interface VideoInfo {
@@ -55,11 +67,11 @@ namespace Ytdlp {
       const ytdlp = await getYtdlp();
       // Download audio only in mp3 format
       const eightRandomChars = Math.random().toString(36).substring(2, 10);
-      const tmpAudioOutput = os.tmpdir() + "/" + eightRandomChars + ".mp3";
+      const tmpAudioOutput = `${os.tmpdir()}/${eightRandomChars}.mp3`;
       const thumbnail = videoInfo.thumbnail.split("/").pop().split("?")[0];
-      const tmpBackgroundOutput = os.tmpdir() + "/" + thumbnail;
+      const tmpBackgroundOutput = `${os.tmpdir()}/${eightRandomChars}_${thumbnail}`;
 
-      await fetch(videoInfo.thumbnail).then((res) => {
+      await fetch(videoInfo.thumbnail).then(async (res) => {
         const dest = fs.createWriteStream(tmpBackgroundOutput);
         return res.blob().then(async (blob) => {
           dest.write(Buffer.from(await blob.arrayBuffer()));
@@ -80,7 +92,7 @@ namespace Ytdlp {
           "--output",
           tmpAudioOutput,
         ]
-      ).on('progress', (progress) => {
+      ).on("progress", (progress) => {
         if (onProgress) onProgress(progress);
         else {
           console.log(
@@ -90,16 +102,15 @@ namespace Ytdlp {
             progress.eta
           );
         }
-      }).on('ytDlpEvent', (eventType, eventData) =>
+      }).on("ytDlpEvent", (eventType, eventData) =>
         console.log(eventType, eventData)
-      ).on('error',
+      ).on("error",
         (error) => reject(console.error(error))
-      ).on('close',
+      ).on("close",
         async () => {
-          console.log('all done')
           await System.handleImportedFiles([
             {
-              name: videoInfo.filename.includes(" - ") ? videoInfo.filename : videoInfo.uploader + " - " + videoInfo.title + ".mp3",
+              name: videoInfo.filename.includes(" - ") ? videoInfo.filename.replace(/\.[a-zA-Z0-9]+$/, ".mp3") : (videoInfo.uploader + " - " + videoInfo.title + ".mp3"),
               path: tmpAudioOutput,
             }
           ]);
@@ -112,6 +123,8 @@ namespace Ytdlp {
             }
           ]);
 
+          if (fs.existsSync(tmpAudioOutput)) fs.unlinkSync(tmpAudioOutput);
+          if (fs.existsSync(tmpBackgroundOutput)) fs.unlinkSync(tmpBackgroundOutput);
           resolve();
         }
       );

@@ -58,6 +58,8 @@ import User from "./toxen/User";
 import { IconLayoutNavbarExpand } from "@tabler/icons";
 import HueManager from "./toxen/philipshue/HueManager";
 import ImportPanel from "./components/Sidepanel/Panels/ImportPanel/ImportPanel";
+import YTDlpWrap from "yt-dlp-wrap";
+import Ytdlp from "./toxen/Ytdlp";
 
 declare const SUBTITLE_CREATOR_WEBPACK_ENTRY: any;
 
@@ -712,6 +714,21 @@ export default class ToxenAppRenderer extends React.Component {
         if (Settings.get("discordPresence")) Toxen.discord.connect().then(() => {
           Toxen.discord.setPresence();
         });
+
+        if (Ytdlp.isYtdlpInstalled()) {
+          const ytd = new YTDlpWrap(Ytdlp.ytdlpPath);
+          await ytd.getVersion().then(async (version) => {
+            console.log("ytdlp version:", version);
+            const latest = (await YTDlpWrap.getGithubReleases()).pop()?.tag_name;
+            console.log("ytdlp latest:", latest);
+            if (latest?.trim() !== version?.trim()) {
+              Toxen.warn("Media Downloader is outdated. Updating...", 2500);
+              await Ytdlp.installYtdlp(true);
+              Toxen.log("Media Downloader updated.", 2500);
+            }
+          });
+        }
+        
       }).then(() => Toxen._resolveWhenReady());
   }
 

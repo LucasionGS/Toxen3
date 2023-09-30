@@ -1105,6 +1105,7 @@ export default class Song implements ISong {
   }
 
   public static async importSong(file: File | ToxenFile): Promise<Result<Song>> {
+    const ensureValidName = (path: string) => path.replace(/[^:\\\/a-z0-9\(\)\[\]\{\}\.\-\_\s]/gi, "_");
     return Promise.resolve().then(async () => {
       let supported = Toxen.getSupportedMediaFiles();
       if (!supported.some(s => Path.extname(file.name) === s)) return new Failure(file.name + " isn't a valid file");
@@ -1112,13 +1113,17 @@ export default class Song implements ISong {
       let libDir = Settings.get("libraryDirectory");
       let nameNoExt = Converter.trimChar(Path.basename(file.name, Path.extname(file.name)), ".");
       let newFolder = Path.resolve(libDir, nameNoExt);
+
+      // Validate folder name
+      newFolder = ensureValidName(newFolder);
+      
       let increment = 0;
       while (await System.pathExists(newFolder)) {
         newFolder = Path.resolve(libDir, nameNoExt + ` (${++increment})`);
       }
 
       await fsp.mkdir(newFolder, { recursive: true });
-      await fsp.copyFile(file.path, Path.resolve(newFolder, file.name));
+      await fsp.copyFile(file.path, ensureValidName(Path.resolve(newFolder, file.name)));
 
       // Build info
       const info = await Song.buildInfo(newFolder);
