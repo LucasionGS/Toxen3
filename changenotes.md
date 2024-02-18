@@ -1,5 +1,7 @@
 <!-- ## Upcoming update / 1.5.2 -->
 <!-- ## Upcoming update / 1.6.1 -->
+## 1.6.1 - 18-02-2024
+- Added song options for Floating title custom text and toggleable underline, as well as margin for side positions.
 ## 1.6.0 - 30-09-2023
 - Added new visualizer: `Waveform`!
 - Added Media Downloader to the import tab. It can be used to download media from Youtube or Soundcloud, and import it to the library.

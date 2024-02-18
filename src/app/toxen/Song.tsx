@@ -59,6 +59,8 @@ export default class Song implements ISong {
   public language: string;
   public subtitleDelay: number;
   public floatingTitle: boolean;
+  public floatingTitleText: string;
+  public floatingTitleUnderline: boolean;
   public floatingTitlePosition: ISong["floatingTitlePosition"];
   public floatingTitleReactive: boolean;
   public floatingTitleOverrideVisualizer: boolean;
@@ -283,6 +285,8 @@ export default class Song implements ISong {
       "language",
       "subtitleDelay",
       "floatingTitle",
+      "floatingTitleText",
+      "floatingTitleUnderline",
       "floatingTitlePosition",
       "floatingTitleReactive",
       "floatingTitleOverrideVisualizer",
@@ -1478,6 +1482,8 @@ export interface ISong {
   subtitleDelay: number;
 
   floatingTitle: boolean;
+  floatingTitleText: string;
+  floatingTitleUnderline: boolean;
   floatingTitlePosition:
   | 'top'
   | 'bottom'

@@ -580,12 +580,13 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
 
     // Add floating title if enabled
     const enabled = Toxen.background.storyboard?.getFloatingTitle();
+    const underline = Toxen.background.storyboard?.getFloatingTitleUnderline();
     const reactive = Toxen.background.storyboard?.getFloatingTitleReactive();
     const overrideVisualizer = Toxen.background.storyboard?.getFloatingTitleOverrideVisualizer();
     const song = Toxen.background.storyboard?.getSong();
     if (enabled && song) {
       let shouldOverride = overrideVisualizer;
-      const title = song.title;
+      const title = Toxen.background.storyboard?.getFloatingTitleText();
       const _fontSize = 48 * (vWidth / 1280);
       const fontSize = MathX.clamp(reactive ? _fontSize + (_fontSize - (_fontSize * this.dynamicDim * 2)) : _fontSize, _fontSize, _fontSize * 2);
       // const font = `${fontSize}px Calibri`;
@@ -602,6 +603,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
 
       const position: TextPosition = Toxen.background.storyboard?.getFloatingTitlePosition() ?? "center";
       const isCenterType = style === VisualizerStyle.Center || style === VisualizerStyle.Waveform;
+      const margin = 16;
       switch (position) {
         default: // Also center
           textX = (vWidth / 2) - (textWidth / 2);
@@ -612,7 +614,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           break;
 
         case "left":
-          textX = 0;
+          textX = margin;
           textY = (vHeight / 2) + (textHeight / 4);
           // boxY = (vHeight / 2) - (textHeight / 2);
 
@@ -620,7 +622,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           break;
 
         case "right":
-          textX = vWidth - textWidth;
+          textX = vWidth - textWidth - margin;
           textY = (vHeight / 2) + (textHeight / 4);
           // boxY = (vHeight / 2) - (textHeight / 2);
 
@@ -644,7 +646,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           break;
 
         case "top-left":
-          textX = 0;
+          textX = margin;
           textY = textHeight;
           // boxY = 0;
 
@@ -652,7 +654,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           break;
 
         case "top-right":
-          textX = vWidth - textWidth;
+          textX = vWidth - textWidth - margin;
           textY = textHeight;
           // boxY = 0;
 
@@ -660,7 +662,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           break;
 
         case "bottom-left":
-          textX = 0;
+          textX = margin;
           textY = vHeight - (textHeight / 2);
           // boxY = vHeight - textHeight;
 
@@ -668,7 +670,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           break;
 
         case "bottom-right":
-          textX = vWidth - textWidth;
+          textX = vWidth - textWidth - margin;
           textY = vHeight - (textHeight / 2);
           // boxY = vHeight - textHeight;
 
@@ -695,13 +697,15 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
 
       this.ctxAlpha(opacity, ctx => {
         ctx.font = font;
-        // Add underline
-        ctx.strokeStyle = fontColor;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(textX, textY + 10);
-        ctx.lineTo(textX + textWidth, textY + 10);
-        ctx.stroke();
+        if (underline) {
+          // Add underline
+          ctx.strokeStyle = fontColor;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(textX, textY + 10);
+          ctx.lineTo(textX + textWidth, textY + 10);
+          ctx.stroke();
+        }
         // Add text
         ctx.fillStyle = fontColor;
         ctx.fillText(title, textX, textY);

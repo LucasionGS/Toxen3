@@ -50,6 +50,8 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
       backgroundDynamicLighting: null,
       background: null,
       floatingTitle: null,
+      floatingTitleText: null,
+      floatingTitleUnderline: null,
       floatingTitleReactive: null,
       floatingTitleOverrideVisualizer: null,
       floatingTitlePosition: null,
@@ -137,6 +139,12 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
   public getFloatingTitle() {
     return this.data.floatingTitle ?? (this.state.song && this.state.song.floatingTitle || false);
   }
+  public getFloatingTitleText() {
+    return this.data.floatingTitleText ?? (this.state.song && this.state.song.floatingTitleText || this.state.song.title);
+  }
+  public getFloatingTitleUnderline() {
+    return this.data.floatingTitleUnderline ?? (this.state.song && this.state.song.floatingTitleUnderline || false);
+  }
   public getFloatingTitleReactive() {
     return this.data.floatingTitleReactive ?? (this.state.song && this.state.song.floatingTitleReactive || false);
   }
@@ -162,6 +170,8 @@ interface StoryboardData {
   backgroundDynamicLighting: boolean;
   background: string;
   floatingTitle: string;
+  floatingTitleText: string;
+  floatingTitleUnderline: boolean;
   floatingTitleReactive: boolean;
   floatingTitleOverrideVisualizer: boolean;
   floatingTitlePosition: ISong["floatingTitlePosition"];

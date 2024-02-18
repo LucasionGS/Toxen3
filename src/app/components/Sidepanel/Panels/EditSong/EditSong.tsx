@@ -299,6 +299,30 @@ export default function EditSong(props: EditSongProps) {
           }}
         />
         <br />
+        <sup>Gives the floating title an underline</sup>
+
+        <TextInput
+          label="Floating Title: Text"
+          name="floatingTitleText"
+          onChange={(v) => Toxen.editingSong.floatingTitleText = v.currentTarget.value}
+          defaultValue={Toxen.editingSong.floatingTitleText}
+          onBlur={() => Toxen.editingSong.saveInfo()}
+          onKeyDown={textInputSaveOnEnter}
+        />
+        <br />
+        <sup>Set the text for the floating title. (Defaults to song title, if empty)</sup>
+
+
+        <Checkbox
+          label="Floating Title: Underline"
+          name="floatingTitleUnderline"
+          defaultChecked={Toxen.editingSong.floatingTitleUnderline}
+          onChange={v => {
+            Toxen.editingSong.floatingTitleUnderline = v.currentTarget.checked;
+            Toxen.editingSong.saveInfo();
+          }}
+        />
+        <br />
         <sup>Enables the floating title for this song.</sup>
         
         <Select
@@ -313,7 +337,7 @@ export default function EditSong(props: EditSongProps) {
             { label: "Bottom left", value: "bottom-left" },
             { label: "Bottom right", value: "bottom-right" },
           ]}
-          label="Floating Title Position"
+          label="Floating Title: Position"
           name="floatingTitlePosition"
           defaultValue={Toxen.editingSong.floatingTitlePosition}
           onChange={v => {
@@ -325,7 +349,7 @@ export default function EditSong(props: EditSongProps) {
         <sup>Set the position of the floating title.</sup>
 
         <Checkbox
-          label="Floating Title Reactive"
+          label="Floating Title: Reactive"
           name="floatingTitleReactive"
           defaultChecked={Toxen.editingSong.floatingTitleReactive}
           onChange={v => {
@@ -337,7 +361,7 @@ export default function EditSong(props: EditSongProps) {
         <sup>Enables the floating title to react to the music.</sup>
 
         <Checkbox
-          label="Floating Title Override Visualizer"
+          label="Floating Title: Override Visualizer"
           name="floatingTitleOverrideVisualizer"
           defaultChecked={Toxen.editingSong.floatingTitleOverrideVisualizer}
           onChange={v => {
