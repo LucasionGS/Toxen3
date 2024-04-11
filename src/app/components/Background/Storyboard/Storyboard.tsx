@@ -140,6 +140,7 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
     return this.data.floatingTitle ?? (this.state.song && this.state.song.floatingTitle || false);
   }
   public getFloatingTitleText() {
+    // return Toxen.subtitles.state.currentText ? stripHtml(Toxen.subtitles.state.currentText) : (this.data.floatingTitleText ?? (this.state.song && this.state.song.floatingTitleText || this.state.song.title));
     return this.data.floatingTitleText ?? (this.state.song && this.state.song.floatingTitleText || this.state.song.title);
   }
   public getFloatingTitleUnderline() {
@@ -175,4 +176,11 @@ interface StoryboardData {
   floatingTitleReactive: boolean;
   floatingTitleOverrideVisualizer: boolean;
   floatingTitlePosition: ISong["floatingTitlePosition"];
+}
+
+function stripHtml(html: string)
+{
+   let tmp = document.createElement("div");
+   tmp.innerHTML = html;
+   return tmp.textContent || tmp.innerText || "";
 }
