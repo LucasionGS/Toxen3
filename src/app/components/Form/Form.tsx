@@ -8,6 +8,7 @@ interface Props {
   onSubmit: (event: React.FormEvent<HTMLFormElement>, formValues: { [key: string]: FormValue }) => void,
   saveButtonText?: string;
   hideSubmit?: boolean;
+  children?: React.ReactNode;
 }
 
 export default class Form extends Component<Props> {

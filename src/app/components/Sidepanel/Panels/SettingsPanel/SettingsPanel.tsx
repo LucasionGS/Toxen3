@@ -1,5 +1,5 @@
 import { Checkbox, Tabs, TextInput, NumberInput, Select, Button, ColorInput, RangeSlider, Slider, Text } from "@mantine/core";
-import { remote } from "electron";
+import * as remote from "@electron/remote";
 import type { EntertainmentArea } from "hue-sync";
 import React, { useEffect } from "react";
 import Converter from "../../../../toxen/Converter";
@@ -21,13 +21,37 @@ export default function SettingsPanel(props: SettingsPanelProps) {
   return (
     <>
       <h1>Settings</h1>
-      <Tabs onTabChange={(index, key) => window.localStorage.setItem("settings-tab-index", index.toString())} initialTab={parseInt(window.localStorage.getItem("settings-tab-index") ?? "0")}>
-        <Tabs.Tab title="General" label="General">
+      <Tabs onChange={(key) => window.localStorage.setItem("settings-tab-index", key)} defaultValue={window.localStorage.getItem("settings-tab-index") || "general"}>
+        <Tabs.List>
+          <Tabs.Tab value="General">
+            General
+          </Tabs.Tab>
+          <Tabs.Tab value="Sidepanel">
+            Sidepanel
+          </Tabs.Tab>
+          <Tabs.Tab value="Controls">
+            Controls
+          </Tabs.Tab>
+          <Tabs.Tab value="Window">
+            Window
+          </Tabs.Tab>
+          <Tabs.Tab value="Visuals">
+            Visuals
+          </Tabs.Tab>
+          <Tabs.Tab value="Account">
+            Account
+          </Tabs.Tab>
+          <Tabs.Tab value="Advanced">
+            Advanced
+          </Tabs.Tab>
+        </Tabs.List>
+        <Tabs.Panel value="General">
           <h2>General</h2>
           {(() => {
             return (
               <>
                 <Select
+                  allowDeselect={false}
                   onChange={(value) => Settings.apply({ isRemote: value === "local" ? false : true }, true)}
                   defaultValue={Settings.get("isRemote") ? "remote" : "local"}
                   name="isRemote"
@@ -45,7 +69,7 @@ export default function SettingsPanel(props: SettingsPanelProps) {
                 />
 
                 <Button
-                  leftIcon={<i className="fas fa-folder" />}
+                  leftSection={<i className="fas fa-folder" />}
                   onClick={() => {
                     // e.preventDefault();
                     let value = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
@@ -68,7 +92,7 @@ export default function SettingsPanel(props: SettingsPanelProps) {
                   }}>
                   &nbsp;Change Music Folder
                 </Button>
-                <Button leftIcon={<i className="fas fa-folder-open" />} onClick={() => remote.shell.openPath(Settings.get("libraryDirectory"))}>
+                <Button leftSection={<i className="fas fa-folder-open" />} onClick={() => remote.shell.openPath(Settings.get("libraryDirectory"))}>
                   &nbsp;Open Music Folder
                 </Button>
                 <br />
@@ -79,9 +103,9 @@ export default function SettingsPanel(props: SettingsPanelProps) {
               </>
             );
           })()}
-        </Tabs.Tab>
+        </Tabs.Panel>
 
-        <Tabs.Tab title="Sidepanel" label="Sidepanel">
+        <Tabs.Panel value="Sidepanel">
           <h2>Sidepanel</h2>
           <Checkbox onClick={(e) => Settings.apply({ panelVerticalTransition: e.currentTarget.checked }, true)} defaultChecked={Settings.get("panelVerticalTransition")} name="panelVerticalTransition" label="Vertical Transition" />
           <br />
@@ -92,6 +116,7 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           <sup>Exposes the icons when the panel is hidden. Only applies when Vertical Transition is off.</sup>
 
           <Select
+            allowDeselect={false}
             onChange={(value) => Settings.apply({ panelDirection: value as PanelDirection }, true)}
             defaultValue={Settings.get("panelDirection")}
             name="panelDirection"
@@ -128,12 +153,12 @@ export default function SettingsPanel(props: SettingsPanelProps) {
               <>
                 <TextInput disabled onClick={callback} value={bg} name="sidepanelBackground" label="Sidepanel Background" />
                 <Button
-                  leftIcon={<i className="fas fa-folder" />}
+                  leftSection={<i className="fas fa-folder" />}
                   onClick={callback}>
                   Change background
                 </Button>
                 <Button
-                  leftIcon={<i className="fas fa-sync-alt" />}
+                  leftSection={<i className="fas fa-sync-alt" />}
                   color="red"
                   onClick={() => {
                     Settings.apply({ sidepanelBackground: null }, true);
@@ -150,23 +175,23 @@ export default function SettingsPanel(props: SettingsPanelProps) {
               </>
             );
           })()}
-        </Tabs.Tab>
+        </Tabs.Panel>
 
-        <Tabs.Tab title="Controls" label="Controls">
+        <Tabs.Panel value="Controls">
           <h2>Controls</h2>
           <Checkbox onClick={(e) => Settings.apply({ pauseWithClick: e.currentTarget.checked }, true)} defaultChecked={Settings.get("pauseWithClick")} name="pauseWithClick" label="Pause With Click" />
           <br />
           <sup>Pauses/Plays the song when you click on the background.</sup>
-        </Tabs.Tab>
+        </Tabs.Panel>
 
-        <Tabs.Tab title="Window" label="Window">
+        <Tabs.Panel value="Window">
           <h2>Window</h2>
           <Checkbox onClick={(e) => Settings.apply({ restoreWindowSize: e.currentTarget.checked }, true)} defaultChecked={Settings.get("restoreWindowSize")} name="restoreWindowSize" label="Restore Window Size On Startup" />
           <br />
           <sup>Saves and restores the window size from last session.</sup>
-        </Tabs.Tab>
+        </Tabs.Panel>
 
-        <Tabs.Tab title="Visuals" label="Visuals">
+        <Tabs.Panel value="Visuals">
           <h2>Visuals</h2>
 
           {/* Edit theme button */}
@@ -176,6 +201,7 @@ export default function SettingsPanel(props: SettingsPanelProps) {
               <>
 
                 <Select
+                  allowDeselect={false}
                   onChange={(value) => {
                     Toxen.setThemeByName(value as string);
                   }}
@@ -195,10 +221,10 @@ export default function SettingsPanel(props: SettingsPanelProps) {
                 />
                 <br />
                 <sup>Select the theme you want to use.</sup>
-                <Button leftIcon={<i className="fas fa-paint-brush" />} ref={btn} disabled={!Toxen.theme || true} onClick={() => {
+                <Button leftSection={<i className="fas fa-paint-brush" />} ref={btn} disabled={!Toxen.theme || true} onClick={() => {
                   Toxen.setMode("ThemeEditor");
                 }}>Edit Theme</Button>
-                <Button leftIcon={<i className="fas fa-paint-brush" />} onClick={() => {
+                <Button leftSection={<i className="fas fa-paint-brush" />} onClick={() => {
                   // e.preventDefault();
                   Toxen.loadThemes();
                 }}>Reload Theme</Button>
@@ -225,7 +251,7 @@ export default function SettingsPanel(props: SettingsPanelProps) {
             return (
               <>
                 <TextInput disabled onClick={callback} value={bg} name="defaultBackground" label="Default Background" />
-                <Button leftIcon={<i className="fas fa-folder" />} onClick={callback}>
+                <Button leftSection={<i className="fas fa-folder" />} onClick={callback}>
                   Change default background
                 </Button>
                 <br />
@@ -298,6 +324,7 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           </sup>
           <br />
           <Select
+            allowDeselect={false}
             onChange={(value) => {
               Settings.apply({ visualizerStyle: value as VisualizerStyle }, true);
             }}
@@ -318,13 +345,13 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           <br />
           <sup>Select which style for the visualizer to use.</sup>
           <br />
-        </Tabs.Tab>
+        </Tabs.Panel>
 
-        {/* <Tabs.Tab title="Account" label="Account">
+        {/* <Tabs.Panel value="Account">
           <LoginForm />
-        </Tabs.Tab> */}
+        </Tabs.Panel> */}
 
-        <Tabs.Tab title="Advanced" label="Advanced">
+        <Tabs.Panel value="Advanced">
           <h2>Advanced settings</h2>
           <Checkbox onClick={(e) => Settings.apply({ showAdvancedSettings: e.currentTarget.checked }, true)} defaultChecked={Settings.get("showAdvancedSettings")} name="showAdvancedSettings" label="Show Advanced UI" />
           <br />
@@ -362,7 +389,7 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           <br />
           {/* Hue Settings */}
           <HueSettings />
-        </Tabs.Tab>
+        </Tabs.Panel>
       </Tabs>
     </>
   )

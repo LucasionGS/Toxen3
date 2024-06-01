@@ -1,4 +1,5 @@
-const ffmpeg: typeof import("fluent-ffmpeg") = require("fluent-ffmpeg/lib/fluent-ffmpeg");
+// const ffmpeg: typeof import("fluent-ffmpeg") = require("fluent-ffmpeg/lib/fluent-ffmpeg");
+import ffmpeg from "fluent-ffmpeg"; // TEST: Unsure if this works?
 import { Toxen } from "../ToxenApp";
 import Settings from "./Settings";
 import fs from "fs";
@@ -15,7 +16,7 @@ namespace Ffmpeg {
   }
 
   // Source: https://github.com/BtbN/FFmpeg-Builds
-  const downloadLocations = {
+  const downloadLocations: Record<NodeJS.Platform, string> = {
     aix: "",
     android: "",
     darwin: "",
@@ -26,13 +27,14 @@ namespace Ffmpeg {
     win32: "https://dl.toxen.net/tools/ffmpeg.zip",
     cygwin: "",
     netbsd: "",
+    haiku: "",
   }
 
   export async function installFFmpeg(): Promise<boolean> {
     return Promise.resolve().then(async () => {
       if (isFFmpegInstalled()) return true;
       Toxen.log("Downloading FFmpeg...", 2000);
-      const url = downloadLocations[os.platform()];
+      const url = downloadLocations[os.platform()] ?? null;
       if (!url) {
         Toxen.error("FFmpeg is not supported on this platform.", 5000);
         return false;

@@ -1,5 +1,5 @@
 import { Button, Group, Image, Modal, Progress, TextInput } from '@mantine/core';
-import { remote } from 'electron';
+import * as remote from "@electron/remote";
 import React from 'react'
 import System, { ToxenFile } from '../../../../toxen/System';
 import { Toxen } from '../../../../ToxenApp';
@@ -13,7 +13,7 @@ export default function ImportPanel() {
     <div>
       <h1>Import music</h1>
       <Button
-        leftIcon={<i className="fas fa-file-import"></i>}
+        leftSection={<i className="fas fa-file-import"></i>}
         onClick={() => {
           let paths = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
             properties: [
@@ -61,7 +61,7 @@ function ImportOnlineMedia() {
   return (
     <>
       <Button
-        leftIcon={<i className="fas fa-file-import"></i>}
+        leftSection={<i className="fas fa-file-import"></i>}
         onClick={() => {
           setModalOpen(true);
         }}

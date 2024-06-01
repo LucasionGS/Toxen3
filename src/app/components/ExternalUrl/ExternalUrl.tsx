@@ -1,4 +1,4 @@
-import { remote } from 'electron';
+import * as remote from "@electron/remote";
 import React from 'react'
 import Settings from '../../toxen/Settings';
 import { Toxen } from '../../ToxenApp';

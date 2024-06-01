@@ -3,7 +3,7 @@ import { Toxen } from '../../ToxenApp';
 import Song from '../../toxen/Song';
 import { Button } from '@mantine/core';
 import Settings from '../../toxen/Settings';
-import { remote } from "electron";
+import * as remote from "@electron/remote";
 import User from '../../toxen/User';
 
 interface SongPanelProps {
@@ -51,7 +51,7 @@ export default class SongPanel extends Component<SongPanelProps, SongPanelState>
     return (
       <>
         {Toxen.playlist ? <>Playlist: <code>{Toxen.playlist.name}</code><br /></> : ""}
-        {songs.map(s => s.Element())}
+        {songs.map(s => s.Element(s.dirname()))}
       </>
     );
   }

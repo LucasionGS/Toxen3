@@ -1,12 +1,17 @@
 import { app, BrowserWindow, nativeImage, protocol } from 'electron';
-import updateElectronApp from "update-electron-app";
+import Path from "path";
+import { updateElectronApp} from "update-electron-app";
+import remote from '@electron/remote/main';
+remote.initialize();
+
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; // Hue bullshit
 app.commandLine.appendSwitch('ignore-certificate-errors');
 
 updateElectronApp({
   repo: "LucasionGS/Toxen3"
 });
-declare const MAIN_WINDOW_WEBPACK_ENTRY: any;
+declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
+declare const MAIN_WINDOW_VITE_NAME: string;
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) { // eslint-disable-line global-require
@@ -22,7 +27,7 @@ const createWindow = (): void => {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      enableRemoteModule: true,
+      // enableRemoteModule: true,
       webSecurity: false,
     },
     autoHideMenuBar: true,
@@ -31,12 +36,19 @@ const createWindow = (): void => {
     icon: "./src/icons/tox.ico",
     darkTheme: true,
   });
+  remote.enable(mainWindow.webContents);
 
+  mainWindow.webContents.openDevTools();
+  
   console.log(process.cwd());
   
 
   // and load the index.html of the app.
-  mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
+  if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+    mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
+  } else {
+    mainWindow.loadFile(Path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
+  };
 
   // Open the DevTools.
   // mainWindow.webContents.openDevTools();

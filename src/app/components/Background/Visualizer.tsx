@@ -4,7 +4,7 @@ import { Toxen } from '../../ToxenApp';
 import Path from "path";
 import "./Visualizer.scss";
 import System from '../../toxen/System';
-//@ts-expect-error 
+// @ts-expect-error 
 import txnLogo from "../../../icons/toxen.png";
 import { hexToRgb, rgbToHex } from '../Form/FormInputFields/FormInputColorPicker';
 import StoryboardParser from '../../toxen/StoryboardParser';

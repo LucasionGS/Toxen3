@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom";
-import { remote } from "electron";
+import ReactDOMClient from "react-dom/client";
+import { getCurrentWindow } from "@electron/remote";
 import ToxenAppRenderer, { Toxen } from "./app/ToxenApp";
 import "@fortawesome/fontawesome-free/js/all"; // Import FA
 import "@fortawesome/fontawesome-free/scss/regular.scss";
@@ -12,163 +13,187 @@ import Stats from "./app/toxen/Statistics";
 // import navigator from "./navigator";
 import User from "./app/toxen/User";
 import { MantineProvider } from "@mantine/core";
-import { NotificationsProvider } from "@mantine/notifications";
+import {  } from "@mantine/notifications";
 import { ModalsProvider } from "@mantine/modals";
+import { app, Menu } from "@electron/remote";
+
+// console.log("Toxen is running in development mode.");
+// console.log(app);
+// console.log(Menu);
+
+
+app.whenReady().then(() => {
+  // Setup
+  // Create menu actions/shortcuts
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate([
+      {
+        label: "Toxen",
+        submenu: [
+          {
+            label: "Toggle Menu",
+            accelerator: "ESC",
+            click() {
+              Toxen.sidePanel.show();
+              (document.activeElement as any)?.blur();
+            }
+          },
+          {
+            label: "Open Music",
+            accelerator: "CTRL + M",
+            click() {
+              if (Toxen.isMode("Player")) {
+                Toxen.sidePanel.show(true);
+                Toxen.sidePanel.setSectionId("songPanel");
+                (document.activeElement as any)?.blur();
+              }
+            }
+          },
+          {
+            label: "Open Playlists",
+            accelerator: "CTRL + P",
+            click() {
+              if (Toxen.isMode("Player")) {
+                Toxen.sidePanel.show(true);
+                Toxen.sidePanel.setSectionId("playlist");
+                (document.activeElement as any)?.blur();
+              }
+            }
+          },
+          {
+            label: "Open Settings",
+            accelerator: "CTRL + S",
+            click() {
+              if (Toxen.isMode("Player")) {
+                Toxen.sidePanel.show(true);
+                Toxen.sidePanel.setSectionId("settings");
+                (document.activeElement as any)?.blur();
+              }
+            }
+          },
+          {
+            label: "Edit current song",
+            accelerator: "CTRL + E",
+            click() {
+              if (Toxen.isMode("Player")) Toxen.editSong(Song.getCurrent());
+            }
+          },
+          {
+            label: "Toggle pause",
+            accelerator: "Space",
+            click(mi, win, e) {
+              switch (document.activeElement.tagName) {
+                // Exceptions
+                case "INPUT":
+                case "TEXTAREA":
+                case "SELECT":
+                case "BUTTON":
+                  break;
+
+                default: // Run toggling.
+                  Toxen.musicPlayer.toggle();
+                  break;
+              }
+            }
+          },
+          {
+            type: "separator"
+          },
+          {
+            label: "Reload Theme",
+            accelerator: "CTRL + SHIFT + T",
+            click() {
+              Toxen.loadThemes();
+              Toxen.notify({
+                content: "Themes reloaded",
+                expiresIn: 1000
+              });
+            }
+          },
+          {
+            label: "Reload Storyboard",
+            accelerator: "CTRL + SHIFT + S",
+            click() {
+              Song.getCurrent()?.applyStoryboard();
+              Toxen.notify({
+                content: "Storyboard reloaded",
+                expiresIn: 1000
+              });
+            }
+          }
+        ]
+      },
+      {
+        label: "Window",
+        submenu: [
+          {
+            label: "Reload",
+            accelerator: "CTRL + R",
+            click() {
+              getCurrentWindow().reload();
+            }
+          },
+          {
+            label: "Full screen",
+            accelerator: "F11",
+            click() {
+              Toxen.toggleFullscreen();
+            }
+          },
+          {
+            label: "Toggle Miniplayer",
+            accelerator: "CTRL + F11",
+            click() {
+              Toxen.toggleMiniplayer();
+            }
+          },
+        ]
+      },
+      {
+        label: "Tools",
+        submenu: [
+          {
+            label: "Subtitle Editor" + (app.isPackaged ? " (Coming soon)" : " (Development Only)"),
+            // accelerator: "F10",
+            click() {
+              Toxen.openSubtitleCreator(Song.getCurrent())
+            },
+            enabled: !app.isPackaged
+          },
+          {
+            type: "separator"
+          },
+          {
+            label: "Developer Console",
+            accelerator: "F12",
+            click() {
+              let win = getCurrentWindow();
+              win.webContents.isDevToolsOpened() ? win.webContents.closeDevTools() : win.webContents.openDevTools();
+            }
+          }
+        ]
+      }
+    ])
+  );
+
+
+  
+  // Render app
+  // ReactDOM.render(toxenApp, document.querySelector("app-root"));
+  const root = ReactDOMClient.createRoot(document.querySelector("app-root"));
+  root.render(
+    <MantineProvider forceColorScheme="dark">
+      {/* <Notifications> */}
+        <ModalsProvider>
+          <ToxenAppRenderer />
+        </ModalsProvider>
+      {/* </Notifications> */}
+    </MantineProvider>
+    // <ToxenAppRenderer />
+  );
+});
 
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; // Hue bullshit
-
-// Setup
-// Create menu actions/shortcuts
-remote.Menu.setApplicationMenu(
-  remote.Menu.buildFromTemplate([
-    {
-      label: "Toxen",
-      submenu: [
-        {
-          label: "Toggle Menu",
-          accelerator: "ESC",
-          click() {
-            Toxen.sidePanel.show();
-            (document.activeElement as any)?.blur();
-          }
-        },
-        {
-          label: "Open Music",
-          accelerator: "CTRL + M",
-          click() {
-            if (Toxen.isMode("Player")) {
-              Toxen.sidePanel.show(true);
-              Toxen.sidePanel.setSectionId("songPanel");
-              (document.activeElement as any)?.blur();
-            }
-          }
-        },
-        {
-          label: "Open Playlists",
-          accelerator: "CTRL + P",
-          click() {
-            if (Toxen.isMode("Player")) {
-              Toxen.sidePanel.show(true);
-              Toxen.sidePanel.setSectionId("playlist");
-              (document.activeElement as any)?.blur();
-            }
-          }
-        },
-        {
-          label: "Open Settings",
-          accelerator: "CTRL + S",
-          click() {
-            if (Toxen.isMode("Player")) {
-              Toxen.sidePanel.show(true);
-              Toxen.sidePanel.setSectionId("settings");
-              (document.activeElement as any)?.blur();
-            }
-          }
-        },
-        {
-          label: "Edit current song",
-          accelerator: "CTRL + E",
-          click() {
-            if (Toxen.isMode("Player")) Toxen.editSong(Song.getCurrent());
-          }
-        },
-        {
-          label: "Toggle pause",
-          accelerator: "Space",
-          click(mi, win, e) {
-            switch (document.activeElement.tagName) {
-              // Exceptions
-              case "INPUT":
-              case "TEXTAREA":
-              case "SELECT":
-              case "BUTTON":
-                break;
-
-              default: // Run toggling.
-                Toxen.musicPlayer.toggle();
-                break;
-            }
-          }
-        },
-        {
-          type: "separator"
-        },
-        {
-          label: "Reload Theme",
-          accelerator: "CTRL + SHIFT + T",
-          click() {
-            Toxen.loadThemes();
-            Toxen.notify({
-              content: "Themes reloaded",
-              expiresIn: 1000
-            });
-          }
-        },
-        {
-          label: "Reload Storyboard",
-          accelerator: "CTRL + SHIFT + S",
-          click() {
-            Song.getCurrent()?.applyStoryboard();
-            Toxen.notify({
-              content: "Storyboard reloaded",
-              expiresIn: 1000
-            });
-          }
-        }
-      ]
-    },
-    {
-      label: "Window",
-      submenu: [
-        {
-          label: "Reload",
-          accelerator: "CTRL + R",
-          click() {
-            remote.getCurrentWindow().reload();
-          }
-        },
-        {
-          label: "Full screen",
-          accelerator: "F11",
-          click() {
-            Toxen.toggleFullscreen();
-          }
-        },
-        {
-          label: "Toggle Miniplayer",
-          accelerator: "CTRL + F11",
-          click() {
-            Toxen.toggleMiniplayer();
-          }
-        },
-      ]
-    },
-    {
-      label: "Tools",
-      submenu: [
-        {
-          label: "Subtitle Editor" + (remote.app.isPackaged ? " (Coming soon)" : " (Development Only)"),
-          // accelerator: "F10",
-          click() {
-            Toxen.openSubtitleCreator(Song.getCurrent())
-          },
-          enabled: !remote.app.isPackaged
-        },
-        {
-          type: "separator"
-        },
-        {
-          label: "Developer Console",
-          accelerator: "F12",
-          click() {
-            let win = remote.getCurrentWindow();
-            win.webContents.isDevToolsOpened() ? win.webContents.closeDevTools() : win.webContents.openDevTools();
-          }
-        }
-      ]
-    }
-  ])
-);
 
 //#region Background tasks
 // Inactivity functionality
@@ -227,20 +252,3 @@ Toxen.whenReady().then(async () => {
 });
 
 //#endregion
-
-// Render app
-const toxenApp = (
-  <MantineProvider theme={{
-    colorScheme: "dark",
-    colors: {
-      white: ["fff000"],
-    }
-  }}>
-    <NotificationsProvider>
-      <ModalsProvider>
-        <ToxenAppRenderer />
-      </ModalsProvider>
-    </NotificationsProvider>
-  </MantineProvider>
-);
-ReactDOM.render(toxenApp, document.querySelector("app-root"));

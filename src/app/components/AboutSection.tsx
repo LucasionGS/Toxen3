@@ -1,4 +1,4 @@
-import { remote } from 'electron';
+import * as remote from "@electron/remote";
 import React, { useEffect, useState } from 'react'
 import Stats from '../toxen/Statistics';
 import Time from '../toxen/Time';
@@ -15,15 +15,22 @@ export default function AboutSection() {
       {/* <SidepanelSectionHeader>
       </SidepanelSectionHeader> */}
       <h1>Toxen About {"&"} Statistics</h1>
-      <Tabs>
-        <Tabs.Tab title="Statistics" label="Statistics">
+      <Tabs defaultValue="Statistics">
+        <Tabs.List>
+          <Tabs.Tab value="Statistics">Statistics</Tabs.Tab>
+          <Tabs.Tab value="Technical Details">Technical Details</Tabs.Tab>
+          <Tabs.Tab value="Credits">Credits</Tabs.Tab>
+          <Tabs.Tab value="Dependencies">Dependencies</Tabs.Tab>
+        </Tabs.List>
+        
+        <Tabs.Panel value="Statistics">
           <h2>Statistics</h2>
           <p>Toxen launched {Stats.get("timesOpened")} times</p>
           <p>{Toxen.songList.length} total songs</p>
           <p>{Stats.get("songsPlayed")} songs played</p>
           <TimePlayed />
-        </Tabs.Tab>
-        <Tabs.Tab title="Technical Details" label="Technical Details">
+        </Tabs.Panel>
+        <Tabs.Panel value="Technical Details">
           <h2>Technical Details</h2>
           {
             [
@@ -36,14 +43,14 @@ export default function AboutSection() {
 
           Toxen is an open source project.
           You can find the source code on <ExternalUrl href="https://github.com/LucasionGS/Toxen3">GitHub</ExternalUrl>.
-        </Tabs.Tab>
-        <Tabs.Tab title="Credits" label="Credits">
+        </Tabs.Panel>
+        <Tabs.Panel value="Credits">
           <h2>Credits</h2>
           <p>Developed by <ExternalUrl href="https://github.com/LucasionGS">Lucasion</ExternalUrl></p>
           <p>Toxen logo designed by <ExternalUrl href="https://www.instagram.com/xrutoma">xrutoma</ExternalUrl></p>
-        </Tabs.Tab>
+        </Tabs.Panel>
 
-        <Tabs.Tab title="Dependencies" label="Dependencies">
+        <Tabs.Panel value="Dependencies">
           <h2>Packages used</h2>
           <h3>Dependencies</h3>
           {Object.keys(packageJson.dependencies).map((key, index) => {
@@ -53,7 +60,7 @@ export default function AboutSection() {
           {Object.keys(packageJson.devDependencies).map((key, index) => {
             return <p key={index}>{key}: <code>{(packageJson.devDependencies as any)[key]}</code></p>
           })}
-        </Tabs.Tab>
+        </Tabs.Panel>
       </Tabs>
     </div>
   );

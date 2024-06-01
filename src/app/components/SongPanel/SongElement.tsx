@@ -5,6 +5,7 @@ import "./SongElement.scss";
 import { Group } from '@mantine/core';
 import { useIntersection } from '@mantine/hooks';
 import RenderIfVisible from "react-render-if-visible";
+import { useModals } from '@mantine/modals';
 
 function SongElementDiv(props: { songElement: SongElement }) {
   /// Observer object is cool and all but holy shit it makes this laggy
@@ -20,53 +21,47 @@ function SongElementDiv(props: { songElement: SongElement }) {
   const bgFile = song.backgroundFile();
   if (songElement.state.playing) classes.push("playing");
 
-  const ContextMenu = songElement.ContextMenu.bind(songElement);
-  const contextMenuRef = React.createRef<HTMLDivElement>();
+  // const ContextMenu: typeof songElement.ContextMenu = songElement.ContextMenu.bind(songElement);
+  // const contextMenuRef = React.createRef<HTMLDivElement>();
+  // let setOpened: (opened: boolean) => void;
+  const modals = useModals();
 
   return (
-    <div style={{
-      position: "relative",
-    }} className="song-element-container">
       <div style={{
-        position: "absolute",
-        top: "50%",
-        left: 5,
-        transform: "translateY(-50%)",
-      }} className="song-element-context-menu-button">
-        <ContextMenu cref={contextMenuRef} isSelected={songElement.state.selected} />
-      </div>
-      <div ref={ref => songElement.divElement = ref} className={classes.join(" ")} style={{
-        background: `linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0)) 0% 0% / cover, url("${bgFile.replace(/\\/g, "/")}")`,
+        position: "relative",
+      }} className="song-element-container">
+        <div ref={ref => songElement.divElement = ref} className={classes.join(" ")} style={{
+          background: `linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0)) 0% 0% / cover, url("${bgFile.replace(/\\/g, "/")}")`,
 
-        /// Style if using Observer object
-        // background: observer?.isIntersecting ? `linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0)) 0% 0% / cover, url("${bgFile.replace(/\\/g, "/")}")`: null,
-        // opacity: observer?.isIntersecting ? 1 : 0,
-        // transition: "transform 0.2s ease-in-out, opacity 0.2 ease-in-out",
-        // transform: `translateX(${observer?.isIntersecting ? "0" : "-64"}px)`,
-      }}
-        onClick={e => {
-          if (e.ctrlKey) return songElement.select();
-          songElement.play();
+          /// Style if using Observer object
+          // background: observer?.isIntersecting ? `linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0)) 0% 0% / cover, url("${bgFile.replace(/\\/g, "/")}")`: null,
+          // opacity: observer?.isIntersecting ? 1 : 0,
+          // transition: "transform 0.2s ease-in-out, opacity 0.2 ease-in-out",
+          // transform: `translateX(${observer?.isIntersecting ? "0" : "-64"}px)`,
         }}
-        onContextMenu={e => {
-          e.preventDefault();
-          contextMenuRef.current?.click();
-        }}
-      >
-        <div style={{ // Progress bar
-          position: "absolute",
-          top: 0,
-          left: 0,
-          height: "100%",
-          width: (songElement.state.progressBar * 90) + "%",
-          backgroundColor: "rgba(0, 255, 0, 0.2)",
-          transition: "width 0.2s ease-in-out",
-        }} />
-        <p className="song-title" >
-          {song.getDisplayName()}
-        </p>
+          onClick={e => {
+            if (e.ctrlKey) return songElement.select();
+            songElement.play();
+          }}
+          onContextMenu={e => {
+            e.preventDefault();
+            song.contextMenuModal(modals);
+          }}
+        >
+          <div style={{ // Progress bar
+            position: "absolute",
+            top: 0,
+            left: 0,
+            height: "100%",
+            width: (songElement.state.progressBar * 90) + "%",
+            backgroundColor: "rgba(0, 255, 0, 0.2)",
+            transition: "width 0.2s ease-in-out",
+          }} />
+          <p className="song-title" >
+            {song.getDisplayName()}
+          </p>
+        </div>
       </div>
-    </div>
   )
 }
 
@@ -104,7 +99,7 @@ export default class SongElement extends Component<SongElementProps, SongElement
     this.props.song.play();
   }
 
-  public ContextMenu(props: { cref?: React.RefObject<HTMLDivElement>, isSelected?: boolean }): JSX.Element {
+  public ContextMenu(props: { giveSetOpen: (setOpen: (opened: boolean) => void) => void, isSelected?: boolean, children?: React.ReactNode }): JSX.Element {
     return this.props.song.ContextMenu.call(this.props.song, props);
   }
 

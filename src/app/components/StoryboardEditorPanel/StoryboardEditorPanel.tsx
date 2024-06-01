@@ -6,7 +6,7 @@ import Time from "../../toxen/Time";
 import { Toxen } from "../../ToxenApp";
 import SidepanelSection from "../Sidepanel/SidepanelSection";
 import SidepanelSectionHeader from "../Sidepanel/SidepanelSectionHeader";
-import { IconArrowDownCircle, IconArrowLeftBar, IconArrowRightBar, IconArrowUpCircle, IconPlayerPause, IconPlayerPlay, IconStar } from "@tabler/icons";
+import { IconArrowDownCircle, IconArrowLeftBar, IconArrowRightBar, IconArrowUpCircle, IconPlayerPause, IconPlayerPlay, IconStar } from "@tabler/icons-react";
 import { useClipboard, useForceUpdate } from "@mantine/hooks";
 import { hexToRgbArray, rgbArrayToHex } from "../Form/FormInputFields/FormInputColorPicker";
 import Settings, { VisualizerStyle } from "../../toxen/Settings";
@@ -44,7 +44,7 @@ export default function StoryboardEditorPanel() {
     <>
       <SidepanelSectionHeader>
         <h1>Storyboard Editor</h1>
-        <Group noWrap grow>
+        <Group wrap="nowrap" grow>
           <div>
             <Button color="green" onClick={async () => {
               const saveLocation = song.storyboardFile() || song.dirname("storyboard.tsb");
@@ -83,7 +83,7 @@ export default function StoryboardEditorPanel() {
         </Group>
 
         <hr />
-        <Group position="center">
+        <Group justify="center">
           <Button title="-5s" color="blue" onClick={() => {
             Toxen.musicPlayer.setPosition(Math.max(0, Math.min(Toxen.musicPlayer.media.currentTime - (5 * playbackRate), Toxen.musicPlayer.media.duration)));
           }}>
@@ -103,7 +103,7 @@ export default function StoryboardEditorPanel() {
             <IconArrowRightBar />
           </Button>
         </Group>
-        <Group position="center">
+        <Group justify="center">
           {/* Playback rate */}
           <Slider
             style={{
@@ -222,6 +222,7 @@ function EventElement(props: { config: StoryboardParser.StoryboardConfig, event:
           }}
         />
         <Select
+          allowDeselect={false}
           label="Component"
           data={Object.keys(StoryboardParser.components).map((key) => {
             return {
@@ -245,7 +246,7 @@ function EventElement(props: { config: StoryboardParser.StoryboardConfig, event:
           }
         </div>
         <br />
-        <Group position="apart">
+        <Group justify="apart">
           <Button color="blue" onClick={() => {
             config.storyboard.push(StoryboardParser.SBEvent.fromConfig({
               start: event.startTime,
@@ -321,7 +322,9 @@ function ComponentButton(props: { event: StoryboardParser.SBEvent, component: St
     case "Number": return (
       <div>
         <NumberInput
-          precision={2}
+          // precision={2}
+          fixedDecimalScale
+          decimalScale={2}
           decimalSeparator="."
           label={dataName + (required ? " *" : "")}
           value={value as number}
@@ -359,6 +362,7 @@ function ComponentButton(props: { event: StoryboardParser.SBEvent, component: St
     case "VisualizerStyle": return (
       <div>
         <Select
+          allowDeselect={false}
           label={dataName + (required ? " *" : "")}
           data={Object.keys(VisualizerStyle).map((key) => {
             return {
@@ -377,6 +381,7 @@ function ComponentButton(props: { event: StoryboardParser.SBEvent, component: St
     case "Select": return (
       <div>
         <Select
+          allowDeselect={false}
           label={dataName + (required ? " *" : "")}
           data={comp.selectData.map(([key, value]) => {
             return {
@@ -395,6 +400,7 @@ function ComponentButton(props: { event: StoryboardParser.SBEvent, component: St
     case "SelectImage": return (
       <div>
         <SelectAsync
+          allowDeselect={false}
           label={dataName + (required ? " *" : "")}
           data={(async () => {
             const song = Toxen.editingSong;

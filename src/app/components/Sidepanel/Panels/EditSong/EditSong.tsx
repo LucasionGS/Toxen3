@@ -1,4 +1,4 @@
-import { remote } from "electron";
+import * as remote from "@electron/remote";
 import React from "react";
 import Form from "../../../Form/Form";
 import Converter from "../../../../toxen/Converter";
@@ -37,13 +37,13 @@ export default function EditSong(props: EditSongProps) {
           <i className="fas fa-save"></i>&nbsp;
           Save
         </button> */}
-        <Button onClick={() => remote.shell.openPath(Toxen.editingSong.dirname())} leftIcon={<i className="fas fa-folder-open"></i>}>
+        <Button onClick={() => remote.shell.openPath(Toxen.editingSong.dirname())} leftSection={<i className="fas fa-folder-open"></i>}>
           Open music folder
         </Button>
-        <Button onClick={() => Toxen.reloadSection()} leftIcon={<i className="fas fa-redo"></i>}>
+        <Button onClick={() => Toxen.reloadSection()} leftSection={<i className="fas fa-redo"></i>}>
           Reload data
         </Button>
-        <Button className="advanced-only" onClick={() => Toxen.editingSong.copyUID()} leftIcon={<i className="fas fa-redo"></i>}>
+        <Button className="advanced-only" onClick={() => Toxen.editingSong.copyUID()} leftSection={<i className="fas fa-redo"></i>}>
           Copy UUID
         </Button>
       </SidepanelSectionHeader>
@@ -98,7 +98,7 @@ export default function EditSong(props: EditSongProps) {
         <NumberInput
           label="Release Year"
           name="year"
-          onChange={(v) => Toxen.editingSong.year = v}
+          onChange={(v) => Toxen.editingSong.year = +v}
           defaultValue={Toxen.editingSong.year}
           onBlur={() => Toxen.editingSong.saveInfo()}
           onKeyDown={textInputSaveOnEnter}
@@ -111,6 +111,7 @@ export default function EditSong(props: EditSongProps) {
         />
         <br />
         <SelectAsync
+          allowDeselect={false}
           label="Media File"
           name="paths.media"
           defaultValue={Toxen.editingSong.paths.media}
@@ -133,6 +134,7 @@ export default function EditSong(props: EditSongProps) {
           }}
         />
         <SelectAsync
+          allowDeselect={false}
           label="Background file"
           name="paths.background"
           defaultValue={Toxen.editingSong.paths.background}
@@ -155,6 +157,7 @@ export default function EditSong(props: EditSongProps) {
           }}
         />
         <SelectAsync
+          allowDeselect={false}
           label="Subtitle file"
           name="paths.subtitles"
           defaultValue={Toxen.editingSong.paths.subtitles}
@@ -181,12 +184,13 @@ export default function EditSong(props: EditSongProps) {
           name="subtitleDelay"
           defaultValue={Toxen.editingSong.subtitleDelay}
           onChange={(v) => {
-            Toxen.editingSong.subtitleDelay = v;
+            Toxen.editingSong.subtitleDelay = +v;
           }}
           onBlur={() => Toxen.editingSong.saveInfo()}
           onKeyDown={textInputSaveOnEnter}
         />
         <SelectAsync
+          allowDeselect={false}
           label="Storyboard file"
           name="paths.storyboard"
           defaultValue={Toxen.editingSong.paths.storyboard}
@@ -248,6 +252,7 @@ export default function EditSong(props: EditSongProps) {
         <sup>Enable to force Rainbow mode onto this song. If disabled, but the global settings have it enabled, this will also be enabled.</sup>
 
         <Select
+          allowDeselect={false}
           label="Background pulsing"
           name="visualizerPulseBackground"
           defaultValue={Toxen.editingSong.visualizerPulseBackground}
@@ -265,6 +270,7 @@ export default function EditSong(props: EditSongProps) {
         <sup>Enables pulsing on the background image of a song. Pulse is based off music intensity and volume.</sup>
 
         <Select
+          allowDeselect={false}
           label="Visualizer Style"
           name="visualizerStyle"
           defaultValue={Toxen.editingSong.visualizerStyle}
@@ -326,6 +332,7 @@ export default function EditSong(props: EditSongProps) {
         <sup>Enables the floating title for this song.</sup>
         
         <Select
+          allowDeselect={false}
           data={[
             { label: "Center", value: "center" },
             { label: "Top", value: "top" },

@@ -11,6 +11,7 @@ interface Props {
   disabled?: boolean;
   dynamicContent?: (section: SidepanelSection) => React.ReactNode | Promise<React.ReactNode>;
   advancedOnly?: boolean;
+  children?: React.ReactNode;
 }
 
 interface State {

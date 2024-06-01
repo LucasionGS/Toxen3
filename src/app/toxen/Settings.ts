@@ -7,7 +7,7 @@ import { PanelDirection } from "../components/Sidepanel/Sidepanel"
 import JSONX from "./JSONX";
 import { Toxen } from "../ToxenApp";
 import User from "./User";
-import { remote } from "electron";
+import * as remote from "@electron/remote";
 
 export default class Settings {
   /**

@@ -7,7 +7,7 @@ import Song from "./Song";
 import { Toxen } from "../ToxenApp";
 import ArrayX from "./ArrayX";
 import ProgressBar from "../components/ProgressBar";
-import { remote } from "electron";
+import * as remote from "@electron/remote";
 import Settings from "./Settings";
 import SubtitleParser from "./SubtitleParser";
 import { Progress } from "@mantine/core";
@@ -104,9 +104,6 @@ export default class System {
                   Unable to load {file.name}
                 </Content>
               );
-            }
-            else {
-              Toxen.log(res);
             }
           });
         }

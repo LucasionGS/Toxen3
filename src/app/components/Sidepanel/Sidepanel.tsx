@@ -1,4 +1,4 @@
-import { remote } from 'electron';
+import * as remote from "@electron/remote"
 import React, { useState } from 'react';
 import Asyncifier from '../../toxen/Asyncifier';
 import Settings from '../../toxen/Settings';
@@ -148,7 +148,7 @@ export default class Sidepanel extends React.Component<Props, State> {
       }
     }
 
-    let sec = this.sections.find(sec => sec?.props?.id == this.state.sectionId);
+    let Sec = this.sections.find(sec => sec?.props?.id == this.state.sectionId);
     const sidepanelBackground = Settings.get("sidepanelBackground");
     return (
       <div ref={this.containerRef} className={classList.join(" ")}
@@ -207,7 +207,7 @@ export default class Sidepanel extends React.Component<Props, State> {
             </div>))}
         </div>
         {
-          sec ?
+          Sec ?
             <div
               className="sidepanel-content"
               onScroll={e => this.scrollStorage[this.state.sectionId] = e.currentTarget.scrollTop}
@@ -219,7 +219,7 @@ export default class Sidepanel extends React.Component<Props, State> {
               style={{
                 width: this.state.show ? "100%" : "0px",
               }}
-            >{sec}</div>
+            >{Sec as any}</div>
             : ""
         }
         {

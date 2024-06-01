@@ -1,6 +1,9 @@
 import Path from "path";
+import * as remote from "@electron/remote";
+import process from "process";
 
 export default class CrossPlatform {
+  
   public static getAppDataPath() {
     if (process.platform === "win32") {
       return Path.resolve(process.env.APPDATA)

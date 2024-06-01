@@ -1,6 +1,6 @@
 import { Button, Group, Menu, TextInput } from '@mantine/core';
 import { useModals } from '@mantine/modals';
-import { IconCheck, IconCheckbox, IconCircle, IconCircleX, IconSelect } from '@tabler/icons';
+import { IconCheck, IconCheckbox, IconCircle, IconCircleX, IconSelect } from '@tabler/icons-react';
 import React, { Component } from 'react'
 import Playlist from '../../toxen/Playlist';
 import { Toxen } from '../../ToxenApp';
@@ -148,7 +148,7 @@ class PlaylistItem extends Component<PlaylistItemProps, PlaylistItemState> {
         <Group>
           <Button color="gray" onClick={() => {
             onClose();
-          }}>Save</Button>
+          }}>Cancel</Button>
           <Button color="green" onClick={() => {
             confirm();
           }}>Save</Button>

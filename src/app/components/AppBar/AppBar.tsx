@@ -1,5 +1,5 @@
 import { Button, Group, Image, Modal, Spoiler } from "@mantine/core";
-import { remote } from "electron";
+import * as remote from "@electron/remote";
 import React, { Component, useState } from "react";
 import { Toxen } from "../../ToxenApp";
 //@ts-expect-error 
@@ -89,7 +89,7 @@ function AppBarTitle() {
     <div className="appBarTitle">
       <Group>
         <h2>
-          <Image src={txnLogo} height={24} width={24} style={{ display: "inline-block" }} />
+          <img src={txnLogo} height={30} width={30} style={{ display: "inline-block" }} />
           &nbsp;
           <span style={{ marginLeft: 2 }}>
             {title}

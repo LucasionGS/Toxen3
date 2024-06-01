@@ -1,6 +1,6 @@
 import { Alert, Loader, MantineProvider } from "@mantine/core";
 import { ModalsProvider } from "@mantine/modals";
-import { NotificationsProvider } from "@mantine/notifications";
+import { Notifications } from "@mantine/notifications";
 import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom";
 import "../../ToxenApp.scss";
@@ -12,7 +12,8 @@ import MusicPlayer from "../../components/MusicPlayer";
 import MusicControls from "./components/MusicControls/MusicControls";
 import { Toxen } from "../../ToxenApp";
 import Song from "../../toxen/Song";
-import { remote, ipcRenderer } from "electron";
+import { ipcRenderer } from "electron";
+import * as remote from "@electron/remote";
 import InitialData from "./models/InitialData";
 import SubtitleParser from "../../toxen/SubtitleParser";
 import fsp from "fs/promises";
@@ -89,17 +90,12 @@ export default function SubtitleCreatorScreen() {
 
 // Render app
 const toxenSubtitleScreen = (
-  <MantineProvider theme={{
-    colorScheme: "dark",
-    colors: {
-      white: ["fff000"],
-    }
-  }}>
-    <NotificationsProvider>
+  <MantineProvider defaultColorScheme="dark">
+    <Notifications>
       <ModalsProvider>
         <SubtitleCreatorScreen />
       </ModalsProvider>
-    </NotificationsProvider>
+    </Notifications>
   </MantineProvider>
 );
 ReactDOM.render(toxenSubtitleScreen, document.querySelector("app-root"));

@@ -1,6 +1,6 @@
 import React from 'react';
 import Settings from '../../../toxen/Settings';
-import { remote } from "electron";
+import * as remote from "@electron/remote";
 import "./FormInput.scss";
 import FormInputColorPicker from './FormInputColorPicker';
 import FormInputSelect from './FormInputSelect';
@@ -33,6 +33,7 @@ interface PropsTemplate<T extends string> {
    * If not defined, will use settings default value.
    */
   getValueTemplateCallback?: () => any;
+  children?: React.ReactNode;
 }
 
 interface PropsTypeText extends PropsTemplate<"text"> {

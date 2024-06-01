@@ -1,4 +1,4 @@
-import { remote } from 'electron';
+import * as remote from "@electron/remote";
 import React, { Component } from 'react'
 import Song from '../../toxen/Song';
 import System from '../../toxen/System';

@@ -27,12 +27,12 @@ export default function BPMFinder(props: BPMFinderProps) {
     <div className="bpm-finder" style={{
       width: "min-content",
     }}>
-      <Group className="bpm-finder__bpm" position="center">
+      <Group className="bpm-finder__bpm" justify="center">
         <h1 style={{ textAlign: "center" }}>
           {bpm.toFixed(2)}
         </h1>
       </Group>
-      <Group noWrap>
+      <Group wrap="nowrap">
         <Button onClick={() => {
           if (initialTabTime === null) {
             setInitialTabTime(Date.now());

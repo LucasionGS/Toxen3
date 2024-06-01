@@ -7,7 +7,7 @@ import { Toxen } from "../ToxenApp";
 import Path from "path";
 import SongElement from "../components/SongPanel/SongElement";
 import Legacy, { Toxen2SongDetails } from "./Legacy";
-import { remote } from "electron";
+import * as remote from "@electron/remote";
 import { Failure, Result, Success } from "./Result";
 import System, { ToxenFile } from "./System";
 import Converter from "./Converter";
@@ -22,7 +22,7 @@ import yauzl from "yauzl";
 import os from "os";
 import { useModals } from "@mantine/modals";
 import { ModalsContextProps, ModalSettings } from "@mantine/modals/lib/context";
-import { Checkbox, Menu, RangeSlider, Button, Progress, Group } from "@mantine/core";
+import { Checkbox, Menu, RangeSlider, Button, Progress, Group, Stack } from "@mantine/core";
 import Playlist from "./Playlist";
 import TButton from "../components/Button/Button";
 import Ffmpeg from "./Ffmpeg";
@@ -225,9 +225,9 @@ export default class Song implements ISong {
   /**
    * React element of Song.
    */
-  public Element() {
+  public Element(key?: string) {
     return (
-      <SongElement playing={this.isPlaying()} song={this} ref={ref => this.currentElement = ref} />
+      <SongElement key={key} playing={this.isPlaying()} song={this} ref={ref => this.currentElement = ref} />
     );
   }
 
@@ -618,11 +618,13 @@ export default class Song implements ISong {
 
   public ContextMenu(props?: {
     noQueueOption?: boolean,
-    cref?: React.RefObject<HTMLDivElement>,
+    // cref?: React.RefObject<HTMLDivElement>,
     isSelected?: boolean,
+    children?: React.ReactNode,
   }) {
     props ?? (props = {});
     const selectedSongs = Song.getSelected();
+    const [opened, setOpened] = useState(false);
 
     const modals = useModals();
 
@@ -630,110 +632,123 @@ export default class Song implements ISong {
 
     if (!isSelected) {
       return (
-        <Menu ref={props.cref} className="song-context-menu">
-          <Menu.Item disabled={true}>
-            {this.getDisplayName()}
-          </Menu.Item>
-          <Menu.Item icon={<i className="fas fa-edit"></i>} onClick={() => {
-            if (Toxen.isMode("ThemeEditor")) return Toxen.sendError("CURRENTLY_EDITING_THEME");
-            if (!Toxen.isMode("Player")) return Toxen.sendError("CURRENTLY_EDITING_SONG");
-            Toxen.editSong(this);
-          }}>
-            Edit info
-          </Menu.Item>
-          <Menu.Item icon={<i className="fas fa-th-list"></i>} onClick={() => {
-            modals.openModal(this.createManagePlaylists());
-          }}>
-            Manager playlists
-          </Menu.Item>
-          {!props.noQueueOption ? (this.inQueue ? (
-            <Menu.Item icon={<i className="fas fa-minus"></i>} onClick={() => this.removeFromQueue()}>
-              Remove from queue
+        <Menu
+          trigger="click"
+          opened={opened}
+          // onClose={() => setOpened(false)}
+          closeOnClickOutside
+        >
+          {props.children ? (
+            <Menu.Target>
+              {props.children}
+            </Menu.Target>
+          ) : null}
+          
+          <Menu.Dropdown>
+            <Menu.Item disabled={true}>
+              {this.getDisplayName()}
             </Menu.Item>
-          ) : (
-            <Menu.Item icon={<i className="fas fa-plus"></i>} onClick={() => this.addToQueue()}>
-              Add to queue
+            <Menu.Item leftSection={<i className="fas fa-edit"></i>} onClick={() => {
+              if (Toxen.isMode("ThemeEditor")) return Toxen.sendError("CURRENTLY_EDITING_THEME");
+              if (!Toxen.isMode("Player")) return Toxen.sendError("CURRENTLY_EDITING_SONG");
+              Toxen.editSong(this);
+            }}>
+              Edit info
             </Menu.Item>
-          )) : undefined}
-          <Menu.Item icon={<i className="fas fa-search"></i>} onClick={async () => {
-            if (Toxen.isMode("ThemeEditor")) return Toxen.sendError("CURRENTLY_EDITING_THEME");
-            if (!Toxen.isMode("Player")) return Toxen.sendError("CURRENTLY_EDITING_SONG");
-            await Toxen.sidePanel.show(true);
-            await Toxen.sidePanel.setSectionId("songPanel");
-            this.scrollTo();
-          }}>
-            Show song in list
-          </Menu.Item>
-          <Menu.Item icon={<i className="fas fa-trash-alt"></i>} color="red" onClick={() => {
-            modals.openConfirmModal({
-              title: <h2>Delete song</h2>,
-              children: `Are you sure you want to delete "${this.title}"?`,
-              onConfirm: async () => {
-                try {
-                  await this.delete();
-                } catch (error) {
-                  Toxen.error(error);
+            <Menu.Item leftSection={<i className="fas fa-th-list"></i>} onClick={() => {
+              modals.openModal(this.createManagePlaylists());
+            }}>
+              Manager playlists
+            </Menu.Item>
+            {!props.noQueueOption ? (this.inQueue ? (
+              <Menu.Item leftSection={<i className="fas fa-minus"></i>} onClick={() => this.removeFromQueue()}>
+                Remove from queue
+              </Menu.Item>
+            ) : (
+              <Menu.Item leftSection={<i className="fas fa-plus"></i>} onClick={() => this.addToQueue()}>
+                Add to queue
+              </Menu.Item>
+            )) : undefined}
+            <Menu.Item leftSection={<i className="fas fa-search"></i>} onClick={async () => {
+              if (Toxen.isMode("ThemeEditor")) return Toxen.sendError("CURRENTLY_EDITING_THEME");
+              if (!Toxen.isMode("Player")) return Toxen.sendError("CURRENTLY_EDITING_SONG");
+              await Toxen.sidePanel.show(true);
+              await Toxen.sidePanel.setSectionId("songPanel");
+              this.scrollTo();
+            }}>
+              Show song in list
+            </Menu.Item>
+            <Menu.Item leftSection={<i className="fas fa-trash-alt"></i>} color="red" onClick={() => {
+              modals.openConfirmModal({
+                title: "Delete song",
+                children: `Are you sure you want to delete "${this.title}"?`,
+                onConfirm: async () => {
+                  try {
+                    await this.delete();
+                  } catch (error) {
+                    Toxen.error(error);
+                  }
+                },
+                labels: {
+                  confirm: "Delete",
+                  cancel: "Cancel"
+                },
+                confirmProps: {
+                  color: "red"
                 }
-              },
-              labels: {
-                confirm: "Delete",
-                cancel: "Cancel"
-              },
-              confirmProps: {
-                color: "red"
-              }
-            });
-          }}>
-            Delete
-          </Menu.Item>
-          <Menu.Item icon={<i className="fas fa-cut"></i>} onClick={() => {
-            modals.openModal(this.createTrimSongModal());
-          }}>
-            Trim
-          </Menu.Item>
-          {
-            User.getCurrentUser()?.premium && !Settings.isRemote() && (
-              <Menu.Item icon={<i className="fas fa-sync"></i>} onClick={() => {
-                this.sync();
-              }}>
-                Sync to remote
-              </Menu.Item>
-            )
-          }
-          {Settings.isAdvanced<JSX.Element>(
-            <>
-              <Menu.Item disabled={true}>
-                Extra options
-              </Menu.Item>
-              <Menu.Item onClick={() => this.copyUID()}>
-                Copy UID
-              </Menu.Item>
-              <Menu.Item onClick={() => remote.shell.openPath(this.dirname())}>
-                Open in file explorer
-              </Menu.Item>
-              <Menu.Item onClick={() => {
+              });
+            }}>
+              Delete
+            </Menu.Item>
+            <Menu.Item leftSection={<i className="fas fa-cut"></i>} onClick={() => {
+              modals.openModal(this.createTrimSongModal());
+            }}>
+              Trim
+            </Menu.Item>
+            {
+              User.getCurrentUser()?.premium && !Settings.isRemote() && (
+                <Menu.Item leftSection={<i className="fas fa-sync"></i>} onClick={() => {
+                  this.sync();
+                }}>
+                  Sync to remote
+                </Menu.Item>
+              )
+            }
+            {Settings.isAdvanced<JSX.Element>(
+              <>
+                <Menu.Item disabled={true}>
+                  Extra options
+                </Menu.Item>
+                <Menu.Item onClick={() => this.copyUID()}>
+                  Copy UID
+                </Menu.Item>
+                <Menu.Item onClick={() => remote.shell.openPath(this.dirname())}>
+                  Open in file explorer
+                </Menu.Item>
+                {/* <Menu.Item onClick={() => {
                 const recorder = new ScreenRecorder();
                 recorder.startRecording();
               }}>
                 Record (Experimental)
-              </Menu.Item>
-            </>
-          )}
+              </Menu.Item> */}
+              </>
+            )}
+          </Menu.Dropdown>
         </Menu>
       )
     }
     else if (selectedSongs.length > 0) {
       return (
-        <Menu ref={props.cref} className="song-context-menu">
+        <Menu>
           {/* <Menu.Item disabled={true}>
             Multiple songs
           </Menu.Item> */}
-          <Menu.Item icon={<i className="far fa-check-square"></i>} onClick={() => {
+          <Menu.Item leftSection={<i className="far fa-check-square"></i>} onClick={() => {
             Song.deselectAll();
           }}>
             Deselect all
           </Menu.Item>
-          <Menu.Item icon={<i className="fas fa-th-list"></i>} onClick={() => {
+          <Menu.Item leftSection={<i className="fas fa-th-list"></i>} onClick={() => {
             const selectedSongs = Song.getSelected();
             // selectedSongs.forEach(s => s.addToPlaylist());
             // Currently disabled
@@ -741,13 +756,13 @@ export default class Song implements ISong {
           }}>
             Manage playlists
           </Menu.Item>
-          <Menu.Item icon={<i className="fas fa-plus"></i>} onClick={async () => {
+          <Menu.Item leftSection={<i className="fas fa-plus"></i>} onClick={async () => {
             const selectedSongs = Song.getSelected();
             selectedSongs.forEach(s => s.addToQueue());
           }}>
             Add to queue
           </Menu.Item>
-          <Menu.Item icon={<i className="fas fa-minus"></i>} onClick={() => {
+          <Menu.Item leftSection={<i className="fas fa-minus"></i>} onClick={() => {
             const selectedSongs = Song.getSelected();
             selectedSongs.forEach(s => s.removeFromQueue());
           }}>
@@ -755,7 +770,7 @@ export default class Song implements ISong {
           </Menu.Item>
           {
             User.getCurrentUser()?.premium && !Settings.isRemote() && (
-              <Menu.Item icon={<i className="fas fa-sync"></i>} onClick={async () => {
+              <Menu.Item leftSection={<i className="fas fa-sync"></i>} onClick={async () => {
                 const selectedSongs = Song.getSelected();
                 for (const song of selectedSongs) {
                   await song.sync();
@@ -765,10 +780,10 @@ export default class Song implements ISong {
               </Menu.Item>
             )
           }
-          <Menu.Item icon={<i className="fas fa-trash-alt"></i>} color="red" onClick={() => {
+          <Menu.Item leftSection={<i className="fas fa-trash-alt"></i>} color="red" onClick={() => {
             const selectedSongs = Song.getSelected();
             modals.openConfirmModal({
-              title: <h2>Delete songs</h2>,
+              title: "Delete songs",
               children: <>
                 <p>
                   Are you sure you want to delete these {selectedSongs.length} songs?
@@ -809,13 +824,105 @@ export default class Song implements ISong {
     else {
       // Empty context menu
       return (
-        <Menu ref={props.cref} className="song-context-menu">
+        <Menu>
           <Menu.Item disabled={true}>
             Empty
           </Menu.Item>
         </Menu>
       );
     }
+  }
+
+  // Replacement for ContextMenu, will be a modal instead
+  public contextMenuModal(modals: ModalsContextProps) {
+
+    const close = () => modals.closeModal(modalId);
+    
+    const modalId = modals.openModal({
+      title: this.getDisplayName(),
+      children: (
+        <Stack>
+          <p>
+            {this.getDisplayName()}
+          </p>
+          <Button onClick={() => {
+            close();
+            if (Toxen.isMode("ThemeEditor")) return Toxen.sendError("CURRENTLY_EDITING_THEME");
+            if (!Toxen.isMode("Player")) return Toxen.sendError("CURRENTLY_EDITING_SONG");
+            Toxen.editSong(this);
+          }}>
+            Edit info
+          </Button>
+          <Button onClick={() => {
+            close();
+            modals.openModal(this.createManagePlaylists());
+          }}>
+            Manage playlists
+          </Button>
+          <Button onClick={() => {
+            close();
+            this.inQueue ? this.removeFromQueue() : this.addToQueue();
+          }}>
+            {this.inQueue ? "Remove from queue" : "Add to queue"}
+          </Button>
+          <Button onClick={() => {
+            close();
+            modals.openConfirmModal({
+              title: "Delete song",
+              children: `Are you sure you want to delete "${this.title}"?`,
+              onConfirm: async () => {
+                try {
+                  await this.delete();
+                } catch (error) {
+                  Toxen.error(error);
+                }
+              },
+              labels: {
+                confirm: "Delete",
+                cancel: "Cancel"
+              },
+              confirmProps: {
+                color: "red"
+              }
+            });
+          }}>
+            Delete
+          </Button>
+          <Button onClick={() => {
+            close();
+            modals.openModal(this.createTrimSongModal());
+          }}>
+            Trim
+          </Button>
+          {
+            User.getCurrentUser()?.premium && !Settings.isRemote() && (
+              <Button onClick={() => {
+                close();
+                this.sync();
+              }}>
+                Sync to remote
+              </Button>
+            )
+          }
+          {Settings.isAdvanced<JSX.Element>(
+            <>
+              <Button onClick={() => {
+                close();
+                this.copyUID()
+              }}>
+                Copy UID
+              </Button>
+              <Button onClick={() => {
+                close();
+                remote.shell.openPath(this.dirname());
+              }}>
+                Open in file explorer
+              </Button>
+            </>
+          )}
+        </Stack>
+      )
+    });
   }
 
   public existingElements: SongElement[] = [];
@@ -829,7 +936,7 @@ export default class Song implements ISong {
 
   public createManagePlaylists(): ModalSettings {
     return {
-      title: <h2>Manage playlists</h2>,
+      title: "Manage playlists",
       children: (
         <>
           {
@@ -849,7 +956,7 @@ export default class Song implements ISong {
 
   public static createManageMultiSongsPlaylists(songs: Song[]): ModalSettings {
     return {
-      title: <h2>Manage playlists</h2>,
+      title: "Manage playlists",
       children: (
         <>
           {
@@ -1120,7 +1227,7 @@ export default class Song implements ISong {
 
       // Validate folder name
       newFolder = ensureValidName(newFolder);
-      
+
       let increment = 0;
       while (await System.pathExists(newFolder)) {
         newFolder = Path.resolve(libDir, nameNoExt + ` (${++increment})`);
@@ -1438,7 +1545,7 @@ export default class Song implements ISong {
         {
           progress > 0 ? (
             <>
-              <Progress value={progress} animate color="green" />
+              <Progress value={progress} animated color="green" />
               <br />
             </>
           ) : null

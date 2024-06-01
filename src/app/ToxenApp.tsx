@@ -1,5 +1,5 @@
 import "./toxen/global"; // Set global variables
-import { remote } from "electron";
+import * as remote from "@electron/remote";
 import { EventEmitter } from "events";
 import React from "react";
 import fsp from "fs/promises";
@@ -55,7 +55,7 @@ import MigrationPanel from "./components/Sidepanel/Panels/MigrationPanel/Migrati
 import EditSong from "./components/Sidepanel/Panels/EditSong/EditSong";
 import InitialData from "./windows/SubtitleCreator/models/InitialData";
 import User from "./toxen/User";
-import { IconLayoutNavbarExpand } from "@tabler/icons";
+import { IconLayoutNavbarExpand } from "@tabler/icons-react";
 import HueManager from "./toxen/philipshue/HueManager";
 import ImportPanel from "./components/Sidepanel/Panels/ImportPanel/ImportPanel";
 import YTDlpWrap from "yt-dlp-wrap";
@@ -168,9 +168,9 @@ export class Toxen {
     return this.resolvedOnReady;
   }
 
+  public static _resolveWhenReady: () => void;
   private static resolvedOnReady = new Promise<void>(resolve => Toxen._resolveWhenReady = resolve);
 
-  public static _resolveWhenReady: () => void;
 
   public static log(message: React.ReactNode, expiresIn?: number) {
     console.log(message);
@@ -441,9 +441,11 @@ export class Toxen {
 
 
       Toxen.loadingScreen.setContent(content);
-      ref.setValue(songCount);
-      ref.setMin(0);
-      ref.setMax(totalSongCount);
+      if (ref) {
+        ref.setValue(songCount);
+        ref.setMin(0);
+        ref.setMax(totalSongCount);
+      }
     };
     try {
       var songList = await Song.getSongs(true, loadingCallback);
@@ -586,7 +588,6 @@ export class Toxen {
       webPreferences: {
         nodeIntegration: true,
         contextIsolation: false,
-        enableRemoteModule: true,
         webSecurity: false
       },
       autoHideMenuBar: true,
@@ -772,7 +773,7 @@ export default class ToxenAppRenderer extends React.Component {
               <h1>Tracks</h1>
               {/* <Button.Group> */}
               <Button
-                leftIcon={<i className="fas fa-redo"></i>}
+                leftSection={<i className="fas fa-redo"></i>}
                 onClick={async () => {
                   await Toxen.loadSongs();
                   Toxen.songPanel.update();
@@ -782,7 +783,7 @@ export default class ToxenAppRenderer extends React.Component {
                 Reload Library
               </Button>
               <Button
-                leftIcon={<i className="fas fa-search"></i>}
+                leftSection={<i className="fas fa-search"></i>}
                 onClick={async () => {
                   Toxen.showCurrentSong();
                 }}

@@ -1,7 +1,7 @@
 import { Toxen } from "../../ToxenApp";
 import React, { useState } from "react";
 import { Button, Group, TextInput } from "@mantine/core";
-import { IconSearch } from "@tabler/icons";
+import { IconSearch } from "@tabler/icons-react";
 
 const SearchField = () => {
   const [value, setValue] = useState(Toxen.songSearch ?? "");
@@ -12,7 +12,7 @@ const SearchField = () => {
     if (newValue === "") Toxen.songPanel.update();
   };
   return (
-    <Group position="left" noWrap>
+    <Group justify="left" wrap="nowrap">
       <Button
         onClick={(e: any) => {
           e.preventDefault();

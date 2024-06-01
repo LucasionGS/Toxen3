@@ -1,15 +1,45 @@
 {
   "name": "toxen3",
   "productName": "Toxen",
-  "version": "1.6.1",
+  "version": "1.7.0",
   "description": "Toxen Music Player",
-  "main": ".webpack/main",
+  "main": ".vite/build/main.js",
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "eslint --ext .ts ."
+    "lint": "eslint --ext .ts,.tsx ."
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^7.4.0",
+    "@electron-forge/maker-deb": "^7.4.0",
+    "@electron-forge/maker-rpm": "^7.4.0",
+    "@electron-forge/maker-squirrel": "^7.4.0",
+    "@electron-forge/maker-zip": "^7.4.0",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.4.0",
+    "@electron-forge/plugin-fuses": "^7.4.0",
+    "@electron-forge/plugin-vite": "^7.4.0",
+    "@electron/fuses": "^1.8.0",
+    "@types/archiver": "^6.0.2",
+    "@types/discord-rpc": "^4.0.8",
+    "@types/fluent-ffmpeg": "^2.1.24",
+    "@types/folder-hash": "^4.0.4",
+    "@types/js-yaml": "^4.0.9",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@types/showdown": "^2.0.6",
+    "@types/yazl": "^2.4.5",
+    "@typescript-eslint/eslint-plugin": "^5.0.0",
+    "@typescript-eslint/parser": "^5.0.0",
+    "@vitejs/plugin-react-swc": "^3.7.0",
+    "electron": "30.0.9",
+    "eslint": "^8.0.1",
+    "eslint-plugin-import": "^2.25.0",
+    "ts-node": "^10.0.0",
+    "typescript": "~4.5.4",
+    "vite": "^5.0.12",
+    "vite-plugin-electron-renderer": "^0.14.5"
   },
   "keywords": [],
   "author": {
@@ -21,138 +51,36 @@
     "url": "https://github.com/LucasionGS/Toxen3"
   },
   "license": "MIT",
-  "config": {
-    "forge": {
-      "packagerConfig": {
-        "icon": "./src/icons/toxen.ico",
-        "executableName": "toxen3"
-      },
-      "makers": [
-        {
-          "name": "@electron-forge/maker-squirrel",
-          "config": {
-            "name": "Toxen",
-            "exe": "toxen3.exe"
-          }
-        },
-        {
-          "name": "@electron-forge/maker-zip",
-          "platforms": [
-            "darwin"
-          ]
-        },
-        {
-          "name": "@electron-forge/maker-deb",
-          "config": {}
-        },
-        {
-          "name": "@electron-forge/maker-rpm",
-          "config": {}
-        }
-      ],
-      "plugins": [
-        [
-          "@electron-forge/plugin-webpack",
-          {
-            "mainConfig": "./webpack.main.config.js",
-            "renderer": {
-              "config": "./webpack.renderer.config.js",
-              "entryPoints": [
-                {
-                  "html": "./src/index.html",
-                  "js": "./src/renderer.ts",
-                  "name": "main_window"
-                },
-                {
-                  "html": "./src/app/windows/SubtitleCreator/index.html",
-                  "js": "./src/app/windows/SubtitleCreator/renderer.tsx",
-                  "name": "subtitle_creator"
-                }
-              ]
-            }
-          }
-        ]
-      ],
-      "publishers": [
-        {
-          "name": "@electron-forge/publisher-github",
-          "config": {
-            "repository": {
-              "owner": "LucasionGS",
-              "name": "Toxen3"
-            },
-            "draft": false,
-            "prerelease": false
-          }
-        }
-      ]
-    }
-  },
-  "devDependencies": {
-    "@electron-forge/cli": "^6.0.0-beta.54",
-    "@electron-forge/maker-deb": "^6.0.0-beta.54",
-    "@electron-forge/maker-rpm": "^6.0.0-beta.54",
-    "@electron-forge/maker-squirrel": "^6.0.0-beta.54",
-    "@electron-forge/maker-zip": "^6.0.0-beta.54",
-    "@electron-forge/plugin-webpack": "6.0.0-beta.54",
-    "@electron-forge/publisher-github": "^6.0.0-beta.54",
-    "@marshallofsound/webpack-asset-relocator-loader": "^0.5.0",
-    "@types/archiver": "^5.3.1",
-    "@types/discord-rpc": "^3.0.6",
-    "@types/electron": "^1.6.10",
-    "@types/fluent-ffmpeg": "^2.1.20",
-    "@types/folder-hash": "^4.0.2",
-    "@types/js-yaml": "^4.0.5",
-    "@types/react": "^17.0.3",
-    "@types/react-dom": "^17.0.3",
-    "@types/react-select": "^4.0.14",
-    "@types/showdown": "^1.9.4",
-    "@types/yauzl": "^2.9.2",
-    "@types/yazl": "^2.4.2",
-    "@typescript-eslint/eslint-plugin": "^4.0.1",
-    "@typescript-eslint/parser": "^4.0.1",
-    "@vercel/webpack-asset-relocator-loader": "^1.7.3",
-    "css-loader": "^4.2.1",
-    "electron": "12.0.2",
-    "eslint": "^7.6.0",
-    "eslint-plugin-import": "^2.20.0",
-    "file-loader": "^6.2.0",
-    "fork-ts-checker-webpack-plugin": "^5.0.14",
-    "node-loader": "^1.0.1",
-    "sass": "^1.50.0",
-    "sass-loader": "^10.0.5",
-    "style-loader": "^1.2.1",
-    "ts-loader": "^8.0.2",
-    "typescript": "^5.2.2"
-  },
   "dependencies": {
-    "@fortawesome/fontawesome-free": "^5.15.3",
-    "@mantine/core": "^4.1.3",
-    "@mantine/hooks": "^4.1.3",
-    "@mantine/modals": "^4.1.3",
-    "@mantine/notifications": "^4.1.3",
+    "@electron/remote": "^2.1.2",
+    "@fortawesome/fontawesome-free": "^6.5.2",
+    "@mantine/core": "^7.10.1",
+    "@mantine/hooks": "^7.10.1",
+    "@mantine/modals": "^7.10.1",
+    "@mantine/notifications": "^7.10.1",
     "@nodertc/dtls": "^0.6.0",
-    "@tabler/icons": "^1.100.0",
-    "archiver": "^5.3.1",
-    "bootstrap": "^4.6.0",
-    "cross-fetch": "^3.1.5",
-    "discord-rpc": "^3.2.0",
-    "electron-squirrel-startup": "^1.0.0",
-    "fluent-ffmpeg": "^2.1.2",
-    "folder-hash": "^4.0.2",
-    "html-react-parser": "^1.2.8",
+    "@tabler/icons-react": "^3.5.0",
+    "archiver": "^7.0.1",
+    "bootstrap": "^5.3.3",
+    "cross-fetch": "^4.0.0",
+    "discord-rpc": "^4.0.1",
+    "electron-squirrel-startup": "^1.0.1",
+    "fluent-ffmpeg": "^2.1.3",
+    "folder-hash": "^4.0.4",
+    "html-react-parser": "^5.1.10",
     "hue-sync": "^0.1.3",
     "js-yaml": "^4.1.0",
     "libflacjs": "^5.4.0",
-    "react": "^17.0.2",
-    "react-bootstrap": "^1.5.2",
-    "react-dom": "^17.0.2",
+    "react": "^18.3.1",
+    "react-bootstrap": "^2.10.2",
+    "react-dom": "^18.3.1",
     "react-render-if-visible": "^2.1.1",
-    "react-select": "^4.3.0",
-    "showdown": "^1.9.1",
-    "update-electron-app": "^2.0.1",
-    "yauzl": "^2.10.0",
+    "react-select": "^5.8.0",
+    "sass": "^1.77.4",
+    "showdown": "^2.1.0",
+    "update-electron-app": "^3.0.0",
+    "yauzl": "^3.1.3",
     "yazl": "^2.5.1",
-    "yt-dlp-wrap": "^2.3.11"
+    "yt-dlp-wrap": "^2.3.12"
   }
 }
