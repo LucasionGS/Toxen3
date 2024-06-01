@@ -145,7 +145,7 @@ body[miniplayer] .sidepanel {
 .sidepanel {
   .sidepanel-icon-toggle {
     * {
-      transform: rotate(112.5deg);
+      transform: rotate(-112.5deg);
       transition: all 0.3s ease-in-out;
       transform-origin: center;
       font-size: 32px;
