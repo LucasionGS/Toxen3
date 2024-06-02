@@ -799,7 +799,7 @@ export default class ToxenAppRenderer extends React.Component {
                       <div
                         style={{
                           overflow: "hidden",
-                          backgroundImage: `url(${(Toxen.playlist.getBackgroundPath())})`,
+                          backgroundImage: `url(${(Toxen.playlist.getBackgroundPath(true))})`,
                           backgroundSize: "cover",
                           backgroundPosition: "center",
                           backgroundRepeat: "no-repeat",

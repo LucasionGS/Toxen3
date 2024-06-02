@@ -7,6 +7,8 @@ import { Toxen } from '../../ToxenApp';
 import SidepanelSectionHeader from '../Sidepanel/SidepanelSectionHeader';
 import "./PlaylistPanel.scss";
 import { ModalsContextProps } from '@mantine/modals/lib/context';
+import Path from 'path';
+import fs from 'fs';
 
 interface PlaylistPanelProps { }
 
@@ -43,6 +45,7 @@ export default class PlaylistPanel extends Component<PlaylistPanelProps, Playlis
 
     const pl = Playlist.create({
       name: playlistName,
+      
       songList: []
     });
 
@@ -108,10 +111,33 @@ function PlaylistItem(props: PlaylistItemProps) {
   };
 
   async function deletePlaylist(force = false) {
+
+    if (currentPlaylist?.songBackground) {
+      const imageNames = Object.values(currentPlaylist.songBackground);
+      for (const imageName of imageNames) {
+        const imagePath = Path.join(Playlist.getPlaylistBackgroundsDir(), imageName);
+        try {
+          fs.unlinkSync(imagePath);
+        } catch (error) {
+          Toxen.error(error.message, 3000);
+        }
+      }
+    }
+
+    if (currentPlaylist?.background) {
+      const imagePath = Path.join(Playlist.getPlaylistBackgroundsDir(), currentPlaylist.background);
+      try {
+        fs.unlinkSync(imagePath);
+      } catch (error) {
+        Toxen.error(error.message, 3000);
+      }
+    }
+    
     if (currentPlaylist === playlist) {
       Toxen.playlist = null;
     }
     Toxen.playlists = Toxen.playlists.filter(p => p.name !== playlist.name);
+
     Playlist.save();
     Toxen.log(
       <>
@@ -239,7 +265,7 @@ function PlaylistItem(props: PlaylistItemProps) {
     });
   };
 
-  const plBackground = playlist?.getBackgroundPath();
+  const plBackground = playlist?.getBackgroundPath(true, true);
   
   return (
     <div

@@ -2386,6 +2386,14 @@ dir-glob@^3.0.1:
   dependencies:
     path-type "^4.0.0"
 
+discord-rpc-electron@^4.0.1:
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/discord-rpc-electron/-/discord-rpc-electron-4.0.1.tgz#5caa27c0f1ee98132771ece2fc15195a90bbdcaf"
+  integrity sha512-mPg08FQEHIGriD4+3x5dpC9YWEeKFqJLzDHxbeQol2NT1dPms4ocgVrW/5BrBNna0Khf/DWUHHgpoPsc1YRQVg==
+  dependencies:
+    node-fetch "^2.6.1"
+    ws "^7.3.1"
+
 discord-rpc@^4.0.1:
   version "4.0.1"
   resolved "https://registry.yarnpkg.com/discord-rpc/-/discord-rpc-4.0.1.tgz#a89aa04a048aa83ad4f347d53fa0162501eae0d8"

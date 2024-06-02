@@ -17,10 +17,12 @@ import { Button, Checkbox, ColorInput, NumberInput, Select, TextInput } from "@m
 import ListInput from "../../../ListInput/ListInput";
 import SelectAsync from "../../../SelectAsync/SelectAsync";
 import ToxenInteractionMode from "../../../../toxen/ToxenInteractionMode";
+import { useModals } from "@mantine/modals";
 
 interface EditSongProps { }
 
 export default function EditSong(props: EditSongProps) {
+  const modals = useModals();
 
   function textInputSaveOnEnter(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter") {
@@ -156,6 +158,41 @@ export default function EditSong(props: EditSongProps) {
             }
           }}
         />
+        <br />
+        {Toxen.playlist && Toxen.playlist.songList.includes(Toxen.editingSong) ? (
+          <>
+            <Button.Group>
+              <Button
+                onClick={() => {
+                  Toxen.playlist.promptSetBackground(modals, Toxen.editingSong);
+                }}
+              >
+                <i className="fas fa-image"></i>&nbsp;
+                Set playlist background
+              </Button>
+              {
+                Toxen.playlist.songBackground && Toxen.playlist.songBackground[Toxen.editingSong.uid] ? (
+                  <Button
+                    onClick={() => {
+                      Toxen.playlist.removeBackground(Toxen.editingSong);
+                      Toxen.reloadSection();
+                    }}
+                    color="red"
+                  >
+                    <i className="fas fa-times"></i>&nbsp;
+                    Remove playlist background
+                  </Button>
+                ) : null
+              }
+            </Button.Group>
+            <br />
+            <br />
+            <sup>
+              Set the background this song will use specifically when playlist "{Toxen.playlist.name}" is selected
+            </sup>
+          </>
+        ) : null}
+
         <SelectAsync
           allowDeselect={false}
           label="Subtitle file"
@@ -330,7 +367,7 @@ export default function EditSong(props: EditSongProps) {
         />
         <br />
         <sup>Enables the floating title for this song.</sup>
-        
+
         <Select
           allowDeselect={false}
           data={[
