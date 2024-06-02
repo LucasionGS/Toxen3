@@ -365,6 +365,9 @@ export class Toxen {
 
     document.body.classList.toggle("advanced", Settings.isAdvanced());
 
+    // Disable hueEnabled while its still broken.
+    if (Settings.get("hueEnabled")) Settings.set("hueEnabled", false);
+    
     if (Settings.get("hueEnabled") && !HueManager.instance) {
       HueManager.init({
         ip: Settings.get("hueBridgeIp"),

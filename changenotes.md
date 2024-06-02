@@ -1,5 +1,19 @@
-<!-- ## Upcoming update / 1.5.2 -->
-<!-- ## Upcoming update / 1.6.1 -->
+<!-- ## Upcoming update / 1.7.1 -->
+## 1.7.0 - 06-03-2024
+### New Features
+Added better playlists.
+- Playlists can now be right-clicked to open a context menu with more options.
+- Playlists can now have a custom image that will be displayed in the playlist selection screen.
+- Playlists now have an `Apply background` checkbox that will apply the playlist's background to the main background when the playlist is selected. This can also be customized per song when a playlist is selected, and editing a song's settings. This will allow you to use a specific background for a song only when it is being played as part of a specific playlist. Themed playlisters, rejoice!
+### Broken stuff
+- Hue integration is currently not functional, but will be re-implemented in the future.
+- Subtitle Editor (Which was previously in development) has been put on hold for now, as it was causing issues with the new Electron version.
+### Dependency Upgrades
+- Major upgrade to Electron 30, migrating from Electron 12. This should improve stability and security.
+- Upgraded to Node.js v22.2.0.
+- Updated all dependencies to their latest versions, including now using React 18.
+### Development process
+- Migrated from webpack to Vite for faster development.
 ## 1.6.1 - 18-02-2024
 - Added song options for Floating title custom text and toggleable underline, as well as margin for side positions.
 ## 1.6.0 - 30-09-2023

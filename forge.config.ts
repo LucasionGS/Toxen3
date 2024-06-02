@@ -9,6 +9,19 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses';
 import { AutoUnpackNativesPlugin, AutoUnpackNativesConfig } from "@electron-forge/plugin-auto-unpack-natives";
 
 const config: ForgeConfig = {
+  publishers: [
+    {
+      name: "@electron-forge/publisher-github",
+      config: {
+        repository: {
+          owner: "LucasionGS",
+          name: "Toxen3"
+        },
+        draft: false,
+        prerelease: false
+      }
+    }
+  ],
   packagerConfig: {
     asar: true,
     icon: './src/icons/toxen.ico',
