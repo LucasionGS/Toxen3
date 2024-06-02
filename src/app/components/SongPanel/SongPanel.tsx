@@ -50,7 +50,7 @@ export default class SongPanel extends Component<SongPanelProps, SongPanelState>
     Toxen.searchedSongList = songs;
     return (
       <>
-        {Toxen.playlist ? <>Playlist: <code>{Toxen.playlist.name}</code><br /></> : ""}
+        {/* {Toxen.playlist ? <>Playlist: <code>{Toxen.playlist.name}</code><br /></> : ""} */}
         {songs.map(s => s.Element(s.dirname()))}
       </>
     );

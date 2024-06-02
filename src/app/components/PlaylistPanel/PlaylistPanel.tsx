@@ -1,11 +1,12 @@
-import { Button, Group, Menu, TextInput } from '@mantine/core';
+import { Button, Checkbox, Group, Menu, Stack, TextInput } from '@mantine/core';
 import { useModals } from '@mantine/modals';
 import { IconCheck, IconCheckbox, IconCircle, IconCircleX, IconSelect } from '@tabler/icons-react';
-import React, { Component } from 'react'
+import React, { Component, useState } from 'react'
 import Playlist from '../../toxen/Playlist';
 import { Toxen } from '../../ToxenApp';
 import SidepanelSectionHeader from '../Sidepanel/SidepanelSectionHeader';
 import "./PlaylistPanel.scss";
+import { ModalsContextProps } from '@mantine/modals/lib/context';
 
 interface PlaylistPanelProps { }
 
@@ -95,134 +96,187 @@ interface PlaylistItemProps { playlist: Playlist, playlistPanel: PlaylistPanel }
 
 interface PlaylistItemState { }
 
-class PlaylistItem extends Component<PlaylistItemProps, PlaylistItemState> {
-  constructor(props: PlaylistItemProps) {
-    super(props);
+function PlaylistItem(props: PlaylistItemProps) {
+  const { playlist, playlistPanel } = props;
+  const currentPlaylist = Playlist.getCurrent();
+  const modals = useModals();
 
-    this.state = {};
-  }
+  const update = () => {
+    // You can use a state if needed for re-rendering
+    // const [state, setState] = useState({});
+    // setState({});
+  };
 
-  update() {
-    this.setState({});
-  }
-
-  public async deletePlaylist(force = false) {
-    const pl = this.props.playlist;
-    const currentPlaylist = Playlist.getCurrent();
-
-    if (currentPlaylist === pl) {
+  async function deletePlaylist(force = false) {
+    if (currentPlaylist === playlist) {
       Toxen.playlist = null;
     }
-    Toxen.playlists = Toxen.playlists.filter(p => p.name !== pl.name);
+    Toxen.playlists = Toxen.playlists.filter(p => p.name !== playlist.name);
     Playlist.save();
-    Toxen.log(<>
-      Removed playlist: <code>{pl.name}</code>
-    </>, 3000);
+    Toxen.log(
+      <>
+        Removed playlist: <code>{playlist.name}</code>
+      </>,
+      3000
+    );
 
-    this.props.playlistPanel.update();
+    playlistPanel.update();
   }
 
-  private EditPlaylistName(props: { playlist: Playlist, onClose: () => void }) {
-    const pl = props.playlist;
-    const onClose = props.onClose;
-    const [playlistName, setPlaylistName] = React.useState(pl?.name || "");
+  function EditPlaylistName({ playlist, onClose }: { playlist: Playlist; onClose: () => void; }) {
+    const [playlistName, setPlaylistName] = useState(playlist?.name || "");
 
     const confirm = () => {
-      pl.name = playlistName.trim();
-      setPlaylistName(pl.name);
+      playlist.name = playlistName.trim();
+      setPlaylistName(playlist.name);
       Playlist.save();
-      this.props.playlistPanel.update();
+      playlistPanel.update();
       onClose();
     };
-    
+
     return (
       <div>
-        <TextInput label="Playlist name" value={playlistName} onChange={e => {
-          setPlaylistName(e.currentTarget.value);
-        }} onKeyDown={e => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            confirm();
-          }
-        }} />
+        <TextInput
+          label="Playlist name"
+          value={playlistName}
+          onChange={(e) => {
+            setPlaylistName(e.currentTarget.value);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              confirm();
+            }
+          }} />
         <Group>
-          <Button color="gray" onClick={() => {
-            onClose();
-          }}>Cancel</Button>
-          <Button color="green" onClick={() => {
-            confirm();
-          }}>Save</Button>
+          <Button color="gray" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button color="green" onClick={confirm}>
+            Save
+          </Button>
         </Group>
       </div>
-    )
-  }
-
-  private ContextMenu = (props: { playlist: Playlist }) => {
-    const pl = props.playlist;
-    const modals = useModals();
-    return (
-      <Menu>
-        <Menu.Item disabled={!pl} onClick={() => {
-          const EditPlaylistName = this.EditPlaylistName.bind(this);
-          const closeEditModel = () => modals.closeModal(editModel);
-          const editModel = modals.openModal({
-            title: `Edit playlist "${pl?.name}"`,
-            children: <div>
-              <EditPlaylistName playlist={pl} onClose={closeEditModel} />
-            </div>,
-          });
-        }}>
-          Manage {pl?.name}
-        </Menu.Item>
-        <Menu.Item color="red" disabled={!pl} onClick={() => {
-          modals.openConfirmModal({
-            title: `Delete playlist "${pl?.name}"`,
-            children: <>
-              <p>Are you sure you want to delete the playlist <code>{pl?.name}</code>?</p>
-              <p>This action cannot be undone.</p>
-            </>,
-            onConfirm: () => {
-              this.deletePlaylist();
-            },
-            labels: {
-              confirm: "Delete",
-              cancel: "Cancel"
-            },
-            confirmProps: {
-              color: "red"
-            },
-          });
-        }}>
-          Delete
-        </Menu.Item>
-      </Menu>
     );
   }
 
-  render() {
-    const pl = this.props.playlist;
-    const currentPlaylist = Playlist.getCurrent();
+  const contextMenuModal = (modals: ModalsContextProps) => {
+    const close = () => modals.closeModal(modalId);
 
-    const isCurrent = currentPlaylist === pl;
-    return (
-      <>
-        <div className={[
-          "playlist-item",
-          isCurrent ? "playlist-item-current" : ""
-        ].join(" ")} onClick={() => {
-          Toxen.playlist = pl;
-          this.props.playlistPanel.update();
-        }}>
-          <this.ContextMenu playlist={pl} />
-          <div className="playlist-item-title">
-            <h3>{pl?.name || "No playlist"}</h3>
-          </div>
-        </div>
-        <br />
-      </>
-    )
-  }
+    const modalId = modals.openModal({
+      title: "Playlist options",
+      children: (
+        <Stack>
+          <Button
+            onClick={() => {
+              const closeEditModel = () => modals.closeModal(editModel);
+              const editModel = modals.openModal({
+                title: `Edit playlist "${playlist?.name}"`,
+                children: (
+                  <div>
+                    <EditPlaylistName playlist={playlist} onClose={closeEditModel} />
+                  </div>
+                ),
+              });
+              close();
+            }}
+          >
+            Change name
+          </Button>
+          <Button
+            onClick={() => {
+              playlist.promptSetBackground(modals);
+              close();
+            }}
+          >
+            Set background
+          </Button>
+          {playlist.background && (
+            <Checkbox
+              label="Apply background"
+              defaultChecked={playlist.applyBackground}
+              onChange={() => {
+                playlist.applyBackground = !playlist.applyBackground;
+                Playlist.save();
+                update();
+              }}
+            >
+              Show playlist background
+            </Checkbox>
+          )}
+          <Button
+            color="red"
+            onClick={() => {
+              modals.openConfirmModal({
+                title: `Delete playlist "${playlist?.name}"`,
+                children: (
+                  <>
+                    <p>
+                      Are you sure you want to delete the playlist <code>{playlist?.name}</code>?
+                    </p>
+                    <p>This action cannot be undone.</p>
+                  </>
+                ),
+                onConfirm: () => {
+                  deletePlaylist();
+                },
+                labels: {
+                  confirm: "Delete",
+                  cancel: "Cancel",
+                },
+                confirmProps: {
+                  color: "red",
+                },
+              });
+              close();
+            }}
+          >
+            Delete
+          </Button>
+        </Stack>
+      ),
+      onClose: close,
+    });
+  };
+
+  const plBackground = playlist?.getBackgroundPath();
+  
+  return (
+    <div
+      className={[
+        "playlist-item",
+        currentPlaylist === playlist ? "playlist-item-current" : "",
+      ].join(" ")}
+      onClick={() => {
+        Toxen.playlist = playlist;
+        playlistPanel.update();
+      }}
+      onContextMenu={(e) => {
+        e.preventDefault();
+
+        // Unless its the default playlist, show the context menu
+        if (playlist) contextMenuModal(modals);
+      }}
+    >
+      <div
+        className="playlist-item-background"
+        style={{
+          ...(
+            plBackground ? {
+              backgroundImage: `url("${plBackground}")`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            } : {}
+          ),
+        }}
+      ></div>
+      <div className="playlist-item-title">
+        <h3>{playlist?.name || "No playlist"}</h3>
+      </div>
+    </div>
+  );
 }
+
 
 function PlaylistForm(props: { playlistPanel: PlaylistPanel }) {
   const nameRef = React.useRef<HTMLInputElement>();

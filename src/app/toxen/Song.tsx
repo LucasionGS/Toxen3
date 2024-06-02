@@ -1056,7 +1056,7 @@ export default class Song implements ISong {
       }
       let ent: Dirent;
       while (ent = await dir.read()) {
-        if (ent.isDirectory()) { // Is music folder
+        if (ent.isDirectory() && !ent.name.startsWith(".")) { // Is music folder
           let songFolder = resolve(dirName, ent.name);
 
           try {

@@ -60,6 +60,7 @@ import HueManager from "./toxen/philipshue/HueManager";
 import ImportPanel from "./components/Sidepanel/Panels/ImportPanel/ImportPanel";
 import YTDlpWrap from "yt-dlp-wrap";
 import Ytdlp from "./toxen/Ytdlp";
+import Reloadable from "./components/Reloadable";
 
 declare const SUBTITLE_CREATOR_WEBPACK_ENTRY: any;
 
@@ -71,10 +72,31 @@ export class Toxen {
   public static async getBlob(src: string) {
     return fetch(src).then((r) => r.blob());
   }
+
   public static setTitle(title: string) {
     Toxen.setAppBarText(title);
     document.title = title;
   }
+
+  // private static reloadables: Record<string, () => void> = {};
+  // public static setReloadable(id: string, callback: () => void) { Toxen.reloadables[id] = callback; }
+  // public static removeReloadable(id: string) { delete Toxen.reloadables[id]; }
+
+  // public static reloadReloadable(id?: string) {
+  //   if (id) {
+  //     console.log(Toxen.reloadables);
+  //     try {
+  //       console.log("Reloading", id);
+  //       Toxen.reloadables[id]();
+  //     } catch (error) {
+  //       Toxen.error(error.message);
+  //     }
+  //     return;
+  //   }
+  //   for (const id in Toxen.reloadables) {
+  //     Toxen.reloadables[id]();
+  //   }
+  // }
 
   public static setAppBarText: (text: string) => void = () => void 0;
   public static setAppBarUser: (user: User) => void = () => void 0;
@@ -361,7 +383,7 @@ export class Toxen {
         });
       }
     }
-    
+
     Toxen.discord.setPresence();
   }
 
@@ -509,19 +531,19 @@ export class Toxen {
     if (newMode && Toxen.isMiniplayer()) {
       Toxen.toggleMiniplayer(false);
     }
-    
+
     w.setFullScreen(newMode);
     document.body.toggleAttribute("fullscreen", newMode);
   }
-  
+
   private static _widthBeforeMiniplayer: number;
   private static _heightBeforeMiniplayer: number;
   private static _xBeforeMiniplayer: number;
   private static _yBeforeMiniplayer: number;
-  
+
   private static _miniplayerWidth = 300;
   private static _miniplayerHeight = Math.floor(300 / 16 * 9);
-  
+
   public static toggleMiniplayer(force?: boolean) {
     const w = remote.getCurrentWindow();
     const newMode = force ?? !Toxen.isMiniplayer();
@@ -529,7 +551,7 @@ export class Toxen {
     if (newMode && w.isFullScreen()) {
       Toxen.toggleFullscreen(false);
     }
-    
+
     document.body.toggleAttribute("miniplayer", newMode);
 
     // If true, set always on top
@@ -729,7 +751,7 @@ export default class ToxenAppRenderer extends React.Component {
             }
           });
         }
-        
+
       }).then(() => Toxen._resolveWhenReady());
   }
 
@@ -770,53 +792,58 @@ export default class ToxenAppRenderer extends React.Component {
           {/* Song Panel */}
           <SidepanelSection key="songPanel" id="songPanel" title="Music" icon={<i className="fas fa-music"></i>}>
             <SidepanelSectionHeader>
-              <h1>Tracks</h1>
-              {/* <Button.Group> */}
-              <Button
-                leftSection={<i className="fas fa-redo"></i>}
-                onClick={async () => {
-                  await Toxen.loadSongs();
-                  Toxen.songPanel.update();
-                }}
-              >
-                &nbsp;
-                Reload Library
-              </Button>
-              <Button
-                leftSection={<i className="fas fa-search"></i>}
-                onClick={async () => {
-                  Toxen.showCurrentSong();
-                }}
-              >&nbsp;Show playing track</Button>
-              {/* </Button.Group> */}
-              <br />
-              <br />
-              <SearchField />
-              <br />
-              <Button color="green" onClick={() => Toxen.sidePanel.setSectionId("playlist")}>Change Playlist</Button>
-              {/* {!Settings.isRemote() && user?.premium && (
-                <Button color="blue" onClick={async () => {
-                  const user = Settings.getUser();
-                  if (user && user.premium) {
-                    const win = remote.getCurrentWindow();
-
-                    const songs = Toxen.getAllSongs();
-                    for (let i = 0; i < songs.length; i++) {
-                      win.setProgressBar(i / songs.length);
-                      const s = songs[i];
-                      await s.sync({
-                        silenceValidated: true,
-                      });
-                    }
-                    win.setProgressBar(-1);
-                    Toxen.notify({
-                      title: "Synced all songs",
-                      content: "All songs have been synced.",
-                      expiresIn: 5000
-                    })
+              {() => (
+                <div style={{ position: "relative" }}>
+                  {
+                    Toxen.playlist ? (
+                      <div
+                        style={{
+                          overflow: "hidden",
+                          backgroundImage: `url(${(Toxen.playlist.getBackgroundPath())})`,
+                          backgroundSize: "cover",
+                          backgroundPosition: "center",
+                          backgroundRepeat: "no-repeat",
+                          position: "absolute",
+                          top: -16,
+                          left: -16,
+                          right: -16,
+                          bottom: -16,
+                          filter: "brightness(0.5) blur(2px)",
+                          zIndex: -1,
+                        }}
+                      ></div>
+                    ) : null
                   }
-                }}>Sync all</Button>
-              )} */}
+                  <div>
+                    <h1>
+                      {Toxen.playlist ? Toxen.playlist.name : "All Tracks"}
+                    </h1>
+                    <SearchField />
+                    <div style={{
+                      height: 8
+                    }}></div>
+                    <Button.Group>
+                      <Button color="green" onClick={() => Toxen.sidePanel.setSectionId("playlist")}>Change Playlist</Button>
+                      <Button
+                        leftSection={<i className="fas fa-redo"></i>}
+                        onClick={async () => {
+                          await Toxen.loadSongs();
+                          Toxen.songPanel.update();
+                        }}
+                      >
+                        &nbsp;
+                        Reload Library
+                      </Button>
+                      <Button
+                        leftSection={<i className="fas fa-search"></i>}
+                        onClick={async () => {
+                          Toxen.showCurrentSong();
+                        }}
+                      >&nbsp;Show playing track</Button>
+                    </Button.Group>
+                  </div>
+                </div>
+              )}
             </SidepanelSectionHeader>
             <SongQueuePanel ref={s => Toxen.songQueuePanel = s} />
             <SongPanel ref={s => Toxen.songPanel = s} />

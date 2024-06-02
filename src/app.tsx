@@ -1,7 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom";
 import ReactDOMClient from "react-dom/client";
-import { getCurrentWindow } from "@electron/remote";
+import { getCurrentWindow, shell } from "@electron/remote";
 import ToxenAppRenderer, { Toxen } from "./app/ToxenApp";
 import "@fortawesome/fontawesome-free/js/all"; // Import FA
 import "@fortawesome/fontawesome-free/scss/regular.scss";
@@ -16,6 +16,8 @@ import { MantineProvider } from "@mantine/core";
 import {  } from "@mantine/notifications";
 import { ModalsProvider } from "@mantine/modals";
 import { app, Menu } from "@electron/remote";
+import System from "./app/toxen/System";
+import CrossPlatform from "./app/toxen/CrossPlatform";
 
 // console.log("Toxen is running in development mode.");
 // console.log(app);
@@ -152,23 +154,29 @@ app.whenReady().then(() => {
       {
         label: "Tools",
         submenu: [
-          {
-            label: "Subtitle Editor" + (app.isPackaged ? " (Coming soon)" : " (Development Only)"),
-            // accelerator: "F10",
-            click() {
-              Toxen.openSubtitleCreator(Song.getCurrent())
-            },
-            enabled: !app.isPackaged
-          },
-          {
-            type: "separator"
-          },
+          // {
+          //   label: "Subtitle Editor" + (app.isPackaged ? " (Coming soon)" : " (Development Only)"),
+          //   // accelerator: "F10",
+          //   click() {
+          //     Toxen.openSubtitleCreator(Song.getCurrent())
+          //   },
+          //   enabled: !app.isPackaged
+          // },
+          // {
+          //   type: "separator"
+          // },
           {
             label: "Developer Console",
             accelerator: "F12",
             click() {
               let win = getCurrentWindow();
               win.webContents.isDevToolsOpened() ? win.webContents.closeDevTools() : win.webContents.openDevTools();
+            }
+          },
+          {
+            label: "Open Data Folder",
+            click() {
+              shell.openPath(CrossPlatform.getToxenDataPath());
             }
           }
         ]

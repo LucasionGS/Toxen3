@@ -52,7 +52,7 @@ export default class Background extends Component<BackgroundProps, BackgroundSta
    * Returns the currently in use background image. It will return the default image if no image is set.
    */
   public getBackground(): string {
-    return this.state.image || Settings.get("defaultBackground") || null;
+    return (Toxen.playlist && Toxen.playlist.applyBackground && Toxen.playlist.getBackgroundPath()) || this.state.image || Settings.get("defaultBackground") || null;
   }
 
   public musicPlayer: MusicPlayer;

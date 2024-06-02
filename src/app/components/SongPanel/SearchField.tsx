@@ -24,6 +24,7 @@ const SearchField = () => {
         <IconSearch />
       </Button>
       <TextInput
+        leftSection={<IconSearch />}
         placeholder="Search..."
         spellCheck={false}
         type="search"
@@ -38,7 +39,7 @@ const SearchField = () => {
           }
         }}
         style={{
-          width: "75%",
+          width: "100%",
         }}
       />
     </Group>

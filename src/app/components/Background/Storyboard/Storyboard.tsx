@@ -126,6 +126,7 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
   public getBackground(full: boolean = false) {
     const bg = this.data.background
       ?? (
+        (Toxen.playlist &&Toxen.playlist.applyBackground && Toxen.playlist.getBackgroundPath()) ||
         (this.state.song && this.state.song.paths.background)
         || null
       );

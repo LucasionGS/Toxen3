@@ -5,17 +5,26 @@ import fs from "fs";
 import CrossPlatform from "./CrossPlatform";
 import { Toxen } from "../ToxenApp";
 import Path from "path";
+import { ModalsContextProps } from "@mantine/modals/lib/context";
+import React from "react";
+import { Button } from "@mantine/core";
+import System, { ToxenFile } from "./System";
+import * as remote from "@electron/remote";
 
 export default class Playlist {
   private constructor() { }
 
   // public static playlists: Playlist[];
   public name: string;
+  public background?: string;
+  public applyBackground?: boolean;
   public songList: Song[];
 
   public static create(data: IPlaylist, compareToSongObject?: { [uid: string]: Song }) {
     let pl = new Playlist();
     pl.name = data.name;
+    pl.background = data.background;
+    pl.applyBackground = data.applyBackground ?? false;
     if (compareToSongObject) {
       pl.songList = data.songList.map(uid => compareToSongObject[uid]).filter(s => s !== null).filter(a => a);
     }
@@ -143,6 +152,8 @@ export default class Playlist {
     const playlists: IPlaylist[] = (Toxen.playlists ?? []).map(pl => {
       return {
         name: pl.name,
+        background: pl.background,
+        applyBackground: pl.applyBackground,
         songList: [... new Set(pl.songList.map(s => s.uid))]
       }
     });
@@ -164,11 +175,80 @@ export default class Playlist {
   public async removeSong(...songs: Song[]): Promise<void>;
   public async removeSong(...songs: Song[]): Promise<void> {
     this.songList = this.songList.filter(s => !songs.includes(s));
-    if (Toxen.sidePanel.getSectionId() === "songPanel" && Toxen.playlist === this) Toxen.reloadSection();await Playlist.save();
+    if (Toxen.sidePanel.getSectionId() === "songPanel" && Toxen.playlist === this) Toxen.reloadSection(); await Playlist.save();
+  }
+
+  public promptSetBackground(modals: ModalsContextProps) {
+    const modalId = modals.openModal({
+      title: "Set Playlist Background",
+      children: (
+        <div>
+          <p>Choose a background image for the playlist.</p>
+          <Button
+            leftSection={<i className="fas fa-file-import"></i>}
+            onClick={() => {
+              let paths = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
+                properties: [
+                  "openFile"
+                ],
+                filters: [
+                  {
+                    name: "Media files",
+                    extensions: Toxen.getSupportedImageFiles().map(ext => ext.replace(".", ""))
+                  },
+                ],
+              });
+
+              if (!paths || paths.length == 0) return;
+
+              const files: ToxenFile[] = paths.map(p => ({
+                name: Path.basename(p),
+                path: p
+              }));
+
+              const playlistBackgroundsDir = Playlist.getPlaylistBackgroundsDir(true);
+              let randomizedName: string;
+              do {
+                randomizedName = System.randomString(16) + Path.extname(files[0].name);
+              } while (fs.existsSync(Path.resolve(playlistBackgroundsDir, randomizedName)));
+              
+              fs.copyFileSync(files[0].path, Path.resolve(playlistBackgroundsDir, randomizedName));
+
+              if (this.background) {
+                fs.unlinkSync(Path.resolve(playlistBackgroundsDir, this.background));
+              }
+              
+              this.background = randomizedName;
+              Playlist.save();
+              Toxen.playlistPanel.update();
+              modals.closeModal(modalId);
+            }}
+          >Set background</Button>
+        </div>
+      )
+    });
+  }
+
+  public static getPlaylistBackgroundsDir(ensureExisting = false) {
+    const playlistBackgroundsDir = Path.resolve(Settings.get("libraryDirectory"), ".playlistBackgrounds");
+    if (ensureExisting && !fs.existsSync(playlistBackgroundsDir)) fs.mkdirSync(playlistBackgroundsDir);
+    return playlistBackgroundsDir;
+  }
+
+  private _cachedBackgroundPath: string;
+  private _cachedBackgroundName: string;
+  public getBackgroundPath() {
+    if (this.background === this._cachedBackgroundName) return this._cachedBackgroundPath;
+    console.log("Getting background path");
+    if (!this.background) return null;
+    this._cachedBackgroundName = this.background;
+    return this._cachedBackgroundPath = Path.resolve(Playlist.getPlaylistBackgroundsDir(), this.background).replace(/\\/g, "/");
   }
 }
 
 interface IPlaylist {
   name: string;
+  background?: string;
+  applyBackground?: boolean;
   songList: string[];
 }
