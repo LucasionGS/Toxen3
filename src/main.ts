@@ -38,7 +38,7 @@ const createWindow = (): void => {
   });
   remote.enable(mainWindow.webContents);
 
-  mainWindow.webContents.openDevTools();
+  // mainWindow.webContents.openDevTools();
   
   console.log(process.cwd());
   

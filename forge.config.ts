@@ -24,7 +24,7 @@ const config: ForgeConfig = {
   ],
   packagerConfig: {
     asar: true,
-    icon: './src/icons/toxen.ico',
+    // icon: './src/icons/toxen.ico',
     executableName: 'toxen3',
   },
   rebuildConfig: {},
@@ -32,7 +32,6 @@ const config: ForgeConfig = {
     name: 'toxen3',
     authors: 'Lucasion',
     description: 'Toxen Music Player',
-    iconUrl: 'https://toxen.net/favicon.ico',
     setupIcon: './src/icons/toxen.ico',
     exe: 'toxen3.exe',
   }), new MakerZIP({}, ['darwin']), new MakerRpm({}), new MakerDeb({})],

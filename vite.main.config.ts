@@ -17,6 +17,7 @@ export default defineConfig((env) => {
       rollupOptions: {
         external,
       },
+      chunkSizeWarningLimit: 1024,
     },
     plugins: [pluginHotRestart('restart')],
     define,
