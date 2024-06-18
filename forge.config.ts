@@ -17,7 +17,7 @@ const config: ForgeConfig = {
           owner: "LucasionGS",
           name: "Toxen3"
         },
-        draft: false,
+        draft: true,
         prerelease: false
       }
     }
