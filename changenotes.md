@@ -1,5 +1,5 @@
 <!-- ## Upcoming update / 1.7.2 -->
-1.7.1 - 19-06-2024
+## 1.7.1 - 19-06-2024
 ### New Features
 - Added a genre field to songs. I am surprised I hadn't already added this. It's a very basic field, but it's there now.
 ### Changes
