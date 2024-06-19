@@ -41,6 +41,7 @@ export default class SongPanel extends Component<SongPanelProps, SongPanelState>
           s.language ?? "", // Language
           ...(s.coArtists ?? []), // Co-Artists
           s.source ?? "",
+          s.genre ?? "",
           ...(s.tags ?? []),
         ].join(" ").replace(/_/g, " ").trim().toLowerCase();
         return items.every(item => sortItems.includes(item));

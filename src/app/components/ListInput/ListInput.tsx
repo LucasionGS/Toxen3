@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { TextInput } from "@mantine/core";
+import { Badge, InputLabel, TagsInput, TextInput } from "@mantine/core";
 import "./ListInput.scss";
 
 interface ListInputProps {
@@ -18,40 +18,24 @@ export default function ListInput(props: ListInputProps) {
   const [currentValue, setCurrentValue] = useState("");
   const [list, setList] = useState<string[]>(props.defaultValue ?? []);
 
-  function remove(value: string) {
-    const newList = list.filter(item => item !== value);
-    props.onChange(newList, value);
-    setList(newList);
-  }
-
   return (
     <>
-      <TextInput
-        name={props.name}
+      <TagsInput 
         label={props.label}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            if (!currentValue) {
-              return;
-            }
-            const newArray = [...list, currentValue];
-            props.onChange(newArray, e.currentTarget.value || null);
-            setList(newArray);
-            setCurrentValue("");
-          }
-        }}
-        value={currentValue}
-        onChange={(e) => setCurrentValue(e.currentTarget.value)}
+        value={list} 
+        onChange={(value) => {
+          props.onChange(value);
+          setList(value);
+        }} 
+        onRemove={(_) => {
+          const i = list.indexOf(_);
+          const value = list[i];
+          const newList = [...list];
+          newList.splice(i, 1);
+          props.onChange(newList, value);
+          setList(newList);
+        }} 
       />
-      <div className="form-input-list-items">
-        {list.map(v => (
-          <div key={v} className="form-input-list-item" onClick={() => remove(v)} >
-            {v.replace(/_/g, " ")}
-            <div className="form-input-list-item-remove">✖</div>
-          </div>
-        ))}
-      </div>
     </>
   );
 }

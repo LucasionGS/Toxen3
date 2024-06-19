@@ -13,11 +13,12 @@ import SidepanelSectionHeader from "../../SidepanelSectionHeader";
 import "./EditSong.scss";
 import fsp from "fs/promises";
 import Path from "path";
-import { Button, Checkbox, ColorInput, NumberInput, Select, TextInput } from "@mantine/core";
+import { Button, Checkbox, ColorInput, InputLabel, NumberInput, Radio, Select, TextInput } from "@mantine/core";
 import ListInput from "../../../ListInput/ListInput";
 import SelectAsync from "../../../SelectAsync/SelectAsync";
 import ToxenInteractionMode from "../../../../toxen/ToxenInteractionMode";
 import { useModals } from "@mantine/modals";
+import ScreenPositionSelector from "../../../ScreenPositionSelector/ScreenPositionSelector";
 
 interface EditSongProps { }
 
@@ -78,6 +79,14 @@ export default function EditSong(props: EditSongProps) {
           name="album"
           onChange={(v) => Toxen.editingSong.album = v.currentTarget.value}
           defaultValue={Toxen.editingSong.album}
+          onBlur={() => Toxen.editingSong.saveInfo()}
+          onKeyDown={textInputSaveOnEnter}
+        />
+        <TextInput
+          label="Genre"
+          name="genre"
+          onChange={(v) => Toxen.editingSong.genre = v.currentTarget.value}
+          defaultValue={Toxen.editingSong.genre}
           onBlur={() => Toxen.editingSong.saveInfo()}
           onKeyDown={textInputSaveOnEnter}
         />
@@ -368,7 +377,7 @@ export default function EditSong(props: EditSongProps) {
         <br />
         <sup>Enables the floating title for this song.</sup>
 
-        <Select
+        {/* <Select
           allowDeselect={false}
           data={[
             { label: "Center", value: "center" },
@@ -388,6 +397,47 @@ export default function EditSong(props: EditSongProps) {
             Toxen.editingSong.floatingTitlePosition = v as typeof Toxen.editingSong.floatingTitlePosition;
             Toxen.editingSong.saveInfo();
           }}
+        /> */}
+        {/* <InputLabel>Floating Title: Position</InputLabel>
+        <Radio.Group
+          name="floatingTitlePosition"
+          defaultValue={Toxen.editingSong.floatingTitlePosition}
+          onChange={v => {
+            Toxen.editingSong.floatingTitlePosition = v as typeof Toxen.editingSong.floatingTitlePosition;
+            Toxen.editingSong.saveInfo();
+          }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <span style={{ display: "flex", gap: 8 }}>
+              <Radio value="top-left" />
+              <Radio value="top" />
+              <Radio value="top-right" />
+            </span>
+
+            <span style={{ display: "flex", gap: 8 }}>
+              <Radio value="left" />
+              <Radio value="center" />
+              <Radio value="right" />
+            </span>
+
+            <span style={{ display: "flex", gap: 8 }}>
+              <Radio value="bottom-left" />
+              <Radio value="bottom" />
+              <Radio value="bottom-right" />
+            </span>
+            <Radio label="Default" value=""/>
+          </div>
+        </Radio.Group> */}
+        <ScreenPositionSelector
+          onChange={v => {
+            Toxen.editingSong.floatingTitlePosition = v === "" ? null : v;
+            Toxen.editingSong.saveInfo();
+          }}
+          defaultValue={Toxen.editingSong.floatingTitlePosition || ""}
+          label="Floating Title: Position"
+          name="floatingTitlePosition"
+          deselectable
+          showText
         />
         <br />
         <sup>Set the position of the floating title.</sup>

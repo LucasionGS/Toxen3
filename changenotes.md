@@ -1,5 +1,12 @@
-<!-- ## Upcoming update / 1.7.1 -->
-## 1.7.0 - 06-03-2024
+<!-- ## Upcoming update / 1.7.2 -->
+1.7.1 - 19-06-2024
+### New Features
+- Added a genre field to songs. I am surprised I hadn't already added this. It's a very basic field, but it's there now.
+### Changes
+- Changed the song tag input to look nicer. Now using the same design as the other input fields.
+- Changed floating title position selector to be more intuitive with a grid representation of the positions.
+
+## 1.7.0 - 18-06-2024
 ### New Features
 Added better playlists.
 - Playlists can now be right-clicked to open a context menu with more options.
@@ -8,6 +15,7 @@ Added better playlists.
 ### Broken stuff
 - Hue integration is currently not functional, but will be re-implemented in the future.
 - Subtitle Editor (Which was previously in development) has been put on hold for now, as it was causing issues with the new Electron version.
+- For now, the Toxen icon is broken until a fix is found. This has to do with the packager failing to package the icon correctly. Default Electron icon is used instead for now.
 ### Dependency Upgrades
 - Major upgrade to Electron 30, migrating from Electron 12. This should improve stability and security.
 - Upgraded to Node.js v22.2.0.

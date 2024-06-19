@@ -47,7 +47,7 @@ export default function AboutSection() {
         <Tabs.Panel value="Credits">
           <h2>Credits</h2>
           <p>Developed by <ExternalUrl href="https://github.com/LucasionGS">Lucasion</ExternalUrl></p>
-          <p>Toxen logo designed by <ExternalUrl href="https://www.instagram.com/xrutoma">xrutoma</ExternalUrl></p>
+          <p>Toxen logo designed by <ExternalUrl href="https://x.com/rubberducky1332">Rubberducky</ExternalUrl></p>
         </Tabs.Panel>
 
         <Tabs.Panel value="Dependencies">
