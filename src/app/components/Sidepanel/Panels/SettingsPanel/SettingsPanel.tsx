@@ -284,6 +284,12 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           </sup>
           <br />
 
+          <Checkbox onClick={(e) => Settings.apply({ visualizerNormalize: e.currentTarget.checked }, true)} defaultChecked={Settings.get("visualizerNormalize")} name="visualizerNormalize" label="Normalize Visualizer" />
+          <br />
+          <sup>
+            Normalize the visualizer to the intensity level of the song. This will make the visuals more smoothed out and less intense.
+          </sup>
+
           <Text>Visualizer Size</Text>
           <Slider onChange={v => Settings.set("fftSize", v)} onChangeEnd={v => Settings.apply({ fftSize: v }, true)} defaultValue={Settings.get("fftSize") || 6} name="fftSize" label={(v) => v} min={1} max={10} />
           <br />

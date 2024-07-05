@@ -45,6 +45,7 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
       visualizerColor: null,
       visualizerStyle: null,
       visualizerIntensity: null,
+      visualizerNormalize: null,
       visualizerPulseBackground: null,
       backgroundDim: null,
       backgroundDynamicLighting: null,
@@ -83,6 +84,16 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
         (this.state.song && this.state.song.visualizerIntensity)
         || Settings.get("visualizerIntensity")
         || 1
+      );
+  }
+
+  // VisualizerNormalizer
+  public getVisualizerNormalize() {
+    return this.data.visualizerNormalize
+      ?? (
+        (this.state.song && this.state.song.visualizerNormalize)
+        || Settings.get("visualizerNormalize")
+        || false
       );
   }
 
@@ -167,6 +178,7 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
 interface StoryboardData {
   visualizerColor: string;
   visualizerIntensity: number;
+  visualizerNormalize: boolean;
   visualizerStyle: VisualizerStyle;
   visualizerPulseBackground: boolean;
   backgroundDim: number;

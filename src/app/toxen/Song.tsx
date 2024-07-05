@@ -49,6 +49,7 @@ export default class Song implements ISong {
   public visualizerColor: string;
   public visualizerStyle: VisualizerStyle;
   public visualizerIntensity: number;
+  public visualizerNormalize: boolean;
   public visualizerForceRainbowMode: boolean;
   /**
    * `pulse` is forced pulsing.  
@@ -281,6 +282,7 @@ export default class Song implements ISong {
       "visualizerColor",
       "visualizerStyle",
       "visualizerIntensity",
+      "visualizerNormalize",
       "visualizerForceRainbowMode",
       "visualizerPulseBackground",
       "year",
@@ -1579,6 +1581,7 @@ export interface ISong {
   visualizerColor: string;
   visualizerStyle: VisualizerStyle;
   visualizerIntensity: number;
+  visualizerNormalize: boolean;
   visualizerForceRainbowMode: boolean;
   /**
    * `pulse` is forced pulsing.  

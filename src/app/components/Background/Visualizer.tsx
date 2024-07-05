@@ -110,6 +110,11 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     // dataArray = dataArray.filter((_, i) => i >= (dataArray.length / 2));
     dataArray = dataArray.slice(dataArray.length / 2);
 
+    // Normalize the data
+    if (Toxen.background.storyboard.getVisualizerNormalize()) {
+      const max = Math.max(...dataArray) / 100;
+      dataArray = dataArray.map(v => Math.round(v / max) * 2);
+    }
 
     // Shuffle the array to make it look more random.
     if (

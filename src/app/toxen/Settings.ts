@@ -298,6 +298,7 @@ export interface ISettings {
   visualizerColor: string;
   visualizerStyle: VisualizerStyle;
   visualizerIntensity: number;
+  visualizerNormalize: boolean;
   /**
    * @unimplemented
    */
