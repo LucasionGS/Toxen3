@@ -55,6 +55,13 @@ export default class Sidepanel extends React.Component<Props, State> {
     // }, 0);
   }
 
+  /**
+   * Makes the panel visible or invisible. Cannot be opened if the panel is hidden.
+   */
+  public setHidden(hidden: boolean) {
+    this.containerRef.current.style.display = hidden ? "none" : "";
+  }
+
   private getWidth() {
     return this.state?.width ?? remote.getCurrentWindow().getSize()[0] / 2;
   }

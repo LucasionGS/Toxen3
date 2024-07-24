@@ -61,6 +61,7 @@ import ImportPanel from "./components/Sidepanel/Panels/ImportPanel/ImportPanel";
 import YTDlpWrap from "yt-dlp-wrap";
 import Ytdlp from "./toxen/Ytdlp";
 import Reloadable from "./components/Reloadable";
+import StoryboardEditor, { StoryboardEditorController } from "./components/StoryboardEditor/StoryboardEditor";
 
 declare const SUBTITLE_CREATOR_WEBPACK_ENTRY: any;
 
@@ -112,6 +113,7 @@ export class Toxen {
     }
     Toxen.mode = mode;
     // Actions on specific modes
+    Toxen.sidePanel.setHidden(false);
     switch (mode) {
       case ToxenInteractionMode.Player: {
         Toxen.sidePanel.setSectionId("songPanel");
@@ -120,7 +122,9 @@ export class Toxen {
 
       case ToxenInteractionMode.StoryboardEditor: {
         (Toxen.editingSong = data as Song).play();
-        Toxen.sidePanel.setSectionId("storyboardEditor");
+        // Toxen.sidePanel.setSectionId("storyboardEditor");
+        Toxen.sidePanel.setHidden(true);
+        Toxen.storyboardEditorController.start();
         break;
       }
 
@@ -409,6 +413,7 @@ export class Toxen {
 
   public static loadingScreen: LoadingScreen;
   public static background: Background;
+  public static storyboardEditorController: StoryboardEditorController;
 
   public static songSearch = "";
   public static songList: Song[];
@@ -771,6 +776,7 @@ export default class ToxenAppRenderer extends React.Component {
         <ThemeContainer ref={ref => Toxen.themeContainer = ref} />
         <AppBar />
         <Background ref={ref => Toxen.background = ref} />
+        <StoryboardEditor controllerSetter={sec => Toxen.storyboardEditorController = sec} />
         <MusicControls ref={ref => Toxen.musicControls = ref} />
         <LoadingScreen ref={ls => Toxen.loadingScreen = ls} initialShow={true} />
         <div className="song-panel-toggle hide-on-inactive" onClick={() => Toxen.sidePanel.show()}>
@@ -933,4 +939,8 @@ export default class ToxenAppRenderer extends React.Component {
 setTimeout(async () => {
   // console.log(await Remote.compareLocalAndRemote());
   // console.log(await Legacy.getToxen2Playlists());
-}, 5000);
+
+  // Toxen.editSong(Song.getCurrent());
+  // await new Promise(r => setTimeout(r, 2000));
+  // Toxen.setMode("StoryboardEditor");
+}, 2000);

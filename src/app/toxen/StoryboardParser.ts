@@ -57,6 +57,11 @@ namespace StoryboardParser {
     selectData?: [string, string?][];
 
     /**
+     * Placeholder text for the argument.
+     */
+    placeholder?: string;
+
+    /**
      * Is this argument required?
      */
     required?: boolean;
@@ -187,7 +192,9 @@ namespace StoryboardParser {
     once?: boolean;
   }
 
-  interface PreparseStoryboardConfig {
+  export interface PreparseStoryboardConfig {
+    bpm: number;
+    bpmOffset: number;
     storyboard: SBEventConfig[];
     variables?: { [key: string]: any };
     version?: number;
@@ -195,6 +202,8 @@ namespace StoryboardParser {
   }
 
   export interface StoryboardConfig {
+    bpm: number;
+    bpmOffset: number;
     storyboard: SBEvent[];
     version?: number;
     author?: string;
@@ -203,6 +212,8 @@ namespace StoryboardParser {
 
   export async function save(path: string, config: StoryboardConfig) {
     const cData = {
+      bpm: config.bpm,
+      bpmOffset: config.bpmOffset,
       version: config.version,
       author: config.author,
       variables: config.variables,
@@ -245,6 +256,8 @@ namespace StoryboardParser {
   // `index` will be incremented by 1 every time a new event is added to `currentEvents`
   // `index` will be checked every frame to see if it needs to be incremented. Check if loadedStoryboard[index].endTime < currentTime
   let loadedStoryboard: StoryboardConfig = {
+    bpm: 120,
+    bpmOffset: 0,
     storyboard: [],
   };
 
@@ -254,6 +267,8 @@ namespace StoryboardParser {
     }
     else {
       loadedStoryboard = { // Default storyboard
+        bpm: 120,
+        bpmOffset: 0,
         storyboard: [],
       };
     }
@@ -272,6 +287,8 @@ namespace StoryboardParser {
     try {
       const events = storyboardConfig.storyboard.map((e, i) => SBEvent.fromConfig(e, storyboardConfig.variables, i, validateFields));
       return {
+        bpm: storyboardConfig.bpm,
+        bpmOffset: storyboardConfig.bpmOffset,
         storyboard: events,
         version: storyboardConfig.version,
         author: storyboardConfig.author,
@@ -361,6 +378,7 @@ namespace StoryboardParser {
           ...info,
           eventStartTime: e.startTime,
           eventEndTime: e.endTime,
+          bpm: loadedStoryboard.bpm,
         }, {
           getState: e.getState,
           setState: e.setState,
@@ -384,12 +402,15 @@ namespace StoryboardParser {
     currentEvents.length = 0;
 
     // Clean events
-    if (loadedStoryboard) loadedStoryboard.storyboard.forEach(tlEvent => {
-      tlEvent.setState(null);
-      if (tlEvent.once) {
-        tlEvent.done = false;
-      }
-    });
+    if (loadedStoryboard) {
+      loadedStoryboard.storyboard.sort((a, b) => a.startTime - b.startTime);
+      loadedStoryboard.storyboard.forEach(tlEvent => {
+        tlEvent.setState(null);
+        if (tlEvent.once) {
+          tlEvent.done = false;
+        }
+      });
+    }
   };
 
   interface SongInfo {
@@ -402,6 +423,7 @@ namespace StoryboardParser {
   interface EventInfo extends SongInfo {
     eventStartTime: number;
     eventEndTime: number;
+    bpm: number;
   }
 
   interface StateManager {
@@ -593,12 +615,13 @@ namespace StoryboardParser {
         name: "BPM",
         identifier: "bpm",
         type: "Number",
-        required: true
+        placeholder: "Uses song BPM if not set"
       },
       {
         name: "Intensity",
         identifier: "intensity",
         type: "Number",
+        required: true
       },
       {
         name: "Beat scale",
@@ -611,15 +634,16 @@ namespace StoryboardParser {
           ["1/2"],
           ["1/4"],
           ["1/8"],
-        ]
+        ],
+        required: true
       }
     ],
-    action: (args, { currentSongTime, eventStartTime }, { setState, getState }, ctx) => {
+    action: (args, { currentSongTime, eventStartTime, bpm: songBpm }, { setState, getState }, ctx) => {
       // Draw a pulse on the visualizer
       let state = getState<{ lastPulse: number }>() ?? { lastPulse: null };
       let color = getAsType<"Color">(args.color);
       let intensity = getAsType<"Number">(args.intensity) / 0.5;
-      let bpm = getAsType<"Number">(args.bpm);
+      let bpm = getAsType<"Number">(args.bpm || songBpm);
       let beatScale = getAsType<"Select">(args.beatScale);
 
       switch (beatScale) {
@@ -803,12 +827,13 @@ namespace StoryboardParser {
         name: "BPM",
         identifier: "bpm",
         type: "Number",
-        required: true
+        placeholder: "Uses song BPM if not set"
       },
       {
         name: "Intensity",
         identifier: "intensity",
         type: "Number",
+        required: true
       },
       {
         name: "Beat scale",
@@ -821,15 +846,16 @@ namespace StoryboardParser {
           ["1/2"],
           ["1/4"],
           ["1/8"],
-        ]
+        ],
+        required: true
       }
     ],
-    action: (args, { currentSongTime, eventStartTime }, { setState, getState }, ctx) => {
+    action: (args, { currentSongTime, eventStartTime, bpm: songBpm }, { setState, getState }, ctx) => {
       // Draw a pulse on the visualizer
       let state = getState<{ lastPulse: number }>() ?? { lastPulse: null };
       let color = getAsType<"Color">(args.color);
       let intensity = getAsType<"Number">(args.intensity) / 0.5;
-      let bpm = getAsType<"Number">(args.bpm);
+      let bpm = getAsType<"Number">(args.bpm || songBpm);
       let beatScale = getAsType<"Select">(args.beatScale);
 
       switch (beatScale) {

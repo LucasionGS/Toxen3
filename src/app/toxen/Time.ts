@@ -118,13 +118,17 @@ export default class Time {
 
   public static fromTimestamp(timestamp: string, onError?: (error: string) => Time) {
     // Assume the timestamp is in the format `hh?:mm?:ss`
-    if (!/^(\d+:)?(\d+:)?(\d+)(?:\.(\d+))?$/.test(timestamp)) {
+    if (!/^-?(\d+:)?(\d+:)?(\d+)(?:\.(\d+))?$/.test(timestamp)) {
       if (onError) {
         return onError("Invalid timestamp format");
       }
       throw `Unable to parse timestamp. Value was "${timestamp}"`;
     }
     let time = new Time();
+    let isMinus = timestamp.startsWith("-");
+
+    if (isMinus) { timestamp = timestamp.substring(1); }
+    
     let parts = timestamp.split(":").reverse();
     const [s, ms] = Time.splitSecondsAndMilliseconds(parseFloat(parts[0]));
     time.addMilliseconds(ms || 0);
@@ -132,7 +136,18 @@ export default class Time {
     time.addMinutes(parseInt(parts[1]) || 0);
     time.addHours(parseInt(parts[2]) || 0);
 
+    if (isMinus) {
+      time.setNegative();
+    }
+
     return time;
+  }
+
+  public setNegative() {
+    this.hours *= -1;
+    this.minutes *= -1;
+    this.seconds *= -1;
+    this.milliseconds *= -1;
   }
 
   public fromFormat(format: string = "hh?:mm:ss") {

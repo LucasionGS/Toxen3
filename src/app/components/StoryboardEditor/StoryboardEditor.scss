@@ -1,0 +1,8 @@
+.storyboard-editor {
+  height: var(--bodyHeight);
+
+  canvas {
+    width: 100%;
+    user-select: none;
+  }
+}
