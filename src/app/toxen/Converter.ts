@@ -89,6 +89,9 @@ export default class Converter {
 
       return rgb;
     }
+  }
 
+  public static createDeepCopy<T>(obj: T): T {
+    return JSON.parse(JSON.stringify(obj));
   }
 }

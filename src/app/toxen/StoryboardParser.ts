@@ -65,6 +65,11 @@ namespace StoryboardParser {
      * Is this argument required?
      */
     required?: boolean;
+
+    /**
+     * Description of the argument.
+     */
+    description?: string;
   }
 
   export interface ComponentArgumentTypes {
@@ -455,6 +460,63 @@ namespace StoryboardParser {
 
 
   // Creating components
+
+  addComponent("text", {
+    name: "Text",
+    arguments: [
+      {
+        name: "Text",
+        identifier: "text",
+        type: "String",
+        required: true
+      },
+      {
+        name: "Font size",
+        identifier: "fontSize",
+        type: "Number",
+        description: "Default: 12"
+      },
+      {
+        name: "Font",
+        identifier: "font",
+        type: "String",
+        description: "Default: Arial"
+      },
+      {
+        name: "Color",
+        identifier: "color",
+        type: "Color"
+      },
+      {
+        name: "X",
+        identifier: "x",
+        type: "Number"
+      },
+      {
+        name: "Y",
+        identifier: "y",
+        type: "Number",
+        description: "The Y position of the text. 0 is the top of the screen, 1080 is the bottom."
+      }
+    ],
+    action: (args, info, stateManager, ctx) => {
+      let text = getAsType<"String">(args.text);
+      let fontSize = getAsType<"Number">(args.fontSize) || 12;
+      let font = getAsType<"String">(args.font) || "Arial";
+      let color = getAsType<"Color">(args.color) || [255, 255, 255];
+      let x = getAsType<"Number">(args.x);
+      let y = getAsType<"Number">(args.y);
+
+      return () => {
+        ctx.save();
+        ctx.font = `${fontSize}px ${font}`;
+        ctx.fillStyle = rgbArrayToHex(color);
+        ctx.fillText(text, x, y);
+        ctx.restore();
+      }
+    }
+  });
+  
   addComponent("visualizerColor", {
     name: "Visualizer Color",
     arguments: [

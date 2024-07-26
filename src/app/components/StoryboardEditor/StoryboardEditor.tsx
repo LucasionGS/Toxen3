@@ -12,6 +12,7 @@ import { VisualizerStyle } from "../../toxen/Settings";
 import { hexToRgbArray, rgbArrayToHex } from "../Form/FormInputFields/FormInputColorPicker";
 import Time from "../../toxen/Time";
 import { IconArrowDownCircle, IconArrowUpCircle, IconStar } from "@tabler/icons-react";
+import Converter from "../../toxen/Converter";
 
 export interface StoryboardEditorController {
   start: () => void;
@@ -234,20 +235,20 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
   }
 
   // Play a sound if the time is on the beat
-  // if (songTime > bpmOffset) {
-  //   if (Math.abs(offset) < 12) {
-  //     if (canPlayClap) {
-  //       const audio = new Audio(soundClap);
-  //       audio.volume = 0.01;
-  //       audio.play();
-  //       canPlayClap = false;
-  //     }
-  //   }
-  //   else {
-  //     // can play again
-  //     canPlayClap = true;
-  //   }
-  // }
+  if (songTime > bpmOffset) {
+    if (Math.abs(offset) < 12) {
+      if (canPlayClap) {
+        const audio = new Audio(soundClap);
+        audio.volume = 0.01;
+        audio.play();
+        canPlayClap = false;
+      }
+    }
+    else {
+      // can play again
+      canPlayClap = true;
+    }
+  }
 
   // Nearest quarter beat to mouse
   function getNearestBeatFrom(x: number) {
@@ -278,23 +279,34 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
   }
 
   // Draw all events on the timeline at the appropriate time
-  const eventCount = config.storyboard.length;
   const visibleEvents: [StoryboardParser.SBEvent, number, number, number, number][] = [];
   let hPosOffset = 0;
-  const eventH = h / eventCount;
+  const visibleStoryboard = config.storyboard.filter((event) => {
+    const startTime = event.startTime * 1000;
+    const endTime = event.endTime * 1000;
+    return startTime - songTime <= 2000 && endTime - songTime >= -2000;
+    // if (startTime - songTime > 2000) return false;
+    // if (endTime - songTime < -2000) return false;
+    // return true;
+  });
+  const eventH = h / (visibleStoryboard.length + 1);
   ctx.save();
-  config.storyboard.forEach((event, i) => {
+  visibleStoryboard.forEach((event, i) => {
     const startTime = event.startTime * 1000;
     const endTime = event.endTime * 1000;
     if (startTime - songTime > 2000) return;
     if (endTime - songTime < -2000) return;
     
     
-    const xStart = indicatorPos + (startTime - songTime), yStart = hPosOffset * eventH;
+    const xStart = indicatorPos + (startTime - songTime), yStart = i * eventH;
     const xEnd = xStart + endTime - startTime, yEnd = yStart + eventH;
 
     ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
-
+    if (event.component === "visualizerColor") {
+      // debugger
+      const color = (event.data.color ?? [255, 255, 255]) as [number, number, number];
+      ctx.fillStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.5)`;
+    }
     
     ctx.fillRect(
       xStart,
@@ -314,7 +326,6 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
       ctx.strokeRect(xStart, yStart, xEnd - xStart, yEnd - yStart); 
     }
     visibleEvents.push([event, xStart, xEnd, yStart, yEnd]);
-    hPosOffset++;
 
     // Draw component name and adjust font size
     ctx.fillStyle = "white";
@@ -607,7 +618,7 @@ function EventElement(props: { config: StoryboardParser.StoryboardConfig, event:
             start: event.startTime,
             end: event.endTime,
             component: event.component,
-            data: Object.create(event.data),
+            data: Converter.createDeepCopy(event.data),
             once: event.once,
           }, {}, null, false));
           close();
@@ -657,123 +668,145 @@ function ComponentButton(props: { event: StoryboardParser.SBEvent, component: St
   const dataName = comp.name;
   const dataType = comp.type;
   const placeholder = comp.placeholder;
+  const description = comp.description;
   const required = comp.required;
   const dataValue = event.data[dataId] as StoryboardParser.ComponentArgumentTypes[typeof dataType];
   const [value, setValue] = useState(dataValue);
   switch (dataType) {
     case "String": return (
-      <div>
-        <TextInput
-          label={dataName + (required ? " *" : "")}
-          value={value as string}
-          onChange={(e) => {
-            setValue(event.data[dataId] = e.currentTarget.value);
-          }}
-          placeholder={placeholder}
-        />
-      </div>
+      <>
+        <div>
+          <TextInput
+            label={dataName + (required ? " *" : "")}
+            value={value as string}
+            onChange={(e) => {
+              setValue(event.data[dataId] = e.currentTarget.value);
+            }}
+            placeholder={placeholder}
+            />
+        </div>
+        <small>{description}</small>
+      </>
     );
 
     case "Number": return (
-      <div>
-        <NumberInput
-          // precision={2}
-          fixedDecimalScale
-          decimalScale={2}
-          decimalSeparator="."
-          label={dataName + (required ? " *" : "")}
-          value={value as number}
-          onChange={(v) => {
-            setValue(event.data[dataId] = v);
-          }}
-          placeholder={placeholder}
-        />
-      </div>
+      <>
+        <div>
+          <NumberInput
+            // precision={2}
+            fixedDecimalScale
+            decimalScale={2}
+            decimalSeparator="."
+            label={dataName + (required ? " *" : "")}
+            value={value as number}
+            onChange={(v) => {
+              setValue(event.data[dataId] = v);
+            }}
+            placeholder={placeholder}
+          />
+        </div>
+        <small>{description}</small>
+      </>
     );
 
     case "Boolean": return (
-      <div>
-        <Checkbox
-          label={dataName + (required ? " *" : "")}
-          checked={value as boolean}
-          onChange={(e) => {
-            setValue(event.data[dataId] = e.currentTarget.checked);
-          }}
-        />
-      </div>
+      <>
+        <div>
+          <Checkbox
+            label={dataName + (required ? " *" : "")}
+            checked={value as boolean}
+            onChange={(e) => {
+              setValue(event.data[dataId] = e.currentTarget.checked);
+            }}
+          />
+        </div>
+        <small>{description}</small>
+      </>
     );
 
     case "Color": return (
-      <div>
-        <ColorInput
-          label={dataName + (required ? " *" : "")}
-          value={rgbArrayToHex((((value as any)?.slice(0, 3) as [number, number, number]) ?? [255, 255, 255]))}
-          onChange={(color) => {
-            setValue(event.data[dataId] = hexToRgbArray(color));
-          }}
-          placeholder={placeholder}
-        />
-      </div>
+      <>
+        <div>
+          <ColorInput
+            label={dataName + (required ? " *" : "")}
+            value={rgbArrayToHex((((value as any)?.slice(0, 3) as [number, number, number]) ?? [255, 255, 255]))}
+            onChange={(color) => {
+              setValue(event.data[dataId] = hexToRgbArray(color));
+            }}
+            placeholder={placeholder}
+          />
+        </div>
+        <small>{description}</small>
+      </>
     );
 
     case "VisualizerStyle": return (
-      <div>
-        <Select
-          allowDeselect={false}
-          label={dataName + (required ? " *" : "")}
-          data={Object.keys(VisualizerStyle).map((key) => {
-            return {
-              label: key,
-              value: VisualizerStyle[key as keyof typeof VisualizerStyle],
-            }
-          })}
-          value={value as string}
-          onChange={(value) => {
-            setValue(event.data[dataId] = value as VisualizerStyle);
-          }}
-        />
-      </div>
+      <>
+        <div>
+          <Select
+            allowDeselect={false}
+            label={dataName + (required ? " *" : "")}
+            data={Object.keys(VisualizerStyle).map((key) => {
+              return {
+                label: key,
+                value: VisualizerStyle[key as keyof typeof VisualizerStyle],
+              }
+            })}
+            value={value as string}
+            onChange={(value) => {
+              setValue(event.data[dataId] = value as VisualizerStyle);
+            }}
+          />
+        </div>
+        <small>{description}</small>
+      </>
     );
 
     case "Select": return (
-      <div>
-        <Select
-          allowDeselect={false}
-          label={dataName + (required ? " *" : "")}
-          data={comp.selectData.map(([key, value]) => {
-            return {
-              label: key,
-              value: value ?? key,
-            }
-          })}
-          value={value as string}
-          onChange={(value) => {
-            setValue(event.data[dataId] = value as string);
-          }}
-        />
-      </div>
+      <>
+        <div>
+          <Select
+            allowDeselect={false}
+            label={dataName + (required ? " *" : "")}
+            data={comp.selectData.map(([key, value]) => {
+              return {
+                label: key,
+                value: value ?? key,
+              }
+            })}
+            value={value as string}
+            onChange={(value) => {
+              setValue(event.data[dataId] = value as string);
+            }}
+          />
+        </div>
+        <small>{description}</small>
+      </>
     );
     
     case "SelectImage": return (
-      <div>
-        <SelectAsync
-          allowDeselect={false}
-          label={dataName + (required ? " *" : "")}
-          data={(async () => {
-            const song = Toxen.editingSong;
-            if (!song)
-              return [];
-            const path = song.dirname();
+      <>
+        <div>
+          <SelectAsync
+            allowDeselect={false}
+            label={dataName + (required ? " *" : "")}
+            data={(async () => {
+              const song = Toxen.editingSong;
+              if (!song)
+                return [];
+              const path = song.dirname();
 
-            const supported = Toxen.getSupportedImageFiles();
-            return await Toxen.filterSupportedFiles(path, supported);
-          })}
-          value={value as string}
-          onChange={(value) => {
-            setValue(event.data[dataId] = value as string);
-          }}
-        />
-      </div>
+              const supported = Toxen.getSupportedImageFiles();
+              return await Toxen.filterSupportedFiles(path, supported);
+            })}
+            value={value as string}
+            onChange={(value) => {
+              setValue(event.data[dataId] = value as string);
+            }}
+          />
+        </div>
+        <small>{description}</small>
+      </>
     );
 
     default:
