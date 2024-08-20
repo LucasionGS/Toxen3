@@ -117,7 +117,11 @@ namespace Ffmpeg {
     });
   }
 
-  export function convertToMp3(song: Song, onProgress?: (progress: FfmpegProgressEvent) => void): Promise<boolean> {
+  export async function convertToFile(ext: string, song: Song, onProgress?: (progress: FfmpegProgressEvent) => void): Promise<boolean> {
+    if (!(await Ffmpeg.installFFmpeg())) {
+      Toxen.error("FFmpeg could not be installed.");
+      return false;
+    }
     return new Promise<boolean>(async (resolve, reject) => {
       try {
         const fullPath = song.dirname(song.paths.media);
@@ -126,9 +130,9 @@ namespace Ffmpeg {
         const fileDirname = Path.dirname(fullPath);
         ffmpeg(fullPath)
           .setFfmpegPath(ffmpegPath)
-          .output(`${fileDirname}/${filenameWithoutExt}.mp3`)
+          .output(`${fileDirname}/${filenameWithoutExt}.${ext}`)
           .on("end", async () => {
-            song.paths.media = `${filenameWithoutExt}.mp3`;
+            song.paths.media = `${filenameWithoutExt}.${ext}`;
             await song.saveInfo();
 
             if (Song.getCurrent() === song) {
@@ -145,6 +149,14 @@ namespace Ffmpeg {
         reject(error);
       }
     });
+  }
+
+  export function convertToMp3(song: Song, onProgress?: (progress: FfmpegProgressEvent) => void): Promise<boolean> {
+    return convertToFile("mp3", song, onProgress);
+  }
+
+  export function convertToOgg(song: Song, onProgress?: (progress: FfmpegProgressEvent) => void): Promise<boolean> {
+    return convertToFile("ogg", song, onProgress);
   }
 }
 

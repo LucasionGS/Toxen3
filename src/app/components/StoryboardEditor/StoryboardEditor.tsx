@@ -13,6 +13,7 @@ import { hexToRgbArray, rgbArrayToHex } from "../Form/FormInputFields/FormInputC
 import Time from "../../toxen/Time";
 import { IconArrowDownCircle, IconArrowUpCircle, IconStar } from "@tabler/icons-react";
 import Converter from "../../toxen/Converter";
+import Ffmpeg from "../../toxen/Ffmpeg";
 
 export interface StoryboardEditorController {
   start: () => void;
@@ -78,6 +79,60 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
   }, []);
   
   const start = React.useCallback(() => {
+    if (!Toxen.editingSong) return;
+
+    if (!Toxen.editingSong.paths.media.endsWith(".ogg")) {
+      // Toxen.notify({
+      //   content: "Storyboard works optimially with .ogg files. Precise timing may not be accurate with other file types.",
+      //   type: "error",
+      //   expiresIn: 5000
+      // });
+
+      function PopupModalConfirmation() {
+        const [converting, setConverting] = React.useState(false);
+        
+        return (
+          <div>
+            <div>
+              <p>Storyboard works optimially with .ogg files. Precise timing may not be accurate with other file types.</p>
+              <p>Would you like to continue?</p>
+            </div>
+
+            <Group>
+              <Button disabled={converting} color="red" onClick={() => {
+                modals.closeModal(modalId);
+                stop();
+                Toxen.setMode("Player");
+              }}>Cancel</Button>
+              <Button disabled={converting} color="blue" onClick={() => {
+                modals.closeModal(modalId);
+              }}>Continue</Button>
+              <Button loading={converting} disabled={converting} color="blue" onClick={() => {
+                setConverting(true);
+                Ffmpeg.convertToOgg(Toxen.editingSong).then(() => {
+                  setConverting(false);
+                  modals.closeModal(modalId);
+                  Toxen.notify({
+                    content: "Converted to .OGG",
+                    expiresIn: 2000
+                  });
+                });
+              }}>Convert to .OGG</Button>
+            </Group>
+          </div>
+        )
+      }
+      
+      const modalId = modals.openModal({
+        title: "Storyboard Warning",
+        closeOnClickOutside: false,
+        closeOnEscape: false,
+        withCloseButton: false,
+        children: <PopupModalConfirmation />
+      });
+    }
+    
+    
     const canvas = canvasRef.current;
     if (canvas) {
       const ctx = canvas.getContext("2d");
@@ -235,20 +290,20 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
   }
 
   // Play a sound if the time is on the beat
-  if (songTime > bpmOffset) {
-    if (Math.abs(offset) < 12) {
-      if (canPlayClap) {
-        const audio = new Audio(soundClap);
-        audio.volume = 0.01;
-        audio.play();
-        canPlayClap = false;
-      }
-    }
-    else {
-      // can play again
-      canPlayClap = true;
-    }
-  }
+  // if (songTime > bpmOffset) {
+  //   if (Math.abs(offset) < 12) {
+  //     if (canPlayClap) {
+  //       const audio = new Audio(soundClap);
+  //       audio.volume = 0.01;
+  //       audio.play();
+  //       canPlayClap = false;
+  //     }
+  //   }
+  //   else {
+  //     // can play again
+  //     canPlayClap = true;
+  //   }
+  // }
 
   // Nearest quarter beat to mouse
   function getNearestBeatFrom(x: number) {
