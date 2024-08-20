@@ -1,4 +1,11 @@
 <!-- ## Upcoming update / 1.7.2 -->
+## 1.8.0 - 20-08-2024
+### Storyboard Editor Update
+The entire storyboard editor has been reworked and improved. It's now more intuitive and easier to use.
+  - Storyboards use a timeline system now, where you can add events on beats based on the BPM and starting point of the song.
+  - More documentation will be added later.
+  - More features will be added and feedback is appreciated.
+
 ## 1.7.1 - 19-06-2024
 ### New Features
 - Added a genre field to songs. I am surprised I hadn't already added this. It's a very basic field, but it's there now.
