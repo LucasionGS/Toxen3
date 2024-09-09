@@ -112,7 +112,7 @@ export default class Settings {
     // if (overrideDefault) Settings.apply(overrideDefault);
   }
 
-  private static officalStreamServer = "https://stream.toxen.net";
+  private static officalStreamServer = "https://stream.toxen.net/api";
 
   public static getServer() {
     return (Settings.get("remoteServer") || Settings.officalStreamServer).replace(/\/+$/, ""); // Remove trailing slashes.

@@ -1141,7 +1141,7 @@ export default class Song implements ISong {
   public async delete(force?: boolean) {
     if (Settings.isRemote()) {
       Toxen.notify({
-        title: "Export not implemented",
+        title: "Delete not implemented",
         content: "This feature is not yet implemented for remote users.",
         expiresIn: 5000,
         type: "error"

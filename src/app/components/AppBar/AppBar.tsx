@@ -100,11 +100,28 @@ function AppBarTitle() {
   )
 }
 
+function bytesToString(bytes: number, unit?: "B" | "KB" | "MB" | "GB" | "TB") {
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
+  const unitIndex = sizes.indexOf(unit);
+  const maxIndex = unitIndex >= 0 ? unitIndex : sizes.length;
+  let sizeIndex = 0;
+  while (bytes >= 1024 && sizeIndex < maxIndex) {
+    bytes /= 1024;
+    sizeIndex++;
+  }
+  return bytes.toFixed(2) + sizes[sizeIndex];
+}
+
 function UserManage() {
   const [opened, setOpened] = useState(false);
   const [user, setUser] = useState(User.getCurrentUser());
 
   Toxen.setAppBarUser = setUser;
+
+  const usedQuota = React.useMemo(() => {
+    if (!user) return "0B/0B used (0%)";
+    return bytesToString(user.storageUsed) + "/" + bytesToString(user.storageQuota) + " used (" + (user.storageUsed / user.storageQuota * 100).toFixed(2) + "%)";
+  }, [user, user?.storageUsed, user?.storageQuota]);
   return (
     <>
       <div className="appBarButton appBar__userButton"
@@ -122,7 +139,7 @@ function UserManage() {
             <div>
               <h2>{user.username}</h2>
               <p><b>Premium Status</b>: {user.premium ? <>Expires <code>{user.premium_expire.toDateString()}</code></> : "No premium"}</p>
-              <p>{user.tracks}/{user.maxTracks}</p>
+              <p>{usedQuota}</p>
 
               
               <Button onClick={() => {

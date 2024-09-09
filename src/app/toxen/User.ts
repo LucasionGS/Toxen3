@@ -83,36 +83,56 @@ export default class User {
     });
   }
 
+  public static refreshUser() {
+    let user = User.getCurrentUser();
+    if (!user) return;
+    User.login(user.token).then(user => {
+      if (user) User.setCurrentUser(user);
+    });
+  }
+
   public static create(info: IUser) {
     let user = new User();
 
     // Assign properties
     user.id = info.id;
     user.username = info.username;
+    user.email = info.email;
     user.token = info.token;
     user.premium = info.premium;
     user.premium_expire = (info.premium_expire ? new Date(info.premium_expire) : null);
-    user.tracks = info.tracks;
-    user.maxTracks = info.maxTracks;
+    user.storageUsed = info.storageUsed;
+    user.storageQuota = info.storageQuota;
 
     return user;
   }
+
+  public static userSessionRefresh: Date;
   
   id: number;
   username: string;
+  email: string;
   token: string;
   premium: boolean;
   premium_expire: Date;
-  tracks: number;
-  maxTracks: number;
+  storageUsed: number;
+  storageQuota: number;
 }
+
+setInterval(() => {
+  if (!User.userSessionRefresh || User.userSessionRefresh < new Date()) {
+    User.userSessionRefresh = new Date(Date.now() + 1000 * 60 * 30); // 30 minutes
+    User.refreshUser();
+  }
+}, 2000);
 
 interface IUser {
   id: number;
   username: string;
+  email: string;
   token: string;
   premium: boolean;
   premium_expire: string;
-  tracks: number;
-  maxTracks: number;
+  storageUsed: number;
+  storageQuota: number;
 }
