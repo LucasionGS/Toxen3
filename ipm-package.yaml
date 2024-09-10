@@ -1,0 +1,15 @@
+# Name of this package. Must match ^[a-z0-9\-]+$
+name: "toxen"
+# Version of this package. Must match ^[0-9]+\.[0-9]+\.[0-9]+$
+version: "1.8.0"
+# Description of this package.
+description: "Customizable Music Player for a more visual experience!"
+# Author of this package.
+author: "Lucasion"
+# Directory of the files to include in the package.
+# Can be a string (for any) or a map of platform to string. Platform can be "linux", "windows", or "any".
+dist:
+  #  windows_x64: "out/make/windows/x64"
+  linux_x64: "out/make/deb/x64/"
+bin:
+  linux_x64: []
