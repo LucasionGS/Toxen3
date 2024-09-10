@@ -43,6 +43,41 @@ export default class Playlist {
   public static get filePath() {
     return Path.resolve(Settings.get("libraryDirectory"), "playlists.json");
   }
+
+  public static async saveRemote() {
+    await Toxen.fetch(Settings.getUser().getPlaylistsPath(), {
+      method: "PUT",
+      body: Playlist.toString(),
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
+  }
+
+  public static async syncToRemote() {
+    if (!Settings.isRemote()) return;
+    await Playlist.saveRemote();
+    // Upload all song backgrounds and playlist backgrounds
+    const playlistBackgroundsDir = Playlist.getLocalPlaylistBackgroundsDir();
+    
+    // Upload playlist backgrounds
+    const playlistBackgrounds = fs.readdirSync(playlistBackgroundsDir);
+    for (const bg of playlistBackgrounds) {
+      const ext = Path.extname(bg);
+      const formData = new FormData();
+      formData.append("file", new Blob([await fs.promises.readFile(Path.join(playlistBackgroundsDir, bg))], { type: `image/${ext}` }), bg);
+      
+      await Toxen.fetch(`${Settings.getUser().getPlaylistsPath()}/${bg}`, {
+        method: "PUT",
+        body: formData,
+        headers: {
+          "Content-Type": "multipart/form-data"
+        }
+      });
+    }
+
+  }
+  
   /**
    * Save Toxen's current playlists.
    */
@@ -52,20 +87,7 @@ export default class Playlist {
 
     if (Settings.isRemote()) {
       // Remote server
-      // new Error("Saving playlists remotely not yet implemented");
-      console.log(
-        JSON.stringify(
-          Toxen.playlists
-        )
-      );
-
-      await Toxen.fetch(Settings.getUser().getPlaylistsPath(), {
-        method: "PUT",
-        body: Playlist.toString(),
-        headers: {
-          "Content-Type": "application/json"
-        }
-      });
+      await Playlist.saveRemote();
     }
     else {
       try {
@@ -278,15 +300,26 @@ export default class Playlist {
     Playlist.save();
   }
   
-  public static getPlaylistBackgroundsDir(ensureExisting = false) {
+  public static getLocalPlaylistBackgroundsDir(ensureExisting = false) {
     const playlistBackgroundsDir = Path.resolve(Settings.get("libraryDirectory"), ".playlistBackgrounds");
     if (ensureExisting && !fs.existsSync(playlistBackgroundsDir)) fs.mkdirSync(playlistBackgroundsDir);
     return playlistBackgroundsDir;
   }
 
+  public static getRemotePlaylistBackgroundsDir() {
+    const playlistBackgroundsDir = `${Settings.getServer()}/playlist`;
+    return playlistBackgroundsDir;
+  }
+  
+  public static getPlaylistBackgroundsDir(ensureExisting = false) {
+    const remote = Settings.isRemote();
+    return remote ? Playlist.getRemotePlaylistBackgroundsDir() : Playlist.getLocalPlaylistBackgroundsDir(ensureExisting);
+  }
+
   private _cachedBackgroundPath: string;
   private _cachedBackgroundName: string;
   public getBackgroundPath(onlyGlobal = false, ignoreApply = false) {
+    const remote = Settings.isRemote();
     const songId = Toxen.background.storyboard.state.song?.uid;
     const songBg = onlyGlobal ? null : this.songBackground[songId];
     const bgUsed = songBg ?? this.background;
@@ -297,7 +330,11 @@ export default class Playlist {
     console.log("Getting background path");
     if (!bgUsed) return null;
     this._cachedBackgroundName = bgUsed;
-    return this._cachedBackgroundPath = Path.resolve(Playlist.getPlaylistBackgroundsDir(), bgUsed).replace(/\\/g, "/");
+    return this._cachedBackgroundPath = remote ? (
+      `${Playlist.getPlaylistBackgroundsDir()}/${bgUsed}`
+    ) : (
+      Path.resolve(Playlist.getPlaylistBackgroundsDir(), bgUsed).replace(/\\/g, "/")
+    );
   }
 }
 

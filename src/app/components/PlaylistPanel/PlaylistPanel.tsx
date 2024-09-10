@@ -9,6 +9,7 @@ import "./PlaylistPanel.scss";
 import { ModalsContextProps } from '@mantine/modals/lib/context';
 import Path from 'path';
 import fs from 'fs';
+import Settings from '../../toxen/Settings';
 
 interface PlaylistPanelProps { }
 
@@ -85,6 +86,13 @@ export default class PlaylistPanel extends Component<PlaylistPanelProps, Playlis
             <>
               <Button color="green" onClick={() => Toxen.sidePanel.setSectionId("songPanel")}>To music panel</Button>
               <Button onClick={() => this.showPlaylistForm()}>Add playlist</Button>
+              {
+                !Settings.isRemote() && Settings.getUser()?.premium && (
+                  <Button onClick={() => Playlist.syncToRemote()}>
+                    Sync playlists to remote
+                  </Button>
+                )
+              }
             </>
         }
         <div className="playlist-list">
