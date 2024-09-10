@@ -55,7 +55,7 @@ export default class Playlist {
   }
 
   public static async syncToRemote() {
-    if (!Settings.isRemote()) return;
+    if (Settings.isRemote()) return;
     await Playlist.saveRemote();
     // Upload all song backgrounds and playlist backgrounds
     const playlistBackgroundsDir = Playlist.getLocalPlaylistBackgroundsDir();

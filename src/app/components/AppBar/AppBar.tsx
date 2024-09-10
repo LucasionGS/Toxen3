@@ -140,6 +140,13 @@ function UserManage() {
               <h2>{user.username}</h2>
               <p><b>Premium Status</b>: {user.premium ? <>Expires <code>{user.premium_expire.toDateString()}</code></> : "No premium"}</p>
               <p>{usedQuota}</p>
+              <Button
+                onClick={() => {
+                  User.refreshUser();
+                }}
+              >
+                Refresh
+              </Button>
 
               
               <Button onClick={() => {

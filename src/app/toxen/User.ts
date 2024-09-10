@@ -124,7 +124,7 @@ setInterval(() => {
     User.userSessionRefresh = new Date(Date.now() + 1000 * 60 * 30); // 30 minutes
     User.refreshUser();
   }
-}, 2000);
+}, 5000);
 
 interface IUser {
   id: number;

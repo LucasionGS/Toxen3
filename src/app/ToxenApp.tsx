@@ -64,6 +64,7 @@ import Reloadable from "./components/Reloadable";
 import StoryboardEditor, { StoryboardEditorController } from "./components/StoryboardEditor/StoryboardEditor";
 
 declare const SUBTITLE_CREATOR_WEBPACK_ENTRY: any;
+const browser = remote.getCurrentWindow();
 
 //#region Define variables used all over the ToxenApp process.
 /**
@@ -849,6 +850,46 @@ export default class ToxenAppRenderer extends React.Component {
                           Toxen.showCurrentSong();
                         }}
                       >&nbsp;Show playing track</Button>
+                      {
+                        !Settings.isRemote() && Settings.getUser()?.premium && (
+                          <Button color="green" onClick={() => {
+                            const currentQueue = [...Toxen.songList];
+                            const total = currentQueue.length;
+                            // 5 songs at a time
+                            const startingQueue = currentQueue.splice(0, 5);
+                            let untilFinished = 5;
+
+                            function syncSong(song: Song) {
+                              song.sync().then(() => {
+                                Toxen.log(`Synced ${song.getDisplayName()}`);
+
+                                const next = currentQueue.shift();
+                                if (next) {
+                                  syncSong(next);
+                                }
+                                else {
+                                  untilFinished--;
+                                }
+
+                                browser.setProgressBar((total - currentQueue.length) / total);
+
+                                if (untilFinished <= 0) {
+                                  Toxen.log("✅ Synced all songs.");
+                                  browser.setProgressBar(-1);
+                                }
+                                
+                              }).catch(err => {
+                                Toxen.error(`Error syncing ${song.getDisplayName()}: ${err.message}`);
+                              });
+                            }
+                            
+                            for (let i = 0; i < startingQueue.length; i++) {
+                              syncSong(startingQueue[i]);
+                            }
+                            
+                          }}>Sync</Button>
+                        )
+                      }
                     </Button.Group>
                   </div>
                 </div>
