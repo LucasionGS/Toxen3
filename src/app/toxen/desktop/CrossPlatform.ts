@@ -1,5 +1,4 @@
 import Path from "path";
-import * as remote from "@electron/remote";
 import process from "process";
 
 export default class CrossPlatform {

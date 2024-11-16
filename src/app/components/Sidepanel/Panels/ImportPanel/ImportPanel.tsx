@@ -4,7 +4,7 @@ import React from 'react'
 import System, { ToxenFile } from '../../../../toxen/System';
 import { Toxen } from '../../../../ToxenApp';
 import Path from "path";
-import Ytdlp from '../../../../toxen/Ytdlp';
+import { VideoInfo } from '../../../../toxen/Ytdlp';
 import Settings from '../../../../toxen/Settings';
 import ExternalUrl from '../../../ExternalUrl/ExternalUrl';
 
@@ -50,7 +50,7 @@ function ImportOnlineMedia() {
   const [modalOpen, setModalOpen] = React.useState(false);
   const [url, setUrl] = React.useState<string>("");
   const [importing, setImporting] = React.useState<boolean>(false);
-  const [videos, setVideos] = React.useState<Ytdlp.VideoInfo[]>([]);
+  const [videos, setVideos] = React.useState<VideoInfo[]>([]);
   const [acceptedResponsibility, setAcceptedResponsibility] = React.useState<boolean>(() => Settings.get("acceptedResponsibility"));
 
   React.useEffect(() => {
@@ -58,6 +58,12 @@ function ImportOnlineMedia() {
     Settings.save({ suppressNotification: true });
   }, [acceptedResponsibility]);
 
+  const Ytdlp = React.useMemo(() => toxenapi.isDesktop() ? toxenapi.getYtdlp() : null, []);
+
+  if (!toxenapi.isDesktop()) {
+    return null;
+  }
+  
   return (
     <>
       <Button
@@ -119,12 +125,18 @@ function ImportOnlineMedia() {
   )
 }
 
-function Video(props: { video: Ytdlp.VideoInfo }) {
+function Video(props: { video: VideoInfo }) {
   const { video } = props;
   const [importing, setImporting] = React.useState<boolean>(false);
   const [progress, setProgress] = React.useState<number>(0);
   const [imported, setImported] = React.useState<boolean>(false);
 
+  const Ytdlp = React.useMemo(() => toxenapi.isDesktop() ? toxenapi.getYtdlp() : null, []);
+  
+  if (!toxenapi.isDesktop()) {
+    return null;
+  }
+  
   return (
     <div>
       <hr />

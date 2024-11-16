@@ -1,23 +1,9 @@
-import os from "os";
-import fs from "fs";
-import fsp from "fs/promises";
-import Path from "path";
-import CrossPlatform from "./CrossPlatform";
 import { PanelDirection } from "../components/Sidepanel/Sidepanel"
 import JSONX from "./JSONX";
 import { Toxen } from "../ToxenApp";
 import User from "./User";
-import * as remote from "@electron/remote";
 
 export default class Settings {
-  /**
-   * Path for the Toxen data folder.
-   */
-  public static readonly toxenDataPath = CrossPlatform.getToxenDataPath();
-  /**
-   * Path for the settings file.
-   */
-  public static readonly filePath = CrossPlatform.getToxenDataPath("settings.json");
   /**
    * Save Toxen's current settings.
    */
@@ -25,14 +11,9 @@ export default class Settings {
     suppressNotification?: boolean;
   }) {
     opts = opts || {};
-    if (!(await fsp.stat(Settings.toxenDataPath).then(() => true).catch(() => false))) {
-      await fsp.mkdir(Settings.toxenDataPath, { recursive: true });
-    }
     try {
       try {
-        let ws = fs.createWriteStream(Settings.filePath);
-        ws.write(Buffer.from(Settings.toString()));
-        ws.close();
+        toxenapi.saveSettings(Settings);
         if (!opts.suppressNotification) Toxen.notify({
           content: "Your settings have been saved.",
           expiresIn: 3000
@@ -58,25 +39,8 @@ export default class Settings {
    */
   public static async load(): Promise<ISettings> {
     return Promise.resolve().then(async () => {
-      if (!(await fsp.stat(Settings.filePath).then(() => true).catch(() => false))) {
-        const musicPath = Path.resolve(os.homedir(), "Music", "ToxenMusic");
-        if (await fsp.stat(musicPath).then(() => false).catch(() => true)) {
-          await fsp.mkdir(musicPath, { recursive: true });
-        }
-        Settings.applyDefaultSettings({
-          libraryDirectory: musicPath
-        })
-        await Settings.save();
-      }
-      try {
-        let data = await fsp.readFile(Settings.filePath, "utf8");
-        Settings.data = JSON.parse(data);
-        Settings.applyDefaultSettings();
-        return Settings.data;
-      } catch (error) {
-        throw "Unable to parse settings file";
-      }
-    })
+      return toxenapi.loadSettings(Settings);
+    });
   }
 
   public static applyDefaultSettings(overrideDefault?: Partial<ISettings>, forceReset?: boolean) {
@@ -84,7 +48,7 @@ export default class Settings {
     const defaultSettings: Partial<ISettings> = {
       showAdvancedSettings: false,
       remoteServer: null,
-      isRemote: false,
+      isRemote: !toxenapi.isDesktop(),
       volume: 50,
       exposePanelIcons: true,
       backgroundDynamicLighting: true,
@@ -137,7 +101,7 @@ export default class Settings {
     //     || Settings.data.libraryDirectory.toLowerCase().startsWith("tx://")
     //     || Settings.data.libraryDirectory.toLowerCase().startsWith("txs://")
     //   ));
-    const isRemote = Settings.get("isRemote") ?? false;
+    const isRemote = Settings.get("isRemote", false) || !toxenapi.isDesktop();
     if (toReturn === undefined) return isRemote;
     return isRemote ? toReturn : null;
   }
@@ -201,11 +165,13 @@ export default class Settings {
   }
 
 
-  public static get<T extends keyof ISettings>(key: T): ISettings[T];
-  public static get<T extends string, ValueType = any>(key: T): ValueType;
-  public static get<T extends keyof ISettings>(key: T): ISettings[T] {
+  public static get<T extends keyof ISettings>(key: T, fallback: ISettings[T]): ISettings[T];
+  public static get<T extends string, ValueType = any>(key: T, fallback: ValueType): ValueType;
+  public static get<T extends keyof ISettings>(key: T): ISettings[T] | undefined;
+  public static get<T extends string, ValueType = any>(key: T): ValueType | undefined;
+  public static get<T extends keyof ISettings>(key: T, fallback?: ISettings[T]): ISettings[T] | undefined {
     // if (Settings.data && Settings.data.hasOwnProperty(key)) return Settings.data[key];
-    return JSONX.getObjectValue(Settings.data, key);
+    return JSONX.getObjectValue(Settings.data, key) ?? fallback;
   }
 
   public static set<T extends keyof ISettings>(key: T, value: ISettings[T]): ISettings[T];
@@ -224,8 +190,11 @@ export default class Settings {
    * Select a file from the file system.
    */
   public static async selectFile(opts?: Electron.OpenDialogOptions) {
+
+    if (!toxenapi.isDesktop()) { toxenapi.throwDesktopOnly(); }
+    
     opts = opts || {};
-    const file = await remote.dialog.showOpenDialog({
+    const file = await toxenapi.remote.dialog.showOpenDialog({
       ...opts,
       properties: ["openFile"],
     });
@@ -240,8 +209,10 @@ export default class Settings {
    * Select multiple of files from the file system.
    */
   public static async selectFiles(opts?: Electron.OpenDialogOptions) {
+    if (!toxenapi.isDesktop()) { toxenapi.throwDesktopOnly(); }
+    
     opts = opts || {};
-    const file = await remote.dialog.showOpenDialog({
+    const file = await toxenapi.remote.dialog.showOpenDialog({
       ...opts,
       properties: ["openFile"],
     });
@@ -257,8 +228,10 @@ export default class Settings {
    * Select a folder from the file system.
    */
   public static async selectFolder(opts?: Electron.OpenDialogOptions) {
+    if (!toxenapi.isDesktop()) { toxenapi.throwDesktopOnly(); }
+    
     opts = opts || {};
-    const folder = await remote.dialog.showOpenDialog({
+    const folder = await toxenapi.remote.dialog.showOpenDialog({
       ...opts,
       properties: ["openDirectory"],
     });

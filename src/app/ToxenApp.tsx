@@ -2,31 +2,24 @@ import "./toxen/global"; // Set global variables
 import * as remote from "@electron/remote";
 import { EventEmitter } from "events";
 import React from "react";
-import fsp from "fs/promises";
-import Path from "path";
 import Background from "./components/Background/Background";
 import LoadingScreen from "./components/LoadingScreen";
 import MusicControls from "./components/MusicControls";
 import MusicPlayer from "./components/MusicPlayer";
 import ProgressBar from "./components/ProgressBar";
 import Form from "./components/Form/Form";
-import FormInput from "./components/Form/FormInputFields/FormInput";
 import Sidepanel from "./components/Sidepanel/Sidepanel";
 import SidepanelSection from "./components/Sidepanel/SidepanelSection";
 import SongPanel from "./components/SongPanel/SongPanel";
-import JSONX from "./toxen/JSONX";
 import Settings, { VisualizerStyle } from "./toxen/Settings";
 import Song from "./toxen/Song";
 import "./ToxenApp.scss";
 import "./tx.scss";
-import System, { ToxenFile } from "./toxen/System";
+import System from "./toxen/System";
 import SidepanelSectionHeader from "./components/Sidepanel/SidepanelSectionHeader";
 import SearchField from "./components/SongPanel/SearchField";
-import Converter from "./toxen/Converter";
 import Stats from "./toxen/Statistics";
 import StoryboardEditorPanel from "./components/StoryboardEditorPanel/StoryboardEditorPanel";
-import { Dirent } from "fs";
-import LoginForm from "./components/LoginForm/LoginForm";
 import { MessageCardOptions } from "./components/MessageCard/MessageCards";
 import ExternalUrl from "./components/ExternalUrl/ExternalUrl";
 import showdown from "showdown";
@@ -34,7 +27,6 @@ import htmlToReactParser, { Element, Text } from "html-react-parser";
 import AboutSection from "./components/AboutSection";
 import SongQueuePanel from "./components/SongPanel/SongQueuePanel";
 import Subtitles from "./components/Subtitles/Subtitles";
-import SubtitleParser from "./toxen/SubtitleParser";
 import ToxenInteractionMode from "./toxen/ToxenInteractionMode";
 import Playlist from "./toxen/Playlist";
 import PlaylistPanel from "./components/PlaylistPanel/PlaylistPanel";
@@ -43,15 +35,12 @@ import Discord from "./toxen/Discord";
 import ThemeContainer from "./components/ThemeContainer/ThemeContainer";
 import ThemeEditorPanel from "./components/ThemeEditorPanel/ThemeEditorPanel";
 import Theme from "./toxen/Theme";
-import { OptionValues } from "./components/Form/FormInputFields/FormInputSelect";
 import AppBar from "./components/AppBar/AppBar";
-import Legacy from "./toxen/Legacy";
 import AdjustPanel from "./components/AdjustPanel/AdjustPanel";
-import { Button, Tabs } from "@mantine/core";
-import { showNotification, hideNotification, updateNotification } from "@mantine/notifications";
-import Ffmpeg from "./toxen/Ffmpeg";
+import { Button } from "@mantine/core";
+import { showNotification } from "@mantine/notifications";
 import SettingsPanel from "./components/Sidepanel/Panels/SettingsPanel/SettingsPanel";
-import MigrationPanel from "./components/Sidepanel/Panels/MigrationPanel/MigrationPanel";
+// import MigrationPanel from "./components/Sidepanel/Panels/MigrationPanel/MigrationPanel";
 import EditSong from "./components/Sidepanel/Panels/EditSong/EditSong";
 import InitialData from "./windows/SubtitleCreator/models/InitialData";
 import User from "./toxen/User";
@@ -59,8 +48,6 @@ import { IconLayoutNavbarExpand } from "@tabler/icons-react";
 import HueManager from "./toxen/philipshue/HueManager";
 import ImportPanel from "./components/Sidepanel/Panels/ImportPanel/ImportPanel";
 import YTDlpWrap from "yt-dlp-wrap";
-import Ytdlp from "./toxen/Ytdlp";
-import Reloadable from "./components/Reloadable";
 import StoryboardEditor, { StoryboardEditorController } from "./components/StoryboardEditor/StoryboardEditor";
 
 declare const SUBTITLE_CREATOR_WEBPACK_ENTRY: any;
@@ -238,11 +225,11 @@ export class Toxen {
 
   public static async filterSupportedFiles(path: string, supported: string[]) {
     return (
-      Settings.isRemote() ? await Toxen.fetch(path).then(res => res.json()) as Dirent[]
+      Settings.isRemote() ? await Toxen.fetch(path).then(res => res.json()) as { name: string }[]
         : await System.recursive(path)
     )
       .filter(f => {
-        let ext = Path.extname(f.name);
+        let ext = toxenapi.getFileExtension(f.name);
         return supported.includes(ext);
       }).map(f => f.name);
   }
@@ -373,7 +360,7 @@ export class Toxen {
     // Disable hueEnabled while its still broken.
     if (Settings.get("hueEnabled")) Settings.set("hueEnabled", false);
     
-    if (Settings.get("hueEnabled") && !HueManager.instance) {
+    if (toxenapi.isDesktop() && Settings.get("hueEnabled") && !HueManager.instance) {
       HueManager.init({
         ip: Settings.get("hueBridgeIp"),
         username: Settings.get("hueUsername"),
@@ -747,18 +734,21 @@ export default class ToxenAppRenderer extends React.Component {
           Toxen.discord.setPresence();
         });
 
-        if (Ytdlp.isYtdlpInstalled()) {
-          const ytd = new YTDlpWrap(Ytdlp.ytdlpPath);
-          await ytd.getVersion().then(async (version) => {
-            console.log("ytdlp version:", version);
-            const latest = (await YTDlpWrap.getGithubReleases()).pop()?.tag_name;
-            console.log("ytdlp latest:", latest);
-            if (latest?.trim() !== version?.trim()) {
-              Toxen.warn("Media Downloader is outdated. Updating...", 2500);
-              await Ytdlp.installYtdlp(true);
-              Toxen.log("Media Downloader updated.", 2500);
-            }
-          });
+        if (toxenapi.isDesktop()) {
+          const ytdlp = toxenapi.getYtdlp();
+          if (ytdlp.isYtdlpInstalled()) {
+            const ytd = new YTDlpWrap(ytdlp.ytdlpPath);
+            await ytd.getVersion().then(async (version) => {
+              console.log("ytdlp version:", version);
+              const latest = (await YTDlpWrap.getGithubReleases()).pop()?.tag_name;
+              console.log("ytdlp latest:", latest);
+              if (latest?.trim() !== version?.trim()) {
+                Toxen.warn("Media Downloader is outdated. Updating...", 2500);
+                await ytdlp.installYtdlp(true);
+                Toxen.log("Media Downloader updated.", 2500);
+              }
+            });
+          }
         }
 
       }).then(() => Toxen._resolveWhenReady());
@@ -948,11 +938,11 @@ export default class ToxenAppRenderer extends React.Component {
             }} />
 
           {/* Toxen2 Migration */}
-          <SidepanelSection key="migration" id="migration"
+          {/* <SidepanelSection key="migration" id="migration"
             // title="Migration" icon={<i className="fas fa-exchange-alt"></i>}
             dynamicContent={async (section) => {
               return (<MigrationPanel />);
-            }} />
+            }} /> */}
 
           {/* No-icon panels. Doesn't appear as a clickable panel, instead only accessible by custom action */}
           {/* Edit song Panel */}

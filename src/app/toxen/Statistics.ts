@@ -1,34 +1,17 @@
-import fs from "fs";
-import fsp from "fs/promises";
-import Path from "path";
-import CrossPlatform from "./CrossPlatform";
-import { PanelDirection } from "../components/Sidepanel/Sidepanel"
 import JSONX from "./JSONX";
 import { Toxen } from "../ToxenApp";
-import Settings from "./Settings";
-import Legacy, { Toxen2Stats } from "./Legacy";
 import EventEmitter from "events";
 
 export class StatsEventEmitter extends EventEmitter { }
 
-export default class Stats extends EventEmitter {
-  /**
-   * Path for the statistics file.
-   */
-  public static readonly filePath = CrossPlatform.getToxenDataPath("statistics.json");
+export default class Stats {
   /**
    * Save Toxen's current statistics.
    */
   public static async save() {
-    console.log("Saving stats...");
     localStorage.setItem("statistics-backup", Stats.toString());
-    if (!(await fsp.stat(Settings.toxenDataPath).then(() => true).catch(() => false))) {
-      await fsp.mkdir(Settings.toxenDataPath, { recursive: true });
-    }
     try {
-      let ws = fs.createWriteStream(Stats.filePath);
-      ws.write(Buffer.from(Stats.toString()));
-      ws.close();
+      toxenapi.saveStats(Stats);
       Stats.events.emit("saved", {
         savedAt: Date.now()
       });
@@ -37,35 +20,17 @@ export default class Stats extends EventEmitter {
     }
   }
   /**
-   * Load Toxen's statistics from `filePath`.
+   * Load Toxen's statistics from the statistics's filepath.
    */
   public static async load(): Promise<IStatistics> {
     return Promise.resolve().then(async () => {
-      if (!(await fsp.stat(Stats.filePath).then(() => true).catch(() => false))) {
-        // Backwards compatibility.
-        let oldStats = Legacy.getToxen2StatisticsPath();
-        if (oldStats) {
-          try {
-            let raw = await fsp.readFile(oldStats, "utf8");
-            let data = JSON.parse(raw) as Toxen2Stats;
-            Stats.data = {} as any;
-            Stats.apply(await Legacy.toxen2StatsToStatistics(data));
-          } catch (error) {
-            console.error(error);
-            Stats.data = {} as any;
-          }
-        }
-        await Stats.save();
-      }
       try {
-        let data = await fsp.readFile(Stats.filePath, "utf8");
-        return (Stats.data = JSON.parse(data));
+        return toxenapi.loadStats(Stats);
       } catch (error) {
         const backup = localStorage.getItem("statistics-backup");
         if (backup) {
           console.log("Using backup statistics file.");
-          Stats.data = JSON.parse(backup);
-          return Stats.data;
+          return Stats.data = JSON.parse(backup);
         }
         throw "Unable to parse statistics file.";
       }

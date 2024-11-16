@@ -2,7 +2,6 @@ import Settings from "./Settings";
 import Song from "./Song";
 import fsp from "fs/promises";
 import fs from "fs";
-import CrossPlatform from "./CrossPlatform";
 import { Toxen } from "../ToxenApp";
 import Path from "path";
 import { ModalsContextProps } from "@mantine/modals/lib/context";

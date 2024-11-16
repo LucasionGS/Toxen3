@@ -1,8 +1,8 @@
 import React from "react";
 import { Button } from "@mantine/core";
-import Legacy from "../../../../toxen/Legacy";
-import Playlist from "../../../../toxen/Playlist";
-import { Toxen } from "../../../../ToxenApp";
+// import Legacy from "../../../../toxen/Legacy";
+// import Playlist from "../../../../toxen/Playlist";
+// import { Toxen } from "../../../../ToxenApp";
 import SidepanelSectionHeader from "../../SidepanelSectionHeader";
 import "./MigrationPanel.scss";
 
@@ -16,7 +16,7 @@ export default function MigrationPanel(props: MigrationPanelProps) {
       </SidepanelSectionHeader>
       <div style={{ width: "100%", whiteSpace: "normal" }}>
         <h2>Import from Toxen2</h2>
-        <Button color="green" onClick={async () => {
+        {/* <Button color="green" onClick={async () => {
           const playlists = await Legacy.getToxen2Playlists();
 
           if (playlists.length === 0) {
@@ -40,7 +40,7 @@ export default function MigrationPanel(props: MigrationPanelProps) {
         }}>
           <i className="fas fa-sync-alt"></i>
           &nbsp;Migrate playlists from Toxen2
-        </Button>
+        </Button> */}
         <br />
         <br />
         <sup>

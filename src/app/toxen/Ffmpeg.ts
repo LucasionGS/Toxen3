@@ -1,22 +1,25 @@
 // const ffmpeg: typeof import("fluent-ffmpeg") = require("fluent-ffmpeg/lib/fluent-ffmpeg");
 import ffmpeg from "fluent-ffmpeg"; // TEST: Unsure if this works?
 import { Toxen } from "../ToxenApp";
-import Settings from "./Settings";
 import fs from "fs";
 import Path from "path";
 import os from "os";
 import yauzl from "yauzl";
 import Song from "./Song";
 
-namespace Ffmpeg {
-  export const ffmpegPath = Settings.toxenDataPath + (os.platform() === "win32" ? "/ffmpeg.exe" : "/ffmpeg");
+export default class Ffmpeg {
+  constructor(ffmepgPath: string) {
+    this.ffmpegPath = ffmepgPath;
+  }
 
-  export function isFFmpegInstalled(): boolean {
-    return fs.existsSync(ffmpegPath);
+  private ffmpegPath: string;
+
+  public isFFmpegInstalled(): boolean {
+    return fs.existsSync(this.ffmpegPath);
   }
 
   // Source: https://github.com/BtbN/FFmpeg-Builds
-  const downloadLocations: Record<NodeJS.Platform, string> = {
+  private downloadLocations: Record<NodeJS.Platform, string> = {
     aix: "",
     android: "",
     darwin: "",
@@ -30,11 +33,15 @@ namespace Ffmpeg {
     haiku: "",
   }
 
-  export async function installFFmpeg(): Promise<boolean> {
+  public async installFFmpeg(): Promise<boolean> {
+    if (!toxenapi.isDesktop()) {
+      toxenapi.throwDesktopOnly();
+    }
+    
     return Promise.resolve().then(async () => {
-      if (isFFmpegInstalled()) return true;
+      if (this.isFFmpegInstalled()) return true;
       Toxen.log("Downloading FFmpeg...", 2000);
-      const url = downloadLocations[os.platform()] ?? null;
+      const url = this.downloadLocations[os.platform()] ?? null;
       if (!url) {
         Toxen.error("FFmpeg is not supported on this platform.", 5000);
         return false;
@@ -53,7 +60,7 @@ namespace Ffmpeg {
                     // Get only filename
                     const filename = entry.fileName.split("/").pop();
 
-                    readStream.pipe(fs.createWriteStream(Settings.toxenDataPath + "/" + filename));
+                    readStream.pipe(fs.createWriteStream(toxenapi.CrossPlatform.getToxenDataPath(filename)));
                   });
                 }
               });
@@ -76,16 +83,7 @@ namespace Ffmpeg {
     });
   }
 
-  interface FfmpegProgressEvent {
-    frames: number;
-    currentFps: number;
-    currentKbps: number;
-    targetSize: number;
-    timemark: string;
-    percent: number;
-  }
-
-  export function trimSong(song: Song, startTime: number, endTime: number, onProgress?: (progress: FfmpegProgressEvent) => void): Promise<boolean> {
+  public trimSong(song: Song, startTime: number, endTime: number, onProgress?: (progress: FfmpegProgressEvent) => void): Promise<boolean> {
     return new Promise<boolean>(async (resolve, reject) => {
       try {
         const fullPath = song.dirname(song.paths.media);
@@ -93,7 +91,7 @@ namespace Ffmpeg {
         const fileDirname = Path.dirname(fullPath);
         Toxen.log("Trimming song...", 2000);
         ffmpeg(fullPath)
-          .setFfmpegPath(ffmpegPath)
+          .setFfmpegPath(this.ffmpegPath)
           .setStartTime(startTime)
           .setDuration(endTime - startTime)
           .output(fileDirname + "/trimmed." + filename)
@@ -117,8 +115,8 @@ namespace Ffmpeg {
     });
   }
 
-  export async function convertToFile(ext: string, song: Song, onProgress?: (progress: FfmpegProgressEvent) => void): Promise<boolean> {
-    if (!(await Ffmpeg.installFFmpeg())) {
+  public async convertToFile(ext: string, song: Song, onProgress?: (progress: FfmpegProgressEvent) => void): Promise<boolean> {
+    if (!(await this.installFFmpeg())) {
       Toxen.error("FFmpeg could not be installed.");
       return false;
     }
@@ -129,7 +127,7 @@ namespace Ffmpeg {
         const filenameWithoutExt = filename.split(".").slice(0, -1).join(".");
         const fileDirname = Path.dirname(fullPath);
         ffmpeg(fullPath)
-          .setFfmpegPath(ffmpegPath)
+          .setFfmpegPath(this.ffmpegPath)
           .output(`${fileDirname}/${filenameWithoutExt}.${ext}`)
           .on("end", async () => {
             song.paths.media = `${filenameWithoutExt}.${ext}`;
@@ -151,13 +149,20 @@ namespace Ffmpeg {
     });
   }
 
-  export function convertToMp3(song: Song, onProgress?: (progress: FfmpegProgressEvent) => void): Promise<boolean> {
-    return convertToFile("mp3", song, onProgress);
+  public convertToMp3(song: Song, onProgress?: (progress: FfmpegProgressEvent) => void): Promise<boolean> {
+    return this.convertToFile("mp3", song, onProgress);
   }
 
-  export function convertToOgg(song: Song, onProgress?: (progress: FfmpegProgressEvent) => void): Promise<boolean> {
-    return convertToFile("ogg", song, onProgress);
+  public convertToOgg(song: Song, onProgress?: (progress: FfmpegProgressEvent) => void): Promise<boolean> {
+    return this.convertToFile("ogg", song, onProgress);
   }
 }
 
-export default Ffmpeg;
+interface FfmpegProgressEvent {
+  frames: number;
+  currentFps: number;
+  currentKbps: number;
+  targetSize: number;
+  timemark: string;
+  percent: number;
+}

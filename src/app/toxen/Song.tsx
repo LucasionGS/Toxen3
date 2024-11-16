@@ -6,8 +6,7 @@ import { Dir, Dirent, createReadStream, createWriteStream } from "fs";
 import { Toxen } from "../ToxenApp";
 import Path from "path";
 import SongElement from "../components/SongPanel/SongElement";
-import Legacy, { Toxen2SongDetails } from "./Legacy";
-import * as remote from "@electron/remote";
+// import Legacy, { Toxen2SongDetails } from "./Legacy";
 import { Failure, Result, Success } from "./Result";
 import System, { ToxenFile } from "./System";
 import Converter from "./Converter";
@@ -16,25 +15,14 @@ import Stats from "./Statistics";
 import SubtitleParser from "./SubtitleParser";
 //@ts-expect-error 
 import ToxenMax from "../../icons/skull_max.png";
-import ScreenRecorder from "./ScreenRecorder";
-import yazl from "yazl";
-import yauzl from "yauzl";
-import os from "os";
 import { useModals } from "@mantine/modals";
 import { ModalsContextProps, ModalSettings } from "@mantine/modals/lib/context";
 import { Checkbox, Menu, RangeSlider, Button, Progress, Group, Stack } from "@mantine/core";
 import Playlist from "./Playlist";
-import TButton from "../components/Button/Button";
-import Ffmpeg from "./Ffmpeg";
-import Time from "./Time";
 import StoryboardParser from "./StoryboardParser";
-import archiver from "archiver";
-import { } from "buffer";
-import { hashElement } from "folder-hash";
 import User from "./User";
 import { hideNotification, updateNotification } from "@mantine/notifications";
 import HueManager from "./philipshue/HueManager";
-// import ToxenInteractionMode from "./ToxenInteractionMode";
 
 export default class Song implements ISong {
   public uid: string;
@@ -93,17 +81,17 @@ export default class Song implements ISong {
     return null;
   }
 
-  public async getToxen2Details(): Promise<Toxen2SongDetails> {
-    if (Settings.isRemote()) {
-      Toxen.error("Toxen2 migration is not supported on remote library.");
-      return null;
-    }
-    try {
-      return JSON.parse(await fsp.readFile(this.dirname("details.json"), "utf8"));
-    } catch (error) {
-      return null;
-    }
-  }
+  // public async getToxen2Details(): Promise<Toxen2SongDetails> {
+  //   if (Settings.isRemote()) {
+  //     Toxen.error("Toxen2 migration is not supported on remote library.");
+  //     return null;
+  //   }
+  //   try {
+  //     return JSON.parse(await fsp.readFile(this.dirname("details.json"), "utf8"));
+  //   } catch (error) {
+  //     return null;
+  //   }
+  // }
 
   /**
    * Return the full path of the song folder.
@@ -348,14 +336,14 @@ export default class Song implements ISong {
         }
 
         // Toxen2 backwards compatibility.
-        try {
-          if (await fsp.stat(Path.resolve(fullPath, "details.json")).then(() => true).catch(() => false)) {
-            let path = Path.resolve(fullPath, "details.json");
-            info = await Legacy.toxen2SongDetailsToInfo(JSON.parse(await fsp.readFile(path, "utf8")), info as ISong)
-          }
-        } catch (error) {
-          Toxen.error("There was an error trying to convert details.json into info.json");
-        }
+        // try {
+        //   if (await fsp.stat(Path.resolve(fullPath, "details.json")).then(() => true).catch(() => false)) {
+        //     let path = Path.resolve(fullPath, "details.json");
+        //     info = await Legacy.toxen2SongDetailsToInfo(JSON.parse(await fsp.readFile(path, "utf8")), info as ISong)
+        //   }
+        // } catch (error) {
+        //   Toxen.error("There was an error trying to convert details.json into info.json");
+        // }
       }
 
       await dir.close();
@@ -407,7 +395,7 @@ export default class Song implements ISong {
       if (this.lastBlobUrl) URL.revokeObjectURL(this.lastBlobUrl);
       let bg = this.backgroundFile();
 
-      if (!Settings.isRemote()) {
+      if (!Settings.isRemote() && toxenapi.isDesktop()) {
         // Check if needs conversion
         const convertable = Toxen.getSupportedConvertableAudioFiles();
         if (convertable.includes(Path.extname(src).toLowerCase())) {
@@ -415,7 +403,7 @@ export default class Song implements ISong {
             title: "Converting " + this.getDisplayName() + " to MP3",
             content: `0% complete`,
           });
-          Ffmpeg.convertToMp3(this, (progress) => { // Purposely don't await, let it run in the background
+          toxenapi.ffmpeg.convertToMp3(this, (progress) => { // Purposely don't await, let it run in the background
             updateNotification({
               id,
               message: <div>
@@ -472,7 +460,7 @@ export default class Song implements ISong {
   }
 
   public static async convertAllNecessary(songs: Song[]) {
-    if (!Settings.isRemote()) {
+    if (!Settings.isRemote() && toxenapi.isDesktop()) {
       // Check if needs conversion
 
       const globalId = Toxen.notify({
@@ -481,11 +469,12 @@ export default class Song implements ISong {
       });
 
       async function convertSong(song: Song) {
+        if (!toxenapi.isDesktop()) { toxenapi.throwDesktopOnly(); }
         const id = Toxen.notify({
           title: "Converting " + song.getDisplayName() + " to MP3",
           content: `0% complete`
         });
-        await Ffmpeg.convertToMp3(song, (progress) => {
+        await toxenapi.ffmpeg.convertToMp3(song, (progress) => {
           updateNotification({
             id,
             title: "Converting " + song.getDisplayName() + " to MP3",
@@ -704,11 +693,13 @@ export default class Song implements ISong {
             }}>
               Delete
             </Menu.Item>
-            <Menu.Item leftSection={<i className="fas fa-cut"></i>} onClick={() => {
-              modals.openModal(this.createTrimSongModal());
-            }}>
-              Trim
-            </Menu.Item>
+            {toxenapi.isDesktop() && (
+              <Menu.Item leftSection={<i className="fas fa-cut"></i>} onClick={() => {
+                modals.openModal(this.createTrimSongModal());
+              }}>
+                Trim
+              </Menu.Item>
+            )}
             {
               User.getCurrentUser()?.premium && !Settings.isRemote() && (
                 <Menu.Item leftSection={<i className="fas fa-sync"></i>} onClick={() => {
@@ -726,9 +717,11 @@ export default class Song implements ISong {
                 <Menu.Item onClick={() => this.copyUID()}>
                   Copy UID
                 </Menu.Item>
-                <Menu.Item onClick={() => remote.shell.openPath(this.dirname())}>
-                  Open in file explorer
-                </Menu.Item>
+                {toxenapi.isDesktop() && (
+                  <Menu.Item onClick={() => toxenapi.remote.shell.openPath(this.dirname())}>
+                    Open in file explorer
+                  </Menu.Item>
+                )}
                 {/* <Menu.Item onClick={() => {
                 const recorder = new ScreenRecorder();
                 recorder.startRecording();
@@ -892,12 +885,14 @@ export default class Song implements ISong {
           }}>
             Delete
           </Button>
-          <Button onClick={() => {
-            close();
-            modals.openModal(this.createTrimSongModal());
-          }}>
-            Trim
-          </Button>
+          {toxenapi.isDesktop() && (
+              <Button onClick={() => {
+                close();
+                modals.openModal(this.createTrimSongModal());
+              }}>
+                Trim
+              </Button>
+          )}
           {
             User.getCurrentUser()?.premium && !Settings.isRemote() && (
               <Button onClick={() => {
@@ -916,12 +911,14 @@ export default class Song implements ISong {
               }}>
                 Copy UID
               </Button>
-              <Button onClick={() => {
-                close();
-                remote.shell.openPath(this.dirname());
-              }}>
-                Open in file explorer
-              </Button>
+              {toxenapi.isDesktop() && (
+                <Button onClick={() => {
+                  close();
+                  toxenapi.remote.shell.openPath(this.dirname());
+                }}>
+                  Open in file explorer
+                </Button>
+              )}
             </>
           )}
         </Stack>
@@ -1110,9 +1107,11 @@ export default class Song implements ISong {
                     song.delete();
                   }}>Delete</Button>
                   <Button color="green" onClick={() => hideNotification(nId)}>Ask later</Button>
-                  <Button color="blue" onClick={() => {
-                    remote.shell.openPath(song.dirname());
-                  }}>Show Folder</Button>
+                  {toxenapi.isDesktop() && (
+                    <Button color="blue" onClick={() => {
+                      toxenapi.remote.shell.openPath(song.dirname());
+                    }}>Show Folder</Button>
+                  )}
                 </Group>
               </div>,
               type: "warning",
@@ -1253,9 +1252,14 @@ export default class Song implements ISong {
    * Copy the song's UID to the clipboard.
    */
   public copyUID(): void {
-    remote.clipboard.write({
-      text: this.uid
-    });
+    if (toxenapi.isDesktop()) {
+      toxenapi.remote.clipboard.write({
+        text: this.uid
+      });
+    }
+    else {
+      navigator.clipboard.writeText(this.uid);
+    }
     Toxen.log("Copied UID to clipboard", 2000);
   }
 
@@ -1280,36 +1284,7 @@ export default class Song implements ISong {
       return;
     }
 
-    // Zip all songs into one file, in separate folders
-    const zip = new yazl.ZipFile();
-    const zipPathTmp = Path.resolve(os.tmpdir(), "toxen-export-" + Math.random().toString().substr(2) + ".zip");
-    // Pipe the zip file to the file system
-    const zipStream = createWriteStream(zipPathTmp);
-    zip.outputStream.pipe(zipStream);
-
-    for (const song of songs) {
-      const songPath = Path.resolve(song.dirname());
-      zip.addReadStream(createReadStream(songPath), Path.basename(song.uid || songPath));
-    }
-
-    zip.end();
-
-    // Wait for the zip file to be written
-    return await new Promise((resolve, reject) => {
-      zipStream.on("finish", resolve);
-      zipStream.on("error", reject);
-    })
-      .then(() => {
-        // Open the zip file in the user's default program
-        return open(zipPathTmp);
-      }).then(() => {
-        // Delete the zip file
-        return fsp.unlink(zipPathTmp);
-      }).catch(error => {
-        Toxen.error("Something went wrong writing the exported zip file.");
-        console.error(error);
-        return fsp.unlink(zipPathTmp);
-      });
+    return toxenapi.exportLocalSongs(...songs);
   }
 
   /**
@@ -1355,96 +1330,7 @@ export default class Song implements ISong {
     }) && null;
 
     if (Settings.isRemote()) return;
-    this.setProgressBar(0.10);
-    try {
-      const upToDate = await this.validateAgainstRemote();
-
-      if (upToDate) {
-        if (!silenceValidated) {
-          this.completeProgressBar();
-          Toxen.notify({
-            title: "Update-to-date",
-            content: <p><code>{this.getDisplayName()}</code> is already up to date.</p>,
-            expiresIn: 1000
-          });
-        }
-        return;
-      }
-    } catch (error) {
-      this.completeProgressBar();
-      return Toxen.notify({
-        title: "Failed to validate against remote",
-        content: error.message,
-        expiresIn: 5000,
-        type: "error"
-      }) && null;
-    }
-
-    // Sync from disk to remote (Using archiver to zip the folder in memory)
-    this.setProgressBar(0.25);
-    const zip = new yazl.ZipFile();
-
-    const zipPathTmp = Path.resolve(os.tmpdir(), "toxen-sync-" + Math.random().toString().substring(2) + ".zip");
-    const zipStream = createWriteStream(zipPathTmp);
-
-    const addFiles = async (dir: string, startingDir: string = dir) => {
-      const files = await fsp.readdir(dir);
-      for (const file of files) {
-        const filePath = Path.resolve(dir, file);
-        const stat = await fsp.stat(filePath);
-        const relativePath = Path.relative(startingDir, filePath);
-        if (stat.isDirectory()) {
-          zip.addEmptyDirectory(relativePath);
-          await addFiles(filePath, startingDir);
-        } else {
-          zip.addReadStream(createReadStream(filePath), relativePath);
-        }
-      }
-    };
-
-    await addFiles(this.dirname());
-
-    zip.outputStream.pipe(zipStream);
-
-    zip.end();
-    this.setProgressBar(0.5);
-
-    return await new Promise((resolve, reject) => {
-      zipStream.on("finish", resolve);
-      zipStream.on("error", reject);
-    }).then(async () => {
-      const formData = new FormData();
-      // Insert as blob
-      formData.append("file", new Blob([await fsp.readFile(zipPathTmp)]), "sync.zip");
-      formData.append("data", JSON.stringify(this.toISong()));
-      return Toxen.fetch(user.getCollectionPath() + "/" + this.uid, {
-        method: "PUT",
-        body: formData
-      });
-    }).then(async res => {
-      if (res.ok) {
-        this.completeProgressBar();
-        Toxen.notify({
-          title: "Synced",
-          content: this.getDisplayName(),
-          expiresIn: 5000
-        });
-        return fsp.unlink(zipPathTmp);
-      } else {
-        this.setProgressBar(0);
-        Toxen.notify({
-          title: "Sync failed",
-          content: await res.text(),
-          expiresIn: 5000,
-          type: "error"
-        });
-      }
-    }).catch(error => {
-      this.setProgressBar(0);
-      Toxen.error("Something went wrong writing the exported zip file.");
-      console.error(error);
-      return fsp.unlink(zipPathTmp);
-    });
+    return toxenapi.syncSong(Toxen, user, this, { silenceValidated})
   }
 
   public async validateAgainstRemote() {
@@ -1453,17 +1339,7 @@ export default class Song implements ISong {
 
     if (!Settings.isRemote()) {
       // Has from disk to remote
-      const { hash: localHash } = await hashElement(this.dirname(), {
-        folders: {
-          ignoreBasename: true,
-        }
-      });
-      console.log("Local hash", localHash);
-      const remoteHash: string = await Toxen.fetch(user.getCollectionPath() + "/" + this.uid, {
-        method: "OPTIONS"
-      }).then(res => res.json()).then(res => res.hash).catch(() => null);
-      console.log("Remote hash", remoteHash);
-      return localHash === remoteHash;
+      return toxenapi.validateSongAgainstRemote(Toxen, user, this);
     }
 
     throw new Error("You must be on your local machine to validate a synced song.");
@@ -1477,6 +1353,9 @@ export default class Song implements ISong {
     //   end: Toxen.musicPlayer.media.duration ? Toxen.musicPlayer.media.duration * 1000 : 60000,
     // }
     const TrimSong = () => {
+      if (!toxenapi.isDesktop()) {
+        toxenapi.throwDesktopOnly();
+      }
       const _currentTime = Toxen.musicPlayer.media.currentTime;
       const _duration = Toxen.musicPlayer.media.duration;
       const _overHalfWay = _currentTime > _duration / 2;
@@ -1487,18 +1366,18 @@ export default class Song implements ISong {
       const [showMilliseconds, setShowMilliseconds] = useState(false);
       const [progress, setProgress] = useState(0);
       const modals = useModals();
-      const browser = useMemo(() => remote.getCurrentWindow(), []);
+      const browser = useMemo(() => toxenapi.remote.getCurrentWindow(), []);
 
       let attempts = 0;
 
       const startTrim = async () => {
         attempts++;
         setLoading(true);
-        const result = await Ffmpeg.installFFmpeg();
+        const result = await toxenapi.ffmpeg.installFFmpeg();
         if (!result)
           return Toxen.error("FFmpeg could not be installed.");
         try {
-          await Ffmpeg.trimSong(this, start / 1000, end / 1000, p => {
+          await toxenapi.ffmpeg.trimSong(this, start / 1000, end / 1000, p => {
             browser.setProgressBar(p.percent / 100);
             setProgress(p.percent);
           });

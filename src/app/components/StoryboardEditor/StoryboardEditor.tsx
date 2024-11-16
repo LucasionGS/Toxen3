@@ -4,16 +4,12 @@ import { Button, Checkbox, Collapse, ColorInput, Group, NumberInput, Select, Sli
 import { Toxen } from "../../ToxenApp";
 import StoryboardParser from "../../toxen/StoryboardParser";
 import { useModals } from "@mantine/modals";
-//@ts-ignore
-import soundClap from "../../sounds/drum-hitclap.wav";
 import { ModalsContextProps } from "@mantine/modals/lib/context";
 import SelectAsync from "../SelectAsync/SelectAsync";
 import { VisualizerStyle } from "../../toxen/Settings";
 import { hexToRgbArray, rgbArrayToHex } from "../Form/FormInputFields/FormInputColorPicker";
 import Time from "../../toxen/Time";
-import { IconArrowDownCircle, IconArrowUpCircle, IconStar } from "@tabler/icons-react";
 import Converter from "../../toxen/Converter";
-import Ffmpeg from "../../toxen/Ffmpeg";
 
 export interface StoryboardEditorController {
   start: () => void;
@@ -107,17 +103,19 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
               <Button disabled={converting} color="blue" onClick={() => {
                 modals.closeModal(modalId);
               }}>Continue</Button>
-              <Button loading={converting} disabled={converting} color="blue" onClick={() => {
-                setConverting(true);
-                Ffmpeg.convertToOgg(Toxen.editingSong).then(() => {
-                  setConverting(false);
-                  modals.closeModal(modalId);
-                  Toxen.notify({
-                    content: "Converted to .OGG",
-                    expiresIn: 2000
+              {toxenapi.isDesktop() && (
+                <Button loading={converting} disabled={converting} color="blue" onClick={() => {
+                  setConverting(true);
+                  toxenapi.ffmpeg.convertToOgg(Toxen.editingSong).then(() => {
+                    setConverting(false);
+                    modals.closeModal(modalId);
+                    Toxen.notify({
+                      content: "Converted to .OGG",
+                      expiresIn: 2000
+                    });
                   });
-                });
-              }}>Convert to .OGG</Button>
+                }}>Convert to .OGG</Button>
+              )}
             </Group>
           </div>
         )

@@ -1,30 +1,10 @@
-import Settings from "./Settings";
-import CrossPlatform from "./CrossPlatform";
-import fs from "fs";
-import fsp from "fs/promises";
-
 export default class Theme implements ITheme {
-  public static readonly themeFolderPath = CrossPlatform.getToxenDataPath("themes");
   public static async load(): Promise<Theme[]> {
-    const themes: Theme[] = await fsp.readdir(Theme.themeFolderPath).then(async (files) => {
-      const themeFiles = files.filter((file) => file.endsWith(".json"));
-      const themePromises = themeFiles.map((file) => {
-        return fsp.readFile(`${Theme.themeFolderPath}/${file}`, "utf8").then((data) => {
-          return Theme.create(JSON.parse(data));
-        });
-      });
-      return Promise.all(themePromises);
-    }).catch(async () => {
-      await fsp.mkdir(Theme.themeFolderPath);
-      return [];
-    });
-
-    return themes;
+    return toxenapi.loadThemes(Theme);
   }
 
   public save() {
-    const data = JSON.stringify(this, null, 2);
-    return fsp.writeFile(`${Theme.themeFolderPath}/${this.name}.json`, data);
+    return toxenapi.saveTheme(this);
   }
 
   name: string;
@@ -84,14 +64,7 @@ export default class Theme implements ITheme {
    * Loads and applies the external CSS file to `Theme.customCSS`, if it exists.
    */
   public loadExternalCSS() {
-    const cssPath = `${Theme.themeFolderPath}/${this.name}.css`;
-    console.log(cssPath);
-    
-    if (fs.existsSync(cssPath)) {
-      const css = fs.readFileSync(cssPath, "utf8");
-      this.customCSS = css;
-    }
-    else this.customCSS = "";
+    return toxenapi.loadThemeExternalCSS(this);
   }
 }
 

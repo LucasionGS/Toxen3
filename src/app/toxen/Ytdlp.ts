@@ -7,16 +7,20 @@ import System, { ToxenFile } from "./System";
 import {  } from "@mantine/modals";
 import { useModals } from "@mantine/modals";
 
-namespace Ytdlp {
-  export const ytdlpPath = Settings.toxenDataPath + (os.platform() === "win32" ? "/ytdlp.exe" : "/ytdlp");
+export default class Ytdlp {
+  constructor(ytdlpPath: string) {
+    this.ytdlpPath = ytdlpPath;
+  }
+  
+  public readonly ytdlpPath: string;
 
-  export function isYtdlpInstalled(): boolean {
-    return fs.existsSync(ytdlpPath);
+  public isYtdlpInstalled(): boolean {
+    return fs.existsSync(this.ytdlpPath);
   }
 
-  export async function installYtdlp(force = false): Promise<boolean> {
+  public async installYtdlp(force = false): Promise<boolean> {
     return Promise.resolve().then(async () => {
-      if (!force && isYtdlpInstalled()) return true;
+      if (!force && this.isYtdlpInstalled()) return true;
       Toxen.log("Downloading ytdlp...", 2000);
       try {
 
@@ -25,8 +29,8 @@ namespace Ytdlp {
         }
         // Confirm responsibility
         
-        if (fs.existsSync(ytdlpPath)) fs.unlinkSync(ytdlpPath);
-        await YTDlpWrap.downloadFromGithub(ytdlpPath);
+        if (fs.existsSync(this.ytdlpPath)) fs.unlinkSync(this.ytdlpPath);
+        await YTDlpWrap.downloadFromGithub(this.ytdlpPath);
         await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait for the file to be written
         return true;
       } catch (error) {
@@ -36,24 +40,16 @@ namespace Ytdlp {
     });
   }
 
-  export async function getYtdlp(): Promise<YTDlpWrap> {
-    if (!isYtdlpInstalled()) await installYtdlp();
+  public async getYtdlpWrap(): Promise<YTDlpWrap> {
+    if (!this.isYtdlpInstalled()) await this.installYtdlp();
     // Check version
-    const ytd = new YTDlpWrap(ytdlpPath);
+    const ytd = new YTDlpWrap(this.ytdlpPath);
     
     return ytd;
   }
 
-  export interface VideoInfo {
-    filename: string;
-    title: string;
-    thumbnail: string;
-    original_url: string;
-    uploader: string;
-  }
-
-  export async function getVideoInfo(url: string): Promise<VideoInfo[]> {
-    const ytdlp = await getYtdlp();
+  public async getVideoInfo(url: string): Promise<VideoInfo[]> {
+    const ytdlp = await this.getYtdlpWrap();
     try {
       const info = await ytdlp.getVideoInfo(url);
       return Array.isArray(info) ? info : [info];
@@ -62,9 +58,9 @@ namespace Ytdlp {
     }
   }
 
-  export async function importAudio(videoInfo: VideoInfo, onProgress?: (progress: Progress) => void): Promise<void> {
+  public async importAudio(videoInfo: VideoInfo, onProgress?: (progress: Progress) => void): Promise<void> {
     return new Promise<void>(async (resolve, reject) => {
-      const ytdlp = await getYtdlp();
+      const ytdlp = await this.getYtdlpWrap();
       // Download audio only in mp3 format
       const eightRandomChars = Math.random().toString(36).substring(2, 10);
       const tmpAudioOutput = `${os.tmpdir()}/${eightRandomChars}.mp3`;
@@ -132,4 +128,10 @@ namespace Ytdlp {
   }
 }
 
-export default Ytdlp;
+export interface VideoInfo {
+  filename: string;
+  title: string;
+  thumbnail: string;
+  original_url: string;
+  uploader: string;
+}
