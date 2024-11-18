@@ -5,8 +5,8 @@ import type Stats from "../app/toxen/Statistics";
 import { IStatistics } from "../app/toxen/Statistics";
 import type Theme from "../app/toxen/Theme";
 import type Song from "../app/toxen/Song";
-import { Toxen } from "../app/ToxenApp";
-import User from "../app/toxen/User";
+import type { Toxen } from "../app/ToxenApp";
+import type User from "../app/toxen/User";
 
 /**
  * Implementation of Toxen Controller for the web version. DesktopController should be used for desktop-specific functions and overwrites.
@@ -18,10 +18,41 @@ export default class ToxenController {
 
   // Global tools / Polyfills
 
+  public packageJson: {
+    version: string;
+    name: string;
+    description: string;
+    dependencies: {
+      [key: string]: string;
+    };
+    devDependencies: {
+      [key: string]: string;
+    };
+  } = {
+    version: "0.0.0",
+    name: "Toxen",
+    description: "Toxen",
+    dependencies: {},
+    devDependencies: {},
+  }
+
+  public getBasename(filePath: string, ext?: string) {
+    const basename = filePath.split('/').pop().split('\\').pop(); // Handle both '/' and '\' separators
+    return ext ? basename.slice(0, basename.length - ext.length) : basename;
+  }
+  
   public getFileExtension(filePath: string) {
-    const baseName = filePath.split('/').pop().split('\\').pop(); // Handle both '/' and '\' separators
-    const dotIndex = baseName.lastIndexOf('.');
-    return dotIndex > 0 ? baseName.slice(dotIndex) : '';
+    const baseName = this.getBasename(filePath);
+    const lastDot = baseName.lastIndexOf('.');
+    return lastDot > 0 ? baseName.slice(lastDot) : "";
+  }
+
+  /**
+   * Joins multiple paths together and normalizes the path.
+   * @returns The normalized path.
+   */
+  public joinPath(...paths: string[]) {
+    return paths.join("/").replace(/\/+/g, "/");
   }
   
   /**
@@ -31,20 +62,44 @@ export default class ToxenController {
     throw "@DESKTOPONLY This function is only available on the desktop version of Toxen." + (hint ? " (" + hint : ")");
   }
 
-  public async saveSettings(settings: typeof Settings) {
-    this.throwDesktopOnly("saveSettings");
+  public async saveSettings($settings: typeof Settings) {
+    window.localStorage.setItem("toxen.settings", $settings.toString());
   }
 
-  public async loadSettings(settings: typeof Settings): Promise<ISettings> {
-    this.throwDesktopOnly("loadSettings");
+  public async loadSettings($settings: typeof Settings): Promise<ISettings> {
+    if (window.localStorage.getItem("toxen.settings") == null) {
+      $settings.applyDefaultSettings();
+      await $settings.save();
+    }
+    try {
+      let data = window.localStorage.getItem("toxen.settings");
+      $settings.data = JSON.parse(data);
+      $settings.applyDefaultSettings();
+      return $settings.data;
+    } catch (error) {
+      // throw "Unable to parse settings file";
+      console.error("Unable to parse settings file", error);
+      $settings.data = {} as any;
+      $settings.applyDefaultSettings();
+      return $settings.data;
+    }
   }
 
   public async saveStats(stats: typeof Stats) {
-    this.throwDesktopOnly("saveStats");
+    window.localStorage.setItem("toxen.stats", stats.toString());
   }
 
   public async loadStats(stats: typeof Stats): Promise<IStatistics> {
-    this.throwDesktopOnly("loadStats");
+    if (window.localStorage.getItem("toxen.stats") == null) {
+      await stats.save();
+    }
+    try {
+      let data = window.localStorage.getItem("toxen.stats");
+      stats.data = JSON.parse(data);
+      return stats.data;
+    } catch (error) {
+      throw "Unable to parse stats file";
+    }
   }
 
   public async saveTheme(theme: Theme) {
@@ -52,14 +107,16 @@ export default class ToxenController {
   }
 
   public async loadThemes(theme: typeof Theme): Promise<Theme[]> {
-    this.throwDesktopOnly("loadThemes");
+    console.warn("Loading themes is not available on the web version yet.");
+    return []; // No themes available on web version yet
   }
 
   /**
    * Loads and applies the external CSS file to `Theme.customCSS`, if it exists.
    */
   public loadThemeExternalCSS(theme: Theme) {
-    this.throwDesktopOnly("loadThemeExternalCSS");
+    // this.throwDesktopOnly("loadThemeExternalCSS");
+    console.warn("Loading external CSS is not available on the web version yet.");
   }
 
   /**

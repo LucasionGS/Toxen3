@@ -1,14 +1,14 @@
 import Settings from "./Settings";
 import Song from "./Song";
-import fsp from "fs/promises";
-import fs from "fs";
+// import fsp from "fs/promises";
+// import fs from "fs";
 import { Toxen } from "../ToxenApp";
-import Path from "path";
+// import Path from "path";
 import { ModalsContextProps } from "@mantine/modals/lib/context";
 import React from "react";
 import { Button, Stack } from "@mantine/core";
 import System, { ToxenFile } from "./System";
-import * as remote from "@electron/remote";
+// import * as remote from "@electron/remote";
 
 export default class Playlist {
   private constructor() { }
@@ -40,7 +40,12 @@ export default class Playlist {
    * Path for the playlists file.
    */
   public static get filePath() {
-    return Path.resolve(Settings.get("libraryDirectory"), "playlists.json");
+    if (toxenapi.isDesktop()) {
+      return toxenapi.path.resolve(Settings.get("libraryDirectory"), "playlists.json");
+    }
+    else {
+      toxenapi.throwDesktopOnly("Getting file path is not available on web version");
+    }
   }
 
   public static async saveRemote() {
@@ -55,26 +60,27 @@ export default class Playlist {
 
   public static async syncToRemote() {
     if (Settings.isRemote()) return;
-    await Playlist.saveRemote();
-    // Upload all song backgrounds and playlist backgrounds
-    const playlistBackgroundsDir = Playlist.getLocalPlaylistBackgroundsDir();
-    
-    // Upload playlist backgrounds
-    const playlistBackgrounds = fs.readdirSync(playlistBackgroundsDir);
-    for (const bg of playlistBackgrounds) {
-      const ext = Path.extname(bg);
-      const formData = new FormData();
-      formData.append("file", new Blob([await fs.promises.readFile(Path.join(playlistBackgroundsDir, bg))], { type: `image/${ext}` }), bg);
+    if (toxenapi.isDesktop()) {
+      await Playlist.saveRemote();
+      // Upload all song backgrounds and playlist backgrounds
+      const playlistBackgroundsDir = Playlist.getLocalPlaylistBackgroundsDir();
       
-      await Toxen.fetch(`${Settings.getUser().getPlaylistsPath()}/${bg}`, {
-        method: "PUT",
-        body: formData,
-        headers: {
-          "Content-Type": "multipart/form-data"
-        }
-      });
+      // Upload playlist backgrounds
+      const playlistBackgrounds = toxenapi.fs.readdirSync(playlistBackgroundsDir);
+      for (const bg of playlistBackgrounds) {
+        const ext = toxenapi.path.extname(bg);
+        const formData = new FormData();
+        formData.append("file", new Blob([await toxenapi.fs.promises.readFile(toxenapi.path.join(playlistBackgroundsDir, bg))], { type: `image/${ext}` }), bg);
+        
+        await Toxen.fetch(`${Settings.getUser().getPlaylistsPath()}/${bg}`, {
+          method: "PUT",
+          body: formData,
+          headers: {
+            "Content-Type": "multipart/form-data"
+          }
+        });
+      }
     }
-
   }
   
   /**
@@ -89,13 +95,12 @@ export default class Playlist {
       await Playlist.saveRemote();
     }
     else {
-      try {
-        // let ws = fs.createWriteStream(Playlist.filePath);
-        // ws.write(Buffer.from(Playlist.toString()));
-        // ws.close();
-        fs.writeFileSync(Playlist.filePath, Playlist.toString());
-      } catch (error) {
-        Toxen.error(error);
+      if (toxenapi.isDesktop()) {
+        try {
+          toxenapi.fs.writeFileSync(Playlist.filePath, Playlist.toString());
+        } catch (error) {
+          Toxen.error(error);
+        }
       }
     }
   }
@@ -122,37 +127,42 @@ export default class Playlist {
         }
       }
       else {
-        // Local
-        if (!(await fsp.stat(Playlist.filePath).then(() => true).catch(() => false))) {
-          await Playlist.save();
-        }
-        try {
-          let data = await fsp.readFile(Playlist.filePath, "utf8");
-          let iPlaylists: IPlaylist[] = JSON.parse(data);
-          let playlists: Playlist[] = iPlaylists.map(pl => Playlist.create(pl));
-          // Sort that shit
-          return playlists.sort((a, b) => a.name.localeCompare(b.name));
-        } catch (error) {
-          // Use localStorage backup
-          if (localStorage.getItem("playlists-backup")) {
-            Toxen.warn("Using backup for playlists.", 2500);
-            try {
-              let data = localStorage.getItem("playlists-backup");
-              let iPlaylists: IPlaylist[] = JSON.parse(data);
-              let playlists: Playlist[] = iPlaylists.map(pl => Playlist.create(pl));
-              // Sort that shit
-              return playlists.sort((a, b) => a.name.localeCompare(b.name));
-            } catch (error) {
+        if (toxenapi.isDesktop()) {
+          // Local
+          if (!(await toxenapi.fs.promises.stat(Playlist.filePath).then(() => true).catch(() => false))) {
+            await Playlist.save();
+          }
+          try {
+            let data = await toxenapi.fs.promises.readFile(Playlist.filePath, "utf8");
+            let iPlaylists: IPlaylist[] = JSON.parse(data);
+            let playlists: Playlist[] = iPlaylists.map(pl => Playlist.create(pl));
+            // Sort that shit
+            return playlists.sort((a, b) => a.name.localeCompare(b.name));
+          } catch (error) {
+            // Use localStorage backup
+            if (localStorage.getItem("playlists-backup")) {
+              Toxen.warn("Using backup for playlists.", 2500);
+              try {
+                let data = localStorage.getItem("playlists-backup");
+                let iPlaylists: IPlaylist[] = JSON.parse(data);
+                let playlists: Playlist[] = iPlaylists.map(pl => Playlist.create(pl));
+                // Sort that shit
+                return playlists.sort((a, b) => a.name.localeCompare(b.name));
+              } catch (error) {
+                Toxen.error("Unable to parse playlists file.\nPlaylists have been reset.");
+                Playlist.save();
+                return [];
+              }
+            }
+            else {
               Toxen.error("Unable to parse playlists file.\nPlaylists have been reset.");
               Playlist.save();
               return [];
             }
           }
-          else {
-            Toxen.error("Unable to parse playlists file.\nPlaylists have been reset.");
-            Playlist.save();
-            return [];
-          }
+        }
+        else {
+          toxenapi.throwDesktopOnly("Loading playlists is not available on web version");
         }
       }
     })
@@ -204,51 +214,53 @@ export default class Playlist {
 
   public promptSetBackground(modals: ModalsContextProps, song?: Song) {
     const promptImage = () => {
-      let paths = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
-        properties: [
-          "openFile"
-        ],
-        filters: [
-          {
-            name: "Media files",
-            extensions: Toxen.getSupportedImageFiles().map(ext => ext.replace(".", ""))
-          },
-        ],
-      });
-
-      if (!paths || paths.length == 0) return;
-
-      const files: ToxenFile[] = paths.map(p => ({
-        name: Path.basename(p),
-        path: p
-      }));
-
-      const playlistBackgroundsDir = Playlist.getPlaylistBackgroundsDir(true);
-      let randomizedName: string;
-      do {
-        randomizedName = System.randomString(16) + Path.extname(files[0].name);
-      } while (fs.existsSync(Path.join(playlistBackgroundsDir, randomizedName)));
-      
-      fs.copyFileSync(files[0].path, Path.join(playlistBackgroundsDir, randomizedName));
-
-      if (song) {
-        if (!this.songBackground) this.songBackground = {};
-        if (this.songBackground[song.uid]) {
-          fs.unlinkSync(Path.join(playlistBackgroundsDir, this.songBackground[song.uid]));
+      if (toxenapi.isDesktop()) {
+        let paths = toxenapi.remote.dialog.showOpenDialogSync(toxenapi.remote.getCurrentWindow(), {
+          properties: [
+            "openFile"
+          ],
+          filters: [
+            {
+              name: "Media files",
+              extensions: Toxen.getSupportedImageFiles().map(ext => ext.replace(".", ""))
+            },
+          ],
+        });
+  
+        if (!paths || paths.length == 0) return;
+  
+        const files: ToxenFile[] = paths.map(p => ({
+          name: toxenapi.path.basename(p),
+          path: p
+        }));
+  
+        const playlistBackgroundsDir = Playlist.getPlaylistBackgroundsDir(true);
+        let randomizedName: string;
+        do {
+          randomizedName = System.randomString(16) + toxenapi.path.extname(files[0].name);
+        } while (toxenapi.fs.existsSync(toxenapi.path.join(playlistBackgroundsDir, randomizedName)));
+        
+        toxenapi.fs.copyFileSync(files[0].path, toxenapi.path.join(playlistBackgroundsDir, randomizedName));
+  
+        if (song) {
+          if (!this.songBackground) this.songBackground = {};
+          if (this.songBackground[song.uid]) {
+            toxenapi.fs.unlinkSync(toxenapi.path.join(playlistBackgroundsDir, this.songBackground[song.uid]));
+          }
+          this.songBackground[song.uid] = randomizedName;
         }
-        this.songBackground[song.uid] = randomizedName;
-      }
-      else {
-        if (this.background) {
-          fs.unlinkSync(Path.join(playlistBackgroundsDir, this.background));
+        else {
+          if (this.background) {
+            toxenapi.fs.unlinkSync(toxenapi.path.join(playlistBackgroundsDir, this.background));
+          }
+          this.background = randomizedName;
         }
-        this.background = randomizedName;
+        
+        
+        Playlist.save();
+        Toxen.playlistPanel.update();
+        modals.closeModal(modalId);
       }
-      
-      
-      Playlist.save();
-      Toxen.playlistPanel.update();
-      modals.closeModal(modalId);
     }
 
     if (song) {
@@ -283,26 +295,33 @@ export default class Playlist {
   }
 
   public removeBackground(song?: Song) {
-    if (song) {
-      if (!this.songBackground) this.songBackground = {};
-      if (this.songBackground[song.uid]) {
-        fs.unlinkSync(Path.join(Playlist.getPlaylistBackgroundsDir(), this.songBackground[song.uid]));
-        delete this.songBackground[song.uid];
+    if (toxenapi.isDesktop()) {
+      if (song) {
+        if (!this.songBackground) this.songBackground = {};
+        if (this.songBackground[song.uid]) {
+          toxenapi.fs.unlinkSync(toxenapi.path.join(Playlist.getPlaylistBackgroundsDir(), this.songBackground[song.uid]));
+          delete this.songBackground[song.uid];
+        }
       }
-    }
-    else {
-      if (this.background) {
-        fs.unlinkSync(Path.join(Playlist.getPlaylistBackgroundsDir(), this.background));
-        this.background = null;
+      else {
+        if (this.background) {
+          toxenapi.fs.unlinkSync(toxenapi.path.join(Playlist.getPlaylistBackgroundsDir(), this.background));
+          this.background = null;
+        }
       }
+      Playlist.save();
     }
-    Playlist.save();
   }
   
   public static getLocalPlaylistBackgroundsDir(ensureExisting = false) {
-    const playlistBackgroundsDir = Path.resolve(Settings.get("libraryDirectory"), ".playlistBackgrounds");
-    if (ensureExisting && !fs.existsSync(playlistBackgroundsDir)) fs.mkdirSync(playlistBackgroundsDir);
-    return playlistBackgroundsDir;
+    if (toxenapi.isDesktop()) {
+      const playlistBackgroundsDir = toxenapi.path.resolve(Settings.get("libraryDirectory"), ".playlistBackgrounds");
+      if (ensureExisting && !toxenapi.fs.existsSync(playlistBackgroundsDir)) toxenapi.fs.mkdirSync(playlistBackgroundsDir);
+      return playlistBackgroundsDir;
+    }
+    else {
+      toxenapi.throwDesktopOnly("Getting local playlist backgrounds directory is not available on web version");
+    }
   }
 
   public static getRemotePlaylistBackgroundsDir() {
@@ -329,11 +348,16 @@ export default class Playlist {
     console.log("Getting background path");
     if (!bgUsed) return null;
     this._cachedBackgroundName = bgUsed;
-    return this._cachedBackgroundPath = remote ? (
+
+    if (!toxenapi.isDesktop()) {
+      toxenapi.throwDesktopOnly("Getting background path is not available on web version");
+    }
+    
+    return this._cachedBackgroundPath = (remote ? (
       `${Playlist.getPlaylistBackgroundsDir()}/${bgUsed}`
     ) : (
-      Path.resolve(Playlist.getPlaylistBackgroundsDir(), bgUsed).replace(/\\/g, "/")
-    );
+      toxenapi.path.resolve(Playlist.getPlaylistBackgroundsDir(), bgUsed).replace(/\\/g, "/")
+    ));
   }
 }
 

@@ -7,8 +7,8 @@ import { Toxen } from '../../ToxenApp';
 import SidepanelSectionHeader from '../Sidepanel/SidepanelSectionHeader';
 import "./PlaylistPanel.scss";
 import { ModalsContextProps } from '@mantine/modals/lib/context';
-import Path from 'path';
-import fs from 'fs';
+// import Path from 'path';
+// import fs from 'fs';
 import Settings from '../../toxen/Settings';
 
 interface PlaylistPanelProps { }
@@ -119,42 +119,46 @@ function PlaylistItem(props: PlaylistItemProps) {
   };
 
   async function deletePlaylist(force = false) {
-
-    if (currentPlaylist?.songBackground) {
-      const imageNames = Object.values(currentPlaylist.songBackground);
-      for (const imageName of imageNames) {
-        const imagePath = Path.join(Playlist.getPlaylistBackgroundsDir(), imageName);
+    if (toxenapi.isDesktop()) {
+      if (currentPlaylist?.songBackground) {
+        const imageNames = Object.values(currentPlaylist.songBackground);
+        for (const imageName of imageNames) {
+          const imagePath = toxenapi.joinPath(Playlist.getPlaylistBackgroundsDir(), imageName);
+          try {
+            toxenapi.fs.unlinkSync(imagePath);
+          } catch (error) {
+            Toxen.error(error.message, 3000);
+          }
+        }
+      }
+      
+      if (currentPlaylist?.background) {
+        const imagePath = toxenapi.joinPath(Playlist.getPlaylistBackgroundsDir(), currentPlaylist.background);
         try {
-          fs.unlinkSync(imagePath);
+          toxenapi.fs.unlinkSync(imagePath);
         } catch (error) {
           Toxen.error(error.message, 3000);
         }
       }
-    }
-
-    if (currentPlaylist?.background) {
-      const imagePath = Path.join(Playlist.getPlaylistBackgroundsDir(), currentPlaylist.background);
-      try {
-        fs.unlinkSync(imagePath);
-      } catch (error) {
-        Toxen.error(error.message, 3000);
+      
+      if (currentPlaylist === playlist) {
+        Toxen.playlist = null;
       }
+      Toxen.playlists = Toxen.playlists.filter(p => p.name !== playlist.name);
+  
+      Playlist.save();
+      Toxen.log(
+        <>
+          Removed playlist: <code>{playlist.name}</code>
+        </>,
+        3000
+      );
+  
+      playlistPanel.update();
     }
-    
-    if (currentPlaylist === playlist) {
-      Toxen.playlist = null;
+    else {
+      toxenapi.throwDesktopOnly("deletePlaylist");
     }
-    Toxen.playlists = Toxen.playlists.filter(p => p.name !== playlist.name);
-
-    Playlist.save();
-    Toxen.log(
-      <>
-        Removed playlist: <code>{playlist.name}</code>
-      </>,
-      3000
-    );
-
-    playlistPanel.update();
   }
 
   function EditPlaylistName({ playlist, onClose }: { playlist: Playlist; onClose: () => void; }) {

@@ -1,5 +1,4 @@
-import "./toxen/global"; // Set global variables
-import * as remote from "@electron/remote";
+// import * as remote from "@electron/remote";
 import { EventEmitter } from "events";
 import React from "react";
 import Background from "./components/Background/Background";
@@ -31,7 +30,7 @@ import ToxenInteractionMode from "./toxen/ToxenInteractionMode";
 import Playlist from "./toxen/Playlist";
 import PlaylistPanel from "./components/PlaylistPanel/PlaylistPanel";
 import TButton from "./components/Button/Button";
-import Discord from "./toxen/Discord";
+import type Discord from "./toxen/desktop/Discord";
 import ThemeContainer from "./components/ThemeContainer/ThemeContainer";
 import ThemeEditorPanel from "./components/ThemeEditorPanel/ThemeEditorPanel";
 import Theme from "./toxen/Theme";
@@ -45,13 +44,13 @@ import EditSong from "./components/Sidepanel/Panels/EditSong/EditSong";
 import InitialData from "./windows/SubtitleCreator/models/InitialData";
 import User from "./toxen/User";
 import { IconLayoutNavbarExpand } from "@tabler/icons-react";
-import HueManager from "./toxen/philipshue/HueManager";
+// import HueManager from "./toxen/philipshue/HueManager";
 import ImportPanel from "./components/Sidepanel/Panels/ImportPanel/ImportPanel";
-import YTDlpWrap from "yt-dlp-wrap";
+// import YTDlpWrap from "yt-dlp-wrap";
 import StoryboardEditor, { StoryboardEditorController } from "./components/StoryboardEditor/StoryboardEditor";
 
 declare const SUBTITLE_CREATOR_WEBPACK_ENTRY: any;
-const browser = remote.getCurrentWindow();
+// const browser = remote.getCurrentWindow();
 
 //#region Define variables used all over the ToxenApp process.
 /**
@@ -358,28 +357,28 @@ export class Toxen {
     document.body.classList.toggle("advanced", Settings.isAdvanced());
 
     // Disable hueEnabled while its still broken.
-    if (Settings.get("hueEnabled")) Settings.set("hueEnabled", false);
+    // if (Settings.get("hueEnabled")) Settings.set("hueEnabled", false);
     
-    if (toxenapi.isDesktop() && Settings.get("hueEnabled") && !HueManager.instance) {
-      HueManager.init({
-        ip: Settings.get("hueBridgeIp"),
-        username: Settings.get("hueUsername"),
-        clientkey: Settings.get("hueClientkey"),
-      });
+    // if (toxenapi.isDesktop() && Settings.get("hueEnabled") && !HueManager.instance) {
+    //   HueManager.init({
+    //     ip: Settings.get("hueBridgeIp"),
+    //     username: Settings.get("hueUsername"),
+    //     clientkey: Settings.get("hueClientkey"),
+    //   });
 
-      if (Settings.get("hueEntertainmentAreaId")) {
-        HueManager.instance.getEntertainmentArea(
-          Settings.get("hueEntertainmentAreaId")
-        ).then(area => {
-          HueManager.setCurrentArea(area);
-        }).catch(err => {
-          HueManager.setCurrentArea(null);
-          Toxen.error(err);
-        });
-      }
-    }
+    //   if (Settings.get("hueEntertainmentAreaId")) {
+    //     HueManager.instance.getEntertainmentArea(
+    //       Settings.get("hueEntertainmentAreaId")
+    //     ).then(area => {
+    //       HueManager.setCurrentArea(area);
+    //     }).catch(err => {
+    //       HueManager.setCurrentArea(null);
+    //       Toxen.error(err);
+    //     });
+    //   }
+    // }
 
-    Toxen.discord.setPresence();
+    Toxen.discord?.setPresence();
   }
 
   public static themes: Theme[] = [];
@@ -521,7 +520,11 @@ export class Toxen {
   }
 
   public static toggleFullscreen(force?: boolean) {
-    const w = remote.getCurrentWindow();
+    if (!toxenapi.isDesktop()) {
+      return Toxen.error("Fullscreen is only available on the desktop version of Toxen.", 5000);
+    }
+
+    const w = toxenapi.remote.getCurrentWindow();
     const newMode = force ?? !w.isFullScreen();
 
     if (newMode && Toxen.isMiniplayer()) {
@@ -541,7 +544,11 @@ export class Toxen {
   private static _miniplayerHeight = Math.floor(300 / 16 * 9);
 
   public static toggleMiniplayer(force?: boolean) {
-    const w = remote.getCurrentWindow();
+    if (!toxenapi.isDesktop()) {
+      return Toxen.error("Miniplayer is only available on the desktop version of Toxen.", 5000);
+    }
+    
+    const w = toxenapi.remote.getCurrentWindow();
     const newMode = force ?? !Toxen.isMiniplayer();
 
     if (newMode && w.isFullScreen()) {
@@ -592,49 +599,51 @@ export class Toxen {
     Toxen.musicControls.progressBar.setFillColor(color);
   }
 
-  public static discord = new Discord("647178364511191061"); // Toxen's App ID
-
-  public static async openSubtitleCreator(song: Song) {
-    if (Settings.isRemote()) {
-      Toxen.error("Subtitles can only be created locally.", 5000);
-      return;
-    }
-
-    const subtitleCreator = new remote.BrowserWindow({
-      width: 1280,
-      height: 768,
-      webPreferences: {
-        nodeIntegration: true,
-        contextIsolation: false,
-        webSecurity: false
-      },
-      autoHideMenuBar: true,
-      frame: false,
-      center: true,
-      icon: "./src/icons/toxen.ico",
-      darkTheme: true,
-      modal: true,
-      parent: remote.getCurrentWindow(),
-    });
-
-    subtitleCreator.setMenu(remote.Menu.buildFromTemplate([]));
-
-    await subtitleCreator.loadURL(SUBTITLE_CREATOR_WEBPACK_ENTRY);
-    subtitleCreator.webContents.send("song_to_edit", JSON.stringify({
-      song: song.toISong(),
-      libraryDirectory: Settings.get("libraryDirectory"),
-    } as InitialData));
-
-    subtitleCreator.on("closed", () => {
-      subtitleCreator.destroy();
-    });
-
-    subtitleCreator.show();
-
-    Toxen.musicPlayer.pause();
-
-    return subtitleCreator;
+  public static get discord(): Discord | null {
+    return toxenapi.isDesktop() ? toxenapi.getDiscordInstance() : null;
   }
+
+  // public static async openSubtitleCreator(song: Song) {
+  //   if (Settings.isRemote()) {
+  //     Toxen.error("Subtitles can only be created locally.", 5000);
+  //     return;
+  //   }
+
+  //   const subtitleCreator = new remote.BrowserWindow({
+  //     width: 1280,
+  //     height: 768,
+  //     webPreferences: {
+  //       nodeIntegration: true,
+  //       contextIsolation: false,
+  //       webSecurity: false
+  //     },
+  //     autoHideMenuBar: true,
+  //     frame: false,
+  //     center: true,
+  //     icon: "./src/icons/toxen.ico",
+  //     darkTheme: true,
+  //     modal: true,
+  //     parent: remote.getCurrentWindow(),
+  //   });
+
+  //   subtitleCreator.setMenu(remote.Menu.buildFromTemplate([]));
+
+  //   await subtitleCreator.loadURL(SUBTITLE_CREATOR_WEBPACK_ENTRY);
+  //   subtitleCreator.webContents.send("song_to_edit", JSON.stringify({
+  //     song: song.toISong(),
+  //     libraryDirectory: Settings.get("libraryDirectory"),
+  //   } as InitialData));
+
+  //   subtitleCreator.on("closed", () => {
+  //     subtitleCreator.destroy();
+  //   });
+
+  //   subtitleCreator.show();
+
+  //   Toxen.musicPlayer.pause();
+
+  //   return subtitleCreator;
+  // }
 }
 
 class ToxenEventEmitter extends EventEmitter {
@@ -672,52 +681,54 @@ export default class ToxenAppRenderer extends React.Component {
       .then(async () => {
         Toxen.updateSettings();
         Stats.load();
-        let win = remote.getCurrentWindow();
-        if (Settings.get("restoreWindowSize")) {
-          // Window initial size
-          win.setSize(
-            Settings.set("windowWidth", Settings.get("windowWidth") ?? 1280),
-            Settings.set("windowHeight", Settings.get("windowHeight") ?? 768)
-          );
-
-          let display = remote.screen.getPrimaryDisplay();
-          let [winSizeWidth, winSizeheight] = win.getSize();
-          win.setPosition(
-            Math.floor(display.size.width / 2) - Math.floor(winSizeWidth / 2),
-            Math.floor(display.size.height / 2) - Math.floor(winSizeheight / 2),
-          );
-        }
-
-        Toxen.toggleFullscreen(win.isFullScreen());
-
-        try {
-          remote.autoUpdater.on("update-available", () => {
-            Toxen.log("A new update available and is being installed in the background...", 5000)
-          });
-
-          remote.autoUpdater.on("update-downloaded", (e, releaseNotes, releaseName, releaseDate, updateURL) => {
-            e.preventDefault();
-            new remote.Notification({
-              title: "Update Downloaded",
-              body: `A new update is available: ${releaseName}`
-            }).show();
-            Toxen.log(<>
-              Update downloaded: <code>{releaseName}</code>
-              <br />
-              <TButton txStyle="action"
-                onClick={() => {
-                  remote.autoUpdater.quitAndInstall();
-                }}
-              >Update</TButton>
-            </>);
-          });
-
-          remote.autoUpdater.on("error", (error) => {
-            console.error(error);
-            Toxen.error(`Error while updating: ${error.message}`);
-          });
-        } catch (error) {
-          Toxen.error("Error trying to listen to auto updater.", 5000);
+        if (toxenapi.isDesktop()) {
+          let win = toxenapi.remote.getCurrentWindow();
+          if (Settings.get("restoreWindowSize")) {
+            // Window initial size
+            win.setSize(
+              Settings.set("windowWidth", Settings.get("windowWidth") ?? 1280),
+              Settings.set("windowHeight", Settings.get("windowHeight") ?? 768)
+            );
+  
+            let display = toxenapi.remote.screen.getPrimaryDisplay();
+            let [winSizeWidth, winSizeheight] = win.getSize();
+            win.setPosition(
+              Math.floor(display.size.width / 2) - Math.floor(winSizeWidth / 2),
+              Math.floor(display.size.height / 2) - Math.floor(winSizeheight / 2),
+            );
+          }
+  
+          Toxen.toggleFullscreen(win.isFullScreen());
+  
+          try {
+            toxenapi.remote.autoUpdater.on("update-available", () => {
+              Toxen.log("A new update available and is being installed in the background...", 5000)
+            });
+  
+            toxenapi.remote.autoUpdater.on("update-downloaded", (e, releaseNotes, releaseName, releaseDate, updateURL) => {
+              e.preventDefault();
+              new toxenapi.remote.Notification({
+                title: "Update Downloaded",
+                body: `A new update is available: ${releaseName}`
+              }).show();
+              Toxen.log(<>
+                Update downloaded: <code>{releaseName}</code>
+                <br />
+                <TButton txStyle="action"
+                  onClick={() => {
+                    toxenapi.remote.autoUpdater.quitAndInstall();
+                  }}
+                >Update</TButton>
+              </>);
+            });
+  
+            toxenapi.remote.autoUpdater.on("error", (error) => {
+              console.error(error);
+              Toxen.error(`Error while updating: ${error.message}`);
+            });
+          } catch (error) {
+            Toxen.error("Error trying to listen to auto updater.", 5000);
+          }
         }
 
         await Toxen.loadThemes(); // Loads themes
@@ -730,17 +741,17 @@ export default class ToxenAppRenderer extends React.Component {
         Toxen.musicPlayer.playRandom();
         Toxen.background.visualizer.start();
 
-        if (Settings.get("discordPresence")) Toxen.discord.connect().then(() => {
-          Toxen.discord.setPresence();
+        if (Settings.get("discordPresence")) Toxen.discord?.connect().then(() => {
+          Toxen.discord?.setPresence();
         });
 
         if (toxenapi.isDesktop()) {
           const ytdlp = toxenapi.getYtdlp();
           if (ytdlp.isYtdlpInstalled()) {
-            const ytd = new YTDlpWrap(ytdlp.ytdlpPath);
+            const ytd = await ytdlp.getYtdlpWrap();
             await ytd.getVersion().then(async (version) => {
               console.log("ytdlp version:", version);
-              const latest = (await YTDlpWrap.getGithubReleases()).pop()?.tag_name;
+              const latest = (await ytdlp.getGithubReleases()).pop()?.tag_name;
               console.log("ytdlp latest:", latest);
               if (latest?.trim() !== version?.trim()) {
                 Toxen.warn("Media Downloader is outdated. Updating...", 2500);
@@ -841,8 +852,9 @@ export default class ToxenAppRenderer extends React.Component {
                         }}
                       >&nbsp;Show playing track</Button>
                       {
-                        !Settings.isRemote() && Settings.getUser()?.premium && (
+                        !Settings.isRemote() && toxenapi.isDesktop() && Settings.getUser()?.premium && (
                           <Button color="green" onClick={() => {
+                            const browser = toxenapi.remote.getCurrentWindow();
                             const currentQueue = [...Toxen.songList];
                             const total = currentQueue.length;
                             // 5 songs at a time
@@ -861,6 +873,7 @@ export default class ToxenAppRenderer extends React.Component {
                                   untilFinished--;
                                 }
 
+                                
                                 browser.setProgressBar((total - currentQueue.length) / total);
 
                                 if (untilFinished <= 0) {

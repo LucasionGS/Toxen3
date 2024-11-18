@@ -10,7 +10,7 @@ import { IconArrowDownCircle, IconArrowLeftBar, IconArrowRightBar, IconArrowUpCi
 import { useClipboard, useForceUpdate } from "@mantine/hooks";
 import { hexToRgbArray, rgbArrayToHex } from "../Form/FormInputFields/FormInputColorPicker";
 import Settings, { VisualizerStyle } from "../../toxen/Settings";
-import Path from "path";
+// import Path from "path";
 import "./StoryboardEditorPanel.scss";
 import BPMFinder from "../BPMFinder/BPMFinder";
 import SelectAsync from "../SelectAsync/SelectAsync";
@@ -60,7 +60,12 @@ export default function StoryboardEditorPanel() {
                   }
                 }
                 else {
-                  song.paths.storyboard = Path.relative(song.dirname(), saveLocation);
+                  if (toxenapi.isDesktop()) {
+                    song.paths.storyboard = toxenapi.path.relative(song.dirname(), saveLocation);
+                  }
+                  else {
+                    toxenapi.throwDesktopOnly("Unable to save storyboard file location on web version.");
+                  }
                 }
                 song.saveInfo();
               }

@@ -1,9 +1,9 @@
 import YTDlpWrap, { Progress } from "yt-dlp-wrap";
-import Settings from "./Settings";
+import Settings from "../Settings";
 import fs from "fs";
 import os from "os";
-import { Toxen } from "../ToxenApp";
-import System, { ToxenFile } from "./System";
+import { Toxen } from "../../ToxenApp";
+import System, { ToxenFile } from "../System";
 import {  } from "@mantine/modals";
 import { useModals } from "@mantine/modals";
 
@@ -125,6 +125,10 @@ export default class Ytdlp {
         }
       );
     });
+  }
+
+  public async getGithubReleases(page?: number, perPage?: number) {
+    return YTDlpWrap.getGithubReleases(page, perPage);
   }
 }
 

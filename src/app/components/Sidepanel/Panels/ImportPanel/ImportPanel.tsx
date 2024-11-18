@@ -1,10 +1,8 @@
 import { Button, Group, Image, Modal, Progress, TextInput } from '@mantine/core';
-import * as remote from "@electron/remote";
 import React from 'react'
 import System, { ToxenFile } from '../../../../toxen/System';
 import { Toxen } from '../../../../ToxenApp';
-import Path from "path";
-import { VideoInfo } from '../../../../toxen/Ytdlp';
+import { VideoInfo } from '../../../../toxen/desktop/Ytdlp';
 import Settings from '../../../../toxen/Settings';
 import ExternalUrl from '../../../ExternalUrl/ExternalUrl';
 
@@ -15,29 +13,34 @@ export default function ImportPanel() {
       <Button
         leftSection={<i className="fas fa-file-import"></i>}
         onClick={() => {
-          let paths = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
-            properties: [
-              "multiSelections",
-              "openFile"
-            ],
-            filters: [
-              {
-                name: "Media files",
-                extensions: Toxen.getSupportedMediaFiles().map(ext => ext.replace(".", ""))
-              },
-            ],
-          });
+          if (toxenapi.isDesktop()) {
+            let paths = toxenapi.remote.dialog.showOpenDialogSync(toxenapi.remote.getCurrentWindow(), {
+              properties: [
+                "multiSelections",
+                "openFile"
+              ],
+              filters: [
+                {
+                  name: "Media files",
+                  extensions: Toxen.getSupportedMediaFiles().map(ext => ext.replace(".", ""))
+                },
+              ],
+            });
 
-          if (!paths || paths.length == 0)
-            return;
+            if (!paths || paths.length == 0)
+              return;
 
-          const promisedFiles: ToxenFile[] = paths.map(p => ({
-            name: Path.basename(p),
-            path: p
-          }));
-          Promise.all(promisedFiles).then(files => {
-            System.handleImportedFiles(files);
-          });
+            const promisedFiles: ToxenFile[] = paths.map(p => ({
+              name: toxenapi.path.basename(p),
+              path: p
+            }));
+            Promise.all(promisedFiles).then(files => {
+              System.handleImportedFiles(files);
+            });
+          }
+          else {
+            toxenapi.throwDesktopOnly("Import local files not yet implemented");
+          }
         }}
       >Import song from Files</Button>
       <br />
@@ -72,7 +75,6 @@ function ImportOnlineMedia() {
           setModalOpen(true);
         }}
       >Import from YouTube/Soundcloud</Button>
-
       {
         acceptedResponsibility ? (
           <Modal size={"80vw"} opened={modalOpen} onClose={() => setModalOpen(false)}>

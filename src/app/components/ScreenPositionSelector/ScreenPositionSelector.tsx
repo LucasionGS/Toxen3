@@ -1,6 +1,6 @@
 import { InputLabel, Radio } from '@mantine/core';
 import React, { useState } from 'react';
-import { Toxen } from 'src/app/ToxenApp';
+// import { Toxen } from 'src/app/ToxenApp';
 import "./ScreenPositionSelector.scss";
 
 interface ScreenPositionSelectorProps {

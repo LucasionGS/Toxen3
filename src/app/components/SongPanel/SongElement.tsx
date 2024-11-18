@@ -1,9 +1,6 @@
 import React, { Component } from 'react';
 import Song from '../../toxen/Song';
-import { Toxen } from '../../ToxenApp';
 import "./SongElement.scss";
-import { Group } from '@mantine/core';
-import { useIntersection } from '@mantine/hooks';
 import RenderIfVisible from "react-render-if-visible";
 import { useModals } from '@mantine/modals';
 

@@ -1,14 +1,12 @@
 import React, { Component } from 'react';
 import Settings, { VisualizerStyle } from '../../toxen/Settings';
 import { Toxen } from '../../ToxenApp';
-import Path from "path";
 import "./Visualizer.scss";
-import System from '../../toxen/System';
 // @ts-expect-error 
 import txnLogo from "../../../icons/toxen.png";
 import { hexToRgb, rgbToHex } from '../Form/FormInputFields/FormInputColorPicker';
 import StoryboardParser from '../../toxen/StoryboardParser';
-import HueManager from '../../toxen/philipshue/HueManager';
+// import HueManager from '../../toxen/philipshue/HueManager';
 import MathX from '../../toxen/MathX';
 import { ISong } from '../../toxen/Song';
 
@@ -161,7 +159,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
 
     Toxen.background.updateDimScale(pulseEnabled ? dynLight : 0);
 
-    try { HueManager.transition(); } catch (error) { }
+    // try { HueManager.transition(); } catch (error) { } // Broken atm
 
     // if (style === VisualizerStyle.None && !Settings.get("backgroundDynamicLighting")) return;
     if (style !== VisualizerStyle.None) {

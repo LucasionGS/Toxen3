@@ -1,7 +1,7 @@
 import ToxenController from "./ToxenController";
 import React from "react";
 import Path from "path";
-import fs from "fs";
+import fs, { Dir, Dirent } from "fs";
 import fsp from "fs/promises";
 //@ts-ignore
 import os from "os";
@@ -12,14 +12,20 @@ import { ISettings } from "../app/toxen/Settings";
 import type Stats from "../app/toxen/Statistics";
 import { IStatistics } from "../app/toxen/Statistics";
 import type Theme from "../app/toxen/Theme";
-import Ytdlp from "../app/toxen/Ytdlp";
-import Ffmpeg from "../app/toxen/Ffmpeg";
+import Ytdlp from "../app/toxen/desktop/Ytdlp";
+import Ffmpeg from "../app/toxen/desktop/Ffmpeg";
 import yazl from "yazl";
 import type Song from "../app/toxen/Song";
-import { type Toxen } from "../app/ToxenApp";
+import type { Toxen } from "../app/ToxenApp";
 import type User from "../app/toxen/User";
 import { hashElement } from "folder-hash";
 import { } from "buffer";
+import packageJson from "../../package.json";
+import { ISong } from "../app/toxen/Song";
+import System from "../app/toxen/System";
+import { Checkbox, Menu, RangeSlider, Button, Progress, Group, Stack } from "@mantine/core";
+import { hideNotification, updateNotification } from "@mantine/notifications";
+import Discord from "../app/toxen/desktop/Discord";
 
 /**
  * DesktopController is a controller for desktop-specific functions. Overwrites the web version of the controller.
@@ -30,10 +36,18 @@ export default class DesktopController extends ToxenController {
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; // Hue bullshit
   }
   
+  public packageJson = packageJson;
   
   public isDesktop(): this is DesktopController { return true; }
   CrossPlatform = CrossPlatform;
   public remote = remote;
+
+  public joinPath(...paths: string[]) {
+    return Path.join(...paths);
+  }
+
+  public fs = fs;
+  public path = Path;
 
   /**
    * Save Toxen's current settings file.
@@ -292,5 +306,160 @@ export default class DesktopController extends ToxenController {
     }).then(res => res.json()).then(res => res.hash).catch(() => null);
     console.log("Remote hash", remoteHash);
     return localHash === remoteHash;
+  }
+
+  public async buildSongInfo($toxen: typeof Toxen, $song: typeof Song, fullPath: string) {
+    return Promise.resolve().then(async () => {
+      let info: Partial<ISong> = {
+        uid: $song.generateUID(),
+        // Other settings...
+        paths: {
+          dirname: null,
+          background: null,
+          media: null,
+          subtitles: null,
+          storyboard: null,
+        },
+      };
+      const dir = await fsp.opendir(fullPath);
+      info.paths.dirname = Path.basename(fullPath);
+      let ent: Dirent;
+      while (ent = await dir.read()) {
+        if (ent.isFile()) {
+          let ext = Path.extname(ent.name).toLowerCase();
+          if ($toxen.getSupportedMediaFiles().includes(ext)) {
+            info.paths.media = ent.name;
+            if (!info.title && !info.artist) {
+              const name = Path.basename(ent.name, Path.extname(ent.name))
+              if (ent.name.indexOf(" - ") > -1) {
+                let [artist, title] = name.split(" - ");
+
+                info.artist = artist;
+                info.title = title;
+              }
+              else {
+                info.title = name;
+              }
+            }
+          }
+          else if ($toxen.getSupportedImageFiles().includes(ext)) {
+            if (!info.paths.background) info.paths.background = ent.name;
+          }
+          else if ($toxen.getSupportedSubtitleFiles().includes(ext)) {
+            if (!info.paths.subtitles) info.paths.subtitles = ent.name;
+          }
+          else if ($toxen.getSupportedStoryboardFiles().includes(ext)) {
+            if (!info.paths.storyboard) info.paths.storyboard = ent.name;
+          }
+        }
+
+        // Toxen2 backwards compatibility.
+        // try {
+        //   if (await fsp.stat(Path.resolve(fullPath, "details.json")).then(() => true).catch(() => false)) {
+        //     let path = Path.resolve(fullPath, "details.json");
+        //     info = await Legacy.toxen2SongDetailsToInfo(JSON.parse(await fsp.readFile(path, "utf8")), info as ISong)
+        //   }
+        // } catch (error) {
+        //   Toxen.error("There was an error trying to convert details.json into info.json");
+        // }
+      }
+
+      await dir.close();
+      return info as ISong;
+    });
+  }
+
+  public async loadLocalSongs($toxen: typeof Toxen, $song: typeof Song, $settings: typeof Settings, reload?: boolean, forEach?: (song: Song) => void) {
+    return Promise.resolve().then(async () => {
+      if (reload !== true && $toxen.songList) {
+        return $toxen.songList;
+      }
+
+      let songs: Song[] = [];
+      let dirName = $settings.get("libraryDirectory");
+      if (!dirName) {
+        return [];
+      }
+      let dir: Dir;
+      try {
+        dir = await fsp.opendir(dirName);
+      } catch (error) {
+        $toxen.error(error);
+
+        return [];
+      }
+      let ent: Dirent;
+      while (ent = await dir.read()) {
+        if (ent.isDirectory() && !ent.name.startsWith(".")) { // Is music folder
+          let songFolder = Path.resolve(dirName, ent.name);
+
+          try {
+            var info: ISong = JSON.parse(await fsp.readFile(Path.resolve(songFolder, "info.json"), "utf8"));
+          } catch (error) {
+            console.error("Failed to load info.json file in song: " + songFolder);
+            info = await $song.buildInfo(songFolder);
+            let s = $song.create(info);
+            await s.saveInfo();
+          }
+
+          info.paths ?? ((info.paths as any) = {})
+          let isDifferent = info.paths.dirname !== ent.name;
+          if (isDifferent) info.paths.dirname = ent.name;
+
+
+          if (info.paths.media) {
+            let song = $song.create(info);
+            songs.push(song);
+            if (isDifferent) song.saveInfo();
+            if (typeof forEach === "function") forEach(song);
+          }
+          else {
+            // Attempt Locate media file
+            const files = await System.recursive(songFolder);
+            const sMedia = $toxen.getSupportedAudioFiles();
+            let mediaFile = files.find(f => sMedia.includes(Path.extname(f.name)))?.name;
+
+            let song = $song.create(info);
+            if (mediaFile) {
+              song.paths.media = mediaFile;
+              songs.push(song);
+              song.saveInfo();
+              if (typeof forEach === "function") forEach(song);
+            }
+
+            if (typeof forEach === "function") forEach(null);
+            console.warn(`Song "${songFolder}" is missing a media file. Excluding from song list.`);
+            const nId = $toxen.notify({
+              title: "Song missing media file",
+              content: <div>
+                <p>The song <b>{song.getDisplayName()}</b> is missing a media file. </p>
+                <p>Do you want to remove it from the library?</p>
+                <Group>
+                  <Button color="red" onClick={() => {
+                    hideNotification(nId);
+                    song.delete();
+                  }}>Delete</Button>
+                  <Button color="green" onClick={() => hideNotification(nId)}>Ask later</Button>
+                  {toxenapi.isDesktop() && (
+                    <Button color="blue" onClick={() => {
+                      toxenapi.remote.shell.openPath(song.dirname());
+                    }}>Show Folder</Button>
+                  )}
+                </Group>
+              </div>,
+              type: "warning",
+            })
+          }
+        }
+      }
+      await dir.close();
+      return $song.sortSongs(songs);
+    });
+  }
+
+  private _discord: Discord;
+  
+  public getDiscordInstance() {
+    return this._discord ??= new Discord("647178364511191061"); // Toxen's Discord Application ID
   }
 }

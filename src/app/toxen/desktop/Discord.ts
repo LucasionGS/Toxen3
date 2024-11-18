@@ -4,10 +4,10 @@ const RPC: typeof import("discord-rpc") = require("discord-rpc-electron");
 // RPC: I had to modify the code itself for it to work.
 // It would only work if I added (error) after the catch on line 48 in the websocket code.
 // If anyone has any better solutions I am all ears.
-import { Toxen } from "../ToxenApp";
-import Song from "./Song";
+import { Toxen } from "../../ToxenApp";
+import Song from "../Song";
 import * as remote from "@electron/remote";
-import Settings from "./Settings";
+import Settings from "../Settings";
 type Client = InstanceType<typeof RPC.Client>;
 type Presence = import("discord-rpc").Presence;
 

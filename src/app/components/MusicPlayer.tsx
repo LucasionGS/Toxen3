@@ -1,7 +1,6 @@
 import React, { Component } from 'react'
 import Song from '../toxen/Song';
 import { Toxen, ToxenEvent } from '../ToxenApp';
-import Path from "path";
 import Settings from '../toxen/Settings';
 import Time from '../toxen/Time';
 import PulsingLogo from './PulsingLogo/PulsingLogo';
@@ -58,7 +57,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
     options = options || {};
     this.media.currentTime = seconds;
     StoryboardParser.resetCurrentEvents();
-    if (!this.props.useSubtitleEditorMode && options.updateDiscord) Toxen.discord.setPresence();
+    if (!this.props.useSubtitleEditorMode && options.updateDiscord) Toxen.discord?.setPresence();
   }
 
   public setSource(src: MediaSourceInfo, playWhenReady: boolean = false) {
@@ -80,7 +79,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
 
   public isVideo(src: string) {
     if (!src) return false;
-    return Toxen.getSupportedVideoFiles().includes(Path.extname(src).toLowerCase());
+    return Toxen.getSupportedVideoFiles().includes(toxenapi.getFileExtension(src).toLowerCase());
   }
 
   public get paused() {
@@ -89,7 +88,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
 
   public play() {
     this.media.play();
-    if (!this.props.useSubtitleEditorMode) Toxen.discord.setPresence();
+    if (!this.props.useSubtitleEditorMode) Toxen.discord?.setPresence();
   }
 
   public load() {
@@ -98,7 +97,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
 
   public pause() {
     this.media.pause();
-    if (!this.props.useSubtitleEditorMode) Toxen.discord.setPresence();
+    if (!this.props.useSubtitleEditorMode) Toxen.discord?.setPresence();
   }
 
   public toggle() {

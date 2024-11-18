@@ -1,22 +1,18 @@
-import * as remote from "@electron/remote";
+// import * as remote from "@electron/remote";
 import React from "react";
-import Form from "../../../Form/Form";
 import Converter from "../../../../toxen/Converter";
-import JSONX from "../../../../toxen/JSONX";
 import Settings, { VisualizerStyle } from "../../../../toxen/Settings";
 import Song from "../../../../toxen/Song";
 import SubtitleParser from "../../../../toxen/SubtitleParser";
 import System from "../../../../toxen/System";
 import { Toxen } from "../../../../ToxenApp";
-import FormInput from "../../../Form/FormInputFields/FormInput";
 import SidepanelSectionHeader from "../../SidepanelSectionHeader";
 import "./EditSong.scss";
-import fsp from "fs/promises";
-import Path from "path";
+// import fsp from "fs/promises";
+// import Path from "path";
 import { Button, Checkbox, ColorInput, InputLabel, NumberInput, Radio, Select, TextInput } from "@mantine/core";
 import ListInput from "../../../ListInput/ListInput";
 import SelectAsync from "../../../SelectAsync/SelectAsync";
-import ToxenInteractionMode from "../../../../toxen/ToxenInteractionMode";
 import { useModals } from "@mantine/modals";
 import ScreenPositionSelector from "../../../ScreenPositionSelector/ScreenPositionSelector";
 
@@ -40,9 +36,13 @@ export default function EditSong(props: EditSongProps) {
           <i className="fas fa-save"></i>&nbsp;
           Save
         </button> */}
-        <Button onClick={() => remote.shell.openPath(Toxen.editingSong.dirname())} leftSection={<i className="fas fa-folder-open"></i>}>
-          Open music folder
-        </Button>
+        {
+          toxenapi.isDesktop() && (
+          <Button onClick={() => toxenapi.remote.shell.openPath(Toxen.editingSong.dirname())} leftSection={<i className="fas fa-folder-open"></i>}>
+            Open music folder
+          </Button>
+          )
+        }
         <Button onClick={() => Toxen.reloadSection()} leftSection={<i className="fas fa-redo"></i>}>
           Reload data
         </Button>
@@ -469,92 +469,101 @@ export default function EditSong(props: EditSongProps) {
       <hr />
       <h2>Export options</h2>
       <Button onClick={async () => {
-        remote.Menu.buildFromTemplate(
-          (await Toxen.filterSupportedFiles(Toxen.editingSong.dirname(), Toxen.getSupportedMediaFiles())).map(file => {
-            file = Toxen.editingSong.dirname(file);
-            return {
-              label: (Toxen.editingSong.mediaFile() === file ? "(Current) " : "") + "Export " + file,
-              click: async () => {
-                let fileData: Buffer;
-                try {
-                  if (Settings.isRemote()) {
-                    fileData = Buffer.from(await Toxen.fetch(file).then(res => res.arrayBuffer()));
+        if (toxenapi.isDesktop()) {
+          toxenapi.remote.Menu.buildFromTemplate(
+            (await Toxen.filterSupportedFiles(Toxen.editingSong.dirname(), Toxen.getSupportedMediaFiles())).map(file => {
+              file = Toxen.editingSong.dirname(file);
+              return {
+                label: (Toxen.editingSong.mediaFile() === file ? "(Current) " : "") + "Export " + file,
+                click: async () => {
+                  let fileData: Buffer;
+                  try {
+                    if (Settings.isRemote()) {
+                      fileData = Buffer.from(await Toxen.fetch(file).then(res => res.arrayBuffer()));
+                    }
+                    else {
+                      fileData = await toxenapi.fs.promises.readFile(file);
+                    }
+                  } catch (error) {
+                    return Toxen.error(error);
                   }
-                  else {
-                    fileData = await fsp.readFile(file);
-                  }
-                } catch (error) {
-                  return Toxen.error(error);
+                  System.exportFile(Settings.isRemote() ? toxenapi.path.basename(file) : file, fileData, [{ name: "", extensions: [file.split(".").pop()] }]);
                 }
-                System.exportFile(Settings.isRemote() ? Path.basename(file) : file, fileData, [{ name: "", extensions: [file.split(".").pop()] }]);
-              }
-            };
-          })
-        ).popup();
+              };
+            })
+          ).popup();
+        }
+        else {
+          toxenapi.throwDesktopOnly();
+        }
       }}><i className="fas fa-file-export"></i>&nbsp;Export Media File</Button>
 
       <br />
 
       <Button onClick={async () => {
-        remote.Menu.buildFromTemplate(
-          (await Toxen.filterSupportedFiles(Toxen.editingSong.dirname(), Toxen.getSupportedImageFiles())).map(file => {
-            file = Toxen.editingSong.dirname(file);
-            return {
-              label: (Toxen.editingSong.backgroundFile() === file ? "(Current) " : "") + "Export " + file,
-              click: async () => {
-                let fileData: Buffer;
-                try {
-                  if (Settings.isRemote()) {
-                    fileData = Buffer.from(await Toxen.fetch(file).then(res => res.arrayBuffer()));
+        if (toxenapi.isDesktop()) {
+          toxenapi.remote.Menu.buildFromTemplate(
+            (await Toxen.filterSupportedFiles(Toxen.editingSong.dirname(), Toxen.getSupportedImageFiles())).map(file => {
+              file = Toxen.editingSong.dirname(file);
+              return {
+                label: (Toxen.editingSong.backgroundFile() === file ? "(Current) " : "") + "Export " + file,
+                click: async () => {
+                  let fileData: Buffer;
+                  try {
+                    if (Settings.isRemote()) {
+                      fileData = Buffer.from(await Toxen.fetch(file).then(res => res.arrayBuffer()));
+                    }
+                    else {
+                      fileData = await toxenapi.fs.promises.readFile(file);
+                    }
+                  } catch (error) {
+                    return Toxen.error(error);
                   }
-                  else {
-                    fileData = await fsp.readFile(file);
-                  }
-                } catch (error) {
-                  return Toxen.error(error);
+                  System.exportFile(Settings.isRemote() ? toxenapi.path.basename(file) : file, fileData, [{ name: "", extensions: [file.split(".").pop()] }]);
                 }
-                System.exportFile(Settings.isRemote() ? Path.basename(file) : file, fileData, [{ name: "", extensions: [file.split(".").pop()] }]);
-              }
-            };
-          })
-        ).popup();
+              };
+            })
+          ).popup();
+        }
       }}><i className="fas fa-file-export"></i>&nbsp;Export Image File</Button>
 
       <br />
 
       <Button onClick={async () => {
-        remote.Menu.buildFromTemplate(
-          (await Toxen.filterSupportedFiles(Toxen.editingSong.dirname(), Toxen.getSupportedSubtitleFiles())).map(file => {
-            file = Toxen.editingSong.dirname(file);
-            return {
-              label: (Toxen.editingSong.subtitleFile() === file ? "(Current) " : "") + "Export " + file,
-              click: async () => {
-                let fileData: Buffer;
-                try {
-                  if (Settings.isRemote()) {
-                    fileData = Buffer.from(await Toxen.fetch(file).then(res => res.arrayBuffer()));
+        if (toxenapi.isDesktop()) {
+          toxenapi.remote.Menu.buildFromTemplate(
+            (await Toxen.filterSupportedFiles(Toxen.editingSong.dirname(), Toxen.getSupportedSubtitleFiles())).map(file => {
+              file = Toxen.editingSong.dirname(file);
+              return {
+                label: (Toxen.editingSong.subtitleFile() === file ? "(Current) " : "") + "Export " + file,
+                click: async () => {
+                  let fileData: Buffer;
+                  try {
+                    if (Settings.isRemote()) {
+                      fileData = Buffer.from(await Toxen.fetch(file).then(res => res.arrayBuffer()));
+                    }
+                    else {
+                      fileData = await toxenapi.fs.promises.readFile(file);
+                    }
+                  } catch (error) {
+                    return Toxen.error(error);
                   }
-                  else {
-                    fileData = await fsp.readFile(file);
-                  }
-                } catch (error) {
-                  return Toxen.error(error);
+                  toxenapi.remote.Menu.buildFromTemplate(
+                    Toxen.getSupportedSubtitleFiles().map(ext => {
+                      return {
+                        label: (toxenapi.path.extname(file) === ext ? "(Current) " : "") + `Export as ${ext} format`,
+                        click: () => {
+                          fileData = Buffer.from(SubtitleParser.exportByExtension(SubtitleParser.parseByExtension(fileData.toString(), toxenapi.path.extname(file)), ext));
+                          System.exportFile((Settings.isRemote() ? "" : toxenapi.path.dirname(file) + "/") + toxenapi.path.basename(file, toxenapi.path.extname(file)), fileData, [{ name: "", extensions: [ext.replace(/^\.+/g, "")] }]);
+                        }
+                      };
+                    })
+                  ).popup();
                 }
-                remote.Menu.buildFromTemplate(
-                  Toxen.getSupportedSubtitleFiles().map(ext => {
-                    return {
-                      label: (Path.extname(file) === ext ? "(Current) " : "") + `Export as ${ext} format`,
-                      click: () => {
-                        fileData = Buffer.from(SubtitleParser.exportByExtension(SubtitleParser.parseByExtension(fileData.toString(), Path.extname(file)), ext));
-                        System.exportFile((Settings.isRemote() ? "" : Path.dirname(file) + "/") + Path.basename(file, Path.extname(file)), fileData, [{ name: "", extensions: [ext.replace(/^\.+/g, "")] }]);
-                      }
-                    };
-                  })
-                ).popup();
-              }
-            };
-          })
-        ).popup();
+              };
+            })
+          ).popup();
+        }
       }}><i className="fas fa-file-export"></i>&nbsp;Export Subtitle File</Button>
     </>
   )

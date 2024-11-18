@@ -1,31 +1,26 @@
 import React from "react";
-import fs from "fs";
-import fsp from "fs/promises";
-import { Dirent } from "fs";
-import Path from "path";
 import Song from "./Song";
 import { Toxen } from "../ToxenApp";
-import ArrayX from "./ArrayX";
-import ProgressBar from "../components/ProgressBar";
-import * as remote from "@electron/remote";
-import Settings from "./Settings";
-import SubtitleParser from "./SubtitleParser";
 import { Progress } from "@mantine/core";
 
 export default class System {
-  public static async recursive(path: string): Promise<Dirent[]>;
-  public static async recursive(path: string, orgPath: string): Promise<Dirent[]>;
+  public static async recursive(path: string): Promise<{ name: string }[]>;
+  public static async recursive(path: string, orgPath: string): Promise<{ name: string }[]>;
   public static async recursive(path: string, orgPath: string = path) {
-    let files = await fsp.readdir(path, { withFileTypes: true });
+    if (!toxenapi.isDesktop()) {
+      toxenapi.throwDesktopOnly("recursive");
+    }
+    
+    let files = await toxenapi.fs.promises.readdir(path, { withFileTypes: true });
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      let newPath = Path.resolve(path, file.name);
-      file.name = Path.relative(orgPath, newPath);
+      let newPath = toxenapi.path.resolve(path, file.name);
+      file.name = toxenapi.path.relative(orgPath, newPath);
 
       if (file.isDirectory()) {
         let newFiles = await System.recursive(newPath, orgPath)
-        files.push(...newFiles);
+        files.push(...newFiles as any); // This works fine assuming Desktop checks works, but TypeScript disagrees.
       }
     }
 
@@ -35,6 +30,9 @@ export default class System {
   public static async handleImportedFiles(files: FileList | (File | ToxenFile)[], verbose?: boolean): Promise<void>;
   public static async handleImportedFiles(files: FileList | (File | ToxenFile)[], verbose?: boolean, _initial?: boolean, _plusIndex?: number, _plusTotal?: number): Promise<void>;
   public static async handleImportedFiles(files: FileList | (File | ToxenFile)[], verbose = true, _initial = true, _plusIndex = 0, _plusTotal = 0) {
+    if (!toxenapi.isDesktop()) {
+      return toxenapi.throwDesktopOnly("handleImportedFiles");
+    }
     return Promise.resolve().then(async () => {
       if (files instanceof FileList) files = [...files];
       let sMedia = Toxen.getSupportedMediaFiles();
@@ -66,14 +64,14 @@ export default class System {
         const file = files[i];
 
         // If directory
-        const stat: fs.Stats | null = await fsp.stat(file.path).then(a => a).catch(() => null);
+        const stat: import("fs").Stats | null = await toxenapi.fs.promises.stat(file.path).then(a => a).catch(() => null);
         if (stat?.isDirectory()) {
           mediaPack = true;
           let dirFiles = await System.recursive(file.path);
 
           await System.handleImportedFiles(dirFiles.map(f => ({
-            path: Path.resolve(file.path, Path.basename(f.name)),
-            name: Path.basename(f.name)
+            path: toxenapi.path.resolve(file.path, toxenapi.path.basename(f.name)),
+            name: toxenapi.path.basename(f.name)
           })), false, false, i, files.length);
 
           continue;
@@ -116,8 +114,8 @@ export default class System {
           let song = Song.getCurrent();
           if (!song) break;
           let imageName = song.paths.background || file.name; // name with extension
-          let ext = Path.extname(imageName); // getting extension
-          imageName = Path.basename(imageName, ext); // Removing extension for path testing
+          let ext = toxenapi.getFileExtension(imageName); // getting extension
+          imageName = toxenapi.getBasename(imageName, ext); // Removing extension for path testing
           imageName = imageName.replace(/^(.*?)(?:_\$tx(\d+))?$/, (_, $1: string, $2: string) => {
             return `${$1}_$tx${(+$2 || 0) + 1}`;
           });
@@ -125,9 +123,9 @@ export default class System {
 
           let dest = song.dirname(imageName);
           let prePic = song.backgroundFile() || null;
-          await fsp.copyFile(file.path, dest).then(async () => {
-            if (prePic !== dest && await fsp.stat(prePic).then(() => true).catch(() => false)) await fsp.rm(prePic);
-            song.paths.background = Path.basename(dest);
+          await toxenapi.fs.promises.copyFile(file.path, dest).then(async () => {
+            if (prePic !== dest && await toxenapi.fs.promises.stat(prePic).then(() => true).catch(() => false)) await toxenapi.fs.promises.rm(prePic);
+            song.paths.background = toxenapi.getBasename(dest);
             Toxen.background.setBackground(dest);
             song.saveInfo();
           })
@@ -149,8 +147,8 @@ export default class System {
           let subName = file.name; // name with extension
 
           let dest = song.dirname(subName);
-          await fsp.copyFile(file.path, dest).then(async () => {
-            song.paths.subtitles = Path.basename(dest);
+          await toxenapi.fs.promises.copyFile(file.path, dest).then(async () => {
+            song.paths.subtitles = toxenapi.getBasename(dest);
             await song.saveInfo();
             song.applySubtitles();
           })
@@ -185,19 +183,27 @@ export default class System {
   }
 
   public static async pathExists(path: string) {
-    return fsp.stat(path).then(() => true).catch(() => false);
+    if (toxenapi.isDesktop()) {
+      return toxenapi.fs.promises.stat(path).then(() => true).catch(() => false);
+    }
+    else {
+      toxenapi.throwDesktopOnly("pathExists");
+    }
   }
 
-  public static async exportFile(name: string, data: string | Buffer, fileFilters?: Electron.FileFilter[]) {
-    let filters: Electron.FileFilter[] = [{ name: "All Files", extensions: ["*"] }];
+  public static async exportFile(name: string, data: string | Buffer, fileFilters?: { name: string, extensions: string[] }[]) {
+    if (!toxenapi.isDesktop()) {
+      return toxenapi.throwDesktopOnly("exportFile");
+    }
+    let filters: { name: string, extensions: string[] }[] = [{ name: "All Files", extensions: ["*"] }];
     if (fileFilters) filters = filters = fileFilters;
-    const newPath = await remote.dialog.showSaveDialog(remote.getCurrentWindow(), {
+    const newPath = await toxenapi.remote.dialog.showSaveDialog(toxenapi.remote.getCurrentWindow(), {
       title: "Export File",
       buttonLabel: "Export",
       filters: filters,
       defaultPath: name
     });
-    if (!newPath.canceled) fsp.writeFile(newPath.filePath, data).then(() => {
+    if (!newPath.canceled) toxenapi.fs.promises.writeFile(newPath.filePath, data as any).then(() => { // TODO: Might need fix? (data as any)
       Toxen.log("Exported " + newPath.filePath, 3000);
     });
   }

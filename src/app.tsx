@@ -1,9 +1,4 @@
-import DesktopController from "./ToxenControllers/DesktopController";
-import ToxenController from "./ToxenControllers/ToxenController";
-window.toxenapi = true ? new DesktopController() : new ToxenController();
-
-console.log("Toxen is running in development mode.", toxenapi, toxenapi.isDesktop() ? "Desktop" : "Web");
-
+import "./ToxenControllers/toxenapi";
 import React from "react";
 import ReactDOM from "react-dom";
 import ReactDOMClient from "react-dom/client";

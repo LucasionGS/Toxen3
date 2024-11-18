@@ -1,4 +1,4 @@
-import * as remote from "@electron/remote"
+// import * as remote from "@electron/remote"
 import React, { useState } from 'react';
 import Asyncifier from '../../toxen/Asyncifier';
 import Settings from '../../toxen/Settings';
@@ -63,14 +63,22 @@ export default class Sidepanel extends React.Component<Props, State> {
   }
 
   private getWidth() {
-    return this.state?.width ?? remote.getCurrentWindow().getSize()[0] / 2;
+    if (toxenapi.isDesktop()) {
+      return this.state?.width ?? toxenapi.remote.getCurrentWindow().getSize()[0] / 2;
+    }
+    return this.state?.width ?? window.innerWidth / 2;
   }
 
   /**
    * Centers the panel on the screen.
    */
   private resetWidth() {
-    return this.setWidth(remote.getCurrentWindow().getSize()[0] / 2);
+    if (toxenapi.isDesktop()) {
+      return this.setWidth(toxenapi.remote.getCurrentWindow().getSize()[0] / 2);
+    }
+    else {
+      return this.setWidth(window.innerWidth / 2);
+    }
   }
 
   private sections: SidepanelSection[] = (Array.isArray(this.props.children) ? this.props.children : [this.props.children]) as any[];

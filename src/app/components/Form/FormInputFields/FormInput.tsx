@@ -1,6 +1,5 @@
 import React from 'react';
 import Settings from '../../../toxen/Settings';
-import * as remote from "@electron/remote";
 import "./FormInput.scss";
 import FormInputColorPicker from './FormInputColorPicker';
 import FormInputSelect from './FormInputSelect';
@@ -172,14 +171,19 @@ export default class FormInput extends React.Component<Props> {
               title="Click to select file"
               ref={ref} className="tx-form-field" type="text" readOnly name={this.props.name} defaultValue={value} onClick={
                 () => {
-                  let value = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
-                    properties: [
-                      'openFile'
-                    ]
-                  });
-                  if (value) {
-                    const parseOutput = (this.props as PropsTypeFile).parseOutput;
-                    ref.current.value = typeof parseOutput === "function" ? parseOutput(value[0]) : value[0];
+                  if (toxenapi.isDesktop()) {
+                    let value = toxenapi.remote.dialog.showOpenDialogSync(toxenapi.remote.getCurrentWindow(), {
+                      properties: [
+                        'openFile'
+                      ]
+                    });
+                    if (value) {
+                      const parseOutput = (this.props as PropsTypeFile).parseOutput;
+                      ref.current.value = typeof parseOutput === "function" ? parseOutput(value[0]) : value[0];
+                    }
+                  }
+                  else {
+                    toxenapi.throwDesktopOnly("openFile");
                   }
                 }
               } />
@@ -299,28 +303,38 @@ export default class FormInput extends React.Component<Props> {
 
   private createOpenFile(ref: React.RefObject<HTMLInputElement>) {
     return () => {
-      let value = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
-        properties: [
-          'openFile'
-        ]
-      });
-      if (value) {
-        const parseOutput = (this.props as PropsTypeFile).parseOutput;
-        ref.current.value = typeof parseOutput === "function" ? parseOutput(value[0]) : value[0];
+      if (toxenapi.isDesktop()) {
+        let value = toxenapi.remote.dialog.showOpenDialogSync(toxenapi.remote.getCurrentWindow(), {
+          properties: [
+            'openFile'
+          ]
+        });
+        if (value) {
+          const parseOutput = (this.props as PropsTypeFile).parseOutput;
+          ref.current.value = typeof parseOutput === "function" ? parseOutput(value[0]) : value[0];
+        }
+      }
+      else {
+        toxenapi.throwDesktopOnly("createOpenFile");
       }
     }
   }
 
   private createOpenFolder(ref: React.RefObject<HTMLInputElement>) {
     return () => {
-      let value = remote.dialog.showOpenDialogSync(remote.getCurrentWindow(), {
-        properties: [
-          'openDirectory'
-        ]
-      });
-      if (value) {
-        const parseOutput = (this.props as PropsTypeFile).parseOutput;
-        ref.current.value = typeof parseOutput === "function" ? parseOutput(value[0]) : value[0];
+      if (toxenapi.isDesktop()) {
+        let value = toxenapi.remote.dialog.showOpenDialogSync(toxenapi.remote.getCurrentWindow(), {
+          properties: [
+            'openDirectory'
+          ]
+        });
+        if (value) {
+          const parseOutput = (this.props as PropsTypeFile).parseOutput;
+          ref.current.value = typeof parseOutput === "function" ? parseOutput(value[0]) : value[0];
+        }
+      }
+      else {
+        toxenapi.throwDesktopOnly("createOpenFolder");
       }
     }
   }

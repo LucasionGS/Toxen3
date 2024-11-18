@@ -1,5 +1,3 @@
-import Converter from "./Converter";
-
 export default class Time {
   constructor(ms: number = 0) {
     this.milliseconds = ms;

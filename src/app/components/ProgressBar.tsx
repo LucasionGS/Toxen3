@@ -1,7 +1,5 @@
 import React, { Component } from 'react'
-import { Toxen } from '../ToxenApp';
 import Visualizer from './Background/Visualizer';
-import { hexToRgb, invertRgb, rgbToGrayscale, rgbToHex } from './Form/FormInputFields/FormInputColorPicker';
 import "./ProgressBar.scss";
 import Tooltip from './Tooltip';
 

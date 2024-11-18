@@ -1,6 +1,6 @@
 import * as remote from "@electron/remote";
-import { Toxen } from "../ToxenApp";
-import Song from "./Song";
+import { Toxen } from "../../ToxenApp";
+import Song from "../Song";
 
 const { desktopCapturer } = remote;
 

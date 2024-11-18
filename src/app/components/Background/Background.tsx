@@ -1,6 +1,4 @@
-import * as remote from "@electron/remote";
 import React, { Component } from 'react'
-import Song from '../../toxen/Song';
 import System from '../../toxen/System';
 import { Toxen } from '../../ToxenApp';
 import MusicPlayer from '../MusicPlayer';
@@ -11,7 +9,6 @@ import Visualizer from './Visualizer';
 import ToxenMax from "../../../icons/skull_max.png";
 import Settings from '../../toxen/Settings';
 import Asyncifier from '../../toxen/Asyncifier';
-import Path from "path";
 import Subtitles from '../Subtitles/Subtitles';
 
 interface BackgroundProps {

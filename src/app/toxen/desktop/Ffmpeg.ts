@@ -1,11 +1,11 @@
 // const ffmpeg: typeof import("fluent-ffmpeg") = require("fluent-ffmpeg/lib/fluent-ffmpeg");
 import ffmpeg from "fluent-ffmpeg"; // TEST: Unsure if this works?
-import { Toxen } from "../ToxenApp";
+import { Toxen } from "../../ToxenApp";
 import fs from "fs";
 import Path from "path";
 import os from "os";
 import yauzl from "yauzl";
-import Song from "./Song";
+import Song from "../Song";
 
 export default class Ffmpeg {
   constructor(ffmepgPath: string) {

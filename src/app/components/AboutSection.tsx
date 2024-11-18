@@ -1,4 +1,4 @@
-import * as remote from "@electron/remote";
+// import * as remote from "@electron/remote";
 import React, { useEffect, useState } from 'react'
 import Stats from '../toxen/Statistics';
 import Time from '../toxen/Time';
@@ -6,10 +6,12 @@ import { Toxen } from '../ToxenApp';
 import ExternalUrl from './ExternalUrl/ExternalUrl';
 import SidepanelSection from './Sidepanel/SidepanelSection';
 import SidepanelSectionHeader from './Sidepanel/SidepanelSectionHeader';
-import packageJson from '../../../package.json';
+// import packageJson from '../../../package.json';
 import { Tabs } from "@mantine/core";
 
 export default function AboutSection() {
+  const packageJson = toxenapi.packageJson;
+  
   return (
     <div style={{ whiteSpace: "normal" }}>
       {/* <SidepanelSectionHeader>
@@ -27,40 +29,48 @@ export default function AboutSection() {
           <h2>Statistics</h2>
           <p>Toxen launched {Stats.get("timesOpened")} times</p>
           <p>{Toxen.songList.length} total songs</p>
-          <p>{Stats.get("songsPlayed")} songs played</p>
+          <p>{Stats.get("songsPlayed") ?? 0} songs played</p>
           <TimePlayed />
         </Tabs.Panel>
-        <Tabs.Panel value="Technical Details">
-          <h2>Technical Details</h2>
-          {
-            [
-              ["Toxen Version", remote.app.getVersion()],
-              ["Node Version", remote.process.versions.node],
-            ].map(([name, value]) => (
-              <p key={name}>{name}: <code>{value}</code></p>
-            ))
-          }
+        {
+          toxenapi.isDesktop() && (
+            <Tabs.Panel value="Technical Details">
+              <h2>Technical Details</h2>
+              {
+                [
+                  ["Toxen Version", toxenapi.remote.app.getVersion()],
+                  ["Node Version", toxenapi.remote.process.versions.node],
+                ].map(([name, value]) => (
+                  <p key={name}>{name}: <code>{value}</code></p>
+                ))
+              }
 
-          Toxen is an open source project.
-          You can find the source code on <ExternalUrl href="https://github.com/LucasionGS/Toxen3">GitHub</ExternalUrl>.
-        </Tabs.Panel>
+              Toxen is an open source project.
+              You can find the source code on <ExternalUrl href="https://github.com/LucasionGS/Toxen3">GitHub</ExternalUrl>.
+            </Tabs.Panel>
+          )
+        }
         <Tabs.Panel value="Credits">
           <h2>Credits</h2>
           <p>Developed by <ExternalUrl href="https://github.com/LucasionGS">Lucasion</ExternalUrl></p>
           <p>Toxen logo designed by <ExternalUrl href="https://x.com/rubberducky1332">Rubberducky</ExternalUrl></p>
         </Tabs.Panel>
 
-        <Tabs.Panel value="Dependencies">
-          <h2>Packages used</h2>
-          <h3>Dependencies</h3>
-          {Object.keys(packageJson.dependencies).map((key, index) => {
-            return <p key={index}>{key}: <code>{(packageJson.dependencies as any)[key]}</code></p>
-          })}
-          <h3>Developer dependencies</h3>
-          {Object.keys(packageJson.devDependencies).map((key, index) => {
-            return <p key={index}>{key}: <code>{(packageJson.devDependencies as any)[key]}</code></p>
-          })}
-        </Tabs.Panel>
+        {
+          toxenapi.isDesktop() && (
+            <Tabs.Panel value="Dependencies">
+              <h2>Packages used</h2>
+              <h3>Dependencies</h3>
+              {Object.keys(packageJson.dependencies).map((key, index) => {
+                return <p key={index}>{key}: <code>{(packageJson.dependencies as any)[key]}</code></p>
+              })}
+              <h3>Developer dependencies</h3>
+              {Object.keys(packageJson.devDependencies).map((key, index) => {
+                return <p key={index}>{key}: <code>{(packageJson.devDependencies as any)[key]}</code></p>
+              })}
+            </Tabs.Panel>
+          )
+        }
       </Tabs>
     </div>
   );

@@ -1,6 +1,9 @@
 import Path from "path";
 import process from "process";
 
+/**
+ * Cross platform utilities. Only works on desktop.
+ */
 export default class CrossPlatform {
   
   public static getAppDataPath() {

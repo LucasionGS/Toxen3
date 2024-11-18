@@ -1,10 +1,5 @@
 import React, { Component } from 'react'
 import { Toxen } from '../../ToxenApp';
-import Song from '../../toxen/Song';
-import { Button } from '@mantine/core';
-import Settings from '../../toxen/Settings';
-import * as remote from "@electron/remote";
-import User from '../../toxen/User';
 
 interface SongPanelProps {
   getRef?: ((songPanel: SongPanel) => void)
