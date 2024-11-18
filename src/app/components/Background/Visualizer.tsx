@@ -36,7 +36,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
   }
   private loop(time: number) {
     if (!this.stopped) requestAnimationFrame(this.loop.bind(this));
-    if (!this.ctx) return console.log("No ctx exist!");
+    if (!this.ctx) return;
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     if (!Toxen.musicPlayer || !Toxen.musicPlayer.media) return console.log("Player or media missing");
 
