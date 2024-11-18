@@ -825,6 +825,9 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
   public stop() {
     this.stopped = true;
   }
+  public isStopped() {
+    return this.stopped;
+  }
 
   public start() {
     this.update();

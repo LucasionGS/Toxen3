@@ -17,9 +17,9 @@ export default defineConfig({
   ],
   resolve: {
     preserveSymlinks: true,
-    alias: {
-      'node-aead-crypto': path.resolve(__dirname, './emptyModule.js'),
-    }
+    // alias: {
+    //   'node-aead-crypto': path.resolve(__dirname, './emptyModule.js'),
+    // }
   },
   clearScreen: false,
 } as UserConfig);

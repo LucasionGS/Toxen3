@@ -48,6 +48,8 @@ import { IconLayoutNavbarExpand } from "@tabler/icons-react";
 import ImportPanel from "./components/Sidepanel/Panels/ImportPanel/ImportPanel";
 // import YTDlpWrap from "yt-dlp-wrap";
 import StoryboardEditor, { StoryboardEditorController } from "./components/StoryboardEditor/StoryboardEditor";
+import { modals } from "@mantine/modals";
+import LoginForm from "./components/LoginForm/LoginForm";
 
 declare const SUBTITLE_CREATOR_WEBPACK_ENTRY: any;
 // const browser = remote.getCurrentWindow();
@@ -738,8 +740,29 @@ export default class ToxenAppRenderer extends React.Component {
         // Toxen.sidePanel.show(true);
         Toxen.sidePanel.setWidth(Settings.get("panelWidth"));
         Toxen.loadingScreen.toggleVisible(false);
-        Toxen.musicPlayer.playRandom();
-        Toxen.background.visualizer.start();
+
+        if (toxenapi.isDesktop()) {
+          Toxen.musicPlayer.playRandom();
+        }
+        else {
+          
+          if (User.getCurrentUser()) {
+            Toxen.sidePanel.setSectionId("songPanel");
+            Toxen.sidePanel.show(true);
+          }
+          else {
+            modals.open({
+              title: "Login",
+              children: (
+                <div>
+                  <h2>Not logged in</h2>
+                  <LoginForm />
+                </div>
+              ),
+              size: "md"
+            })
+          }
+        }
 
         if (Settings.get("discordPresence")) Toxen.discord?.connect().then(() => {
           Toxen.discord?.setPresence();

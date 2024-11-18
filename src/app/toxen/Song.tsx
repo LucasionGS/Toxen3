@@ -412,6 +412,9 @@ export default class Song implements ISong {
         img.addEventListener("load", onLoad);
       }
       else addToMetadata();
+
+      if (Toxen.background.visualizer.isStopped())
+      Toxen.background.visualizer.start();
     }
   }
 

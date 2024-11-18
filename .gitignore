@@ -94,3 +94,4 @@ out/
 
 # Web
 buildweb/
+deploy-web.ps1
