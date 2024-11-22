@@ -16,6 +16,14 @@ export default class ToxenController {
     return false;
   }
 
+  /**
+   * Alias for `!$settings.isRemote() && this.isDesktop()`.
+   * @returns True if the ToxenController is the desktop version and not remote using remote libraries.
+   */
+  public isLocal($settings: typeof Settings): this is DesktopController {
+    return !$settings.isRemote() && this.isDesktop();
+  }
+
   // Global tools / Polyfills
 
   public packageJson: {
@@ -60,6 +68,13 @@ export default class ToxenController {
    */
   public throwDesktopOnly(hint?: string): never {
     throw "@DESKTOPONLY This function is only available on the desktop version of Toxen." + (hint ? " (" + hint : ")");
+  }
+
+  /**
+   * Logs a warning if the ToxenController isn't the desktop version.
+   */
+  public warnDesktopOnly(hint?: string) {
+    console.warn("@DESKTOPONLY This function is only available on the desktop version of Toxen." + (hint ? " (" + hint : ""));
   }
 
   public async saveSettings($settings: typeof Settings) {

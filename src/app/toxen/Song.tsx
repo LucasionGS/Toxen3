@@ -1108,6 +1108,15 @@ export default class Song implements ISong {
   }
 
   public static async importSong(file: File | ToxenFile): Promise<Result<Song>> {
+    if (Settings.isRemote()) {
+      Toxen.notify({
+        title: "Import not implemented",
+        content: "This feature is not yet implemented for remote users.",
+        expiresIn: 5000,
+        type: "error"
+      });
+    }
+    
     if (!toxenapi.isDesktop()) {
       toxenapi.throwDesktopOnly("Unable to import songs on web version.");
     }

@@ -141,7 +141,10 @@ export class Toxen {
    * Used for fetching URLs and supports tx:// and txs:// URLs. (Gets converted to http(s)://)
    */
   public static fetch(input: string, init?: RequestInit) {
-    return fetch(Toxen.txToHttp(input), init);
+    return fetch(Toxen.txToHttp(input), {
+      credentials: "include",
+      ...init,
+    });
   }
 
   public static async getChangeLogs() {

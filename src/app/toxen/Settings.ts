@@ -83,12 +83,13 @@ export default class Settings {
   }
 
   /**
-   * Returns whether the current music folder is remote.
+   * Returns whether the current music folder is remote. For web, it will always return `true`.
    */
   public static isRemote(): boolean;
   /**
    * If the current music folder is a remote folder, return what is parsed, otherwise return `null`.  
-   * Do not pass `null` to the function, as it would return `null` in both cases, rendering it useless.
+   * Do not pass `null` to the function, as it would return `null` in both cases, rendering it useless.  
+   * For web, it will always act as `true`.
    */
   public static isRemote<T>(toReturn: T): T;
   public static isRemote<T>(toReturn?: T): T | boolean {

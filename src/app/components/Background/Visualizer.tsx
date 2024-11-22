@@ -113,6 +113,33 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
       const max = Math.max(...dataArray) / 100;
       dataArray = dataArray.map(v => Math.round(v / max) * 2);
     }
+    // else if (!Toxen.background.storyboard.getVisualizerNormalize()) { // Placeholder for future settings
+    //   const len = dataArray.length;
+    //   const fr = 1 / len; // Fraction
+    //   let rank: [number, number, number][] = [];
+    //   // const newData = Uint8Array.from(dataArray);
+    //   dataArray.forEach((v, i) => {
+    //     rank.push([v, i, 0]);
+    //   });
+
+    //   // Sort by value to be highest first
+    //   rank = rank
+    //     .toSorted(([a], [b]) => b - a)
+    //     .map((v, i) => [v[0], v[1], i])
+    //     .toSorted(([, a], [, b]) => b - a) as [number, number, number][];
+
+    //   // Normalize the data
+    //   dataArray = dataArray.map((_, i) => {
+    //     const [value, index, r] = rank[i];
+    //     // if (r > len / 2) {
+    //     //   return value / 2;
+    //     // }
+    //     // else {
+    //     //   return value;
+    //     // }
+    //     return Math.round(value * ((len - r) * fr));
+    //   }).toReversed();
+    // }
 
     // Shuffle the array to make it look more random.
     if (
@@ -793,7 +820,11 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
   private ctxAlpha(alpha: number, callback: (ctx: CanvasRenderingContext2D) => void, ctx: CanvasRenderingContext2D = this.ctx) {
     let oldAlpha = ctx.globalAlpha;
     ctx.globalAlpha = alpha;
+    // ctx.shadowColor = "rgba(255,255,255,0.8)";
+    // ctx.shadowBlur = 10;
     callback(ctx);
+    // ctx.shadowColor = "";
+    // ctx.shadowBlur = 0;
     ctx.globalAlpha = oldAlpha;
   }
 

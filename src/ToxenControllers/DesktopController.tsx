@@ -264,8 +264,9 @@ export default class DesktopController extends ToxenController {
       // Insert as blob
       formData.append("file", new Blob([await fsp.readFile(zipPathTmp)]), "sync.zip");
       formData.append("data", JSON.stringify(song.toISong()));
+      formData.append("_method", "PUT");
       return $toxen.fetch(user.getCollectionPath() + "/" + song.uid, {
-        method: "PUT",
+        method: "POST",
         body: formData
       });
     }).then(async res => {

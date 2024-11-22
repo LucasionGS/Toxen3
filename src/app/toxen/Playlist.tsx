@@ -350,7 +350,8 @@ export default class Playlist {
     this._cachedBackgroundName = bgUsed;
 
     if (!toxenapi.isDesktop()) {
-      toxenapi.throwDesktopOnly("Getting background path is not available on web version");
+      toxenapi.warnDesktopOnly("Getting background path is not available on web version");
+      return null;
     }
     
     return this._cachedBackgroundPath = (remote ? (

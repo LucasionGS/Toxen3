@@ -2,6 +2,7 @@ import React from "react";
 import Song from "./Song";
 import { Toxen } from "../ToxenApp";
 import { Progress } from "@mantine/core";
+import Settings from "./Settings";
 
 export default class System {
   public static async recursive(path: string): Promise<{ name: string }[]>;
@@ -30,9 +31,10 @@ export default class System {
   public static async handleImportedFiles(files: FileList | (File | ToxenFile)[], verbose?: boolean): Promise<void>;
   public static async handleImportedFiles(files: FileList | (File | ToxenFile)[], verbose?: boolean, _initial?: boolean, _plusIndex?: number, _plusTotal?: number): Promise<void>;
   public static async handleImportedFiles(files: FileList | (File | ToxenFile)[], verbose = true, _initial = true, _plusIndex = 0, _plusTotal = 0) {
-    if (!toxenapi.isDesktop()) {
-      return toxenapi.throwDesktopOnly("handleImportedFiles");
-    }
+    // if (!toxenapi.isDesktop()) {
+    //   return toxenapi.throwDesktopOnly("handleImportedFiles"); // This does work on web, but this is for safety checks.
+    // }
+    // Desktop version
     return Promise.resolve().then(async () => {
       if (files instanceof FileList) files = [...files];
       let sMedia = Toxen.getSupportedMediaFiles();
@@ -59,22 +61,24 @@ export default class System {
       }
 
       let mediaPack = !_initial; // Only set to false if this is the first call of this function within itself.
-      var i = 0;
+      var i = 0; // Not entirely sure why this is here??? Was I silly? im keeping it
       for (i = 0; i < files.length; i++) {
         const file = files[i];
 
-        // If directory
-        const stat: import("fs").Stats | null = await toxenapi.fs.promises.stat(file.path).then(a => a).catch(() => null);
-        if (stat?.isDirectory()) {
-          mediaPack = true;
-          let dirFiles = await System.recursive(file.path);
-
-          await System.handleImportedFiles(dirFiles.map(f => ({
-            path: toxenapi.path.resolve(file.path, toxenapi.path.basename(f.name)),
-            name: toxenapi.path.basename(f.name)
-          })), false, false, i, files.length);
-
-          continue;
+        // If directory - Only on desktop
+        if (toxenapi.isDesktop() && !Settings.isRemote()) {
+          const stat: import("fs").Stats | null = await toxenapi.fs.promises.stat(file.path).then(a => a).catch(() => null);
+          if (stat?.isDirectory()) {
+            mediaPack = true;
+            let dirFiles = await System.recursive(file.path);
+  
+            await System.handleImportedFiles(dirFiles.map(f => ({
+              path: toxenapi.path.resolve(file.path, toxenapi.path.basename(f.name)),
+              name: toxenapi.path.basename(f.name)
+            })), false, false, i, files.length);
+  
+            continue;
+          }
         }
 
 
@@ -121,19 +125,43 @@ export default class System {
           });
           imageName += ext; // Reading the extension
 
-          let dest = song.dirname(imageName);
-          let prePic = song.backgroundFile() || null;
-          await toxenapi.fs.promises.copyFile(file.path, dest).then(async () => {
-            if (prePic !== dest && await toxenapi.fs.promises.stat(prePic).then(() => true).catch(() => false)) await toxenapi.fs.promises.rm(prePic);
-            song.paths.background = toxenapi.getBasename(dest);
-            Toxen.background.setBackground(dest);
-            song.saveInfo();
-          })
-            .catch((reason) => {
-              Toxen.error("Unable to change background");
-              Toxen.error(reason);
-            });
+          if (toxenapi.isLocal(Settings)) {
+            let dest = song.dirname(imageName);
+            let prePic = song.backgroundFile() || null;
+            await toxenapi.fs.promises.copyFile(file.path, dest).then(async () => {
+              if (prePic !== dest && await toxenapi.fs.promises.stat(prePic).then(() => true).catch(() => false)) await toxenapi.fs.promises.rm(prePic);
+              song.paths.background = toxenapi.getBasename(dest);
+              Toxen.background.setBackground(dest);
+              song.saveInfo();
+            })
+              .catch((reason) => {
+                Toxen.error("Unable to change background");
+                Toxen.error(reason);
+              });
+  
+          }
+          else if (file instanceof File) {
+            let reader = new FileReader();
+            reader.onload = async () => {
+              let base64 = reader.result as string;
+              song.paths.background = imageName;
 
+              // Upload to server
+              await Toxen.fetch(`${song.backgroundFile()}`, {
+                method: "PUT",
+                body: file
+              }).then(() => {
+                Toxen.log("Uploaded background image");
+              }).catch((reason) => {
+                Toxen.error("Unable to upload background image");
+                Toxen.error(reason);
+              });
+              
+              Toxen.background.setBackground(song.backgroundFile());
+              song.saveInfo();
+            }
+            reader.readAsDataURL(file);
+          }
           break;
         }
         else if (sSubtitle.some(ext => file.name.endsWith(ext))) {
@@ -146,16 +174,39 @@ export default class System {
           if (!song) break;
           let subName = file.name; // name with extension
 
-          let dest = song.dirname(subName);
-          await toxenapi.fs.promises.copyFile(file.path, dest).then(async () => {
-            song.paths.subtitles = toxenapi.getBasename(dest);
-            await song.saveInfo();
-            song.applySubtitles();
-          })
-            .catch((reason) => {
-              Toxen.error("Unable to change subtitles");
-              Toxen.error(reason);
-            });
+          if (toxenapi.isLocal(Settings)) {
+            let dest = song.dirname(subName);
+            await toxenapi.fs.promises.copyFile(file.path, dest).then(async () => {
+              song.paths.subtitles = toxenapi.getBasename(dest);
+              await song.saveInfo();
+              song.applySubtitles();
+            })
+              .catch((reason) => {
+                Toxen.error("Unable to change subtitles");
+                Toxen.error(reason);
+              });
+          }
+          else if (file instanceof File) {
+            let reader = new FileReader();
+            reader.onload = async () => {
+              song.paths.subtitles = subName;
+
+              // Upload to server
+              await Toxen.fetch(`${song.subtitleFile()}`, {
+                method: "PUT",
+                body: file
+              }).then(() => {
+                Toxen.log("Uploaded subtitle file");
+              }).catch((reason) => {
+                Toxen.error("Unable to upload subtitle file");
+                Toxen.error(reason);
+              });
+              
+              await song.saveInfo();
+              song.applySubtitles();
+            }
+            reader.readAsDataURL(file);
+          }
 
           break;
         }

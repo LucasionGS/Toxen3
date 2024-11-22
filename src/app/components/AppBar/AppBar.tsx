@@ -134,8 +134,8 @@ function UserManage() {
 
   const usedQuota = React.useMemo(() => {
     if (!user) return "0B/0B used (0%)";
-    return bytesToString(user.storageUsed) + "/" + bytesToString(user.storageQuota) + " used (" + (user.storageUsed / user.storageQuota * 100).toFixed(2) + "%)";
-  }, [user, user?.storageUsed, user?.storageQuota]);
+    return bytesToString(user.storage_used) + "/" + bytesToString(user.storage_quota) + " used (" + (user.storage_used / user.storage_quota * 100).toFixed(2) + "%)";
+  }, [user, user?.storage_used, user?.storage_quota]);
   return (
     <>
       <div className="appBarButton appBar__userButton"
@@ -151,7 +151,7 @@ function UserManage() {
         {
           user ? (
             <div>
-              <h2>{user.username}</h2>
+              <h2>{user.name}</h2>
               <p><b>Premium Status</b>: {user.premium ? <>Expires <code>{user.premium_expire.toDateString()}</code></> : "No premium"}</p>
               <p>{usedQuota}</p>
               <Button

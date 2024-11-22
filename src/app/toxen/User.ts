@@ -16,20 +16,16 @@ export default class User {
     return Settings.getServer() + "/playlist";
   }
 
-  public static async login(token: string): Promise<User>;
-  public static async login(username: string, password: string): Promise<User>;
-  public static async login(username: string, password?: string) {
+  // public static async login(token: string): Promise<User>;
+  // public static async login(email: string, password: string): Promise<User>;
+  public static async login(email: string, password: string) {
     const loginUrl = Settings.getServer();
 
-    let data: any;
-    if (username && password) data = {
-      username: username,
+    const data = {
+      email: email,
       password: password
     };
-    else if (username && !password) data = {
-      token: username
-    };
-    return await Toxen.fetch(loginUrl + "/user/login", {
+    return await Toxen.fetch(loginUrl + "/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -46,7 +42,7 @@ export default class User {
         throw new Error("Could not reach Toxen server");
       }
 
-      if (password) Toxen.error(`Failed to login as ${username}`, 3000);
+      if (password) Toxen.error(`Failed to login as ${email}`, 3000);
       else Toxen.error(`Failed to login. Token invalid`, 3000);
       return null;
     });
@@ -78,16 +74,23 @@ export default class User {
   public static logout() {
     Toxen.setAppBarUser(null);
     window.localStorage.removeItem("user");
-    Toxen.fetch(Settings.getServer() + "/user/logout", {
-      method: "POST"
-    });
+    Toxen.fetch(Settings.getServer() + "/logout");
   }
 
   public static refreshUser() {
     let user = User.getCurrentUser();
     if (!user) return;
-    User.login(user.token).then(user => {
-      if (user) User.setCurrentUser(user);
+    return Toxen.fetch(Settings.getServer() + "/authenticated").then(async response => {
+      if (response.ok) {
+        let newUser = User.create(await response.json() as IUser);
+        User.setCurrentUser(newUser);
+        return newUser;
+      }
+      else {
+        User.logout();
+        Toxen.error("Failed to refresh user", 3000);
+      }
+      return null;
     });
   }
 
@@ -96,13 +99,13 @@ export default class User {
 
     // Assign properties
     user.id = info.id;
-    user.username = info.username;
+    user.name = info.name;
     user.email = info.email;
     user.token = info.token;
     user.premium = info.premium;
     user.premium_expire = (info.premium_expire ? new Date(info.premium_expire) : null);
-    user.storageUsed = info.storageUsed;
-    user.storageQuota = info.storageQuota;
+    user.storage_used = info.storage_used;
+    user.storage_quota = info.storage_quota;
 
     return user;
   }
@@ -110,13 +113,13 @@ export default class User {
   public static userSessionRefresh: Date;
   
   id: number;
-  username: string;
+  name: string;
   email: string;
   token: string;
   premium: boolean;
   premium_expire: Date;
-  storageUsed: number;
-  storageQuota: number;
+  storage_used: number;
+  storage_quota: number;
 }
 
 setInterval(() => {
@@ -128,11 +131,11 @@ setInterval(() => {
 
 interface IUser {
   id: number;
-  username: string;
+  name: string;
   email: string;
   token: string;
   premium: boolean;
   premium_expire: string;
-  storageUsed: number;
-  storageQuota: number;
+  storage_used: number;
+  storage_quota: number;
 }
