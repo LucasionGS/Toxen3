@@ -8,6 +8,8 @@ $sidePanelColor: #1b1b1b;
     height 0.5s cubic-bezier(0.64, 0.32, 0.54, 1.03);
   --panel-width: 40vw;
   --panel-icons-width: 128px;
+
+  --accent-color: #b6ffba;
 }
 
 // Inactivity
@@ -32,7 +34,7 @@ body.inactive .sidepanel:not(.show) {
     opacity: 1;
   }
 
-  border-color: #b6ffba;
+  border-color: var(--accent-color);
   
 }
 
@@ -97,7 +99,7 @@ body[miniplayer] .sidepanel {
   padding: 16px;
   border-left: white 1px solid;
   border-right: white 1px solid;
-  border-color: #b6ffba;
+  border-color: var(--accent-color);
   // width: var(--panel-icons-width);
   user-select: none;
   overflow-y: auto;
@@ -188,7 +190,9 @@ body[miniplayer] .sidepanel {
   overflow-x: hidden;
   overflow-y: auto;
 
-  // Customize scrollbar
+  
+}
+.sidepanel-content {
   &::-webkit-scrollbar {
     width: 16px;
     height: 8px;
@@ -203,7 +207,6 @@ body[miniplayer] .sidepanel {
   &::-webkit-scrollbar-thumb:hover {
     background: #f1f1f1;
   }
-
 }
 
 .sidepanel .sidepanel-backdrop {
@@ -250,6 +253,74 @@ body[miniplayer] .sidepanel {
 
     &:active {
       background-color: aqua;
+    }
+  }
+}
+
+// Mobile display
+@media screen and ((max-width: 768px) and (min-height: 768px)) { // Mobile view
+  // Sidepanel is always visible on the bottom half of the screen
+  .sidepanel {
+    opacity: 1 !important;
+    height: 50vh !important;
+    width: 100vw !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    border: none !important;
+    border-bottom: none !important;
+    border-top: solid var(--accent-color) 1px !important;
+
+    flex-direction: column-reverse;
+
+    .sidepanel-backdrop {
+      display: none;
+    }
+    
+    .sidepanel-icons {
+      display: flex;
+      flex-direction: row;
+      height: initial !important;
+      justify-content: space-around;
+      flex-shrink: 0;
+      padding: 0;
+
+      border-top: solid var(--accent-color) 1px !important;
+      
+      .sidepanel-icon {
+        width: initial !important;
+      }
+
+      hr {
+        display: none;
+      }
+    }
+
+    .sidepanel-icon-toggle {
+      display: none !important;
+    }
+    
+    .sidepanel-content {
+      padding: 16px !important;
+      width: 100% !important;
+      opacity: 1 !important;
+      overflow: auto !important;
+      min-height: calc(50vh - var(--appbar-height) * 2) !important;
+    }
+
+    .sidepanel-icon-title {
+      display: none !important;
+    }
+
+    // .sidepanel-icon-title {
+    //   display: inline !important;
+    //   font-size: 20px !important;
+    //   line-height: 32px !important;
+    //   vertical-align: 6px !important;
+    // }
+
+    .sidepanel-resizer {
+      display: none;
     }
   }
 }

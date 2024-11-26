@@ -55,6 +55,22 @@ export default class Song implements ISong {
   public floatingTitleReactive: boolean;
   public floatingTitleOverrideVisualizer: boolean;
 
+  /**
+   * The files that are in the song's directory. Maps to an object.
+   * The datetime string is the last modified date of the file.
+   */
+  public files: ISong["files"] = {};
+
+  /**
+   * Defines the latest action the file has had. Used for syncing.
+   * @param file The relative path of the file.
+   * @param action "u" for updated, "d" for deleted. Default is "u".
+   * @param datetime The time and date of the file action. Default is the current time.
+   */
+  public setFile(file: string, action: "u" | "d" = "u", datetime: Date | number = new Date().getTime()) {
+    this.files[file] = { action, time: typeof datetime !== "number" ? datetime.getTime() : datetime };
+  }
+
   private static history: Song[] = [];
   private static historyIndex = 0;
   public static getHistory(): readonly Song[] {
@@ -290,6 +306,7 @@ export default class Song implements ISong {
       "floatingTitlePosition",
       "floatingTitleReactive",
       "floatingTitleOverrideVisualizer",
+      "files",
     ];
     const obj = {} as any;
     keys.forEach(key => {
@@ -386,6 +403,10 @@ export default class Song implements ISong {
       this.setCurrent();
       this.setAppTitle();
       const addToMetadata = (blob?: Blob) => {
+        if (this !== Song.getCurrent()) {
+          return;
+        }
+        
         Toxen.discord?.setPresence(this);
         navigator.mediaSession.metadata = new MediaMetadata({
           title: this.title ?? "Unknown Title",
@@ -411,7 +432,7 @@ export default class Song implements ISong {
         }
         img.addEventListener("load", onLoad);
       }
-      else addToMetadata();
+      addToMetadata();
 
       if (Toxen.background.visualizer.isStopped())
       Toxen.background.visualizer.start();
@@ -1052,6 +1073,8 @@ export default class Song implements ISong {
   }
 
   public async saveInfo(): Promise<void> {
+    // this.files["info.json"] = Date.now();
+    this.setFile("info.json");
     const curSong = Song.getCurrent();
     if (curSong === this) {
       curSong.setAppTitle();
@@ -1390,6 +1413,17 @@ export interface ISong {
   | 'center';
   floatingTitleReactive: boolean;
   floatingTitleOverrideVisualizer: boolean;
+
+  /**
+   * The files that are in the song's directory. Maps to a datetime number.  
+   * The datetime number is the last modified date of the file.
+   */
+  files: {
+    [path: string]: {
+      time: number;
+      action: "d" | "u";
+    };
+  }
 }
 
 interface ISongPaths {

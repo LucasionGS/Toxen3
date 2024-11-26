@@ -1,7 +1,7 @@
 {
   "name": "toxen3",
   "productName": "Toxen",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "description": "Toxen Music Player",
   "main": ".vite/build/main.js",
   "scripts": {
@@ -10,7 +10,8 @@
     "make": "electron-forge make",
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
-    "buildweb": "vite build --config ./vite.web.config.ts"
+    "buildweb": "vite build --config ./vite.web.config.ts",
+    "startweb": "vite --config ./vite.web.config.ts"
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.4.0",

@@ -82,3 +82,10 @@ body[miniplayer] .miniplayer-overlay {
     padding: 8px;
   }
 }
+
+@media screen and ((max-width: 768px) and (min-height: 768px)) { // Mobile view
+  .content-container {
+    width: 100vw;
+    height: calc(50vh - var(--appbar-height));
+  }
+}

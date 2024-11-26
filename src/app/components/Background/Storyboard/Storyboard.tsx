@@ -153,7 +153,13 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
     return this.data.floatingTitle ?? (this.state.song && this.state.song.floatingTitle || false);
   }
   public getFloatingTitleText() {
-    // return Toxen.subtitles.state.currentText ? stripHtml(Toxen.subtitles.state.currentText) : (this.data.floatingTitleText ?? (this.state.song && this.state.song.floatingTitleText || this.state.song.title));
+    if (Toxen.subtitles.state.subtitles) {
+      return (
+        Toxen.subtitles.state.currentText
+          ? stripHtml(Toxen.subtitles.state.currentText)
+          : (this.data.floatingTitleText ?? (this.state.song && this.state.song.floatingTitleText || ""))
+      );
+    }
     return this.data.floatingTitleText ?? (this.state.song && this.state.song.floatingTitleText || this.state.song.title);
   }
   public getFloatingTitleUnderline() {

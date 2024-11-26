@@ -614,9 +614,9 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     const reactive = Toxen.background.storyboard?.getFloatingTitleReactive();
     const overrideVisualizer = Toxen.background.storyboard?.getFloatingTitleOverrideVisualizer();
     const song = Toxen.background.storyboard?.getSong();
-    if (enabled && song) {
+    const title = Toxen.background.storyboard?.getFloatingTitleText();
+    if (enabled && song && title) {
       let shouldOverride = overrideVisualizer;
-      const title = Toxen.background.storyboard?.getFloatingTitleText();
       const _fontSize = 48 * (vWidth / 1280);
       const fontSize = MathX.clamp(reactive ? _fontSize + (_fontSize - (_fontSize * this.dynamicDim * 2)) : _fontSize, _fontSize, _fontSize * 2);
       // const font = `${fontSize}px Calibri`;

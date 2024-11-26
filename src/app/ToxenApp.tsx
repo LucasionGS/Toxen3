@@ -802,15 +802,17 @@ export default class ToxenAppRenderer extends React.Component {
           <IconLayoutNavbarExpand size="20vh" />
         </div>
         <ThemeContainer ref={ref => Toxen.themeContainer = ref} />
-        <AppBar />
-        <Background ref={ref => Toxen.background = ref} />
-        <StoryboardEditor controllerSetter={sec => Toxen.storyboardEditorController = sec} />
-        <MusicControls ref={ref => Toxen.musicControls = ref} />
-        <LoadingScreen ref={ls => Toxen.loadingScreen = ls} initialShow={true} />
-        <div className="song-panel-toggle hide-on-inactive" onClick={() => Toxen.sidePanel.show()}>
-          &nbsp;
-          <i className="fas fa-bars"></i>
-          <span className="song-panel-toggle-title">Menu</span>
+        <div className="content-container">
+          <AppBar />
+          <Background ref={ref => Toxen.background = ref} />
+          <StoryboardEditor controllerSetter={sec => Toxen.storyboardEditorController = sec} />
+          <MusicControls ref={ref => Toxen.musicControls = ref} />
+          <LoadingScreen ref={ls => Toxen.loadingScreen = ls} initialShow={true} />
+          <div className="song-panel-toggle hide-on-inactive" onClick={() => Toxen.sidePanel.show()}>
+            &nbsp;
+            <i className="fas fa-bars"></i>
+            <span className="song-panel-toggle-title">Menu</span>
+          </div>
         </div>
         <Sidepanel
           sectionId="songPanel" // Default panel
@@ -852,7 +854,7 @@ export default class ToxenAppRenderer extends React.Component {
                     ) : null
                   }
                   <div>
-                    <h1>
+                    <h1 className="song-panel-title">
                       {Toxen.playlist ? Toxen.playlist.name : "All Tracks"}
                     </h1>
                     <SearchField />

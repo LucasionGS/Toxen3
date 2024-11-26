@@ -2,7 +2,8 @@ $bgColor: #202124;
 $greenColor: #b6ffba;
 
 body {
-  --bodyHeight: calc(100vh - 32px);
+  --appbar-height: 32px;
+  --bodyHeight: calc(100vh - var(--appbar-height));
   position: absolute;
   top: calc(100vh - var(--bodyHeight));
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;

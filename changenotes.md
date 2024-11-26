@@ -1,4 +1,26 @@
 <!-- ## Upcoming update / 1.7.2 -->
+## 1.9.0 - 26-11-2024
+While this update doesn't add a lot of new features, it's a big in terms of development.  
+A major part of the codebase has been refactored to work on the web. This is part of a bigger plan to make Toxen available on the web for Toxen Premium users to stream their music from the Toxen server. If you have access to a web browser, be it on your phone, tablet, or computer, you'll be able to access your music library and play your songs from anywhere.
+
+### New Storyboard Event: `Floating Title: Reactive`
+- Added a new storyboard event that can be used to enable and disable Float Title's reactiveness.
+
+### Disabling Hue Integration (for now)
+- Disabled the Hue integration. This will be re-implemented in the future but had broken due to the Electron upgrade.
+
+### Mobile Viewability
+- Added a mobile view. Primarily made for the web version, but works on Desktop too. This is still in development and will be improved over time. It can be seen by simply resizing the window to a width under 768 pixels. Feedback on this view is appreciated.
+
+### In-Development Features
+This next section isn't features that are currently available, but features that are in development and will be available in the future.
+
+#### Experimental Web Version
+A Work in progress, but functional version of Toxen on web have been created. The aim is for as many Desktop features to be available on the web version as possible. Do keep in mind that the browser has limitations that prevent some of them. The web version will be made available to a select few for testing in the near future.
+
+#### Song Synchronization
+The Toxen stream server has been re-created and improved. It will be available for testing soon along with the web version. This will allow you to synchronize your songs to Toxen's server and stream them to your devices, as well as synchronize your songs when changes are made to the library or remote library.
+
 ## 1.8.0 - 20-08-2024
 ### Storyboard Editor Update
 The entire storyboard editor has been reworked and improved. It's now more intuitive and easier to use.

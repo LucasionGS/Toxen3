@@ -129,7 +129,11 @@ export default class System {
             let dest = song.dirname(imageName);
             let prePic = song.backgroundFile() || null;
             await toxenapi.fs.promises.copyFile(file.path, dest).then(async () => {
-              if (prePic !== dest && await toxenapi.fs.promises.stat(prePic).then(() => true).catch(() => false)) await toxenapi.fs.promises.rm(prePic);
+              if (prePic !== dest && await toxenapi.fs.promises.stat(prePic).then(() => true).catch(() => false))
+              {
+                await toxenapi.fs.promises.rm(prePic);
+                song.setFile(prePic, "d");
+              }
               song.paths.background = toxenapi.getBasename(dest);
               Toxen.background.setBackground(dest);
               song.saveInfo();
@@ -141,26 +145,26 @@ export default class System {
   
           }
           else if (file instanceof File) {
-            let reader = new FileReader();
-            reader.onload = async () => {
-              let base64 = reader.result as string;
-              song.paths.background = imageName;
+            // let reader = new FileReader();
+            // let base64 = reader.result as string;
+            song.paths.background = imageName;
 
-              // Upload to server
-              await Toxen.fetch(`${song.backgroundFile()}`, {
-                method: "PUT",
-                body: file
-              }).then(() => {
-                Toxen.log("Uploaded background image");
-              }).catch((reason) => {
-                Toxen.error("Unable to upload background image");
-                Toxen.error(reason);
-              });
-              
-              Toxen.background.setBackground(song.backgroundFile());
-              song.saveInfo();
-            }
-            reader.readAsDataURL(file);
+            // Upload to server
+            await Toxen.fetch(`${song.backgroundFile()}`, {
+              method: "PUT",
+              body: file
+            }).then(() => {
+              Toxen.log("Uploaded background image");
+            }).catch((reason) => {
+              Toxen.error("Unable to upload background image");
+              Toxen.error(reason);
+            });
+            
+            Toxen.background.setBackground(song.backgroundFile());
+            song.saveInfo();
+            // reader.onload = async () => {
+            // }
+            // reader.readAsDataURL(file);
           }
           break;
         }
@@ -178,6 +182,7 @@ export default class System {
             let dest = song.dirname(subName);
             await toxenapi.fs.promises.copyFile(file.path, dest).then(async () => {
               song.paths.subtitles = toxenapi.getBasename(dest);
+              song.setFile(subName, "u");
               await song.saveInfo();
               song.applySubtitles();
             })
@@ -201,7 +206,8 @@ export default class System {
                 Toxen.error("Unable to upload subtitle file");
                 Toxen.error(reason);
               });
-              
+
+              song.setFile(subName, "u");
               await song.saveInfo();
               song.applySubtitles();
             }

@@ -1,7 +1,7 @@
 @import "../../../root.scss";
 .toxen-background {
-  width: 100vw;
-  height: var(--bodyHeight);
+  width: 100%;
+  height: calc(100% - var(--appbar-height));
   z-index: -1;
   position: fixed;
   left: 0;
@@ -19,8 +19,21 @@
     left: 0;
     // bottom: 0;
     width: 100%;
-    height: var(--bodyHeight);
+    height: 100%;
     // filter: brightness(0.4);
     background-color: black;
+  }
+}
+
+@media screen and ((max-width: 768px) and (min-height: 768px)) { // Mobile view
+  .toxen-background {
+    height: calc(50% - var(--appbar-height));
+    bottom: initial;
+    top: var(--appbar-height);
+
+    & video {
+      top: var(--appbar-height);
+      height: calc(50% - var(--appbar-height));
+    }
   }
 }
