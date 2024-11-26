@@ -7,7 +7,7 @@
   height: var(--bodyHeight);
 }
 
-@media screen and ((max-width: 768px) and (min-height: 768px)) { // Mobile view
+@media screen and ((max-width: 768px)) { // Mobile view
   .audio-visualizer {
     height: calc(50% - var(--appbar-height));
     bottom: initial;

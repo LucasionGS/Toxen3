@@ -72,7 +72,7 @@ body[miniplayer] .toxen-music-controls {
   }
 }
 
-@media screen and ((max-width: 768px) and (min-height: 768px)) { // Mobile view
+@media screen and ((max-width: 768px)) { // Mobile view
   .toxen-music-controls {
     width: 95%;
     bottom: calc(50% + 2.5vh) !important;

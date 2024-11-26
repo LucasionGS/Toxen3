@@ -258,7 +258,7 @@ body[miniplayer] .sidepanel {
 }
 
 // Mobile display
-@media screen and ((max-width: 768px) and (min-height: 768px)) { // Mobile view
+@media screen and ((max-width: 768px)) { // Mobile view
   // Sidepanel is always visible on the bottom half of the screen
   .sidepanel {
     opacity: 1 !important;
