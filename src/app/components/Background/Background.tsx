@@ -70,7 +70,7 @@ export default class Background extends Component<BackgroundProps, BackgroundSta
 
     return (
       <div className="toxen-background"
-        onClick={() => Settings.get("pauseWithClick") ? Toxen.musicPlayer.toggle() : null}
+        // onClick={() => Settings.get("pauseWithClick") ? Toxen.musicPlayer.toggle() : null}
         // onDoubleClick={() => {
         //   Toxen.toggleFullscreen();
         // }}

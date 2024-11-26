@@ -802,7 +802,10 @@ export default class ToxenAppRenderer extends React.Component {
           <IconLayoutNavbarExpand size="20vh" />
         </div>
         <ThemeContainer ref={ref => Toxen.themeContainer = ref} />
-        <div className="content-container">
+        <div
+          className="content-container"
+          onClick={() => Settings.get("pauseWithClick") ? Toxen.musicPlayer.toggle() : null}
+        >
           <AppBar />
           <Background ref={ref => Toxen.background = ref} />
           <StoryboardEditor controllerSetter={sec => Toxen.storyboardEditorController = sec} />
