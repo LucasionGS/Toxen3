@@ -4,7 +4,7 @@ import { Toxen } from '../../ToxenApp';
 import "./Visualizer.scss";
 // @ts-expect-error 
 import txnLogo from "../../../icons/toxen.png";
-import { hexToRgb, rgbToHex } from '../Form/FormInputFields/FormInputColorPicker';
+import { hexToRgb, invertRgb, rgbToHex } from '../Form/FormInputFields/FormInputColorPicker';
 import StoryboardParser from '../../toxen/StoryboardParser';
 // import HueManager from '../../toxen/philipshue/HueManager';
 import MathX from '../../toxen/MathX';
@@ -63,9 +63,15 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height); // Background dim
 
     storedColor = Toxen.background.storyboard.getVisualizerColor();
-    if (this.lastColor !== storedColor) {
-      Toxen.musicControls.progressBar.setFillColor(storedColor);
+    if (Toxen.background.storyboard.getVisualizerRainbow()) {
+      Toxen.musicControls.progressBar.setFillColor(
+        "linear-gradient(90deg, rgba(255,0,0,1) 0%, rgba(255,154,0,1) 10%, rgba(208,222,33,1) 20%, rgba(79,220,74,1) 30%, rgba(63,218,216,1) 40%, rgba(47,201,226,1) 50%, rgba(28,127,238,1) 60%, rgba(95,21,242,1) 70%, rgba(186,12,248,1) 80%, rgba(251,7,217,1) 90%, rgba(255,0,0,1) 100%)"
+      );
     }
+    else
+      if (this.lastColor !== storedColor) {
+        Toxen.musicControls.progressBar.setFillColor(storedColor);
+      }
     this.lastColor = storedColor ?? this.lastColor;
     const backgroundFile = Toxen.background.storyboard.getBackground();
     if (this.lastBackground !== backgroundFile) {
@@ -143,6 +149,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
 
     // Shuffle the array to make it look more random.
     if (
+      // Settings.get("visualizerStyle") === VisualizerStyle.CircleWaveform ||
       (Settings.get("visualizerShuffle") ?? false) &&
       Settings.get("visualizerStyle") !== VisualizerStyle.Waveform
     ) {
@@ -189,6 +196,17 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     // try { HueManager.transition(); } catch (error) { } // Broken atm
 
     // if (style === VisualizerStyle.None && !Settings.get("backgroundDynamicLighting")) return;
+    const oldShadowBlur = ctx.shadowBlur;
+    const oldShadowColor = ctx.shadowColor;
+    if (Toxen.background.storyboard.getVisualizerGlow()) {
+
+      // ctx.shadowColor = rgbToHex(invertRgb(storedColorAsRGB));
+      ctx.shadowColor = storedColor;
+    }
+    const setBarShadowBlur = (height: number) => {
+      ctx.shadowBlur = height / 3; // Shadow based on height of the bar
+    };
+
     if (style !== VisualizerStyle.None) {
       let useLogo = false;
       switch (style) {
@@ -210,14 +228,20 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
               _barHeight // barHeight
             ];
 
+            setBarShadowBlur(barHeight);
+
             // If rainbow:
             this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, null, {
               top: false,
               bottom: true
             });
 
-            this.ctxAlpha(opacity, ctx => {
+            this.useAlpha(opacity, ctx => {
+              // ctx.shadowBlur = barHeight / 5;
+              // ctx.shadowColor = rgbToHex(invertRgb(storedColorAsRGB));
               ctx.fillRect(barX, barY, barWidth, barHeight); // Draw basic visualizer
+              // ctx.shadowBlur = 0;
+              // ctx.shadowColor = "transparent";
             });
           }
           break;
@@ -238,13 +262,15 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
               _barHeight // barHeight
             ];
 
+            setBarShadowBlur(barHeight);
+
             // If rainbow:
             this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, null, {
               top: false,
               bottom: true
             });
 
-            this.ctxAlpha(opacity, ctx => {
+            this.useAlpha(opacity, ctx => {
               ctx.fillRect(barX, barY, barWidth, barHeight); // Bottom visuals
             });
           }
@@ -266,13 +292,15 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
               _barHeight // barHeight
             ];
 
+            setBarShadowBlur(barHeight);
+
             // If rainbow:
             this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, null, {
               top: true,
               bottom: false
             });
 
-            this.ctxAlpha(opacity, ctx => {
+            this.useAlpha(opacity, ctx => {
               ctx.fillRect(barX, barY, barWidth, barHeight); // Top visuals
             });
           }
@@ -295,7 +323,9 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
               _barHeight // barHeight
             ];
 
-            this.ctxAlpha(opacity, ctx => {
+            setBarShadowBlur(barHeight);
+
+            this.useAlpha(opacity, ctx => {
               this.setRainbowIfEnabled(ctx, barX, 0, barWidth, barHeight, i, null, {
                 top: true,
                 bottom: false
@@ -330,7 +360,9 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
               unitH // barHeight
             ];
 
-            this.ctxAlpha(opacity, ctx => {
+            // setBarShadowBlur(barHeight); // Doesn't work?
+
+            this.useAlpha(opacity, ctx => {
 
               if (i % 2 === 0) {
                 this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, null, {
@@ -366,11 +398,12 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
               _barHeight * 2 // barHeight
             ];
 
+            setBarShadowBlur(barHeight);
+
             // If rainbow:
             this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i);
 
-
-            this.ctxAlpha(opacity, ctx => {
+            this.useAlpha(opacity, ctx => {
               ctx.fillRect(barX, barY, barWidth, barHeight); // Draw basic visualizer
             });
           }
@@ -399,11 +432,13 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
               _barHeight // barHeight
             );
 
+            setBarShadowBlur(barHeight);
+
             smallestHeight += barHeight;
             // If rainbow:
             this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, cycleIncrementer);
 
-            this.ctxAlpha(opacity, ctx => {
+            this.useAlpha(opacity, ctx => {
               ctx.save();
               // ctx.setTransform(1, 0, 0, 1, barX + 11, barY - 132);
               ctx.setTransform(1, 0, 0, 1, barX, barY);
@@ -418,7 +453,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
             smallestHeight /= len;
             smallestHeight *= 1.5;
             // smallestHeight += 128;
-            this.ctxAlpha(opacity, ctx => {
+            this.useAlpha(opacity, ctx => {
               if (toxenLogo.complete) {
                 ctx.save();
                 ctx.setTransform(1, 0, 0, 1, (vWidth / 2) - imgSize, (vHeight / 2) - imgSize);
@@ -466,18 +501,20 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
               _barHeight // barHeight
             );
 
+            setBarShadowBlur(barHeight);
+
             smallestHeight += barHeight;
             // If rainbow:
             this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, cycleIncrementer);
 
-            this.ctxAlpha(opacity, ctx => {
+            this.useAlpha(opacity, ctx => {
               ctx.save();
               ctx.setTransform(1, 0, 0, 1, barX, barY);
               ctx.rotate(((cycleIncrementer * (Math.PI / 180)) * i));
               ctx.fillRect(-(unitW / 2), 0, barWidth, barHeight); // Draw basic visualizer
               ctx.restore();
             });
-            this.ctxAlpha(opacity, ctx => {
+            this.useAlpha(opacity, ctx => {
               ctx.save();
               ctx.setTransform(1, 0, 0, 1, barX, barY);
               ctx.rotate(0 - ((cycleIncrementer * (Math.PI / 180)) * i));
@@ -490,7 +527,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
             smallestHeight /= len;
             smallestHeight *= 1.5;
             // smallestHeight += 128;
-            this.ctxAlpha(opacity, ctx => {
+            this.useAlpha(opacity, ctx => {
               if (toxenLogo.complete) {
                 ctx.save();
                 ctx.setTransform(1, 0, 0, 1, (vWidth / 2) - imgSize, (vHeight / 2) - imgSize);
@@ -531,6 +568,8 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
               _barHeight * 2 // barHeight
             ];
 
+            // setBarShadowBlur(barHeight); // Extremely laggy
+
             const nextData = dataArray[i + 1];
 
             if (typeof nextData === "number") {
@@ -544,7 +583,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
 
               ctx.save();
               ctx.beginPath();
-              this.ctxAlpha(opacity, ctx => {
+              this.useAlpha(opacity, ctx => {
                 ctx.moveTo(barX, barY);
                 ctx.lineTo(nextBarX, nextBarY);
                 ctx.lineTo(nextBarX + nextBarWidth, nextBarY);
@@ -569,46 +608,76 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           }
           break;
         }
-        // case VisualizerStyle.WaveformCircle: {
-        //   // Combination of Waveform and singularity. Generates a smooth waveform between the higest points of each bar.
-        //   const cycleIncrementer = 360 / len;
-        //   const uniteLength = len / 360;
-        //   const maxHeight = getMaxHeight(0.50);
-        //   // let smallestHeight = maxHeight;
-        //   const unitH = maxHeight / dataSize;
-        //   const unitW = (vWidth * 1.25 + unitH) / len;
-        //   const centerY = (vHeight / 2);
-        //   for (let i = 0; i < len; i++) {
-        //     const data = dataArray[i];
-        //     const _barHeight = (data * unitH);
-        //     // Position and size
-        //     const [barX, barY, barWidth, barHeight] = this.getBar(
-        //       (vWidth / 2) - (unitW / 2) /* Progress bar curve */, // barX
-        //       (vHeight / 2), // barY
-        //       unitW, // barWidth
-        //       _barHeight // barHeight
-        //     );
+        case VisualizerStyle.Orb: {
+          const maxHeight = getMaxHeight(0.25);
+          const unitAngle = (2 * Math.PI) / len; // Half-circle
+          const unitH = maxHeight / dataSize;
+          const centerX = vWidth / 2;
+          const centerY = vHeight / 2;
+          const radius = Math.min(centerX, centerY) * 0.45;
 
-        //     // If rainbow:
-        //     this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, cycleIncrementer);
+          const rotation = Math.PI / 2 + ((time / 20000) * Math.PI);
 
-        //     this.ctxAlpha(opacity, ctx => {
-        //       const radian = (cycleIncrementer * i) * (Math.PI / 180);
-        //       ctx.save();
-        //       // ctx.setTransform(1, 0, 0, 1, barX + 11, barY - 132);
-        //       ctx.setTransform(1, 0, 0, 1, barX, barY);
-        //       ctx.rotate(radian + (time / 20000));
-        //       // ctx.fillRect(-(unitW / 2), 128, barWidth, barHeight); // Draw basic visualizer
-        //       ctx.fillRect(-(unitW / 2), 0, barWidth, barHeight); // Draw basic visualizer
-        //       ctx.restore();
-        //     });
-        //   }
-        //   break;
-        // }
+          for (let i = 0; i < len; i++) {
+            const data = dataArray[i];
+            const barHeight = Math.max(1, data * unitH);
+
+            const angle = i * unitAngle + rotation;
+            let mirroredAngle = (-i - 1) * unitAngle + rotation;
+
+            const [x1, y1] = [
+              centerX + Math.cos(angle) * radius,
+              centerY + Math.sin(angle) * radius
+            ];
+            const [x2, y2] = [
+              centerX + Math.cos(angle) * (radius + barHeight),
+              centerY + Math.sin(angle) * (radius + barHeight)
+            ];
+
+            const [mx1, my1] = [
+              centerX + Math.cos(mirroredAngle) * radius,
+              centerY + Math.sin(mirroredAngle) * radius
+            ];
+            const [mx2, my2] = [
+              centerX + Math.cos(mirroredAngle) * (radius + barHeight),
+              centerY + Math.sin(mirroredAngle) * (radius + barHeight)
+            ];
+
+            // If rainbow:
+            this.setRainbowIfEnabled(ctx, x1, y1, barHeight, barHeight, i);
+
+            // Draw the bar for the original angle
+            ctx.save();
+            ctx.beginPath();
+            ctx.lineWidth = 3;
+            this.useAlpha(opacity, ctx => {
+              ctx.moveTo(x1, y1);
+              ctx.lineTo(x2, y2);
+            });
+            ctx.stroke();
+            ctx.restore();
+
+            // Draw the bar for the mirrored angle
+            ctx.save();
+            ctx.beginPath();
+            ctx.lineWidth = 3;
+            this.useAlpha(opacity, ctx => {
+              ctx.moveTo(mx1, my1);
+              ctx.lineTo(mx2, my2);
+            });
+            ctx.stroke();
+            ctx.restore();
+          }
+          break;
+        }
       }
     }
 
+    ctx.shadowBlur = oldShadowBlur;
+    ctx.shadowColor = oldShadowColor;
+
     // Add floating title if enabled
+    const usingSubtitles = Toxen.background.storyboard?.getFloatingSubtitles();
     const enabled = Toxen.background.storyboard?.getFloatingTitle();
     const underline = Toxen.background.storyboard?.getFloatingTitleUnderline();
     const reactive = Toxen.background.storyboard?.getFloatingTitleReactive();
@@ -617,12 +686,13 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     const title = Toxen.background.storyboard?.getFloatingTitleText();
     if (enabled && song && title) {
       let shouldOverride = overrideVisualizer;
-      const _fontSize = 48 * (vWidth / 1280);
+      const textWidth = ctx.measureText(title).width;
+      const _fontSize = (48 * (vWidth / 1280) * (usingSubtitles ? 0.5 : 1));
+
       const fontSize = MathX.clamp(reactive ? _fontSize + (_fontSize - (_fontSize * this.dynamicDim * 2)) : _fontSize, _fontSize, _fontSize * 2);
       // const font = `${fontSize}px Calibri`;
       const font = `${fontSize}px Calibri Light`; // TODO: Make this a setting and customizable font
       const fontColor = this.lastColor ?? '#fff';
-      const textWidth = ctx.measureText(title).width;
       const textHeight = fontSize;
 
       let textX: number;
@@ -725,7 +795,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
         );
       }
 
-      this.ctxAlpha(opacity, ctx => {
+      this.useAlpha(opacity, ctx => {
         ctx.font = font;
         if (underline) {
           // Add underline
@@ -774,8 +844,13 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
   private setRainbow(ctx: CanvasRenderingContext2D, barX: number, barY: number, barWidth: number, barHeight: number, i: number, cycleIncrementer?: number, options?: {
     top?: boolean;
     bottom?: boolean;
-  }) {
+  }, customHandler?: (ctx: CanvasRenderingContext2D, rainbowColor: string) => void) {
     const rainbowColor = `hsl(${(cycleIncrementer ?? this.getCycleIncrementer()) * i + (Toxen.musicPlayer.media.currentTime * 50)}, 100%, 50%)`;
+    if (customHandler) {
+      return customHandler(ctx, rainbowColor);
+    }
+
+    ctx.shadowColor = rainbowColor;
 
     const grd = ctx.createLinearGradient(barX, barY, barX + barWidth, barY + barHeight);
     if (!options) {
@@ -807,8 +882,10 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
   private setRainbowIfEnabled(ctx: CanvasRenderingContext2D, barX: number, barY: number, barWidth: number, barHeight: number, i: number, cycleIncrementer?: number, options?: {
     top?: boolean;
     bottom?: boolean;
-  }) {
-    if (Toxen.background.storyboard.getSong()?.visualizerForceRainbowMode || Settings.get("visualizerRainbowMode")) this.setRainbow(ctx, barX, barY, barWidth, barHeight, i, cycleIncrementer, options);
+  }, customHandler?: (ctx: CanvasRenderingContext2D, rainbowColor: string) => void) {
+    if (Toxen.background.storyboard.getVisualizerRainbow()) {
+      this.setRainbow(ctx, barX, barY, barWidth, barHeight, i, cycleIncrementer, options, customHandler);
+    }
   }
 
   /**
@@ -817,15 +894,35 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
    * @param callback Code to execute using the temporary alpha.
    * @param ctx Context to use. If omitted, uses `this.ctx`.
    */
-  private ctxAlpha(alpha: number, callback: (ctx: CanvasRenderingContext2D) => void, ctx: CanvasRenderingContext2D = this.ctx) {
+  private useAlpha(alpha: number, callback: (ctx: CanvasRenderingContext2D) => void, ctx: CanvasRenderingContext2D = this.ctx) {
     let oldAlpha = ctx.globalAlpha;
     ctx.globalAlpha = alpha;
-    // ctx.shadowColor = "rgba(255,255,255,0.8)";
-    // ctx.shadowBlur = 10;
     callback(ctx);
-    // ctx.shadowColor = "";
-    // ctx.shadowBlur = 0;
     ctx.globalAlpha = oldAlpha;
+  }
+
+  /**
+   * Change the shadow settings temporarily on a Context2D object and revert back to normal when finished.
+   * @param blur Shadow blur to use temporarily
+   * @param color Shadow color to use temporarily
+   * @param callback Code to execute using the temporary shadow settings.
+   * @param ctx Context to use. If omitted, uses `this.ctx`.
+   */
+  private useShadow({
+    blur = 0,
+    color = "transparent",
+  }: {
+    blur?: number;
+    color?: string;
+  }, callback: (ctx: CanvasRenderingContext2D) => void, ctx: CanvasRenderingContext2D = this.ctx) {
+    const oldBlur = ctx.shadowBlur;
+    const oldColor = ctx.shadowColor
+
+    ctx.shadowBlur = blur;
+    ctx.shadowColor = color;
+    callback(ctx);
+    ctx.shadowBlur = oldBlur;
+    ctx.shadowColor = oldColor;
   }
 
   private initializeAudioAnalyser() {

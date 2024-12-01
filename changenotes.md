@@ -1,4 +1,19 @@
-<!-- ## Upcoming update / 1.7.2 -->
+
+## 1.10.0 - Future
+### New Features
+- `Visualizer Glow` - This adds a glow effect to most of the visualizers. It can be toggled in the settings, per song, and through a storyboard. It's disabled by default. It can be quite performance heavy, especially on higher `Visualizer Size` values. Size `6` and below should work well for most mid-range computers. If you experience lag, try lowering the `Visualizer Size` value.
+  - Glow is disabled on the following visualizers:
+    - `Waveform` - Performance is too unstable with glow enabled.
+    - `Orb` - Performance is too unstable with glow enabled.
+- `Orb` visualizer - A circular visualizer style using bars that extrude from the center transparent circle.
+  - Glow does not apply to this visualizer as it tanks performance.
+- The ability to display the subtitles in place of the floating title. This can be toggled per song. It's disabled by default.
+
+### Changes and Fixes
+- Fixed Toxen's pause malfunctioning sometimes if "Pause With Click" is enabled since last update.
+- Fixed certain settings having their default values not being selected visually unless explicitly selected.
+- Rainbow visualizer now also applies to the progress bar and buffer indicator.
+
 ## 1.9.0 - 26-11-2024
 While this update doesn't add a lot of new features, it's a big in terms of development.  
 A major part of the codebase has been refactored to work on the web. This is part of a bigger plan to make Toxen available on the web for Toxen Premium users to stream their music from the Toxen server. If you have access to a web browser, be it on your phone, tablet, or computer, you'll be able to access your music library and play your songs from anywhere.

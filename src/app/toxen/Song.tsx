@@ -39,6 +39,7 @@ export default class Song implements ISong {
   public visualizerIntensity: number;
   public visualizerNormalize: boolean;
   public visualizerForceRainbowMode: boolean;
+  public visualizerGlow: boolean;
   /**
    * `pulse` is forced pulsing.  
    * `pulse-off` is forced no pulsing.  
@@ -54,6 +55,7 @@ export default class Song implements ISong {
   public floatingTitlePosition: ISong["floatingTitlePosition"];
   public floatingTitleReactive: boolean;
   public floatingTitleOverrideVisualizer: boolean;
+  public useFloatingTitleSubtitles: boolean;
 
   /**
    * The files that are in the song's directory. Maps to an object.
@@ -297,6 +299,7 @@ export default class Song implements ISong {
       "visualizerNormalize",
       "visualizerForceRainbowMode",
       "visualizerPulseBackground",
+      "visualizerGlow",
       "year",
       "language",
       "subtitleDelay",
@@ -306,6 +309,7 @@ export default class Song implements ISong {
       "floatingTitlePosition",
       "floatingTitleReactive",
       "floatingTitleOverrideVisualizer",
+      "useFloatingTitleSubtitles",
       "files",
     ];
     const obj = {} as any;
@@ -1393,6 +1397,7 @@ export interface ISong {
    * `null` will use the global setting.
    */
   visualizerPulseBackground: "pulse" | "pulse-off";
+  visualizerGlow: boolean;
   paths: ISongPaths;
   year: number;
   language: string;
@@ -1413,6 +1418,7 @@ export interface ISong {
   | 'center';
   floatingTitleReactive: boolean;
   floatingTitleOverrideVisualizer: boolean;
+  useFloatingTitleSubtitles: boolean;
 
   /**
    * The files that are in the song's directory. Maps to a datetime number.  

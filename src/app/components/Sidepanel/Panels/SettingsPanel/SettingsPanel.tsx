@@ -313,6 +313,13 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           </sup>
           <br />
 
+          <Checkbox onClick={(e) => Settings.apply({ visualizerGlow: e.currentTarget.checked }, true)} defaultChecked={Settings.get("visualizerGlow")} name="visualizerGlow" label="Visualizer Glow" />
+          <br />
+          <sup>
+            Enable a glow effect on the visualizer.
+          </sup>
+          <br />
+
           <Checkbox onClick={(e) => Settings.apply({ backgroundDynamicLighting: e.currentTarget.checked }, true)} defaultChecked={Settings.get("backgroundDynamicLighting")} name="backgroundDynamicLighting" label="Dynamic Lighting" />
           <br />
           <sup>
@@ -328,6 +335,8 @@ export default function SettingsPanel(props: SettingsPanelProps) {
             Enables pulsing on the background image of a song. Pulse is based off music intensity and volume.
           </sup>
           <br />
+
+
           <Select
             allowDeselect={false}
             onChange={(value) => {

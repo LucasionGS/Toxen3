@@ -140,10 +140,10 @@ export default class ProgressBar extends Component<ProgressBarProps, ProgressBar
 
     let fillStyle: React.HTMLAttributes<HTMLDivElement>["style"] = {
       width: `${percent}%`,
-      backgroundColor: this.state.fillColor ?? "#fff"
+      background: this.state.fillColor ?? "#fff",
     };
     let fillStyleBuffered: React.HTMLAttributes<HTMLDivElement>["style"] = {
-      backgroundColor: this.state.fillColor ?? "#fff",
+      background: this.state.fillColor ?? "#fff",
       width: `${percentBuffered}%`,
       left: `${this.state.bufferedRange[0] / (max - min) * 100}%`,
       opacity: 0.2,

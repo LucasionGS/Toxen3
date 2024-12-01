@@ -15,6 +15,10 @@
   - Create playlist from current queue.
   - Multi-add to playlist.
 
+### Extra fun
+- DJ booth: Allowing storyboard events to be triggered in real-time through button presses. Buttons are remappable.
+  - This could be a fun way to experiment with storyboards, and can be recording live to be saved as a storyboard.
+
 ### Bugs
 - Fix background dim still being dimmed even at 0% opacity.
 - No easy way to delete a song from your library. (Physically delete it from the file system)

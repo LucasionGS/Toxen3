@@ -33,7 +33,7 @@ import Discord from "../app/toxen/desktop/Discord";
 export default class DesktopController extends ToxenController {
   constructor() {
     super();
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; // Hue bullshit
+    // process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; // Hue bullshit
   }
   
   public packageJson = packageJson;

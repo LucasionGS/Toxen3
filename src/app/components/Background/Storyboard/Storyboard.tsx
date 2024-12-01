@@ -43,10 +43,12 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
   public resetData() {
     this.data = {
       visualizerColor: null,
+      visualizerForceRainbowMode: null,
       visualizerStyle: null,
       visualizerIntensity: null,
       visualizerNormalize: null,
       visualizerPulseBackground: null,
+      visualizerGlow: null,
       backgroundDim: null,
       backgroundDynamicLighting: null,
       background: null,
@@ -56,6 +58,7 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
       floatingTitleReactive: null,
       floatingTitleOverrideVisualizer: null,
       floatingTitlePosition: null,
+      useFloatingTitleSubtitles: null,
     }
   }
 
@@ -66,6 +69,13 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
       || (this.state.song && this.state.song.visualizerColor)
       || Settings.get("visualizerColor")
       || Visualizer.DEFAULT_COLOR;
+  }
+  // Visualizer Rainbow Mode
+  public getVisualizerRainbow() {
+    return this.data.visualizerForceRainbowMode
+      || (this.state.song && this.state.song.visualizerForceRainbowMode)
+      || Settings.get("visualizerRainbowMode")
+      || false;
   }
 
   // VisualizerStyle
@@ -112,6 +122,17 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
     return result;
   }
 
+  public getVisualizerGlow() {
+    return this.data.visualizerGlow
+      ?? (
+        (this.state.song && this.state.song.visualizerGlow)
+        ?? (
+          Settings.get("visualizerGlow")
+          || false
+        )
+      );
+  }
+
   public getBackgroundDim() {
     return this.data.backgroundDim
       ?? (
@@ -128,6 +149,14 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
         Settings.get("backgroundDynamicLighting")
         || false
       );
+  }
+
+  public getFloatingSubtitles() {
+    return !!Toxen.subtitles.state.subtitles && (this.data.useFloatingTitleSubtitles
+      ?? (
+        (this.state.song && this.state.song.useFloatingTitleSubtitles)
+        ?? false
+      ));
   }
 
   /**
@@ -153,14 +182,14 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
     return this.data.floatingTitle ?? (this.state.song && this.state.song.floatingTitle || false);
   }
   public getFloatingTitleText() {
-    if (Toxen.subtitles.state.subtitles) {
+    if (this.getFloatingSubtitles()) {
       return (
         Toxen.subtitles.state.currentText
           ? stripHtml(Toxen.subtitles.state.currentText)
           : (this.data.floatingTitleText ?? (this.state.song && this.state.song.floatingTitleText || ""))
       );
     }
-    return this.data.floatingTitleText ?? (this.state.song && this.state.song.floatingTitleText || this.state.song.title);
+    return this.data.floatingTitleText ?? (this.state.song && this.state.song.floatingTitleText || this.state.song?.title);
   }
   public getFloatingTitleUnderline() {
     return this.data.floatingTitleUnderline ?? (this.state.song && this.state.song.floatingTitleUnderline || false);
@@ -183,12 +212,15 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
 
 interface StoryboardData {
   visualizerColor: string;
+  visualizerForceRainbowMode: boolean;
   visualizerIntensity: number;
   visualizerNormalize: boolean;
   visualizerStyle: VisualizerStyle;
   visualizerPulseBackground: boolean;
+  visualizerGlow: boolean;
   backgroundDim: number;
   backgroundDynamicLighting: boolean;
+  useFloatingTitleSubtitles: boolean;
   background: string;
   floatingTitle: string;
   floatingTitleText: string;

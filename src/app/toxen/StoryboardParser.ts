@@ -92,7 +92,7 @@ namespace StoryboardParser {
    * @param name Name of the component.
    * @param component The component object.
    */
-  function addComponent<Arguments extends ComponentArgument[]>(name: string, component: Component<Arguments>) {
+  function addStoryboardComponent<Arguments extends ComponentArgument[]>(name: string, component: Component<Arguments>) {
     components[name] = component;
   }
 
@@ -466,7 +466,7 @@ namespace StoryboardParser {
 
   // Creating components
 
-  addComponent("visualizerColor", {
+  addStoryboardComponent("visualizerColor", {
     name: "Visualizer Color",
     arguments: [
       {
@@ -488,7 +488,7 @@ namespace StoryboardParser {
     }
   });
 
-  addComponent("visualizerColorTransition", {
+  addStoryboardComponent("visualizerColorTransition", {
     name: "Visualizer Color Transition",
     arguments: [
       {
@@ -537,7 +537,7 @@ namespace StoryboardParser {
     }
   });
 
-  addComponent("visualizerStyle", {
+  addStoryboardComponent("visualizerStyle", {
     name: "Visualizer Style",
     arguments: [
       {
@@ -553,7 +553,7 @@ namespace StoryboardParser {
     }
   });
 
-  addComponent("visualizerIntensity", {
+  addStoryboardComponent("visualizerIntensity", {
     name: "Visualizer Intensity",
     arguments: [
       {
@@ -568,7 +568,7 @@ namespace StoryboardParser {
     }
   });
 
-  addComponent("visualizerIntensityTransition", {
+  addStoryboardComponent("visualizerIntensityTransition", {
     name: "Visualizer Intensity Transition",
     arguments: [
       {
@@ -613,7 +613,22 @@ namespace StoryboardParser {
     }
   });
 
-  addComponent("text", {
+  addStoryboardComponent("visualizerGlow", {
+    name: "Visualizer Glow",
+    arguments: [
+      {
+        name: "Glow",
+        identifier: "glow",
+        type: "Boolean"
+      },
+    ],
+    action: (args) => {
+      let glow = getAsType<"Boolean">(args.glow);
+      Toxen.background.storyboard.data.visualizerGlow = glow;
+    }
+  });
+
+  addStoryboardComponent("text", {
     name: "Text",
     arguments: [
       {
@@ -669,7 +684,7 @@ namespace StoryboardParser {
     }
   });
 
-  addComponent("pulse", {
+  addStoryboardComponent("pulse", {
     name: "Pulse",
     arguments: [
       {
@@ -772,7 +787,7 @@ namespace StoryboardParser {
     }
   });
   
-  addComponent("setBackground", {
+  addStoryboardComponent("setBackground", {
     name: "Set Background",
     arguments: [
       {
@@ -787,7 +802,7 @@ namespace StoryboardParser {
     }
   });
   
-  addComponent("backgroundDim", {
+  addStoryboardComponent("backgroundDim", {
     name: "Background Dim",
     arguments: [
       {
@@ -802,7 +817,7 @@ namespace StoryboardParser {
     }
   });
 
-  addComponent("backgroundDimTransition", {
+  addStoryboardComponent("backgroundDimTransition", {
     name: "Background Dim Transition",
     arguments: [
       {
@@ -845,7 +860,7 @@ namespace StoryboardParser {
     }
   });
 
-  addComponent("dynamicLighting", {
+  addStoryboardComponent("dynamicLighting", {
     name: "Dynamic Lighting",
     arguments: [
       {
@@ -860,7 +875,7 @@ namespace StoryboardParser {
     }
   });
 
-  addComponent("floatingTitleReactive", {
+  addStoryboardComponent("floatingTitleReactive", {
     name: "Floating Title Reactive",
     arguments: [
       {
@@ -877,7 +892,7 @@ namespace StoryboardParser {
   });
 
   // Hue specific
-  addComponent("hueVisualizerSync", {
+  addStoryboardComponent("hueVisualizerSync", {
     name: "Philips Hue: Visualizer Sync (Broken)",
     arguments: [],
     action: (args, info, sm) => {
@@ -897,7 +912,7 @@ namespace StoryboardParser {
     }
   });
 
-  addComponent("huePulse", {
+  addStoryboardComponent("huePulse", {
     name: "Philips Hue: Pulse (Broken)",
     arguments: [
       {

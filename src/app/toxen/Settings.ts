@@ -62,6 +62,7 @@ export default class Settings {
       visualizerRainbowMode: false,
       pauseWithClick: true,
       visualizerPulseBackground: false,
+      visualizerGlow: false,
       acceptedResponsibility: false,
     };
 
@@ -128,7 +129,8 @@ export default class Settings {
    * Returns a stringified version of `ISettings`.
    */
   public static toString() {
-    return JSON.stringify(Settings.data ?? {}, null, 2);
+    if (!Settings.data) throw "No data to save.";
+    return JSON.stringify(Settings.data, null, 2);
   }
 
   /**
@@ -279,6 +281,7 @@ export interface ISettings {
   visualizerShuffle: boolean;
   visualizerRainbowMode: boolean;
   visualizerPulseBackground: boolean;
+  visualizerGlow: boolean;
   backgroundDynamicLighting: boolean;
   fftSize: number;
 
@@ -319,5 +322,5 @@ export enum VisualizerStyle {
   MirroredSingularity = "mirroredsingularity",
   MirroredSingularityWithLogo = "mirroredsingularitywithlogo",
   Waveform = "waveform",
-  // WaveformCircle = "waveformcircle",
+  Orb = "orb",
 };

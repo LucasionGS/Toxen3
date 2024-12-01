@@ -1,7 +1,7 @@
 {
   "name": "toxen3",
   "productName": "Toxen",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "description": "Toxen Music Player",
   "main": ".vite/build/main.js",
   "scripts": {
@@ -24,6 +24,7 @@
     "@electron-forge/plugin-vite": "^7.4.0",
     "@electron-forge/publisher-github": "^7.4.0",
     "@electron/fuses": "^1.8.0",
+    "@types/animejs": "^3.1.12",
     "@types/archiver": "^6.0.2",
     "@types/discord-rpc": "^4.0.8",
     "@types/events": "^3.0.3",
@@ -64,6 +65,7 @@
     "@mantine/notifications": "^7.10.1",
     "@nodertc/dtls": "^0.6.0",
     "@tabler/icons-react": "^3.5.0",
+    "animejs": "^3.2.2",
     "archiver": "^7.0.1",
     "bootstrap": "^5.3.3",
     "cross-fetch": "^4.0.0",

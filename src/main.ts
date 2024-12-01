@@ -4,7 +4,7 @@ import { updateElectronApp} from "update-electron-app";
 import remote from '@electron/remote/main';
 remote.initialize();
 
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; // Hue bullshit
+// process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; // Hue bullshit
 app.commandLine.appendSwitch('ignore-certificate-errors');
 
 updateElectronApp({

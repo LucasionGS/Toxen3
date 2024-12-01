@@ -272,7 +272,7 @@ export default function EditSong(props: EditSongProps) {
         <ColorInput
           label="Visualizer Color"
           name="visualizerColor"
-          defaultValue={Toxen.editingSong.visualizerColor}
+          defaultValue={Toxen.editingSong.visualizerColor ?? "<Default>"}
           onChange={(v) => {
             Toxen.editingSong.visualizerColor = v;
             // Toxen.editingSong.saveInfo();
@@ -301,7 +301,7 @@ export default function EditSong(props: EditSongProps) {
           allowDeselect={false}
           label="Background pulsing"
           name="visualizerPulseBackground"
-          defaultValue={Toxen.editingSong.visualizerPulseBackground}
+          defaultValue={Toxen.editingSong.visualizerPulseBackground ?? ""}
           data={[
             { value: "", label: "<Default>" },
             { value: "pulse", label: "Enabled" },
@@ -319,7 +319,7 @@ export default function EditSong(props: EditSongProps) {
           allowDeselect={false}
           label="Visualizer Style"
           name="visualizerStyle"
-          defaultValue={Toxen.editingSong.visualizerStyle}
+          defaultValue={Toxen.editingSong.visualizerStyle ?? ""}
           data={[
             { value: "", label: "<Default>" },
             ...(() => {
@@ -341,6 +341,26 @@ export default function EditSong(props: EditSongProps) {
         <br />
         <sup>Select which style for the visualizer to use for this song.</sup>
 
+        {/* Visualizer Glow */}
+        <Select
+          allowDeselect={false}
+          label="Visualizer Glow"
+          name="visualizerGlow"
+          defaultValue={Toxen.editingSong.visualizerGlow ? "enabled" : Toxen.editingSong.visualizerGlow === false ? "disabled" : ""}
+          data={[
+            { value: "", label: "<Default>" },
+            { value: "enabled", label: "Enabled" },
+            { value: "disabled", label: "Disabled" }
+          ]}
+          onChange={(v) => {
+            Toxen.editingSong.visualizerGlow = v === "enabled" ? true : v === "disabled" ? false : null;
+            Toxen.editingSong.saveInfo();
+          }}
+        />
+        <br />
+        <sup>Enables a glow effect on the visualizer for this song.</sup>
+
+
         <Checkbox
           label="Floating Title"
           name="floatingTitle"
@@ -356,6 +376,7 @@ export default function EditSong(props: EditSongProps) {
         <TextInput
           label="Floating Title: Text"
           name="floatingTitleText"
+          placeholder="<Default>"
           onChange={(v) => Toxen.editingSong.floatingTitleText = v.currentTarget.value}
           defaultValue={Toxen.editingSong.floatingTitleText}
           onBlur={() => Toxen.editingSong.saveInfo()}
@@ -364,6 +385,18 @@ export default function EditSong(props: EditSongProps) {
         <br />
         <sup>Set the text for the floating title. (Defaults to song title, if empty)</sup>
 
+        {/* useFloatingTitleSubtitles */}
+        <Checkbox
+          label="Floating Title: Use Subtitles"
+          name="useFloatingTitleSubtitles"
+          defaultChecked={Toxen.editingSong.useFloatingTitleSubtitles}
+          onChange={v => {
+            Toxen.editingSong.useFloatingTitleSubtitles = v.currentTarget.checked;
+            Toxen.editingSong.saveInfo();
+          }}
+        />
+        <br />
+        <sup>Use the subtitles if selected, as the text for the floating title. This overrides the text field.</sup>
 
         <Checkbox
           label="Floating Title: Underline"
@@ -376,58 +409,6 @@ export default function EditSong(props: EditSongProps) {
         />
         <br />
         <sup>Enables the floating title for this song.</sup>
-
-        {/* <Select
-          allowDeselect={false}
-          data={[
-            { label: "Center", value: "center" },
-            { label: "Top", value: "top" },
-            { label: "Bottom", value: "bottom" },
-            { label: "Left", value: "left" },
-            { label: "Right", value: "right" },
-            { label: "Top left", value: "top-left" },
-            { label: "Top right", value: "top-right" },
-            { label: "Bottom left", value: "bottom-left" },
-            { label: "Bottom right", value: "bottom-right" },
-          ]}
-          label="Floating Title: Position"
-          name="floatingTitlePosition"
-          defaultValue={Toxen.editingSong.floatingTitlePosition}
-          onChange={v => {
-            Toxen.editingSong.floatingTitlePosition = v as typeof Toxen.editingSong.floatingTitlePosition;
-            Toxen.editingSong.saveInfo();
-          }}
-        /> */}
-        {/* <InputLabel>Floating Title: Position</InputLabel>
-        <Radio.Group
-          name="floatingTitlePosition"
-          defaultValue={Toxen.editingSong.floatingTitlePosition}
-          onChange={v => {
-            Toxen.editingSong.floatingTitlePosition = v as typeof Toxen.editingSong.floatingTitlePosition;
-            Toxen.editingSong.saveInfo();
-          }}
-        >
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <span style={{ display: "flex", gap: 8 }}>
-              <Radio value="top-left" />
-              <Radio value="top" />
-              <Radio value="top-right" />
-            </span>
-
-            <span style={{ display: "flex", gap: 8 }}>
-              <Radio value="left" />
-              <Radio value="center" />
-              <Radio value="right" />
-            </span>
-
-            <span style={{ display: "flex", gap: 8 }}>
-              <Radio value="bottom-left" />
-              <Radio value="bottom" />
-              <Radio value="bottom-right" />
-            </span>
-            <Radio label="Default" value=""/>
-          </div>
-        </Radio.Group> */}
         <ScreenPositionSelector
           onChange={v => {
             Toxen.editingSong.floatingTitlePosition = v === "" ? null : v;
