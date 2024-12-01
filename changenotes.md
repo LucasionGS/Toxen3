@@ -1,4 +1,8 @@
 
+## 1.10.1 - 1-12-2024
+### Changes
+- Changed the `Orb` from being static radius to dynamic based on song intensity.
+
 ## 1.10.0 - 1-12-2024
 ### New Features
 - `Visualizer Glow` - This adds a glow effect to most of the visualizers. It can be toggled in the settings, per song, and through a storyboard. It's disabled by default. It can be quite performance heavy, especially on higher `Visualizer Size` values. Size `6` and below should work well for most mid-range computers. If you experience lag, try lowering the `Visualizer Size` value.
