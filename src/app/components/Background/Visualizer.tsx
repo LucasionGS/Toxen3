@@ -614,7 +614,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           const unitH = maxHeight / dataSize;
           const centerX = vWidth / 2;
           const centerY = vHeight / 2;
-          const radius = Math.min(centerX, centerY) * 0.45;
+          const radius = (Math.min(centerX, centerY) * 0.45) + (Math.min(centerX, centerY) * 0.2) * dynLight;
 
           const rotation = Math.PI / 2 + ((time / 20000) * Math.PI);
 
