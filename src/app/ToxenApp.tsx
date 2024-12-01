@@ -804,7 +804,7 @@ export default class ToxenAppRenderer extends React.Component {
         <ThemeContainer ref={ref => Toxen.themeContainer = ref} />
         <div
           className="content-container"
-          onClick={() => Settings.get("pauseWithClick") ? Toxen.musicPlayer.toggle() : null}
+          // onClick={() => Settings.get("pauseWithClick") ? Toxen.musicPlayer.toggle() : null}
         >
           <AppBar />
           <Background ref={ref => Toxen.background = ref} />
