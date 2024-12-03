@@ -15,11 +15,14 @@ import ListInput from "../../../ListInput/ListInput";
 import SelectAsync from "../../../SelectAsync/SelectAsync";
 import { useModals } from "@mantine/modals";
 import ScreenPositionSelector from "../../../ScreenPositionSelector/ScreenPositionSelector";
+import { VisualizerStyleOptions } from "../SettingsPanel/SettingsPanel";
+import { useForceUpdate } from "@mantine/hooks";
 
 interface EditSongProps { }
 
 export default function EditSong(props: EditSongProps) {
   const modals = useModals();
+  const forceUpdate = useForceUpdate();
 
   function textInputSaveOnEnter(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter") {
@@ -241,8 +244,6 @@ export default function EditSong(props: EditSongProps) {
           name="paths.storyboard"
           defaultValue={Toxen.editingSong.paths.storyboard}
           data={(async () => {
-            console.log(Toxen.editingSong.paths.storyboard);
-
             let song = Toxen.editingSong;
             if (!song)
               return [];
@@ -336,10 +337,23 @@ export default function EditSong(props: EditSongProps) {
           onChange={(v) => {
             Toxen.editingSong.visualizerStyle = v as any;
             Toxen.editingSong.saveInfo();
+            forceUpdate();
           }}
         />
         <br />
         <sup>Select which style for the visualizer to use for this song.</sup>
+
+        {/* Specific VS settings */}
+        <VisualizerStyleOptions
+          style={Toxen.editingSong.visualizerStyle}
+          allOptions={Toxen.editingSong.visualizerStyleOptions}
+          onSave={(allOptions) => Toxen.editingSong.visualizerStyleOptions = allOptions}
+          onSaveEnd={(allOptions) => {
+            Toxen.editingSong.visualizerStyleOptions = allOptions;
+            Toxen.editingSong.saveInfo();
+          }}
+        />
+        <br />
 
         {/* Visualizer Glow */}
         <Select

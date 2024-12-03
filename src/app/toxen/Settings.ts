@@ -64,6 +64,7 @@ export default class Settings {
       visualizerPulseBackground: false,
       visualizerGlow: false,
       acceptedResponsibility: false,
+      visualizerStyleOptions: {},
     };
 
     let toUse: Partial<ISettings> = {};
@@ -273,6 +274,7 @@ export interface ISettings {
   theme: string;
   visualizerColor: string;
   visualizerStyle: VisualizerStyle;
+  visualizerStyleOptions: Partial<Record<VisualizerStyle, Record<string, any>>>;
   visualizerIntensity: number;
   visualizerNormalize: boolean;
   /**
@@ -324,3 +326,72 @@ export enum VisualizerStyle {
   Waveform = "waveform",
   Orb = "orb",
 };
+
+export type VisualizerStyleOptionsTypes =
+  | "range"
+  | "boolean"
+
+export interface VisualizerStyleOption {
+  name: string;
+  key: string;
+  type: VisualizerStyleOptionsTypes;
+  defaultValue?: any | (() => any);
+
+  min?: number;
+  max?: number;
+  step?: number;
+};
+  
+export const visualizerStyleOptions: Partial<Record<VisualizerStyle, VisualizerStyleOption[]>> = {
+  [VisualizerStyle.Orb]: [
+    {
+      name: "X Position",
+      key: "x",
+      type: "range",
+      defaultValue: -0.1,
+      min: -0.1,
+      max: 100,
+      step: 0.1,
+    },
+    {
+      name: "Y Position",
+      key: "y",
+      type: "range",
+      defaultValue: -0.1,
+      min: -0.1,
+      max: 100,
+      step: 0.1,
+    },
+    {
+      name: "Size",
+      key: "size",
+      type: "range",
+      defaultValue: 0,
+      min: 0,
+      max: 1000,
+      step: 0.1,
+    },
+    {
+      name: "Opaque",
+      key: "opaque",
+      type: "boolean",
+      defaultValue: "",
+    }
+  ],
+}
+
+/**
+ * A map of the `VisualizerStyle` to the `VisualizerStyleOption`.  
+ * This is used to quickly get the options for a specific `VisualizerStyle` when order is not important.
+ */
+export const visualizerStyleOptionsMap: Partial<Record<VisualizerStyle, Record<string, VisualizerStyleOption>>> = {};
+for (const key in visualizerStyleOptions) {
+  if (Object.prototype.hasOwnProperty.call(visualizerStyleOptions, key)) {
+    const options = visualizerStyleOptions[key as VisualizerStyle];
+    const map: Record<string, VisualizerStyleOption> = {};
+    for (const option of options) {
+      map[option.key] = option;
+    }
+    visualizerStyleOptionsMap[key as VisualizerStyle] = map;
+  }
+}

@@ -4,16 +4,18 @@ import { Checkbox, Tabs, TextInput, NumberInput, Select, Button, ColorInput, Ran
 import React, { useEffect } from "react";
 import Converter from "../../../../toxen/Converter";
 // import HueManager from "../../../../toxen/philipshue/HueManager";
-import Settings, { VisualizerStyle } from "../../../../toxen/Settings";
+import Settings, { ISettings, VisualizerStyle, visualizerStyleOptions } from "../../../../toxen/Settings";
 import Song from "../../../../toxen/Song";
 import { Toxen } from "../../../../ToxenApp";
 import TButton from "../../../Button/Button";
 import { PanelDirection } from "../../Sidepanel";
 import "./SettingsPanel.scss";
+import { useForceUpdate } from "@mantine/hooks";
 
 interface SettingsPanelProps { }
 
 export default function SettingsPanel(props: SettingsPanelProps) {
+  const forceUpdate = useForceUpdate();
   return (
     <>
       <h1>Settings</h1>
@@ -341,6 +343,7 @@ export default function SettingsPanel(props: SettingsPanelProps) {
             allowDeselect={false}
             onChange={(value) => {
               Settings.apply({ visualizerStyle: value as VisualizerStyle }, true);
+              forceUpdate();
             }}
             defaultValue={Settings.get("visualizerStyle")}
             name="visualizerStyle"
@@ -358,7 +361,15 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           />
           <br />
           <sup>Select which style for the visualizer to use.</sup>
-          <br />
+
+          {/* Specific VS settings */}
+          <VisualizerStyleOptions
+            style={Settings.get("visualizerStyle")}
+            allOptions={Settings.get("visualizerStyleOptions")}
+            onSave={(allOptions) => Settings.apply({ visualizerStyleOptions: allOptions })}
+            onSaveEnd={(allOptions) => Settings.apply({ visualizerStyleOptions: allOptions }, true)}
+          />
+          
         </Tabs.Panel>
 
         {/* <Tabs.Panel value="Account">
@@ -407,6 +418,84 @@ export default function SettingsPanel(props: SettingsPanelProps) {
       </Tabs>
     </>
   )
+}
+
+export function VisualizerStyleOptions(props: {
+  style: VisualizerStyle,
+  allOptions: ISettings["visualizerStyleOptions"],
+  onSave: (allOptions: ISettings["visualizerStyleOptions"]) => void,
+  onSaveEnd?: (allOptions: ISettings["visualizerStyleOptions"]) => void
+}) {
+  const { style, allOptions = {}, onSave, onSaveEnd = onSave } = props;
+  
+  return visualizerStyleOptions[style]?.map((option) => {
+    const options = allOptions[style] ?? {};
+    switch (option.type) {
+      default:
+        return null;
+
+      case "range":
+        return (
+          <>
+            <Text>{option.name}</Text>
+            <Slider
+              onChange={v => {
+                options[option.key] = v;
+                allOptions[style] = options;
+                onSave(allOptions);
+              }}
+              onChangeEnd={v => {
+                options[option.key] = v;
+                allOptions[style] = options;
+                onSaveEnd(allOptions);
+              }}
+
+              defaultValue={options[option.key] ?? option.defaultValue}
+              name={option.key}
+              label={(v) => v == option.defaultValue ? "Default" : v}
+              min={option.min}
+              max={option.max}
+              step={option.step ?? 1}
+            />
+            <br />
+          </>
+        );
+
+      case "boolean":
+        return (
+        <Select
+          allowDeselect={false}
+          onChange={(value) => {
+            if (value === "") {
+              delete options[option.key];
+            }
+            else {
+              options[option.key] = value === "true";
+            }
+            allOptions[style] = options;
+            onSaveEnd(allOptions);
+          }}
+          defaultValue={typeof options[option.key] === "boolean" ? options[option.key].toString() : (option.defaultValue ?? "").toString()}
+          name={option.key}
+          label={option.name}
+          data={[
+            {
+              value: "",
+              label: "<Default>"
+            },
+            {
+              value: "true",
+              label: "Yes"
+            },
+            {
+              value: "false",
+              label: "No"
+            }
+          ]}
+        />
+      );
+    }
+  });
 }
 
 /**

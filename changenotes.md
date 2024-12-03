@@ -1,4 +1,13 @@
 
+## 1.11.0 - 3-12-2024
+### New Features
+- Some visualizers now have furthered customizabilty. Starting with the new `Orb` visualizer, which can now have it's position changed on the screen, and the size adjusted. This can be done per visualizer, both globally and per-song. These visualizer specific settings will be added to more visualizers in the future. The options appear under the `Visualizer Style` selector, depending on which visualizer you have selected.
+- `Orb` now has an `Opaque` option that can be toggled, accessible through the new visualizer-specific settings.
+- `Orb` now has a slight glow effect around the inner circle when using `Opaque` mode.
+
+### Changes
+- Fixed `Sides` visualizer not applying glow.
+
 ## 1.10.1 - 1-12-2024
 ### Changes
 - Changed the `Orb` from being static radius to dynamic based on song intensity.

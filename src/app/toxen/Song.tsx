@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 // import { resolve } from "path";
-import Settings, { VisualizerStyle } from "./Settings";
+import Settings, { ISettings, VisualizerStyle } from "./Settings";
 // import fsp from "fs/promises";
 // import { Dir, Dirent } from "fs";
 import { Toxen } from "../ToxenApp";
@@ -36,6 +36,7 @@ export default class Song implements ISong {
   public paths: ISongPaths;
   public visualizerColor: string;
   public visualizerStyle: VisualizerStyle;
+  public visualizerStyleOptions: ISong["visualizerStyleOptions"];
   public visualizerIntensity: number;
   public visualizerNormalize: boolean;
   public visualizerForceRainbowMode: boolean;
@@ -295,6 +296,7 @@ export default class Song implements ISong {
       "genre",
       "visualizerColor",
       "visualizerStyle",
+      "visualizerStyleOptions",
       "visualizerIntensity",
       "visualizerNormalize",
       "visualizerForceRainbowMode",
@@ -1388,6 +1390,7 @@ export interface ISong {
   tags: string[];
   visualizerColor: string;
   visualizerStyle: VisualizerStyle;
+  visualizerStyleOptions: ISettings["visualizerStyleOptions"];
   visualizerIntensity: number;
   visualizerNormalize: boolean;
   visualizerForceRainbowMode: boolean;

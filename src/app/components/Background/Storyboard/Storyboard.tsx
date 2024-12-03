@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import Settings, { VisualizerStyle } from '../../../toxen/Settings';
+import Settings, { VisualizerStyle, visualizerStyleOptions, visualizerStyleOptionsMap } from '../../../toxen/Settings';
 import Song, { ISong } from '../../../toxen/Song';
 import { Toxen } from '../../../ToxenApp';
 import Visualizer from '../Visualizer';
@@ -87,6 +87,18 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
         || VisualizerStyle.ProgressBar
       );
   }
+
+  // Visualizer options
+  public getVisualizerOption(vs: VisualizerStyle, key: string) {
+    const global = Settings.get("visualizerStyleOptions", {})[vs];
+    const song = this.state.song?.visualizerStyleOptions?.[vs];
+    const defaultValue = visualizerStyleOptionsMap?.[vs]?.[key]["defaultValue"];
+
+    if (song && song[key] !== undefined && song[key] !== defaultValue) return song[key];
+    if (global && global[key] !== undefined && global[key] !== defaultValue) return global[key];
+    return null;
+  }
+  
   // VisualizerIntensity
   public getVisualizerIntensity() {
     return this.data.visualizerIntensity

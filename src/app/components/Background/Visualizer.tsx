@@ -360,9 +360,9 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
               unitH // barHeight
             ];
 
-            // setBarShadowBlur(barHeight); // Doesn't work?
-
+            
             this.useAlpha(opacity, ctx => {
+              setBarShadowBlur(barWidth);
 
               if (i % 2 === 0) {
                 this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, null, {
@@ -609,18 +609,37 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           break;
         }
         case VisualizerStyle.Orb: {
+          // const vsOptions = (Settings.get("visualizerStyleOptions", {}))[VisualizerStyle.Orb] ?? {};
+          const vsOptions = {
+            x: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Orb, "x") ?? 50,
+            y: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Orb, "y") ?? 50,
+            size: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Orb, "size") ?? 0,
+            opaque: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Orb, "opaque") ?? false,
+          }
+          // console.log(vsOptions);
+          
+          
           const maxHeight = getMaxHeight(0.25);
           const unitAngle = (2 * Math.PI) / len; // Half-circle
           const unitH = maxHeight / dataSize;
-          const centerX = vWidth / 2;
-          const centerY = vHeight / 2;
-          const radius = (Math.min(centerX, centerY) * 0.45) + (Math.min(centerX, centerY) * 0.2) * dynLight;
+          const centerX = typeof vsOptions.x === "number" && vsOptions.x > -0.1 ? (vWidth / 100 * vsOptions.x) : (vWidth / 2);
+          const centerY = typeof vsOptions.y === "number" && vsOptions.y > -0.1 ? (vHeight / 100 * vsOptions.y) : (vHeight / 2);
+          const rSizeX = vWidth / 2;
+          const rSizeY = vHeight / 2;
+          const radius = (vsOptions.size > 0 ? (
+            vsOptions.size + (vsOptions.size * 0.2) * dynLight
+          ) : (
+            (Math.min(rSizeX, rSizeY) * 0.45) + (Math.min(rSizeX, rSizeY) * 0.2) * dynLight
+          ));
 
           const rotation = Math.PI / 2 + ((time / 20000) * Math.PI);
 
+          let highest = 0;
+          
           for (let i = 0; i < len; i++) {
             const data = dataArray[i];
             const barHeight = Math.max(1, data * unitH);
+            if (barHeight > highest) highest = barHeight;
 
             const angle = i * unitAngle + rotation;
             let mirroredAngle = (-i - 1) * unitAngle + rotation;
@@ -666,6 +685,18 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
               ctx.lineTo(mx2, my2);
             });
             ctx.stroke();
+            ctx.restore();
+          }
+
+          if (vsOptions.opaque) {
+            // Apply a radial glow to the orb based on heighest
+            ctx.save();
+            setBarShadowBlur(highest);
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.lineWidth = 3;
+            ctx.fillStyle = storedColor;
+            ctx.fill();
             ctx.restore();
           }
           break;
