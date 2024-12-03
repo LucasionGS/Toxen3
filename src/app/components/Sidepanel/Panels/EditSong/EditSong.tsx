@@ -351,6 +351,7 @@ export default function EditSong(props: EditSongProps) {
           onSaveEnd={(allOptions) => {
             Toxen.editingSong.visualizerStyleOptions = allOptions;
             Toxen.editingSong.saveInfo();
+            forceUpdate();
           }}
         />
         <br />
