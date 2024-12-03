@@ -1,4 +1,6 @@
-
+## 1.11.1 - 3-12-2024
+### Hotfix
+- Fixed options not displaying and saving correctly on song-specific visualizer-specific settings.
 ## 1.11.0 - 3-12-2024
 ### New Features
 - Some visualizers now have furthered customizabilty. Starting with the new `Orb` visualizer, which can now have it's position changed on the screen, and the size adjusted. This can be done per visualizer, both globally and per-song. These visualizer specific settings will be added to more visualizers in the future. The options appear under the `Visualizer Style` selector, depending on which visualizer you have selected.
