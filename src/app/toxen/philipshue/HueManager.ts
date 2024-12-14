@@ -1,4 +1,5 @@
-import HueSync, { EntertainmentArea } from "hue-sync";
+// @ts-ignore
+import HueSync, { EntertainmentArea } from "hue-sync"; // Re-add when reimplementing? Might need a different package.
 import { Toxen } from "../../ToxenApp";
 import Settings from "../Settings";
 
