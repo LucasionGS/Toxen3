@@ -622,16 +622,21 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           const maxHeight = getMaxHeight(0.25);
           const unitAngle = (2 * Math.PI) / len; // Half-circle
           const unitH = maxHeight / dataSize;
-          const centerX = typeof vsOptions.x === "number" && vsOptions.x > -0.1 ? (vWidth / 100 * vsOptions.x) : (vWidth / 2);
-          const centerY = typeof vsOptions.y === "number" && vsOptions.y > -0.1 ? (vHeight / 100 * vsOptions.y) : (vHeight / 2);
           const rSizeX = vWidth / 2;
           const rSizeY = vHeight / 2;
+          let centerX = typeof vsOptions.x === "number" && vsOptions.x > -0.1 ? (vWidth / 100 * vsOptions.x) : rSizeX;
+          let centerY = typeof vsOptions.y === "number" && vsOptions.y > -0.1 ? (vHeight / 100 * vsOptions.y) : rSizeY;
           const radius = (vsOptions.size > 0 ? (
-            vsOptions.size + (vsOptions.size * 0.2) * dynLight
+            vsOptions.size + (vsOptions.size * (dynLight / 4))
           ) : (
             (Math.min(rSizeX, rSizeY) * 0.45) + (Math.min(rSizeX, rSizeY) * 0.2) * dynLight
           ));
 
+          if (pulseEnabled) {
+            centerX = rSizeX + ((centerX - rSizeX) * (1 + (dynLight / 4)));
+            centerY = rSizeY + ((centerY - rSizeY) * (1 + (dynLight / 4)));
+          }
+          
           const rotation = Math.PI / 2 + ((time / 20000) * Math.PI);
 
           let highest = 0;
