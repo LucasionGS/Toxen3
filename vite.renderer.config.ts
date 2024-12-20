@@ -5,6 +5,7 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import renderer from "vite-plugin-electron-renderer";
 import toxenApi from './vite_toxen_plugin';
+import sass, { SassString } from "sass";
 
 // https://vitejs.dev/config
 export default defineConfig((env) => {
@@ -13,6 +14,18 @@ export default defineConfig((env) => {
   const name = forgeConfigSelf.name ?? '';
 
   return {
+    css: {
+      preprocessorOptions: {
+        scss: {
+          functions: {
+            "ToxenIsWeb()": () => {
+              const val = process.env["TOXEN_IS_WEB"] === "true" ? sass.types.Boolean.TRUE : sass.types.Boolean.FALSE;
+              return val;
+            }
+          }
+        },
+      }
+    },
     root,
     mode,
     base: './',

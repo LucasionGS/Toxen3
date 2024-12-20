@@ -8,10 +8,12 @@
   // background-color: #ffffff;
 }
 
-@media screen and ((max-width: 768px)) { // Mobile view
-  .toxen-storyboard {
-    height: calc(50% - var(--appbar-height));
-    bottom: initial;
-    top: var(--appbar-height);
+@if ToxenIsWeb() {
+  @media screen and ((max-width: 768px)) { // Mobile view
+    .toxen-storyboard {
+      height: calc(50% - var(--appbar-height));
+      bottom: initial;
+      top: var(--appbar-height);
+    }
   }
 }

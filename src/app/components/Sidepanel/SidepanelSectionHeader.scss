@@ -20,11 +20,13 @@
   }
 }
 
-@media screen and ((max-width: 768px)) { // Mobile view
-  .sidepanel-section-header {
-    padding: 8px 16px;
-    h1 {
-      font-size: 24px;
+@if ToxenIsWeb() {
+  @media screen and ((max-width: 768px)) { // Mobile view
+    .sidepanel-section-header {
+      padding: 8px 16px;
+      h1 {
+        font-size: 24px;
+      }
     }
   }
 }

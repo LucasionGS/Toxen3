@@ -72,14 +72,16 @@ body[miniplayer] .toxen-music-controls {
   }
 }
 
-@media screen and ((max-width: 768px)) { // Mobile view
-  .toxen-music-controls {
-    width: 95%;
-    bottom: calc(50% + 2.5vh) !important;
+@if ToxenIsWeb() {
+  @media screen and ((max-width: 768px)) { // Mobile view
+    .toxen-music-controls {
+      width: 95%;
+      bottom: calc(50% + 2.5vh) !important;
 
-    .toxen-music-controls-time {
-      .toxen-music-controls-volume {
-        width: 95%;
+      .toxen-music-controls-time {
+        .toxen-music-controls-volume {
+          width: 95%;
+        }
       }
     }
   }
