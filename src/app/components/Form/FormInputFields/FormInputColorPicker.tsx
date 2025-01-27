@@ -95,7 +95,7 @@ export function rgbToGrayscale(rgb: { r: number, g: number, b: number }) {
 }
 
 export function rgbArrayToHex(rgb: [number, number, number, number?]) {
-  return rgbToHex({ r: rgb[0], g: rgb[1], b: rgb[2], a: rgb[3] });
+  return rgbToHex({ r: rgb[0], g: rgb[1], b: rgb[2], a: rgb[3] ?? 255 });
 }
 
 export function rgbToHex(rgb: { r: number, g: number, b: number, a?: number }) {

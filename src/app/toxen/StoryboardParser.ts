@@ -891,6 +891,122 @@ namespace StoryboardParser {
     }
   });
 
+  /**
+   * Displays a single pulse effect in a corner or edge of the screen.
+   * Works the same as pulse, but only displays in a corner or edge of the screen and once, doesn't repeat
+   */
+  addStoryboardComponent("cornerPulseSingle", {
+    name: "Corner Pulse",
+    arguments: [
+      {
+        name: "Color",
+        identifier: "color",
+        type: "Color",
+        required: true
+      },
+      {
+        name: "Intensity",
+        identifier: "intensity",
+        type: "Number",
+        required: true
+      },
+      {
+        name: "Top Left",
+        identifier: "pos_topLeft",
+        type: "Boolean",
+        description: "Display in the top left corner"
+      },
+      {
+        name: "Top Right",
+        identifier: "pos_topRight",
+        type: "Boolean",
+        description: "Display in the top right corner"
+      },
+      {
+        name: "Bottom Left",
+        identifier: "pos_bottomLeft",
+        type: "Boolean",
+        description: "Display in the bottom left corner"
+      },
+      {
+        name: "Bottom Right",
+        identifier: "pos_bottomRight",
+        type: "Boolean",
+        description: "Display in the bottom right corner"
+      }
+    ],
+    action(args, info, stateManager, ctx) {
+      let color = getAsType<"Color">(args.color);
+      let intensity = getAsType<"Number">(args.intensity) / 0.5;
+      const size = 1000;
+      
+      let {funcs, hex} = stateManager.getState<{ funcs: (() => void)[], hex: string }>() ?? {};
+      hex ??= rgbArrayToHex(color);
+
+      if (!funcs) {
+        funcs = [];
+        if (getAsType<"Boolean">(args.pos_topLeft)) {
+          funcs.push(() => {
+            const gradient = ctx.createRadialGradient(0, 0, 0, 0, 0, size);
+            gradient.addColorStop(0, hex);
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(0, 0, size, 0, Math.PI * 2);
+            ctx.fill();
+          });
+        }
+        if (getAsType<"Boolean">(args.pos_topRight)) {
+          funcs.push(() => {
+            const gradient = ctx.createRadialGradient(ctx.canvas.width, 0, 0, ctx.canvas.width, 0, size);
+            gradient.addColorStop(0, hex);
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(ctx.canvas.width, 0, size, 0, Math.PI * 2);
+            ctx.fill();
+          });
+        }
+        if (getAsType<"Boolean">(args.pos_bottomLeft)) {
+          funcs.push(() => {
+            const gradient = ctx.createRadialGradient(0, ctx.canvas.height, 0, 0, ctx.canvas.height, size);
+            gradient.addColorStop(0, hex);
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(0, ctx.canvas.height, size, 0, Math.PI * 2);
+            ctx.fill();
+          });
+        }
+        if (getAsType<"Boolean">(args.pos_bottomRight)) {
+          funcs.push(() => {
+            const gradient = ctx.createRadialGradient(ctx.canvas.width, ctx.canvas.height, 0, ctx.canvas.width, ctx.canvas.height, size);
+            gradient.addColorStop(0, hex);
+            gradient.addColorStop(1, 'rgba(0, 0, 0, 0)');
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(ctx.canvas.width, ctx.canvas.height, size, 0, Math.PI * 2);
+            ctx.fill();
+          });
+        }
+        
+        stateManager.setState({funcs, hex});
+      }
+      
+      let currentTime = info.currentSongTime - info.eventStartTime;
+      let duration = info.eventEndTime - info.eventStartTime;
+      let progress = currentTime / duration;
+      return () => {
+        ctx.save();
+        ctx.globalAlpha = intensity * (1 - progress);
+        ctx.shadowColor = hex;
+        ctx.shadowBlur = 50;
+        funcs.forEach(f => f());
+        ctx.restore();
+      }
+    },
+  })
+
   // Hue specific
   addStoryboardComponent("hueVisualizerSync", {
     name: "Philips Hue: Visualizer Sync (Broken)",

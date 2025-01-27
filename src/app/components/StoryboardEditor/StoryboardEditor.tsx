@@ -24,6 +24,7 @@ let currentMousePos: { x: number, y: number } = { x: 0, y: 0 };
 const mouseDown = { m0: false, m1: false, m2: false };
 const mouseDownFrame = { m0: false, m1: false, m2: false };
 
+const eventMadeAtKey: Record<string, StoryboardParser.SBEvent> = {};
 export default function StoryboardEditor(props: StoryboardEditorProps) {
   const modals = useModals();
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
@@ -52,6 +53,7 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
   }
 
   const mouseEventHandler = React.useCallback((e: MouseEvent) => {
+    if (!isStarted) return false;
     // Mouse position is relative to the canvas
     const canvasSize = canvasRef.current.getBoundingClientRect();
     currentMousePos = {
@@ -72,7 +74,106 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
     if (btns >= 1) {
       mouseDown.m0 = true;
     } else mouseDown.m0 = false;
-  }, []);
+  }, [config, config?.storyboard?.length, isStarted]);
+  
+  const keydownEventHandler = React.useCallback((e: KeyboardEvent) => {
+    if (!isStarted) return false;
+    console.log("Key down", e.key, e.code);
+
+    switch (e.code) {
+      case "Numpad9":
+      case "Numpad8":
+      case "Numpad7":
+      case "Numpad6":
+      case "Numpad5":
+      case "Numpad4":
+      case "Numpad3":
+      case "Numpad2":
+      case "Numpad1":
+        if (!eventMadeAtKey[e.code]) {
+          const event = StoryboardParser.SBEvent.fromConfig({
+            start: Toxen.musicPlayer.media.currentTime,
+            end: Toxen.musicPlayer.media.currentTime,
+            component: "cornerPulseSingle",
+            data: {
+              color: hexToRgbArray("#FFFFFF"),
+              intensity: 1,
+            },
+            once: false,
+          }, {}, null, false);
+
+          eventMadeAtKey[e.code] = event;
+
+          // Set the corners that are active
+          switch (e.code) {
+            case "Numpad9":
+              event.data.pos_topRight = true;
+              break;
+            case "Numpad8":
+              event.data.pos_topLeft = true;
+              event.data.pos_topRight = true;
+              break;
+            case "Numpad7":
+              event.data.pos_topLeft = true;
+              break;
+            case "Numpad6":
+              event.data.pos_topRight = true;
+              event.data.pos_bottomRight = true;
+              break;
+            case "Numpad5":
+              event.data.pos_topRight = true;
+              event.data.pos_topLeft = true;
+              event.data.pos_bottomRight = true;
+              event.data.pos_bottomLeft = true;
+              break;
+            case "Numpad4":
+              event.data.pos_topLeft = true;
+              event.data.pos_bottomLeft = true;
+              break;
+            case "Numpad3":
+              event.data.pos_bottomRight = true;
+              break;
+            case "Numpad2":
+              event.data.pos_bottomLeft = true;
+              event.data.pos_bottomRight = true;
+              break;
+            case "Numpad1":
+              event.data.pos_bottomLeft = true;
+              break;
+          
+            default:
+              break;
+          }
+          config?.storyboard.push(event);
+        }
+        else {
+          const event = eventMadeAtKey[e.code];
+          event.endTime = Toxen.musicPlayer.media.currentTime;
+        }
+        break;
+    }
+  }, [config, config?.storyboard?.length, isStarted]);
+  const keyupEventHandler = React.useCallback((e: KeyboardEvent) => {
+    if (!isStarted) return false;
+    console.log("Key up", e.key, e.code);
+    switch (e.code) {
+      case "Numpad9":
+      case "Numpad8":
+      case "Numpad7":
+      case "Numpad6":
+      case "Numpad5":
+      case "Numpad4":
+      case "Numpad3":
+      case "Numpad2":
+      case "Numpad1":
+        if (eventMadeAtKey[e.code]) {
+          const event = eventMadeAtKey[e.code];
+          event.endTime = Toxen.musicPlayer.media.currentTime;
+          eventMadeAtKey[e.code] = null;
+        }
+        break;
+    }
+  }, [config, config?.storyboard?.length, isStarted]);
   
   const start = React.useCallback(() => {
     if (!Toxen.editingSong) return;
@@ -148,9 +249,12 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
       setIsStarted(true);
 
       // Add event listeners
-      canvas.addEventListener("mousemove", mouseEventHandler);
-      canvas.addEventListener("mousedown", mouseEventHandler);
-      canvas.addEventListener("mouseup", mouseEventHandler);
+      // canvas.addEventListener("mousemove", mouseEventHandler);
+      // canvas.addEventListener("mousedown", mouseEventHandler);
+      // canvas.addEventListener("mouseup", mouseEventHandler);
+
+      // window.addEventListener("keydown", keydownEventHandler);
+      // window.addEventListener("keyup", keyupEventHandler);
     }
   }, []);
   
@@ -158,15 +262,37 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
     const canvas = canvasRef.current;
     shouldBeStopped = true;
     setIsStarted(false);
-    canvas.removeEventListener("mousemove", mouseEventHandler);
-    canvas.removeEventListener("mousedown", mouseEventHandler);
-    canvas.removeEventListener("mouseup", mouseEventHandler);
+    // canvas.removeEventListener("mousemove", mouseEventHandler);
+    // canvas.removeEventListener("mousedown", mouseEventHandler);
+    // canvas.removeEventListener("mouseup", mouseEventHandler);
+
+    // window.removeEventListener("keydown", keydownEventHandler);
+    // window.removeEventListener("keyup", keyupEventHandler);
   }, []);
 
   const controller = React.useMemo<StoryboardEditorController>(() => ({
     start,
     stop
   }), [start, stop]);
+
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    // Add event listeners
+    canvas.addEventListener("mousemove", mouseEventHandler);
+    canvas.addEventListener("mousedown", mouseEventHandler);
+    canvas.addEventListener("mouseup", mouseEventHandler);
+
+    window.addEventListener("keydown", keydownEventHandler);
+    window.addEventListener("keyup", keyupEventHandler);
+    return () => {
+      canvas.removeEventListener("mousemove", mouseEventHandler);
+      canvas.removeEventListener("mousedown", mouseEventHandler);
+      canvas.removeEventListener("mouseup", mouseEventHandler);
+
+      window.removeEventListener("keydown", keydownEventHandler);
+      window.removeEventListener("keyup", keyupEventHandler);
+    }
+  }, [config]);
   
   props.controllerSetter?.(controller);
   
