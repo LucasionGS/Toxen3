@@ -174,6 +174,16 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
         break;
     }
   }, [config, config?.storyboard?.length, isStarted]);
+
+  const scrollEventHandler = React.useCallback((e: WheelEvent) => {
+    if (!isStarted) return false;
+    if (e.deltaY > 0) {
+      Toxen.musicPlayer.media.currentTime += 0.2;
+    }
+    else {
+      Toxen.musicPlayer.media.currentTime -= 0.2;
+    }
+  }, [config, config?.storyboard?.length, isStarted]);
   
   const start = React.useCallback(() => {
     if (!Toxen.editingSong) return;
@@ -281,6 +291,7 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
     canvas.addEventListener("mousemove", mouseEventHandler);
     canvas.addEventListener("mousedown", mouseEventHandler);
     canvas.addEventListener("mouseup", mouseEventHandler);
+    canvas.addEventListener("wheel", scrollEventHandler);
 
     window.addEventListener("keydown", keydownEventHandler);
     window.addEventListener("keyup", keyupEventHandler);
@@ -288,6 +299,7 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
       canvas.removeEventListener("mousemove", mouseEventHandler);
       canvas.removeEventListener("mousedown", mouseEventHandler);
       canvas.removeEventListener("mouseup", mouseEventHandler);
+      canvas.removeEventListener("wheel", scrollEventHandler);
 
       window.removeEventListener("keydown", keydownEventHandler);
       window.removeEventListener("keyup", keyupEventHandler);
