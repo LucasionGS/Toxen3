@@ -476,13 +476,8 @@ namespace StoryboardParser {
       }
     ],
     action: (args) => {
-      let color = getAsType<"Color">(args.color);
-      const hex = rgbToHex({
-        r: color[0],
-        g: color[1],
-        b: color[2],
-        a: color[3]
-      });
+      let color = getAsType<"Color">(args.color) || [255, 255, 255];
+      const hex = rgbArrayToHex(color);
 
       Toxen.background.storyboard.data.visualizerColor = hex;
     }
