@@ -15,7 +15,7 @@ import type Theme from "../app/toxen/Theme";
 import Ytdlp from "../app/toxen/desktop/Ytdlp";
 import Ffmpeg from "../app/toxen/desktop/Ffmpeg";
 import yazl from "yazl";
-import type Song from "../app/toxen/Song";
+import Song, { type SongDiff } from "../app/toxen/Song"; // can i import? I forgor 💀
 import type { Toxen } from "../app/ToxenApp";
 import type User from "../app/toxen/User";
 import { hashElement } from "folder-hash";
@@ -201,98 +201,213 @@ export default class DesktopController extends ToxenController {
       });
   }
 
-  public async syncSong($toxen: typeof Toxen, user: User, song: Song, { silenceValidated }: { silenceValidated?: boolean; }): Promise<void> {
+  public async syncSong($toxen: typeof Toxen, user: User, song: Song, diff: SongDiff, { silenceValidated }: { silenceValidated?: boolean; }): Promise<void> {
     song.setProgressBar(0.10);
-    try {
-      const upToDate = await song.validateAgainstRemote();
+    // try {
+    //   const upToDate = await song.validateAgainstRemote();
 
-      if (upToDate) {
-        if (!silenceValidated) {
+    //   if (upToDate) {
+    //     if (!silenceValidated) {
+    //       song.completeProgressBar();
+    //       $toxen.notify({
+    //         title: "Update-to-date",
+    //         content: <p><code>{song.getDisplayName()}</code> is already up to date.</p>,
+    //         expiresIn: 1000
+    //       });
+    //     }
+    //     return;
+    //   }
+    // } catch (error) {
+    //   song.completeProgressBar();
+    //   return $toxen.notify({
+    //     title: "Failed to validate against remote",
+    //     content: error.message,
+    //     expiresIn: 5000,
+    //     type: "error"
+    //   }) && null;
+    // }
+    
+    if (diff.upload === "*") {
+      // Sync from disk to remote (Using archiver to zip the folder in memory)
+      song.setProgressBar(0.25);
+      
+      // Before zipping, ensure ALL files have an md5 hash
+      const files = await System.recursive(song.dirname());
+      let madeChange = false;
+      await Promise.resolve(files.map(async (file) => {
+        file.name = file.name.replace(/\\/g, "/");
+
+        if (!song.files[file.name]) {
+          song.files[file.name] = {
+            action: "u",
+            time: Date.now()
+          };
+          madeChange = true;
+          console.log("⚠ Added hash to song file:", file.name);
+        };
+      }));
+
+      if (!song.hash) {
+        song.hash = Song.randomFileHash();
+        madeChange = true;
+        console.log("⚠ Added hash to song:", song.getDisplayName());
+      }
+      
+      if (madeChange) {
+        await song.saveInfo();
+      }
+      
+      const zip = new yazl.ZipFile();
+      const zipPathTmp = Path.resolve(os.tmpdir(), "toxen-sync-" + Math.random().toString().substring(2) + ".zip");
+      const zipStream = fs.createWriteStream(zipPathTmp);
+  
+      const addFiles = async (dir: string, startingDir: string = dir) => {
+        const files = await fsp.readdir(dir);
+        for (const file of files) {
+          const filePath = Path.resolve(dir, file);
+          const stat = await fsp.stat(filePath);
+          const relativePath = Path.relative(startingDir, filePath);
+          if (stat.isDirectory()) {
+            zip.addEmptyDirectory(relativePath);
+            await addFiles(filePath, startingDir);
+          } else {
+            try {
+              zip.addReadStream(fs.createReadStream(filePath), relativePath);
+            } catch (error) {
+              $toxen.error(error.message);
+            }
+          }
+        }
+      };
+  
+      await addFiles(song.dirname());
+  
+      zip.outputStream.pipe(zipStream);
+  
+      zip.end();
+      song.setProgressBar(0.5);
+  
+      return await new Promise((resolve, reject) => {
+        zipStream.on("finish", resolve);
+        zipStream.on("error", reject);
+      }).then(async () => {
+        const formData = new FormData();
+        // Insert as blob
+        formData.append("file", new Blob([await fsp.readFile(zipPathTmp)]), "sync.zip");
+        formData.append("data", JSON.stringify(song.toISong()));
+        formData.append("_method", "PUT");
+        return $toxen.fetch(`${user.getCollectionPath()}/${song.uid}`, {
+          method: "POST",
+          body: formData
+        });
+      }).then(async res => {
+        if (res.ok) {
           song.completeProgressBar();
           $toxen.notify({
-            title: "Update-to-date",
-            content: <p><code>{song.getDisplayName()}</code> is already up to date.</p>,
-            expiresIn: 1000
+            title: "Synced",
+            content: song.getDisplayName(),
+            expiresIn: 5000
+          });
+          return fsp.unlink(zipPathTmp);
+        } else {
+          song.setProgressBar(0);
+          $toxen.notify({
+            title: "Sync failed",
+            content: await res.text(),
+            expiresIn: 5000,
+            type: "error"
           });
         }
-        return;
-      }
-    } catch (error) {
-      song.completeProgressBar();
-      return $toxen.notify({
-        title: "Failed to validate against remote",
-        content: error.message,
-        expiresIn: 5000,
-        type: "error"
-      }) && null;
+      }).catch(error => {
+        song.setProgressBar(0);
+        $toxen.error("Something went wrong writing the exported zip file.");
+        console.error(error);
+        return fsp.unlink(zipPathTmp);
+      });
     }
+    else if (diff.localHash || diff.remoteHash) { // An empty array means no changes
+      let hash = diff.localHash;
 
-    // Sync from disk to remote (Using archiver to zip the folder in memory)
-    song.setProgressBar(0.25);
-    const zip = new yazl.ZipFile();
+      if (diff.localHash && diff.remoteHash) {
+        hash = Song.randomFileHash();
+      }
+      
+      // Upload files
+      if (diff.localHash && !Array.isArray(diff.upload)) {
+        for (const fileKey of Object.keys(diff.upload)) {
+          const file = diff.upload[fileKey];
+          if (fileKey === "info.json") {
 
-    const zipPathTmp = Path.resolve(os.tmpdir(), "toxen-sync-" + Math.random().toString().substring(2) + ".zip");
-    const zipStream = fs.createWriteStream(zipPathTmp);
+            await $toxen.fetch(`${user.getCollectionPath()}/${song.uid}/info.json`, {
+              method: "PUT",
+              body: JSON.stringify(song.toISong()),
+              headers: {
+                "Content-Type": "application/json"
+              }
+            })
+          }
+          else {
+            let filePath = Path.resolve(song.dirname(), fileKey);
+            console.log("Uploading file:", filePath);
+            
+            // let formData = new FormData();
+            // formData.append("file", new Blob([await fsp.readFile(filePath)]), fileKey);
+            // formData.append("_method", "PUT");
+            await $toxen.fetch(`${user.getCollectionPath()}/${song.uid}/${fileKey}`, {
+              method: "PUT",
+              body: new Blob([await fsp.readFile(filePath)])
+            });
+          }
+        }
+        // diff.upload;
+      }
 
-    const addFiles = async (dir: string, startingDir: string = dir) => {
-      const files = await fsp.readdir(dir);
-      for (const file of files) {
-        const filePath = Path.resolve(dir, file);
-        const stat = await fsp.stat(filePath);
-        const relativePath = Path.relative(startingDir, filePath);
-        if (stat.isDirectory()) {
-          zip.addEmptyDirectory(relativePath);
-          await addFiles(filePath, startingDir);
-        } else {
-          zip.addReadStream(fs.createReadStream(filePath), relativePath);
+      // Download files
+      if (diff.remoteHash && !Array.isArray(diff.download)) {
+        const preInfo = song.toISong();
+        for (const fileKey of Object.keys(diff.download)) {
+          let filePath = Path.resolve(song.dirname(), fileKey);
+          console.log("Downloading file:", filePath);
+          let res = await $toxen.fetch(`${user.getCollectionPath()}/${song.uid}/${fileKey}`);
+          if (res.ok) {
+            await fsp.writeFile(filePath, (await res.blob()).stream());
+            console.log("Downloaded file:", fileKey);
+          }
+          else {
+            console.error("Failed to download file:", fileKey);
+          }
+        }
+        await song.reload();
+        const postInfo = song.toISong();
+        // Check if the song has changed
+        if (song.uid == Song.getCurrent()?.uid) {
+          if (
+            preInfo.paths.background !== postInfo.paths.background
+            || preInfo.files[preInfo.paths.background]?.time !== postInfo.files[postInfo.paths.background]?.time
+          ) { $toxen.background.setBackground(
+            `${song.backgroundFile()}?t=${Date.now()}`
+          ); }
+          if (
+            preInfo.paths.media !== postInfo.paths.media
+            || preInfo.files[preInfo.paths.media]?.time !== postInfo.files[postInfo.paths.media]?.time
+          ) { song.play(); }
+          if (
+            preInfo.paths.subtitles !== postInfo.paths.subtitles
+            || preInfo.files[preInfo.paths.subtitles]?.time !== postInfo.files[postInfo.paths.subtitles]?.time
+          ) { await song.applySubtitles(); }
+          if (
+            preInfo.paths.storyboard !== postInfo.paths.storyboard
+            || preInfo.files[preInfo.paths.storyboard]?.time !== postInfo.files[postInfo.paths.storyboard]?.time
+          ) { await song.applyStoryboard(); }
         }
       }
-    };
 
-    await addFiles(song.dirname());
 
-    zip.outputStream.pipe(zipStream);
-
-    zip.end();
-    song.setProgressBar(0.5);
-
-    return await new Promise((resolve, reject) => {
-      zipStream.on("finish", resolve);
-      zipStream.on("error", reject);
-    }).then(async () => {
-      const formData = new FormData();
-      // Insert as blob
-      formData.append("file", new Blob([await fsp.readFile(zipPathTmp)]), "sync.zip");
-      formData.append("data", JSON.stringify(song.toISong()));
-      formData.append("_method", "PUT");
-      return $toxen.fetch(user.getCollectionPath() + "/" + song.uid, {
-        method: "POST",
-        body: formData
-      });
-    }).then(async res => {
-      if (res.ok) {
-        song.completeProgressBar();
-        $toxen.notify({
-          title: "Synced",
-          content: song.getDisplayName(),
-          expiresIn: 5000
-        });
-        return fsp.unlink(zipPathTmp);
-      } else {
-        song.setProgressBar(0);
-        $toxen.notify({
-          title: "Sync failed",
-          content: await res.text(),
-          expiresIn: 5000,
-          type: "error"
-        });
-      }
-    }).catch(error => {
-      song.setProgressBar(0);
-      $toxen.error("Something went wrong writing the exported zip file.");
-      console.error(error);
-      return fsp.unlink(zipPathTmp);
-    });
+      song.completeProgressBar();
+    }
+    else {
+      song.completeProgressBar();
+    }
   }
 
   public async validateSongAgainstRemote($toxen: typeof Toxen, user: User, song: Song): Promise<boolean> {
@@ -462,5 +577,26 @@ export default class DesktopController extends ToxenController {
   
   public getDiscordInstance() {
     return this._discord ??= new Discord("647178364511191061"); // Toxen's Discord Application ID
+  }
+
+  public async compareSongsAgainstRemote($toxen: typeof Toxen, user: User, data: any): Promise<{
+    result: Record<string, SongDiff>
+  }> {
+    return $toxen.fetch(user.getCollectionPath(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        data
+      })
+    }).then(async res => {
+      if (res.ok) {
+        return res.json();
+      }
+      else {
+        throw await res.text();
+      }
+    });
   }
 }

@@ -58,6 +58,9 @@ export default class Song implements ISong {
   public floatingTitleOverrideVisualizer: boolean;
   public useFloatingTitleSubtitles: boolean;
 
+  // Hash used for sync
+  public hash: string;
+
   /**
    * The files that are in the song's directory. Maps to an object.
    * The datetime string is the last modified date of the file.
@@ -313,6 +316,7 @@ export default class Song implements ISong {
       "floatingTitleOverrideVisualizer",
       "useFloatingTitleSubtitles",
       "files",
+      "hash",
     ];
     const obj = {} as any;
     keys.forEach(key => {
@@ -340,6 +344,13 @@ export default class Song implements ISong {
     }
     while (!skipCheck && Toxen.songList && Toxen.songList.length > 0 && Toxen.songList.some(s => s.uid === uid));
     return uid;
+  }
+
+  /**
+   * Generates a 32 character long random hex string.
+   */
+  public static randomFileHash() {
+    return Math.random().toString(16).slice(2, 18) + Math.random().toString(16).slice(2, 18);
   }
 
   private lastBlobUrl: string;
@@ -399,13 +410,13 @@ export default class Song implements ISong {
       await this.applyStoryboard();
       if (!options.disableHistory) Song.historyAdd(this);
       Toxen.musicPlayer.setSource(src, true);
-      await Toxen.background.setBackground(bg);
+      await Toxen.background.setBackground(bg + "?h=" + this.hash);
       Stats.set("songsPlayed", (Stats.get("songsPlayed") ?? 0) + 1)
       Toxen.setAllVisualColors(this.visualizerColor);
       Toxen.background.storyboard.setSong(this);
       Toxen.background.visualizer.update();
       let img = new Image();
-      img.src = Toxen.background.getBackground() || ToxenMax;
+      img.src = (Toxen.background.getBackground() || ToxenMax)
       this.setCurrent();
       this.setAppTitle();
       const addToMetadata = (blob?: Blob) => {
@@ -1007,7 +1018,7 @@ export default class Song implements ISong {
       if (!user) {
         return 0;
       }
-      let iSongs: ISong[] = await Toxen.fetch(user.getCollectionPath()).then(res => res.json()).catch(() => []);
+      let iSongs: ISong[] = await Toxen.fetch(user.getCollectionPath()).then(res => res.json()).catch(() => [] as any);
       return iSongs.length;
     }
     else {
@@ -1046,6 +1057,22 @@ export default class Song implements ISong {
     return Song.sortSongs(songs);
   }
 
+  public async reload() {
+    if (Settings.isRemote() || !toxenapi.isDesktop()) {
+      return;
+    }
+    
+    let data = await toxenapi.fs.promises.readFile(toxenapi.path.resolve(this.dirname(), "info.json"), "utf8").then(data => JSON.parse(data)).catch(() => null);
+    for (const key in data) {
+      if (key in data) {
+        const v = (data as any)[key];
+        (this as any)[key] = v;
+      }
+    }
+
+    return this;
+  }
+
   public async delete(force?: boolean) {
     if (Settings.isRemote()) {
       Toxen.notify({
@@ -1079,8 +1106,9 @@ export default class Song implements ISong {
   }
 
   public async saveInfo(): Promise<void> {
-    // this.files["info.json"] = Date.now();
-    this.setFile("info.json");
+    let filetime = Date.now();
+    this.setFile("info.json", "u", filetime);
+    this.hash = Song.randomFileHash();
     const curSong = Song.getCurrent();
     if (curSong === this) {
       curSong.setAppTitle();
@@ -1091,7 +1119,7 @@ export default class Song implements ISong {
       if (!user) {
         return;
       }
-      return await Toxen.fetch(user.getCollectionPath() + "/" + this.uid + "/info.json", {
+      return await Toxen.fetch(`${user.getCollectionPath()}/${this.uid}/info.json`, {
         method: "PUT",
         body: JSON.stringify(info),
         headers: {
@@ -1251,7 +1279,7 @@ export default class Song implements ISong {
     }, 1000);
   }
 
-  public async sync({ silenceValidated = false } = {}): Promise<void> {
+  public async sync(diff?: SongDiff, { silenceValidated = false } = {}): Promise<void> {
     const user = Settings.getUser();
     if (!user.premium) return Toxen.notify({
       title: "Sync failed",
@@ -1261,7 +1289,46 @@ export default class Song implements ISong {
     }) && null;
 
     if (Settings.isRemote()) return;
-    return toxenapi.syncSong(Toxen, user, this, { silenceValidated})
+
+    return toxenapi.syncSong(Toxen, user, this, diff, { silenceValidated})
+  }
+
+  public static async createCompareSongsData() {
+    const user = Settings.getUser();
+    if (!user.premium) throw new Error("You must be a premium user to compare songs against the remote.");
+
+    if (!toxenapi.isDesktop()) {
+      toxenapi.throwDesktopOnly();
+    }
+
+    const localSongsData = (await Song.loadLocalSongs()).map(s => ({
+      uid: s.uid,
+      files: s.files,
+      hash: s.hash,
+    }));
+
+    const map = localSongsData.reduce((prev, cur) => {
+      prev[cur.uid] = cur;
+      delete cur.uid;
+      return prev;
+    }, {} as Record<string, Omit<(typeof localSongsData)[number], "uid">>);
+
+    return map;
+  }
+
+  public static async compareSongsAgainstRemote() {
+    const data = await this.createCompareSongsData();
+
+    const user = Settings.getUser();
+    if (!user.premium) throw new Error("You must be a premium user to compare songs against the remote.");
+
+    if (!toxenapi.isDesktop()) {
+      toxenapi.throwDesktopOnly();
+    }
+
+    const remoteData = await toxenapi.compareSongsAgainstRemote(Toxen, user, data);
+
+    return remoteData;
   }
 
   public async validateAgainstRemote() {
@@ -1433,6 +1500,8 @@ export interface ISong {
       action: "d" | "u";
     };
   }
+
+  hash: string;
 }
 
 interface ISongPaths {
@@ -1456,4 +1525,11 @@ interface ISongPaths {
    * A *.tsb (Toxen Storyboard) file. Actual format is YAML data.
    */
   storyboard: string;
+}
+
+export interface SongDiff {
+  upload: Record<string, { action: string, time: number }> | [] | "*",
+  download: Record<string, { action: string, time: number }> | [] | "*",
+  localHash?: string,
+  remoteHash?: string,
 }

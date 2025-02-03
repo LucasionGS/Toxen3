@@ -166,7 +166,7 @@ export default function EditSong(props: EditSongProps) {
             Toxen.editingSong.saveInfo();
             let current = Song.getCurrent();
             if (Toxen.editingSong == current) {
-              Toxen.background.setBackground(current.backgroundFile());
+              Toxen.background.setBackground(current.backgroundFile() + "?h=" + current.hash);
             }
           }}
         />

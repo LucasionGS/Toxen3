@@ -7,6 +7,7 @@ import type Theme from "../app/toxen/Theme";
 import type Song from "../app/toxen/Song";
 import type { Toxen } from "../app/ToxenApp";
 import type User from "../app/toxen/User";
+import type { SongDiff } from "../app/toxen/Song";
 
 /**
  * Implementation of Toxen Controller for the web version. DesktopController should be used for desktop-specific functions and overwrites.
@@ -142,12 +143,18 @@ export default class ToxenController {
     this.throwDesktopOnly("exportLocalSongs");
   }
 
-  public async syncSong($toxen: typeof Toxen, user: User, song: Song, { silenceValidated }: { silenceValidated?: boolean; }): Promise<void> {
+  public async syncSong($toxen: typeof Toxen, user: User, song: Song, diff: SongDiff, { silenceValidated }: { silenceValidated?: boolean; }): Promise<void> {
     this.throwDesktopOnly("syncSong");
   }
 
   public async validateSongAgainstRemote($toxen: Toxen, user: User, song: Song): Promise<boolean> {
     this.throwDesktopOnly("validateSongAgainstRemote");
+  }
+
+  public async compareSongsAgainstRemote($toxen: typeof Toxen, user: User, data: any): Promise<{
+    result: Record<string, SongDiff>
+  }> {
+    this.throwDesktopOnly("fetchRemoteSongsData");
   }
 }
 

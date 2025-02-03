@@ -436,7 +436,7 @@ export function VisualizerStyleOptions(props: {
 
       case "range":
         return (
-          <>
+          <React.Fragment key={option.key}>
             <Text>{option.name}</Text>
             <Slider
               onChange={v => {
@@ -458,12 +458,12 @@ export function VisualizerStyleOptions(props: {
               step={option.step ?? 1}
             />
             <br />
-          </>
+          </React.Fragment>
         );
 
       case "boolean":
         return (
-        <Select
+        <Select key={option.key}
           allowDeselect={false}
           onChange={(value) => {
             if (value === "") {

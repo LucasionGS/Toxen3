@@ -118,31 +118,40 @@ export default class System {
           let song = Song.getCurrent();
           if (!song) break;
           let imageName = song.paths.background || file.name; // name with extension
-          let ext = toxenapi.getFileExtension(imageName); // getting extension
-          imageName = toxenapi.getBasename(imageName, ext); // Removing extension for path testing
-          imageName = imageName.replace(/^(.*?)(?:_\$tx(\d+))?$/, (_, $1: string, $2: string) => {
-            return `${$1}_$tx${(+$2 || 0) + 1}`;
-          });
-          imageName += ext; // Reading the extension
+          // let ext = toxenapi.getFileExtension(imageName); // getting extension
+          // imageName = toxenapi.getBasename(imageName, ext); // Removing extension for path testing
+          // imageName = imageName.replace(/^(.*?)(?:_\$tx(\d+))?$/, (_, $1: string, $2: string) => {
+          //   return `${$1}_$tx${(+$2 || 0) + 1}`;
+          // });
+          // imageName += ext; // Reading the extension
 
           if (toxenapi.isLocal(Settings)) {
             let dest = song.dirname(imageName);
             let prePic = song.backgroundFile() || null;
-            await toxenapi.fs.promises.copyFile(file.path, dest).then(async () => {
-              if (prePic !== dest && await toxenapi.fs.promises.stat(prePic).then(() => true).catch(() => false))
-              {
-                await toxenapi.fs.promises.rm(prePic);
-                song.setFile(prePic, "d");
-              }
+            const postProcess = async () => {
+              // if (prePic !== dest && await toxenapi.fs.promises.stat(prePic).then(() => true).catch(() => false))
+              // {
+              //   await toxenapi.fs.promises.rm(prePic);
+              //   const local = toxenapi.path.relative(song.dirname(), prePic);
+              //   song.setFile(local, "d");
+              // }
               song.paths.background = toxenapi.getBasename(dest);
-              Toxen.background.setBackground(dest);
-              song.saveInfo();
-            })
+              song.setFile(song.paths.background = toxenapi.getBasename(dest), "u");
+              await song.saveInfo();
+              Toxen.background.setBackground(dest + "?h=" + song.hash);
+            };
+
+            if (file.path == "" && file instanceof File) { // Likely a web file
+              await toxenapi.fs.promises.writeFile(dest, file.stream()).then(postProcess)
+            }
+            else {
+              await toxenapi.fs.promises.copyFile(file.path, dest).then(postProcess)
               .catch((reason) => {
                 Toxen.error("Unable to change background");
                 Toxen.error(reason);
               });
-  
+            }
+
           }
           else if (file instanceof File) {
             // let reader = new FileReader();
@@ -150,6 +159,8 @@ export default class System {
             song.paths.background = imageName;
 
             // Upload to server
+            let filetime = Date.now();
+            song.setFile(imageName, "u", filetime);
             await Toxen.fetch(`${song.backgroundFile()}`, {
               method: "PUT",
               body: file
@@ -160,8 +171,8 @@ export default class System {
               Toxen.error(reason);
             });
             
-            Toxen.background.setBackground(song.backgroundFile());
-            song.saveInfo();
+            await song.saveInfo();
+            Toxen.background.setBackground(song.backgroundFile() + "?h=" + song.hash);
             // reader.onload = async () => {
             // }
             // reader.readAsDataURL(file);
@@ -197,6 +208,8 @@ export default class System {
               song.paths.subtitles = subName;
 
               // Upload to server
+              let filetime = Date.now();
+              song.setFile(subName, "u", filetime);
               await Toxen.fetch(`${song.subtitleFile()}`, {
                 method: "PUT",
                 body: file

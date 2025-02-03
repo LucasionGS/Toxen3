@@ -48,7 +48,7 @@ export default function StoryboardEditorPanel() {
           <div>
             <Button color="green" onClick={async () => {
               const saveLocation = song.storyboardFile() || song.dirname("storyboard.tsb");
-              StoryboardParser.save(saveLocation, config);
+              StoryboardParser.save(saveLocation, config, song);
               if (saveLocation !== song.storyboardFile()) {
                 if (Settings.isRemote()) {
                   song.paths.storyboard = saveLocation.replace(song.dirname(), "");

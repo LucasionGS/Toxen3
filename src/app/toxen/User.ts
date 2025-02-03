@@ -77,7 +77,7 @@ export default class User {
     Toxen.fetch(Settings.getServer() + "/logout");
   }
 
-  public static refreshUser() {
+  public static async refreshUser() {
     let user = User.getCurrentUser();
     if (!user) return;
     return Toxen.fetch(Settings.getServer() + "/authenticated").then(async response => {

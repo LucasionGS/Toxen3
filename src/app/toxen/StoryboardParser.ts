@@ -7,6 +7,7 @@ import yaml from "js-yaml";
 import User from "./User";
 // import HueManager from "./philipshue/HueManager";
 import MathX from "./MathX";
+import Song from "./Song";
 
 namespace StoryboardParser {
   export const version = 1;
@@ -215,7 +216,7 @@ namespace StoryboardParser {
     variables?: { [key: string]: any };
   }
 
-  export async function save(path: string, config: StoryboardConfig) {
+  export async function save(path: string, config: StoryboardConfig, song: Song) {
     const cData = {
       bpm: config.bpm,
       bpmOffset: config.bpmOffset,
@@ -233,11 +234,11 @@ namespace StoryboardParser {
 
     const data = yaml.dump(cData);
 
+    let filetime = Date.now();
+    const storyboardName = path.slice(song.dirname().length + 1);
     if (Settings.isRemote()) {
       const user = Settings.getUser();
       if (!user) throw new Error("Cannot save storyboard. User is not logged in.");
-      // const userPath = user.getCollectionPath();
-      // const relative = path.replace(userPath, "");
       console.log("Saving to", path);
       return Toxen.fetch(`${path}`, {
         method: "PUT",
@@ -247,17 +248,21 @@ namespace StoryboardParser {
         }
       }).then(res => {
         if (!res.ok) throw new Error(`Failed to save storyboard. Status: ${res.status} ${res.statusText}`);
+        song.setFile(storyboardName, "u", filetime);
+        song.saveInfo();
       });
     }
     else {
       if (toxenapi.isDesktop()) {
-        return toxenapi.fs.promises.writeFile(path, data);
+        await toxenapi.fs.promises.writeFile(path, data);
+        song.setFile(storyboardName, "u", filetime);
+        await song.saveInfo();
+        return
       }
       else {
         toxenapi.throwDesktopOnly("saveStoryboard");
       }
     }
-
   }
 
   let eventIndex = 0;

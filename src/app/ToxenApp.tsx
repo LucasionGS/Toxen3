@@ -476,6 +476,18 @@ export class Toxen {
       var songList = await Song.getSongs(true, loadingCallback);
     }
 
+    // Check to ensure all songs have an MD5 hash
+    if (!Settings.isRemote()) {
+      for (const song of songList) {
+        if (!song.hash) {
+          Toxen.warn("Song \"" + song.title + "\" does not have an MD5 hash. Generating one now...");
+          song.hash = Song.randomFileHash();
+          await song.saveInfo();
+          Toxen.warn("MD5 hash generated for \"" + song.title + "\": " + song.hash);
+        }
+      }
+    }
+
     Toxen.setSongList(songList);
 
     try {
@@ -884,8 +896,15 @@ export default class ToxenAppRenderer extends React.Component {
                       >&nbsp;Show playing track</Button>
                       {
                         !Settings.isRemote() && toxenapi.isDesktop() && Settings.getUser()?.premium && (
-                          <Button color="green" onClick={() => {
+                          <Button color="green" onClick={async () => {
                             const browser = toxenapi.remote.getCurrentWindow();
+
+                            const songData = await Song.compareSongsAgainstRemote();
+                            
+                            console.log("Syncing songs...", songData);
+                            
+                            
+                            // return;
                             const currentQueue = [...Toxen.songList];
                             const total = currentQueue.length;
                             // 5 songs at a time
@@ -893,8 +912,8 @@ export default class ToxenAppRenderer extends React.Component {
                             let untilFinished = 5;
 
                             function syncSong(song: Song) {
-                              song.sync().then(() => {
-                                Toxen.log(`Synced ${song.getDisplayName()}`);
+                              song.sync(songData.result[song.uid]).then(() => {
+                                // Toxen.log(`Synced ${song.getDisplayName()}`);
 
                                 const next = currentQueue.shift();
                                 if (next) {

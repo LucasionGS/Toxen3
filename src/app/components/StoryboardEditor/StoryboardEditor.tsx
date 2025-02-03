@@ -314,7 +314,7 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
       <div style={{ display: "flex" }}>
         <Button onClick={() => {
           const saveLocation = song.storyboardFile() || song.dirname("storyboard.tsb");
-          StoryboardParser.save(saveLocation, config);
+          StoryboardParser.save(saveLocation, config, song);
           Toxen.notify({
             content: "Storyboard saved",
             expiresIn: 2000
