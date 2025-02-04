@@ -1,3 +1,6 @@
+## 1.12.1 - 4-02-2025
+### Further implementation changes to Toxen Stream
+- More of the same as previously, more stability and better implementation. 
 ## 1.12.0 - 4-02-2025
 ### Implementation changes to Toxen Stream
 - This is another step towards a stable Toxen Stream. It will soon be for testing for a select few.
