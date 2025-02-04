@@ -15,7 +15,7 @@ function SongElementDiv(props: { songElement: SongElement }) {
   const { songElement } = props;
   let song = songElement.props.song;
   let classes = ["song-element", songElement.state.selected ? "selected" : null].filter(a => a);
-  const bgFile = song.backgroundFile();
+  const bgFile = `${song.backgroundFile()}?h=${song.hash}`;
   if (songElement.state.playing) classes.push("playing");
 
   // const ContextMenu: typeof songElement.ContextMenu = songElement.ContextMenu.bind(songElement);

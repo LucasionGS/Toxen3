@@ -65,6 +65,8 @@ export default class Settings {
       visualizerGlow: false,
       acceptedResponsibility: false,
       visualizerStyleOptions: {},
+      remoteSyncOnStartup: false,
+      remoteSyncOnSongEdit: false,
     };
 
     let toUse: Partial<ISettings> = {};
@@ -309,6 +311,10 @@ export interface ISettings {
 
   // Media downloader
   acceptedResponsibility: boolean;
+
+  // Syncing
+  remoteSyncOnStartup: boolean;
+  remoteSyncOnSongEdit: boolean;
 }
 
 export enum VisualizerStyle {

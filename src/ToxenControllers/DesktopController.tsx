@@ -136,7 +136,7 @@ export default class DesktopController extends ToxenController {
         });
       });
       return Promise.all(themePromises);
-    }).catch(async () => {
+    }).catch(async (): Promise<Theme[]> => {
       await fsp.mkdir(this.themeFolderPath);
       return [];
     });
@@ -203,29 +203,6 @@ export default class DesktopController extends ToxenController {
 
   public async syncSong($toxen: typeof Toxen, user: User, song: Song, diff: SongDiff, { silenceValidated }: { silenceValidated?: boolean; }): Promise<void> {
     song.setProgressBar(0.10);
-    // try {
-    //   const upToDate = await song.validateAgainstRemote();
-
-    //   if (upToDate) {
-    //     if (!silenceValidated) {
-    //       song.completeProgressBar();
-    //       $toxen.notify({
-    //         title: "Update-to-date",
-    //         content: <p><code>{song.getDisplayName()}</code> is already up to date.</p>,
-    //         expiresIn: 1000
-    //       });
-    //     }
-    //     return;
-    //   }
-    // } catch (error) {
-    //   song.completeProgressBar();
-    //   return $toxen.notify({
-    //     title: "Failed to validate against remote",
-    //     content: error.message,
-    //     expiresIn: 5000,
-    //     type: "error"
-    //   }) && null;
-    // }
     
     if (diff.upload === "*") {
       // Sync from disk to remote (Using archiver to zip the folder in memory)
@@ -254,7 +231,9 @@ export default class DesktopController extends ToxenController {
       }
       
       if (madeChange) {
-        await song.saveInfo();
+        await song.saveInfo({
+          callSync: false
+        });
       }
       
       const zip = new yazl.ZipFile();
@@ -303,11 +282,13 @@ export default class DesktopController extends ToxenController {
       }).then(async res => {
         if (res.ok) {
           song.completeProgressBar();
-          $toxen.notify({
-            title: "Synced",
-            content: song.getDisplayName(),
-            expiresIn: 5000
-          });
+          if (!silenceValidated) {
+            $toxen.notify({
+              title: "Synced",
+              content: song.getDisplayName(),
+              expiresIn: 5000
+            });
+          }
           return fsp.unlink(zipPathTmp);
         } else {
           song.setProgressBar(0);
@@ -385,7 +366,7 @@ export default class DesktopController extends ToxenController {
             preInfo.paths.background !== postInfo.paths.background
             || preInfo.files[preInfo.paths.background]?.time !== postInfo.files[postInfo.paths.background]?.time
           ) { $toxen.background.setBackground(
-            `${song.backgroundFile()}?t=${Date.now()}`
+            `${song.backgroundFile()}?h=${song.hash}`
           ); }
           if (
             preInfo.paths.media !== postInfo.paths.media
@@ -402,6 +383,9 @@ export default class DesktopController extends ToxenController {
         }
       }
 
+      if (!silenceValidated) {
+        $toxen.log(`Synced track: ${song.getDisplayName()}`, 1500);
+      }
 
       song.completeProgressBar();
     }
@@ -419,7 +403,7 @@ export default class DesktopController extends ToxenController {
     console.log("Local hash", localHash);
     const remoteHash: string = await $toxen.fetch(user.getCollectionPath() + "/" + song.uid, {
       method: "OPTIONS"
-    }).then(res => res.json()).then(res => res.hash).catch(() => null);
+    }).then(res => res.json()).then(res => res.hash).catch((): string => null);
     console.log("Remote hash", remoteHash);
     return localHash === remoteHash;
   }

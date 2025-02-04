@@ -37,7 +37,7 @@ import Theme from "./toxen/Theme";
 import AppBar from "./components/AppBar/AppBar";
 import AdjustPanel from "./components/AdjustPanel/AdjustPanel";
 import { Button } from "@mantine/core";
-import { showNotification } from "@mantine/notifications";
+import { Notifications, showNotification } from "@mantine/notifications";
 import SettingsPanel from "./components/Sidepanel/Panels/SettingsPanel/SettingsPanel";
 // import MigrationPanel from "./components/Sidepanel/Panels/MigrationPanel/MigrationPanel";
 import EditSong from "./components/Sidepanel/Panels/EditSong/EditSong";
@@ -321,7 +321,8 @@ export class Toxen {
     showNotification({
       id,
       message: notification.content,
-      disallowClose: notification.disableClose ?? false,
+      // disallowClose: notification.disableClose ?? false,
+      withCloseButton: !(notification.disableClose ?? false),
       autoClose: notification.expiresIn ?? false,
       title: notification.title,
       color: notification.type == "error" ? "red" : notification.type == "warning" ? "yellow" : "green",
@@ -620,47 +621,49 @@ export class Toxen {
     return toxenapi.isDesktop() ? toxenapi.getDiscordInstance() : null;
   }
 
-  // public static async openSubtitleCreator(song: Song) {
-  //   if (Settings.isRemote()) {
-  //     Toxen.error("Subtitles can only be created locally.", 5000);
-  //     return;
-  //   }
+  public static async syncSongs() {
+    if (!toxenapi.isDesktop()) {
+      return toxenapi.throwDesktopOnly();
+    }
+    const browser = toxenapi.remote.getCurrentWindow();
 
-  //   const subtitleCreator = new remote.BrowserWindow({
-  //     width: 1280,
-  //     height: 768,
-  //     webPreferences: {
-  //       nodeIntegration: true,
-  //       contextIsolation: false,
-  //       webSecurity: false
-  //     },
-  //     autoHideMenuBar: true,
-  //     frame: false,
-  //     center: true,
-  //     icon: "./src/icons/toxen.ico",
-  //     darkTheme: true,
-  //     modal: true,
-  //     parent: remote.getCurrentWindow(),
-  //   });
+    const songData = await Song.compareSongsAgainstRemote();
+    
+    console.log("Syncing songs...", songData);
+    
+    // return;
+    const currentQueue = [...Toxen.songList];
+    const total = currentQueue.length;
+    // 5 songs at a time
+    let untilFinished = 5;
+    const startingQueue = currentQueue.splice(0, untilFinished);
 
-  //   subtitleCreator.setMenu(remote.Menu.buildFromTemplate([]));
+    function syncSong(song: Song) {
+      song.sync(songData.result[song.uid]).then(() => {
+        const next = currentQueue.shift();
+        if (next) {
+          syncSong(next);
+        }
+        else {
+          untilFinished--;
+        }
+        
+        browser.setProgressBar((total - currentQueue.length) / total);
 
-  //   await subtitleCreator.loadURL(SUBTITLE_CREATOR_WEBPACK_ENTRY);
-  //   subtitleCreator.webContents.send("song_to_edit", JSON.stringify({
-  //     song: song.toISong(),
-  //     libraryDirectory: Settings.get("libraryDirectory"),
-  //   } as InitialData));
-
-  //   subtitleCreator.on("closed", () => {
-  //     subtitleCreator.destroy();
-  //   });
-
-  //   subtitleCreator.show();
-
-  //   Toxen.musicPlayer.pause();
-
-  //   return subtitleCreator;
-  // }
+        if (untilFinished <= 0) {
+          Toxen.log("✅ Synced all songs.", 2500);
+          browser.setProgressBar(-1);
+        }
+        
+      }).catch(err => {
+        Toxen.error(`Error syncing ${song.getDisplayName()}: ${err.message}`);
+      });
+    }
+    
+    for (let i = 0; i < startingQueue.length; i++) {
+      syncSong(startingQueue[i]);
+    }
+  }
 }
 
 class ToxenEventEmitter extends EventEmitter {
@@ -896,51 +899,7 @@ export default class ToxenAppRenderer extends React.Component {
                       >&nbsp;Show playing track</Button>
                       {
                         !Settings.isRemote() && toxenapi.isDesktop() && Settings.getUser()?.premium && (
-                          <Button color="green" onClick={async () => {
-                            const browser = toxenapi.remote.getCurrentWindow();
-
-                            const songData = await Song.compareSongsAgainstRemote();
-                            
-                            console.log("Syncing songs...", songData);
-                            
-                            
-                            // return;
-                            const currentQueue = [...Toxen.songList];
-                            const total = currentQueue.length;
-                            // 5 songs at a time
-                            const startingQueue = currentQueue.splice(0, 5);
-                            let untilFinished = 5;
-
-                            function syncSong(song: Song) {
-                              song.sync(songData.result[song.uid]).then(() => {
-                                // Toxen.log(`Synced ${song.getDisplayName()}`);
-
-                                const next = currentQueue.shift();
-                                if (next) {
-                                  syncSong(next);
-                                }
-                                else {
-                                  untilFinished--;
-                                }
-
-                                
-                                browser.setProgressBar((total - currentQueue.length) / total);
-
-                                if (untilFinished <= 0) {
-                                  Toxen.log("✅ Synced all songs.");
-                                  browser.setProgressBar(-1);
-                                }
-                                
-                              }).catch(err => {
-                                Toxen.error(`Error syncing ${song.getDisplayName()}: ${err.message}`);
-                              });
-                            }
-                            
-                            for (let i = 0; i < startingQueue.length; i++) {
-                              syncSong(startingQueue[i]);
-                            }
-                            
-                          }}>Sync</Button>
+                          <Button color="green" onClick={Toxen.syncSongs}>Sync</Button>
                         )
                       }
                     </Button.Group>
@@ -1022,6 +981,19 @@ export default class ToxenAppRenderer extends React.Component {
           </SidepanelSection>
 
         </Sidepanel>
+        <Notifications
+          style={{
+            position: "fixed",
+            bottom: 0,
+            right: 0,
+            zIndex: 1000,
+            padding: 16,
+            minWidth: "15vw",
+            maxWidth: "100vw",
+            overflowX: "hidden",
+            overflowY: "hidden",
+          }}
+        />
         {/* <MessageCards ref={ref => Toxen.messageCards = ref} /> */}
       </div>
     );

@@ -178,11 +178,9 @@ if (toxenapi.isDesktop()) {
 const root = ReactDOMClient.createRoot(document.querySelector("app-root"));
 root.render(
   <MantineProvider forceColorScheme="dark">
-    {/* <Notifications> */}
-      <ModalsProvider>
-        <ToxenAppRenderer />
-      </ModalsProvider>
-    {/* </Notifications> */}
+    <ModalsProvider>
+      <ToxenAppRenderer />
+    </ModalsProvider>
   </MantineProvider>
   // <ToxenAppRenderer />
 );
@@ -241,6 +239,10 @@ Toxen.whenReady().then(async () => {
 
   // Save Stats
   setInterval(() => Stats.save(), 30000);
+
+  if (Settings.get("remoteSyncOnStartup")) {
+    Toxen.syncSongs();
+  }
 });
 
 //#endregion

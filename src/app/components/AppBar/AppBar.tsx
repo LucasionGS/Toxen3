@@ -114,7 +114,7 @@ function AppBarTitle() {
   )
 }
 
-function bytesToString(bytes: number, unit?: "B" | "KB" | "MB" | "GB" | "TB") {
+export function bytesToString(bytes: number, unit?: "B" | "KB" | "MB" | "GB" | "TB") {
   const sizes = ["B", "KB", "MB", "GB", "TB"];
   const unitIndex = sizes.indexOf(unit);
   const maxIndex = unitIndex >= 0 ? unitIndex : sizes.length;
@@ -154,20 +154,26 @@ function UserManage() {
               <h2>{user.name}</h2>
               <p><b>Premium Status</b>: {user.premium ? <>Expires <code>{user.premium_expire.toDateString()}</code></> : "No premium"}</p>
               <p>{usedQuota}</p>
-              <Button
-                onClick={() => {
-                  User.refreshUser();
-                }}
-              >
-                Refresh
-              </Button>
+              <Button.Group>
+                <Button
+                  onClick={() => {
+                    User.refreshUser();
+                    Toxen.reloadSection();
+                  }}
+                >
+                  Refresh
+                </Button>
 
-              
-              <Button onClick={() => {
-                User.logout();
-                setUser(null);
-              }}>Logout</Button>
-            </div>
+                
+                <Button
+                  color="red"
+                  onClick={() => {
+                    User.logout();
+                    setUser(null);
+                  }}
+                >Logout</Button>
+              </Button.Group>
+              </div>
           ) : (
             <div>
               <h2>Not logged in</h2>

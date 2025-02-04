@@ -11,11 +11,15 @@ import TButton from "../../../Button/Button";
 import { PanelDirection } from "../../Sidepanel";
 import "./SettingsPanel.scss";
 import { useForceUpdate } from "@mantine/hooks";
+import LoginForm from "../../../LoginForm/LoginForm";
+import User from "../../../../toxen/User";
+import { bytesToString } from "../../../AppBar/AppBar";
 
 interface SettingsPanelProps { }
 
 export default function SettingsPanel(props: SettingsPanelProps) {
   const forceUpdate = useForceUpdate();
+  const user = User.getCurrentUser();
   return (
     <>
       <h1>Settings</h1>
@@ -372,9 +376,39 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           
         </Tabs.Panel>
 
-        {/* <Tabs.Panel value="Account">
+        <Tabs.Panel value="Account">
           <LoginForm />
-        </Tabs.Panel> */}
+          <br />
+          {user && (() => {
+            const usedQuota = user ?
+              `${bytesToString(user.storage_used)}/${bytesToString(user.storage_quota)} used (${(user.storage_used / user.storage_quota * 100).toFixed(2)}%)`
+              : "0B/0B used (0%)";
+            return (<>
+              <h2>{user.name}</h2>
+              <h2>Premium status</h2>
+              {user.premium ? (
+                <>
+                  <p>Expires <code>{user.premium_expire.toDateString()}</code></p>
+                  <p>Remote Library Quota: <b>{usedQuota}</b></p>
+                  <Checkbox onClick={(e) => Settings.apply({ remoteSyncOnStartup: e.currentTarget.checked }, true)} defaultChecked={Settings.get("remoteSyncOnStartup")} name="remoteSyncOnStartup" label="Sync on startup" />
+                  <br />
+                  <sup>
+                    Syncs your local library with the remote library on startup.
+                    <br />
+                    Uploads new songs and updates existing ones. Update is two-way.
+                  </sup>
+                  <Checkbox onClick={(e) => Settings.apply({ remoteSyncOnSongEdit: e.currentTarget.checked }, true)} defaultChecked={Settings.get("remoteSyncOnSongEdit")} name="remoteSyncOnSongEdit" label="Sync on edit" />
+                  <br />
+                  <sup>
+                    Syncs individual songs when you edit them automatically.
+                  </sup>
+                </>
+              ) : (
+                <p>You are not a premium user.</p>
+              )}
+            </>)
+          })()}
+        </Tabs.Panel>
 
         <Tabs.Panel value="Advanced">
           <h2>Advanced settings</h2>

@@ -40,6 +40,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     if (!Toxen.musicPlayer || !Toxen.musicPlayer.media) return console.log("Player or media missing");
 
+    const song = Toxen.background.storyboard?.getSong();
     const ctx = this.ctx;
 
     const storyboardCallbacks = StoryboardParser.drawStoryboard(ctx, {
@@ -81,7 +82,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
         const fullFile = Toxen.background.storyboard.getBackground(true);
         img.src = fullFile;
         img.onload = () => {
-          Toxen.background.setBackground(img.src);
+          Toxen.background.setBackground(`${img.src}?h=${song.hash}`);
         }
       }
       else {
@@ -718,7 +719,6 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     const underline = Toxen.background.storyboard?.getFloatingTitleUnderline();
     const reactive = Toxen.background.storyboard?.getFloatingTitleReactive();
     const overrideVisualizer = Toxen.background.storyboard?.getFloatingTitleOverrideVisualizer();
-    const song = Toxen.background.storyboard?.getSong();
     const title = Toxen.background.storyboard?.getFloatingTitleText();
     if (enabled && song && title) {
       let shouldOverride = overrideVisualizer;

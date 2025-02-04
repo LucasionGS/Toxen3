@@ -1105,7 +1105,11 @@ export default class Song implements ISong {
     }
   }
 
-  public async saveInfo(): Promise<void> {
+  public async saveInfo(opts?: {
+    callSync?: boolean
+  }): Promise<void> {
+    opts ??= {};
+    
     let filetime = Date.now();
     this.setFile("info.json", "u", filetime);
     this.hash = Song.randomFileHash();
@@ -1149,6 +1153,9 @@ export default class Song implements ISong {
     if (!this.paths || !this.paths.dirname) return;
     try {
       await toxenapi.fs.promises.writeFile(toxenapi.path.resolve(this.dirname(), "info.json"), JSON.stringify(this.toISong()));
+      if ((opts.callSync ?? true) && Settings.get("remoteSyncOnSongEdit")) {
+        await this.sync(null, { silenceValidated: true });
+      }
       // Toxen.notify({
       //   title: "Song saved",
       //   content: this.getDisplayName(),
@@ -1290,10 +1297,14 @@ export default class Song implements ISong {
 
     if (Settings.isRemote()) return;
 
-    return toxenapi.syncSong(Toxen, user, this, diff, { silenceValidated})
+    if (!diff) {
+      diff = (await Song.compareSongsAgainstRemote([this])).result[this.uid];
+    }
+    
+    return toxenapi.syncSong(Toxen, user, this, diff, { silenceValidated })
   }
 
-  public static async createCompareSongsData() {
+  public static async createCompareSongsData(songs?: Song[]) {
     const user = Settings.getUser();
     if (!user.premium) throw new Error("You must be a premium user to compare songs against the remote.");
 
@@ -1301,7 +1312,7 @@ export default class Song implements ISong {
       toxenapi.throwDesktopOnly();
     }
 
-    const localSongsData = (await Song.loadLocalSongs()).map(s => ({
+    const localSongsData = (songs ?? await Song.loadLocalSongs()).map(s => ({
       uid: s.uid,
       files: s.files,
       hash: s.hash,
@@ -1316,8 +1327,8 @@ export default class Song implements ISong {
     return map;
   }
 
-  public static async compareSongsAgainstRemote() {
-    const data = await this.createCompareSongsData();
+  public static async compareSongsAgainstRemote(songs?: Song[]) {
+    const data = await this.createCompareSongsData(songs);
 
     const user = Settings.getUser();
     if (!user.premium) throw new Error("You must be a premium user to compare songs against the remote.");

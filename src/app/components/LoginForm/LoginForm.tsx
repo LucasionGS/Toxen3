@@ -9,7 +9,7 @@ import FormInput from "../Form/FormInputFields/FormInput";
 let attemptedInitialLogin = false;
 export default function LoginForm(props: { onSuccessfulLogin?: () => void }) {
   const { onSuccessfulLogin } = props;
-  async function handleLogin(loginPromise: Promise<User>) {
+  async function handleLogin(loginPromise: Promise<User>, notify = true) {
     setLoading(true);
     return loginPromise.then(loggedInUser => {
       if (loggedInUser) {
@@ -20,6 +20,16 @@ export default function LoginForm(props: { onSuccessfulLogin?: () => void }) {
         setLoggedIn(true);
         Toxen.sidePanel.reloadSection();
         if (Settings.isRemote()) Toxen.loadSongs();
+
+        if (notify) {
+          Toxen.notify({
+            title: "Log in successful",
+            content: `Welcome, ${loggedInUser.name}!`,
+            expiresIn: 2500,
+            type: "normal",
+          });
+        }
+          
       }
       else {
         setLoading(false);
@@ -34,14 +44,13 @@ export default function LoginForm(props: { onSuccessfulLogin?: () => void }) {
     });
   }
 
-  // if (!Settings.isRemote()) return <>Connect to a server to login.</>
   const [loggedIn, setLoggedIn] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string>(null);
   const user = Settings.getUser();
   if (!attemptedInitialLogin && user) {
     attemptedInitialLogin = true;
-    handleLogin(User.refreshUser());
+    handleLogin(User.refreshUser(), false);
   }
 
   const [email, setEmail] = React.useState(user?.email || "");
@@ -49,15 +58,21 @@ export default function LoginForm(props: { onSuccessfulLogin?: () => void }) {
   
   return (
     user ? (
-      <Button onClick={() => {
+      <Button onClick={async () => {
+        await Settings.apply({ isRemote: false });
         User.logout();
         Toxen.loadSongs();
         setLoggedIn(false);
         Toxen.reloadSection();
-      }} color="yellow">Log out of <b>{user.email}</b></Button>
+      }} color="yellow">Log out</Button>
     ) : (
       <>
         <h2>Toxen login</h2>
+        <sub>
+          Log in to your Toxen account to access your songs and settings.
+          <br />
+          <b>Note</b> - Toxen Stream is not open for registration. Only select users have access.
+        </sub>
         <Alert color="red" title="Error" hidden={!error}>{error}</Alert>
         <form onSubmit={e => {
           e.preventDefault();
