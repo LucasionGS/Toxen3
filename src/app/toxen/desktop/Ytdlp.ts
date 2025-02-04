@@ -104,9 +104,10 @@ export default class Ytdlp {
         (error) => reject(console.error(error))
       ).on("close",
         async () => {
+          const filterSpecialChars = (str: string) => str.replace(/[^a-zA-Z0-9]/g, "_");
           await System.handleImportedFiles([
             {
-              name: videoInfo.filename.includes(" - ") ? videoInfo.filename.replace(/\.[a-zA-Z0-9]+$/, ".mp3") : (videoInfo.uploader + " - " + videoInfo.title + ".mp3"),
+              name: videoInfo.filename.includes(" - ") ? filterSpecialChars(videoInfo.filename).replace(/\.[a-zA-Z0-9]+$/, ".mp3") : (filterSpecialChars(videoInfo.uploader) + " - " + filterSpecialChars(videoInfo.title) + ".mp3"),
               path: tmpAudioOutput,
             }
           ]);

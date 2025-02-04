@@ -309,8 +309,8 @@ export class Toxen {
   public static subtitles: Subtitles;
   public static themeContainer: ThemeContainer;
   public static updateSongPanels() {
-    Toxen.songQueuePanel.update();
-    Toxen.songPanel.update();
+    Toxen.songQueuePanel?.update();
+    Toxen.songPanel?.update();
   }
   /**
    * Send a message to the Toxen message cards.
@@ -873,13 +873,25 @@ export default class ToxenAppRenderer extends React.Component {
                   }
                   <div>
                     <h1 className="song-panel-title">
-                      {Toxen.playlist ? Toxen.playlist.name : "All Tracks"}
+                      {((Settings.isRemote() ?  "☁ " : "") + (Toxen.playlist ? Toxen.playlist.name : ("All Tracks")))}
                     </h1>
                     <SearchField />
                     <div style={{
                       height: 8
                     }}></div>
                     <Button.Group>
+                      {toxenapi.isDesktop() && Settings.getUser()?.premium && typeof Settings.get("isRemote") === "boolean" && (
+                        <Button color={Settings.get("isRemote") ? "blue" : "gray"} onClick={() => {
+                          Settings.apply({isRemote: !Settings.get("isRemote")}, true).then(() => {
+                            Toxen.reloadSection();
+                          });
+                        }}>☁</Button>
+                      )}
+                      {
+                        !Settings.isRemote() && toxenapi.isDesktop() && Settings.getUser()?.premium && (
+                          <Button color="green" onClick={Toxen.syncSongs}>Sync</Button>
+                        )
+                      }
                       <Button color="green" onClick={() => Toxen.sidePanel.setSectionId("playlist")}>Change Playlist</Button>
                       <Button
                         leftSection={<i className="fas fa-redo"></i>}
@@ -897,11 +909,6 @@ export default class ToxenAppRenderer extends React.Component {
                           Toxen.showCurrentSong();
                         }}
                       >&nbsp;Show playing track</Button>
-                      {
-                        !Settings.isRemote() && toxenapi.isDesktop() && Settings.getUser()?.premium && (
-                          <Button color="green" onClick={Toxen.syncSongs}>Sync</Button>
-                        )
-                      }
                     </Button.Group>
                   </div>
                 </div>
@@ -917,15 +924,14 @@ export default class ToxenAppRenderer extends React.Component {
           </SidepanelSection>
 
           {/* Playlist Management Panel */}
-          <SidepanelSection key="adjust" id="adjust" title="Adjust" icon={<i className="fas fa-sliders-h"></i>} disabled>
+          {/* <SidepanelSection key="adjust" id="adjust" title="Adjust" icon={<i className="fas fa-sliders-h"></i>} disabled>
             <AdjustPanel />
-          </SidepanelSection>
+          </SidepanelSection> */}
 
           {/* Import Panel */}
-          <SidepanelSection key="importSong" id="importSong" title="Import" icon={<i className="fas fa-file-import"></i>}>
+          <SidepanelSection key="importSong" id="importSong" title="Import" icon={<i className="fas fa-file-import"></i>} disabled={!toxenapi.isDesktop()}>
             <ImportPanel />
           </SidepanelSection>
-
 
           {/* Keep settings tab at the bottom */}
           <SidepanelSection key="settings" id="settings" title="Settings" icon={<i className="fas fa-cog"></i>} separator>

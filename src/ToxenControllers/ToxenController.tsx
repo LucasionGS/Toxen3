@@ -8,6 +8,7 @@ import type Song from "../app/toxen/Song";
 import type { Toxen } from "../app/ToxenApp";
 import type User from "../app/toxen/User";
 import type { SongDiff } from "../app/toxen/Song";
+import { showNotification } from "@mantine/notifications";
 
 /**
  * Implementation of Toxen Controller for the web version. DesktopController should be used for desktop-specific functions and overwrites.
@@ -68,7 +69,12 @@ export default class ToxenController {
    * Throws an error if the ToxenController isn't the desktop version.
    */
   public throwDesktopOnly(hint?: string): never {
-    throw "@DESKTOPONLY This function is only available on the desktop version of Toxen." + (hint ? " (" + hint : ")");
+    showNotification({
+      title: "Desktop Only",
+      message: "This function is only available on the desktop version of Toxen." + (hint ? " (" + hint + ")" : ""),
+      color: "red",
+    });
+    throw "@DESKTOPONLY This function is only available on the desktop version of Toxen." + (hint ? " (" + hint + ")" : "");
   }
 
   /**

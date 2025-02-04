@@ -24,33 +24,33 @@ export default class AppBar extends Component<AppBarProps, AppBarState> {
         {/* User manage */}
         <UserManage />
 
-        {/* Toxen Action button */}
-        <div className="appBarButton appBar__actionButton"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const btnBox = e.currentTarget.getBoundingClientRect();
-            if (toxenapi.isDesktop()) {
-              toxenapi.remote.Menu.getApplicationMenu().popup({
-                x: btnBox.left,
-                y: btnBox.bottom
-              });
-            }
-            else {
-              Toxen.notify({
-                title: "Toxen",
-                content: "Not implemented on web version yet.",
-                expiresIn: 5000
-              });
-            }
-          }}>
-          {/* Arrow down icon */}
-          <i className="fas fa-caret-down"></i>
-        </div>
 
         {
           toxenapi.isDesktop() && (
             <>
+              {/* Toxen Action button */}
+              <div className="appBarButton appBar__actionButton"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  const btnBox = e.currentTarget.getBoundingClientRect();
+                  if (toxenapi.isDesktop()) {
+                    toxenapi.remote.Menu.getApplicationMenu().popup({
+                      x: btnBox.left,
+                      y: btnBox.bottom
+                    });
+                  }
+                  else {
+                    Toxen.notify({
+                      title: "Toxen",
+                      content: "Not implemented on web version yet.",
+                      expiresIn: 5000
+                    });
+                  }
+                }}>
+                {/* Arrow down icon */}
+                <i className="fas fa-caret-down"></i>
+              </div>
               {/* Minimize button */}
               <div className="appBarButton appBar__minimizeButton"
                 onClick={(e) => {
@@ -101,7 +101,7 @@ function AppBarTitle() {
   Toxen.setAppBarText = setTitle;
   return (
     <div className="appBarTitle">
-      <Group>
+      <Group grow>
         <h2>
           <img src={txnLogo} height={30} width={30} style={{ display: "inline-block" }} />
           &nbsp;

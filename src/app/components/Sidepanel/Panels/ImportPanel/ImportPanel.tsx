@@ -1,4 +1,4 @@
-import { Button, Group, Image, Modal, Progress, TextInput } from '@mantine/core';
+import { Alert, Button, Group, Image, Modal, Progress, TextInput } from '@mantine/core';
 import React from 'react'
 import System, { ToxenFile } from '../../../../toxen/System';
 import { Toxen } from '../../../../ToxenApp';
@@ -7,6 +7,14 @@ import Settings from '../../../../toxen/Settings';
 import ExternalUrl from '../../../ExternalUrl/ExternalUrl';
 
 export default function ImportPanel() {
+  if (Settings.isRemote()) {
+    return (
+      <div>
+        <Alert color="red">Importing music is only available locally.</Alert>
+      </div>
+    );
+  }
+  
   return (
     <div>
       <h1>Import music</h1>
@@ -81,17 +89,20 @@ function ImportOnlineMedia() {
             <div>
               <h1>Import from YouTube/Soundcloud</h1>
               <p>Enter a YouTube or Soundcloud URL to import a song.</p>
-              <TextInput disabled={importing} placeholder="https://youtube.com/watch?v=..." value={url} onChange={e => setUrl(e.currentTarget.value)} />
-
-              <Button loading={importing} onClick={async () => {
+              <form onSubmit={async e => {
+                e.preventDefault();
                 setImporting(true);
                 const videos = await Ytdlp.getVideoInfo(url);
                 console.log(videos);
                 setImporting(false);
                 setVideos(videos);
               }}>
-                {importing ? "Loading..." : "Load"}
-              </Button>
+                <TextInput disabled={importing} placeholder="https://youtube.com/watch?v=..." value={url} onChange={e => setUrl(e.currentTarget.value)} />
+
+                <Button loading={importing}>
+                  {importing ? "Loading..." : "Load"}
+                </Button>
+              </form>
 
               <div style={{
                 maxHeight: 500,

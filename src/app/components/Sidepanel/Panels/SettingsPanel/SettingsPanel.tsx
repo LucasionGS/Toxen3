@@ -1,4 +1,4 @@
-import { Checkbox, Tabs, TextInput, NumberInput, Select, Button, ColorInput, RangeSlider, Slider, Text } from "@mantine/core";
+import { Checkbox, Tabs, TextInput, NumberInput, Select, Button, ColorInput, RangeSlider, Slider, Text, Alert } from "@mantine/core";
 // import * as remote from "@electron/remote";
 // import type { EntertainmentArea } from "hue-sync";
 import React, { useEffect } from "react";
@@ -51,7 +51,11 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           <h2>General</h2>
           {(() => {
             if (!toxenapi.isDesktop()) {
-              return null;
+              return (
+                <Alert color="yellow">
+                  Not all settings are available on Toxen Web
+                </Alert>
+              );
             }
             
             return (
@@ -379,7 +383,7 @@ export default function SettingsPanel(props: SettingsPanelProps) {
         <Tabs.Panel value="Account">
           <LoginForm />
           <br />
-          {user && (() => {
+          {user && toxenapi.isDesktop() && (() => {
             const usedQuota = user ?
               `${bytesToString(user.storage_used)}/${bytesToString(user.storage_quota)} used (${(user.storage_used / user.storage_quota * 100).toFixed(2)}%)`
               : "0B/0B used (0%)";
@@ -412,38 +416,52 @@ export default function SettingsPanel(props: SettingsPanelProps) {
 
         <Tabs.Panel value="Advanced">
           <h2>Advanced settings</h2>
-          <Checkbox onClick={(e) => Settings.apply({ showAdvancedSettings: e.currentTarget.checked }, true)} defaultChecked={Settings.get("showAdvancedSettings")} name="showAdvancedSettings" label="Show Advanced UI" />
+          <Checkbox onClick={(e) => {
+            Settings.apply({ showAdvancedSettings: e.currentTarget.checked }, true);
+            Toxen.reloadSection();
+          }} defaultChecked={Settings.get("showAdvancedSettings")} name="showAdvancedSettings" label="Show Advanced UI" />
           <br />
           <sup>
             Enables the viewing of advanced settings and UI elements. This will display a few more buttons around in Toxen,
             along with more technical settings that users usually don't have to worry about.
           </sup>
 
-          <Checkbox onClick={(e) => Settings.apply({ discordPresence: e.currentTarget.checked }, true)} defaultChecked={Settings.get("discordPresence")} name="discordPresence" label="Discord Presence" />
-          <br />
-          <sup>Enables Discord presence integration. It will show you are using Toxen in your status.</sup>
-
-          <Checkbox onClick={(e) => Settings.apply({ discordPresenceDetailed: e.currentTarget.checked }, true)} defaultChecked={Settings.get("discordPresenceDetailed")} name="discordPresenceDetailed" label="Discord Presence: Show details" />
-          <br />
-          <sup>Enables a detailed activity status in Discord presence. It'll show what song you are listening to, and how far into it you are.</sup>
-
           <Checkbox onClick={(e) => Settings.apply({ progressBarShowMs: e.currentTarget.checked }, true)} defaultChecked={Settings.get("progressBarShowMs")} name="progressBarShowMs" label="Progress Bar: Show milliseconds" />
           <br />
           <sup>Enables showing the milliseconds in the progress bar.</sup>
 
-          <Button onClick={() => {
-            const songs = Toxen.getAllSongs();
+          {
+            toxenapi.isDesktop() && (
+              <>
+                <Checkbox onClick={(e) => Settings.apply({ discordPresence: e.currentTarget.checked }, true)} defaultChecked={Settings.get("discordPresence")} name="discordPresence" label="Discord Presence" />
+                <br />
+                <sup>Enables Discord presence integration. It will show you are using Toxen in your status.</sup>
 
-            Song.convertAllNecessary(songs).then((changedSongs) => {
-              Toxen.updateSongPanels();
-              Toxen.notify({
-                title: "Converted all songs",
-                content: `Converted ${changedSongs} songs to the new format.`
-              })
-            });
-          }} color="green">
-            Convert all necessary audio files
-          </Button>
+                <Checkbox onClick={(e) => Settings.apply({ discordPresenceDetailed: e.currentTarget.checked }, true)} defaultChecked={Settings.get("discordPresenceDetailed")} name="discordPresenceDetailed" label="Discord Presence: Show details" />
+                <br />
+                <sup>Enables a detailed activity status in Discord presence. It'll show what song you are listening to, and how far into it you are.</sup>
+
+                {
+                  Settings.isAdvanced() && (
+                    <Button onClick={() => {
+                      const songs = Toxen.getAllSongs();
+
+                      Song.convertAllNecessary(songs).then((changedSongs) => {
+                        Toxen.updateSongPanels();
+                        Toxen.notify({
+                          title: "Converted all songs",
+                          content: `Converted ${changedSongs} songs to the new format.`
+                        })
+                      });
+                    }} color="green">
+                      Convert all necessary audio files
+                    </Button>
+                  )
+                }
+              </>
+            )
+          }
+
 
           <br />
           {/* Hue Settings */}

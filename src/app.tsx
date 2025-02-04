@@ -243,6 +243,8 @@ Toxen.whenReady().then(async () => {
   if (Settings.get("remoteSyncOnStartup")) {
     Toxen.syncSongs();
   }
+
+  Toxen.reloadSection(); // Reload the section in case of load time changes
 });
 
 //#endregion

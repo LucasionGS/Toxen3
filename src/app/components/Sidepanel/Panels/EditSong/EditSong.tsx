@@ -40,7 +40,7 @@ export default function EditSong(props: EditSongProps) {
           Save
         </button> */}
         {
-          toxenapi.isDesktop() && (
+          !Settings.isRemote() && toxenapi.isDesktop() && (
           <Button onClick={() => toxenapi.remote.shell.openPath(Toxen.editingSong.dirname())} leftSection={<i className="fas fa-folder-open"></i>}>
             Open music folder
           </Button>

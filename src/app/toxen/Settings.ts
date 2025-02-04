@@ -2,6 +2,7 @@ import { PanelDirection } from "../components/Sidepanel/Sidepanel"
 import JSONX from "./JSONX";
 import { Toxen } from "../ToxenApp";
 import User from "./User";
+import Song from "./Song";
 
 export default class Settings {
   /**
@@ -151,11 +152,22 @@ export default class Settings {
 
         // Special cases
         if (value !== preValue) {
-          if (key === "libraryDirectory") {
-            Toxen.loadSongs();
-          }
-          else if (key === "isRemote") {
-            Toxen.loadSongs();
+          if (key === "libraryDirectory" || key === "isRemote") {
+            await Toxen.loadSongs();
+            setTimeout(() => {
+              const cur = Song.getCurrent();
+              let next: Song;
+              if (cur) {
+                next = Toxen.getPlayableSongs().find(s => s.uid === cur.uid);
+              }
+
+              if (next) {
+                next.play();
+              }
+              else {
+                Toxen.musicPlayer.playRandom();
+              }
+            }, 10);
           }
           else if (key === "theme") Toxen.setThemeByName(value as typeof data[typeof key]);
         }

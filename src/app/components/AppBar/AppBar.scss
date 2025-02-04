@@ -21,7 +21,8 @@
   align-items: center;
 
   .appBarTitle {
-    width: calc(100% - (50px * 4) - 8px);
+    display: flex;
+    flex-grow: 1;
     white-space: nowrap;
     overflow: hidden;
     
