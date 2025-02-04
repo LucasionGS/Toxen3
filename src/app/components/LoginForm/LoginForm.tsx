@@ -46,8 +46,6 @@ export default function LoginForm(props: { onSuccessfulLogin?: () => void }) {
 
   const [email, setEmail] = React.useState(user?.email || "");
   const [password, setPassword] = React.useState("");
-
-  const login = () => handleLogin(User.login(email as string, password as string));
   
   return (
     user ? (
@@ -61,12 +59,17 @@ export default function LoginForm(props: { onSuccessfulLogin?: () => void }) {
       <>
         <h2>Toxen login</h2>
         <Alert color="red" title="Error" hidden={!error}>{error}</Alert>
-        <TextInput label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} onSubmit={login} />
-        <TextInput label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} onSubmit={login} />
-        <br />
-        <Button loading={loading} onClick={login}>
-          {loading ? "Logging in..." : "Login"}
-        </Button>
+        <form onSubmit={e => {
+          e.preventDefault();
+          handleLogin(User.login(email as string, password as string));
+        }}>
+          <TextInput label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <TextInput label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <br />
+          <Button loading={loading} type="submit">
+            {loading ? "Logging in..." : "Login"}
+          </Button>
+        </form>
       </>
     )
   )

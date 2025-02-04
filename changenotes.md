@@ -1,3 +1,6 @@
+## 1.12.0 - 4-02-2025
+### Implementation changes to Toxen Stream
+- This is another step towards a stable Toxen Stream. It will soon be for testing for a select few.
 ## 1.11.1 - 3-12-2024
 ### Hotfix
 - Fixed options not displaying and saving correctly on song-specific visualizer-specific settings.

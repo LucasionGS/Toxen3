@@ -1062,7 +1062,7 @@ export default class Song implements ISong {
       return;
     }
     
-    let data = await toxenapi.fs.promises.readFile(toxenapi.path.resolve(this.dirname(), "info.json"), "utf8").then(data => JSON.parse(data)).catch(() => null);
+    let data = await toxenapi.fs.promises.readFile(toxenapi.path.resolve(this.dirname(), "info.json"), "utf8").then(data => JSON.parse(data)).catch(() => null as any);
     for (const key in data) {
       if (key in data) {
         const v = (data as any)[key];
