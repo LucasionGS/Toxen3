@@ -99,7 +99,7 @@ function ImportOnlineMedia() {
               }}>
                 <TextInput disabled={importing} placeholder="https://youtube.com/watch?v=..." value={url} onChange={e => setUrl(e.currentTarget.value)} />
 
-                <Button loading={importing}>
+                <Button loading={importing} disabled={importing} type="submit" color="green">
                   {importing ? "Loading..." : "Load"}
                 </Button>
               </form>
