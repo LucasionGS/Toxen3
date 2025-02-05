@@ -483,7 +483,9 @@ export class Toxen {
         if (!song.hash) {
           console.warn("Song \"" + song.title + "\" does not have an MD5 hash. Generating one now...", 1000);
           song.hash = Song.randomFileHash();
-          await song.saveInfo();
+          await song.saveInfo({
+            callSync: false
+          });
           console.warn("MD5 hash generated for \"" + song.title + "\": " + song.hash, 1000);
         }
       }
