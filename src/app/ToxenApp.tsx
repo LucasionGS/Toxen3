@@ -481,10 +481,10 @@ export class Toxen {
     if (!Settings.isRemote()) {
       for (const song of songList) {
         if (!song.hash) {
-          Toxen.warn("Song \"" + song.title + "\" does not have an MD5 hash. Generating one now...");
+          console.warn("Song \"" + song.title + "\" does not have an MD5 hash. Generating one now...", 1000);
           song.hash = Song.randomFileHash();
           await song.saveInfo();
-          Toxen.warn("MD5 hash generated for \"" + song.title + "\": " + song.hash);
+          console.warn("MD5 hash generated for \"" + song.title + "\": " + song.hash, 1000);
         }
       }
     }
