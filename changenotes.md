@@ -1,3 +1,6 @@
+## 1.12.2 - 5-02-2025
+### Hotfix
+- Too many notifications on first time sync
 ## 1.12.1 - 4-02-2025
 ### Further implementation changes to Toxen Stream
 - More of the same as previously, more stability and better implementation. 
