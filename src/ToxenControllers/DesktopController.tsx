@@ -48,6 +48,7 @@ export default class DesktopController extends ToxenController {
 
   public fs = fs;
   public path = Path;
+  public os = os;
 
   /**
    * Save Toxen's current settings file.
@@ -232,7 +233,8 @@ export default class DesktopController extends ToxenController {
       
       if (madeChange) {
         await song.saveInfo({
-          callSync: false
+          callSync: false,
+          forceLocal: true
         });
       }
       
@@ -259,7 +261,7 @@ export default class DesktopController extends ToxenController {
         }
       };
   
-      await addFiles(song.dirname());
+      await addFiles(song.dirnameLocal());
   
       zip.outputStream.pipe(zipStream);
   
@@ -471,7 +473,7 @@ export default class DesktopController extends ToxenController {
 
   public async loadLocalSongs($toxen: typeof Toxen, $song: typeof Song, $settings: typeof Settings, reload?: boolean, forEach?: (song: Song) => void) {
     return Promise.resolve().then(async () => {
-      if (reload !== true && $toxen.songList) {
+      if (reload !== true && !$settings.isRemote() && $toxen.songList) {
         return $toxen.songList;
       }
 
@@ -563,7 +565,7 @@ export default class DesktopController extends ToxenController {
     return this._discord ??= new Discord("647178364511191061"); // Toxen's Discord Application ID
   }
 
-  public async compareSongsAgainstRemote($toxen: typeof Toxen, user: User, data: any): Promise<{
+  public async compareLocalSongsAgainstRemote($toxen: typeof Toxen, user: User, data: any): Promise<{
     result: Record<string, SongDiff>
   }> {
     return $toxen.fetch(user.getCollectionPath(), {

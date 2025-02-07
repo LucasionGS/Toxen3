@@ -192,7 +192,7 @@ export class Toxen {
 
   public static log(message: React.ReactNode, expiresIn?: number) {
     console.log(message);
-    Toxen.notify({
+    return Toxen.notify({
       title: "Info",
       content: message,
       expiresIn: expiresIn,
@@ -883,11 +883,35 @@ export default class ToxenAppRenderer extends React.Component {
                     }}></div>
                     <Button.Group>
                       {toxenapi.isDesktop() && Settings.getUser()?.premium && typeof Settings.get("isRemote") === "boolean" && (
-                        <Button color={Settings.get("isRemote") ? "blue" : "gray"} onClick={() => {
-                          Settings.apply({isRemote: !Settings.get("isRemote")}, true).then(() => {
-                            Toxen.reloadSection();
-                          });
-                        }}>☁</Button>
+                        <Button color={Settings.get("isRemote") ? "blue" : "gray"}
+                          onClick={() => {
+                            Settings.apply({isRemote: !Settings.get("isRemote")}, true).then(() => {
+                              Toxen.reloadSection();
+                            });
+                          }}
+
+                          onContextMenu={() => {
+                            // Song.downloadAllMissingRemoteToLocal();
+                            modals.openConfirmModal({
+                              title: "Download all missing songs",
+                              content: "Are you sure you want to download all missing songs?",
+                              onConfirm: () => {
+                                Song.downloadAllMissingRemoteToLocal().then(async () => {
+                                  await Toxen.loadSongs();
+                                  Toxen.reloadSection();
+                                });
+                              },
+                              labels: {
+                                confirm: "Download",
+                                cancel: "Cancel",
+                              },
+                              confirmProps: {
+                                color: "green",
+                              },
+                            }); 
+                          }}
+                            
+                        >☁</Button>
                       )}
                       {
                         !Settings.isRemote() && toxenapi.isDesktop() && Settings.getUser()?.premium && (

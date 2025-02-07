@@ -116,14 +116,21 @@ export default class Song implements ISong {
   // }
 
   /**
+   * Return the full local path of the song folder.
+   */
+  public dirnameLocal(relativePath?: string) {
+    if (toxenapi.isDesktop()) return (this.paths && this.paths.dirname) ? toxenapi.path.resolve(Settings.get("libraryDirectory"), this.paths.dirname, relativePath ?? ".") : null;
+    toxenapi.throwDesktopOnly("Unable to get song directory name.");
+  }
+
+  /**
    * Return the full path of the song folder.
    */
   public dirname(relativePath?: string) {
     let user = Settings.getUser();
     if (Settings.isRemote() && !user) return null;
     if (Settings.isRemote()) return `${user.getCollectionPath()}/${this.uid}${relativePath ? "/" + relativePath : ""}`;
-    if (toxenapi.isDesktop()) return (this.paths && this.paths.dirname) ? toxenapi.path.resolve(Settings.get("libraryDirectory"), this.paths.dirname, relativePath ?? ".") : null;
-    toxenapi.throwDesktopOnly("Unable to get song directory name.");
+    return this.dirnameLocal(relativePath);
   }
 
   /**
@@ -606,227 +613,6 @@ export default class Song implements ISong {
 
   public inQueue: boolean = false;
 
-  public ContextMenu(props?: {
-    noQueueOption?: boolean,
-    // cref?: React.RefObject<HTMLDivElement>,
-    isSelected?: boolean,
-    children?: React.ReactNode,
-  }) {
-    props ?? (props = {});
-    const selectedSongs = Song.getSelected();
-    const [opened, setOpened] = useState(false);
-
-    const modals = useModals();
-
-    let isSelected = props.isSelected ?? this.selected ?? false;
-
-    if (!isSelected) {
-      return (
-        <Menu
-          trigger="click"
-          opened={opened}
-          // onClose={() => setOpened(false)}
-          closeOnClickOutside
-        >
-          {props.children ? (
-            <Menu.Target>
-              {props.children}
-            </Menu.Target>
-          ) : null}
-          
-          <Menu.Dropdown>
-            <Menu.Item disabled={true}>
-              {this.getDisplayName()}
-            </Menu.Item>
-            <Menu.Item leftSection={<i className="fas fa-edit"></i>} onClick={() => {
-              if (Toxen.isMode("ThemeEditor")) return Toxen.sendError("CURRENTLY_EDITING_THEME");
-              if (!Toxen.isMode("Player")) return Toxen.sendError("CURRENTLY_EDITING_SONG");
-              Toxen.editSong(this);
-            }}>
-              Edit info
-            </Menu.Item>
-            <Menu.Item leftSection={<i className="fas fa-th-list"></i>} onClick={() => {
-              modals.openModal(this.createManagePlaylists());
-            }}>
-              Manager playlists
-            </Menu.Item>
-            {!props.noQueueOption ? (this.inQueue ? (
-              <Menu.Item leftSection={<i className="fas fa-minus"></i>} onClick={() => this.removeFromQueue()}>
-                Remove from queue
-              </Menu.Item>
-            ) : (
-              <Menu.Item leftSection={<i className="fas fa-plus"></i>} onClick={() => this.addToQueue()}>
-                Add to queue
-              </Menu.Item>
-            )) : undefined}
-            <Menu.Item leftSection={<i className="fas fa-search"></i>} onClick={async () => {
-              if (Toxen.isMode("ThemeEditor")) return Toxen.sendError("CURRENTLY_EDITING_THEME");
-              if (!Toxen.isMode("Player")) return Toxen.sendError("CURRENTLY_EDITING_SONG");
-              await Toxen.sidePanel.show(true);
-              await Toxen.sidePanel.setSectionId("songPanel");
-              this.scrollTo();
-            }}>
-              Show song in list
-            </Menu.Item>
-            <Menu.Item leftSection={<i className="fas fa-trash-alt"></i>} color="red" onClick={() => {
-              modals.openConfirmModal({
-                title: "Delete song",
-                children: `Are you sure you want to delete "${this.title}"?`,
-                onConfirm: async () => {
-                  try {
-                    await this.delete();
-                  } catch (error) {
-                    Toxen.error(error);
-                  }
-                },
-                labels: {
-                  confirm: "Delete",
-                  cancel: "Cancel"
-                },
-                confirmProps: {
-                  color: "red"
-                }
-              });
-            }}>
-              Delete
-            </Menu.Item>
-            {toxenapi.isDesktop() && (
-              <Menu.Item leftSection={<i className="fas fa-cut"></i>} onClick={() => {
-                modals.openModal(this.createTrimSongModal());
-              }}>
-                Trim
-              </Menu.Item>
-            )}
-            {
-              User.getCurrentUser()?.premium && !Settings.isRemote() && (
-                <Menu.Item leftSection={<i className="fas fa-sync"></i>} onClick={() => {
-                  this.sync();
-                }}>
-                  Sync to remote
-                </Menu.Item>
-              )
-            }
-            {Settings.isAdvanced<JSX.Element>(
-              <>
-                <Menu.Item disabled={true}>
-                  Extra options
-                </Menu.Item>
-                <Menu.Item onClick={() => this.copyUID()}>
-                  Copy UID
-                </Menu.Item>
-                {toxenapi.isDesktop() && (
-                  <Menu.Item onClick={() => toxenapi.remote.shell.openPath(this.dirname())}>
-                    Open in file explorer
-                  </Menu.Item>
-                )}
-                {/* <Menu.Item onClick={() => {
-                const recorder = new ScreenRecorder();
-                recorder.startRecording();
-              }}>
-                Record (Experimental)
-              </Menu.Item> */}
-              </>
-            )}
-          </Menu.Dropdown>
-        </Menu>
-      )
-    }
-    else if (selectedSongs.length > 0) {
-      return (
-        <Menu>
-          {/* <Menu.Item disabled={true}>
-            Multiple songs
-          </Menu.Item> */}
-          <Menu.Item leftSection={<i className="far fa-check-square"></i>} onClick={() => {
-            Song.deselectAll();
-          }}>
-            Deselect all
-          </Menu.Item>
-          <Menu.Item leftSection={<i className="fas fa-th-list"></i>} onClick={() => {
-            const selectedSongs = Song.getSelected();
-            // selectedSongs.forEach(s => s.addToPlaylist());
-            // Currently disabled
-            modals.openModal(Song.createManageMultiSongsPlaylists(selectedSongs));
-          }}>
-            Manage playlists
-          </Menu.Item>
-          <Menu.Item leftSection={<i className="fas fa-plus"></i>} onClick={async () => {
-            const selectedSongs = Song.getSelected();
-            selectedSongs.forEach(s => s.addToQueue());
-          }}>
-            Add to queue
-          </Menu.Item>
-          <Menu.Item leftSection={<i className="fas fa-minus"></i>} onClick={() => {
-            const selectedSongs = Song.getSelected();
-            selectedSongs.forEach(s => s.removeFromQueue());
-          }}>
-            Remove from queue
-          </Menu.Item>
-          {
-            User.getCurrentUser()?.premium && !Settings.isRemote() && (
-              <Menu.Item leftSection={<i className="fas fa-sync"></i>} onClick={async () => {
-                const selectedSongs = Song.getSelected();
-                for (const song of selectedSongs) {
-                  await song.sync();
-                }
-              }}>
-                Sync to remote
-              </Menu.Item>
-            )
-          }
-          <Menu.Item leftSection={<i className="fas fa-trash-alt"></i>} color="red" onClick={() => {
-            const selectedSongs = Song.getSelected();
-            modals.openConfirmModal({
-              title: "Delete songs",
-              children: <>
-                <p>
-                  Are you sure you want to delete these {selectedSongs.length} songs?
-                  <hr />
-                  The following songs will be deleted:
-                  {
-                    selectedSongs.map(s => (
-                      <div key={s.uid}>
-                        <i className="fas fa-music"></i>
-                        &nbsp;
-                        <span>{s.getDisplayName()}</span>
-                      </div>
-                    ))
-                  }
-                </p>
-              </>,
-              onConfirm: async () => {
-                try {
-                  await this.delete();
-                } catch (error) {
-                  Toxen.error(error);
-                }
-              },
-              labels: {
-                confirm: "Delete all",
-                cancel: "Cancel"
-              },
-              confirmProps: {
-                color: "red"
-              }
-            });
-          }}>
-            Delete
-          </Menu.Item>
-        </Menu>
-      )
-    }
-    else {
-      // Empty context menu
-      return (
-        <Menu>
-          <Menu.Item disabled={true}>
-            Empty
-          </Menu.Item>
-        </Menu>
-      );
-    }
-  }
-
   // Replacement for ContextMenu, will be a modal instead
   public contextMenuModal(modals: ModalsContextProps) {
 
@@ -882,7 +668,7 @@ export default class Song implements ISong {
           }}>
             Delete
           </Button>
-          {toxenapi.isDesktop() && (
+          {!Settings.isRemote() && (
               <Button onClick={() => {
                 close();
                 modals.openModal(this.createTrimSongModal());
@@ -896,7 +682,67 @@ export default class Song implements ISong {
                 close();
                 this.sync();
               }}>
-                Sync to remote
+                Sync with remote
+              </Button>
+            )
+          }
+          {
+            User.getCurrentUser()?.premium && Settings.isRemote() && toxenapi.isDesktop() && (
+              <Button onClick={async () => {
+                close();
+                // Create the song on local with the info, then sync it
+
+                // Check if sone already exists locally
+                let localSongs = await Song.loadLocalSongs();
+                
+                const existingSong = localSongs.find(s => s.uid === this.uid);
+
+                // Create the song locally
+                const localDir = existingSong
+                  ? existingSong.dirnameLocal()
+                  : toxenapi.path.resolve(Settings.get("libraryDirectory"), this.uid);
+                
+                if ((await toxenapi.fs.promises.stat(localDir).catch(() => false))) {
+                  const id = modals.openConfirmModal({
+                    title: "Song already exists locally",
+                    children: (
+                      <Stack>
+                        <p>
+                          If you continue, the existing song will be deleted and replaced with the remote version. All unsynced local changes will be lost.
+                          <br />
+                          If you meant to sync the song differences, change to local mode and sync the song.
+                        </p>
+                      </Stack>
+                    ),
+                    labels: {
+                      confirm: "Delete and redownload song",
+                      cancel: "Cancel"
+                    },
+                    confirmProps: {
+                      color: "red"
+                    },
+                    onConfirm: () => {
+                      modals.closeModal(id);
+                      this.downloadRemoteToLocal(localDir).then(() => {
+                        Toxen.log("Song downloaded to local.", 2000);
+                      }).catch(error => {
+                        Toxen.error("Failed to download song to local: " + error.message);
+                      });
+                    },
+                    onCancel: () => {
+                      modals.closeModal(id);
+                    }
+                  });
+                }
+                else {
+                  this.downloadRemoteToLocal(localDir).then(() => {
+                    Toxen.log("Song downloaded to local.", 2000);
+                  }).catch(error => {
+                    Toxen.error("Failed to download song to local: " + error.message);
+                  });
+                }
+              }}>
+                Download to local
               </Button>
             )
           }
@@ -921,6 +767,120 @@ export default class Song implements ISong {
         </Stack>
       )
     });
+  }
+
+  public async downloadRemoteToLocal(): Promise<void>;
+  public async downloadRemoteToLocal(localSong: Song): Promise<void>;
+  public async downloadRemoteToLocal(localDir: string): Promise<void>;
+  public async downloadRemoteToLocal(local?: string | Song) {
+    if (!Settings.isRemote() || !toxenapi.isDesktop()) {
+      Toxen.error("Cannot download from remote to local when not in remote mode nor on desktop.");
+      return;
+    }
+
+    // Check if sone already exists locally
+    // Create the song locally
+    const localDir = local instanceof Song
+      ? local.dirnameLocal()
+      : typeof local === "string"
+      ? toxenapi.path.resolve(Settings.get("libraryDirectory"), local)
+      : toxenapi.path.resolve(Settings.get("libraryDirectory"), this.uid);
+    // const songByFolder = localSongs.find(s => s.paths.dirname === this.uid);
+    
+    const tmp = toxenapi.path.resolve(toxenapi.os.tmpdir(), Song.randomFileHash()); // For temporary move location while redownloading, in case something goes wrong.
+    
+    if ((await toxenapi.fs.promises.stat(localDir).catch(() => false))) {
+      await toxenapi.fs.promises.rename(localDir, tmp);
+    }
+    
+    const songData = this.toISong();
+    const fileData: {
+      name: string;
+      isDirectory: boolean;
+    }[] = await Toxen.fetch(this.dirname()).then(res => res.json()).catch(() => null as any);
+    
+    this.setProgressBar(0.10);
+    try {
+      await toxenapi.fs.promises.mkdir(localDir);
+      const fileCount = Object.keys(songData.files).length;
+      // for (const filePath in songData.files) {
+
+      let fileNumDone = 0;
+      await Promise.all(fileData.map(async (file) => {
+        const filePath = file.name;
+        const fullPath = toxenapi.path.resolve(localDir, filePath);
+        const dir = toxenapi.path.dirname(fullPath);
+        if (!(await toxenapi.fs.promises.stat(dir).catch(() => false))) {
+          await toxenapi.fs.promises.mkdir(dir, { recursive: true });
+        }
+        console.log("Syncing file: " + filePath);
+        const data = await Toxen.fetch(this.dirname(filePath)).then(
+          res => {
+            if (res.ok) return res.blob().then(blob => blob.stream());
+            else return null;
+          }
+        ).catch(() => null as any);
+        if (data) {
+          await toxenapi.fs.promises.writeFile(
+            fullPath,
+            data
+          );
+        }
+        fileNumDone++;
+        this.setProgressBar(fileNumDone / fileCount);
+      }));
+
+      this.setProgressBar(1, true);
+
+      if ((await toxenapi.fs.promises.stat(tmp).catch(() => false))) {
+        await toxenapi.fs.promises.rmdir(tmp, { recursive: true });
+      }
+    } catch (error) {
+      Toxen.error("Failed to create song locally: " + error.message);
+      if (await toxenapi.fs.promises.stat(tmp).catch(() => false)) {
+        await toxenapi.fs.promises.rmdir(localDir, { recursive: true });
+        await toxenapi.fs.promises.rename(tmp, localDir);
+      }
+      return;
+    }
+  }
+
+  public static async downloadAllMissingRemoteToLocal(remoteSongs?: Song[]) {
+    if (!Settings.isRemote() || !toxenapi.isDesktop()) {
+      Toxen.error("Cannot download from remote to local when not in remote mode nor on desktop.");
+      return;
+    }
+
+    const localSongs = await Song.loadLocalSongs();
+    remoteSongs ??= Toxen.getAllSongs();
+
+    const missingSongs = remoteSongs.filter(s => !localSongs.some(ls => ls.uid === s.uid));
+
+    function DownloadedSongs() {
+      const [done, _setDone] = React.useState(0);
+      setDone = _setDone;
+      return `Downloaded song ${done} / ${count}`;
+    }
+
+    let setDone: (done: number) => void;
+    
+    const count = missingSongs.length;
+    let done = 0;
+    const notifId = Toxen.notify({
+      content: <DownloadedSongs />,
+      disableClose: true,
+      title: "Downloading missing songs"
+    });
+    for (const song of missingSongs) {
+      let songPath = toxenapi.path.resolve(Settings.get("libraryDirectory"), song.uid)
+      while (await toxenapi.fs.promises.stat(songPath).catch(() => false)) {
+        songPath = toxenapi.path.resolve(Settings.get("libraryDirectory"), song.uid + "-" + Song.randomFileHash());
+      }
+      await song.downloadRemoteToLocal(songPath);
+      setDone(++done);
+    }
+
+    hideNotification(notifId);
   }
 
   public existingElements: SongElement[] = [];
@@ -1106,18 +1066,22 @@ export default class Song implements ISong {
   }
 
   public async saveInfo(opts?: {
-    callSync?: boolean
+    callSync?: boolean,
+    forceLocal?: boolean,
+    touch?: boolean
   }): Promise<void> {
     opts ??= {};
     
     let filetime = Date.now();
-    this.setFile("info.json", "u", filetime);
+    if (opts.touch ?? true) {
+      this.setFile("info.json", "u", filetime);
+    }
     this.hash = Song.randomFileHash();
     const curSong = Song.getCurrent();
     if (curSong === this) {
       curSong.setAppTitle();
     }
-    if (Settings.isRemote()) {
+    if (Settings.isRemote() && !opts.forceLocal) {
       let info = this.toISong();
       let user = Settings.getUser();
       if (!user) {
@@ -1152,7 +1116,12 @@ export default class Song implements ISong {
     
     if (!this.paths || !this.paths.dirname) return;
     try {
-      await toxenapi.fs.promises.writeFile(toxenapi.path.resolve(this.dirname(), "info.json"), JSON.stringify(this.toISong()));
+      const localPath = (this.paths && this.paths.dirname) ? toxenapi.path.resolve(Settings.get("libraryDirectory"), this.paths.dirname) : null;
+      if (!localPath) {
+        Toxen.error("Failed to save song info: " + this.getDisplayName());
+        return;
+      }
+      await toxenapi.fs.promises.writeFile(toxenapi.path.resolve(localPath, "info.json"), JSON.stringify(this.toISong()));
       if ((opts.callSync ?? true) && Settings.get("remoteSyncOnSongEdit")) {
         await this.sync(null, { silenceValidated: true });
       }
@@ -1295,7 +1264,7 @@ export default class Song implements ISong {
       type: "error"
     }) && null;
 
-    if (Settings.isRemote()) return;
+    // if (Settings.isRemote()) return;
 
     if (!diff) {
       diff = (await Song.compareSongsAgainstRemote([this])).result[this.uid];
@@ -1304,7 +1273,7 @@ export default class Song implements ISong {
     return toxenapi.syncSong(Toxen, user, this, diff, { silenceValidated })
   }
 
-  public static async createCompareSongsData(songs?: Song[]) {
+  public static async createCompareLocalSongsData(songs?: Song[]) {
     const user = Settings.getUser();
     if (!user.premium) throw new Error("You must be a premium user to compare songs against the remote.");
 
@@ -1312,11 +1281,30 @@ export default class Song implements ISong {
       toxenapi.throwDesktopOnly();
     }
 
-    const localSongsData = (songs ?? await Song.loadLocalSongs()).map(s => ({
+    let localSongsData: {
+      files: Song["files"];
+      hash: string
+      uid: string
+    }[];
+
+    const mapSongToData = (songs: Song[]) => songs.map(s => ({
       uid: s.uid,
       files: s.files,
       hash: s.hash,
     }));
+    
+    if (Settings.isRemote()) {
+      const localSongs = await Song.loadLocalSongs();
+      localSongsData = mapSongToData((songs ? (
+        songs.map(s => {
+          const local = localSongs.find(ls => ls.uid === s.uid);
+          return local
+        })
+      ) : localSongs));
+    }
+    else {
+      localSongsData = mapSongToData((songs ?? await Song.loadLocalSongs()));
+    }
 
     const map = localSongsData.reduce((prev, cur) => {
       prev[cur.uid] = cur;
@@ -1328,7 +1316,7 @@ export default class Song implements ISong {
   }
 
   public static async compareSongsAgainstRemote(songs?: Song[]) {
-    const data = await this.createCompareSongsData(songs);
+    const data = await this.createCompareLocalSongsData(songs);
 
     const user = Settings.getUser();
     if (!user.premium) throw new Error("You must be a premium user to compare songs against the remote.");
@@ -1337,7 +1325,16 @@ export default class Song implements ISong {
       toxenapi.throwDesktopOnly();
     }
 
-    const remoteData = await toxenapi.compareSongsAgainstRemote(Toxen, user, data);
+    const remoteData = await toxenapi.compareLocalSongsAgainstRemote(Toxen, user, data);
+
+    const isInverted = Settings.isRemote();
+    if (isInverted) {
+      for (const uid in remoteData.result) {
+        const diff = remoteData.result[uid];
+        if (!diff) continue;
+        [diff.download, diff.upload] = [diff.upload, diff.download];
+      }
+    }
 
     return remoteData;
   }

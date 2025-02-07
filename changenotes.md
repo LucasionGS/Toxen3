@@ -1,3 +1,6 @@
+## 1.12.3 - 7-02-2025
+### New features
+- Toxen Stream downloading of missing songs from remote.
 ## 1.12.2 - 5-02-2025
 ### Hotfix
 - Too many notifications on first time sync

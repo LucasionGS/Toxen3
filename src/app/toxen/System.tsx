@@ -67,7 +67,7 @@ export default class System {
 
         // If directory - Only on desktop
         if (toxenapi.isDesktop() && !Settings.isRemote()) {
-          const stat: import("fs").Stats | null = await toxenapi.fs.promises.stat(file.path).then(a => a).catch(() => null);
+          const stat: import("fs").Stats | null = await toxenapi.fs.promises.stat(file.path).then(a => a).catch(() => null as any);
           if (stat?.isDirectory()) {
             mediaPack = true;
             let dirFiles = await System.recursive(file.path);
@@ -165,7 +165,7 @@ export default class System {
               method: "PUT",
               body: file
             }).then(() => {
-              Toxen.log("Uploaded background image");
+              Toxen.log("Uploaded background image", 3000);
             }).catch((reason) => {
               Toxen.error("Unable to upload background image");
               Toxen.error(reason);
@@ -214,7 +214,7 @@ export default class System {
                 method: "PUT",
                 body: file
               }).then(() => {
-                Toxen.log("Uploaded subtitle file");
+                Toxen.log("Uploaded subtitle file", 3000);
               }).catch((reason) => {
                 Toxen.error("Unable to upload subtitle file");
                 Toxen.error(reason);

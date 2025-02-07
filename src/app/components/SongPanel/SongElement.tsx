@@ -96,10 +96,6 @@ export default class SongElement extends Component<SongElementProps, SongElement
     this.props.song.play();
   }
 
-  public ContextMenu(props: { giveSetOpen: (setOpen: (opened: boolean) => void) => void, isSelected?: boolean, children?: React.ReactNode }): JSX.Element {
-    return this.props.song.ContextMenu.call(this.props.song, props);
-  }
-
   public select(force?: boolean) {
 
     const state = force ?? !this.state.selected;

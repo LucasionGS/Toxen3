@@ -157,7 +157,7 @@ export default class ToxenController {
     this.throwDesktopOnly("validateSongAgainstRemote");
   }
 
-  public async compareSongsAgainstRemote($toxen: typeof Toxen, user: User, data: any): Promise<{
+  public async compareLocalSongsAgainstRemote($toxen: typeof Toxen, user: User, data: any): Promise<{
     result: Record<string, SongDiff>
   }> {
     this.throwDesktopOnly("fetchRemoteSongsData");
