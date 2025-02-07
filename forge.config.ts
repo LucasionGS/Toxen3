@@ -25,15 +25,15 @@ const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     icon: './src/icons/sizes/icon.ico',
-    executableName: 'Toxen'
+    executableName: 'toxen3'
   },
   rebuildConfig: {},
   makers: [new MakerSquirrel({
-    name: 'Toxen',
+    name: 'toxen3',
     authors: 'Lucasion',
     description: 'Toxen Music Player',
     setupIcon: './src/icons/toxen.ico',
-    exe: 'Toxen.exe',
+    exe: 'toxen3.exe',
   }), new MakerZIP({}, ['darwin']), new MakerRpm({}), new MakerDeb({})],
   plugins: [
     new VitePlugin({
