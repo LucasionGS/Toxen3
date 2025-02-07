@@ -32,7 +32,7 @@ const createWindow = (): void => {
     autoHideMenuBar: true,
     frame: false,
     center: true,
-    icon: "./src/icons/tox.ico",
+    icon: "./src/icons/sizes/icon.ico",
     darkTheme: true,
   });
   remote.enable(mainWindow.webContents);

@@ -24,16 +24,16 @@ const config: ForgeConfig = {
   ],
   packagerConfig: {
     asar: true,
-    // icon: './src/icons/toxen.ico',
-    executableName: 'toxen3',
+    icon: './src/icons/sizes/icon.ico',
+    executableName: 'Toxen'
   },
   rebuildConfig: {},
   makers: [new MakerSquirrel({
-    name: 'toxen3',
+    name: 'Toxen',
     authors: 'Lucasion',
     description: 'Toxen Music Player',
     setupIcon: './src/icons/toxen.ico',
-    exe: 'toxen3.exe',
+    exe: 'Toxen.exe',
   }), new MakerZIP({}, ['darwin']), new MakerRpm({}), new MakerDeb({})],
   plugins: [
     new VitePlugin({
