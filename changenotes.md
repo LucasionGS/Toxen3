@@ -1,3 +1,6 @@
+## 1.12.4 - 7-02-2025
+### New features:
+- More like a returning feature - The multi-select is back, and you can now select multiple by holding `CTRL` and dragging your mouse across songs.
 ## 1.12.3 - 7-02-2025
 ### New features
 - Toxen Stream downloading of missing songs from remote.
