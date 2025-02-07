@@ -409,6 +409,9 @@ export class Toxen {
   public static storyboardEditorController: StoryboardEditorController;
 
   public static songSearch = "";
+  /**
+   * The full list of songs loaded.
+   */
   public static songList: Song[];
   public static searchedSongList: Song[];
   private static setSongList(songList: Song[]) {
@@ -623,18 +626,18 @@ export class Toxen {
     return toxenapi.isDesktop() ? toxenapi.getDiscordInstance() : null;
   }
 
-  public static async syncSongs() {
+  public static async syncSongs(songs?: Song[]) {
     if (!toxenapi.isDesktop()) {
       return toxenapi.throwDesktopOnly();
     }
     const browser = toxenapi.remote.getCurrentWindow();
 
-    const songData = await Song.compareSongsAgainstRemote();
+    const songData = await Song.compareSongsAgainstRemote(songs);
     
     console.log("Syncing songs...", songData);
     
     // return;
-    const currentQueue = [...Toxen.songList];
+    const currentQueue = [...(songs ?? Toxen.songList)];
     const total = currentQueue.length;
     // 5 songs at a time
     let untilFinished = 5;
@@ -915,7 +918,7 @@ export default class ToxenAppRenderer extends React.Component {
                       )}
                       {
                         !Settings.isRemote() && toxenapi.isDesktop() && Settings.getUser()?.premium && (
-                          <Button color="green" onClick={Toxen.syncSongs}>Sync</Button>
+                          <Button color="green" onClick={() => Toxen.syncSongs()}>Sync</Button>
                         )
                       }
                       <Button color="green" onClick={() => Toxen.sidePanel.setSectionId("playlist")}>Change Playlist</Button>

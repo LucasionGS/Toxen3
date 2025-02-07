@@ -37,12 +37,18 @@ function SongElementDiv(props: { songElement: SongElement }) {
           // transform: `translateX(${observer?.isIntersecting ? "0" : "-64"}px)`,
         }}
           onClick={e => {
-            if (e.ctrlKey) return songElement.select();
+            if (e.ctrlKey) return;
             songElement.play();
           }}
           onContextMenu={e => {
             e.preventDefault();
             song.contextMenuModal(modals);
+          }}
+          onMouseDownCapture={e => {
+            if (e.ctrlKey && e.buttons === 1) return songElement.select();
+          }}
+          onMouseEnter={e => {
+            if (e.ctrlKey && e.buttons === 1) return songElement.select();
           }}
         >
           <div style={{ // Progress bar

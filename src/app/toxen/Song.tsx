@@ -615,158 +615,250 @@ export default class Song implements ISong {
 
   // Replacement for ContextMenu, will be a modal instead
   public contextMenuModal(modals: ModalsContextProps) {
+    const selectedSongs = Song.getSelected();
 
+    let isSelected = this.selected;
+    
+    let modalId: string;
     const close = () => modals.closeModal(modalId);
     
-    const modalId = modals.openModal({
-      title: this.getDisplayName(),
-      children: (
-        <Stack>
-          <p>
-            {this.getDisplayName()}
-          </p>
-          <Button onClick={() => {
-            close();
-            if (Toxen.isMode("ThemeEditor")) return Toxen.sendError("CURRENTLY_EDITING_THEME");
-            if (!Toxen.isMode("Player")) return Toxen.sendError("CURRENTLY_EDITING_SONG");
-            Toxen.editSong(this);
-          }}>
-            Edit info
-          </Button>
-          <Button onClick={() => {
-            close();
-            modals.openModal(this.createManagePlaylists());
-          }}>
-            Manage playlists
-          </Button>
-          <Button onClick={() => {
-            close();
-            this.inQueue ? this.removeFromQueue() : this.addToQueue();
-          }}>
-            {this.inQueue ? "Remove from queue" : "Add to queue"}
-          </Button>
-          <Button onClick={() => {
-            close();
-            modals.openConfirmModal({
-              title: "Delete song",
-              children: `Are you sure you want to delete "${this.title}"?`,
-              onConfirm: async () => {
-                try {
-                  await this.delete();
-                } catch (error) {
-                  Toxen.error(error);
+    // If none are selected
+    // or if only one is selected and it's this one
+    // or if more than one are selected and this one is not selected
+    // Show the single song context menu
+    if (selectedSongs.length == 0 || (selectedSongs.length == 1) || (selectedSongs.length > 1 && !isSelected)) {
+      modalId = modals.openModal({
+        title: this.getDisplayName(),
+        children: (
+          <Stack>
+            <p>
+              {this.getDisplayName()}
+            </p>
+            <Button onClick={() => {
+              close();
+              if (Toxen.isMode("ThemeEditor")) return Toxen.sendError("CURRENTLY_EDITING_THEME");
+              if (!Toxen.isMode("Player")) return Toxen.sendError("CURRENTLY_EDITING_SONG");
+              Toxen.editSong(this);
+            }}>
+              Edit info
+            </Button>
+            <Button onClick={() => {
+              close();
+              modals.openModal(this.createManagePlaylists());
+            }}>
+              Manage playlists
+            </Button>
+            <Button onClick={() => {
+              close();
+              this.inQueue ? this.removeFromQueue() : this.addToQueue();
+            }}>
+              {this.inQueue ? "Remove from queue" : "Add to queue"}
+            </Button>
+            <Button onClick={() => {
+              close();
+              modals.openConfirmModal({
+                title: "Delete song",
+                children: `Are you sure you want to delete "${this.title}"?`,
+                onConfirm: async () => {
+                  try {
+                    await this.delete();
+                  } catch (error) {
+                    Toxen.error(error);
+                  }
+                },
+                labels: {
+                  confirm: "Delete",
+                  cancel: "Cancel"
+                },
+                confirmProps: {
+                  color: "red"
                 }
-              },
-              labels: {
-                confirm: "Delete",
-                cancel: "Cancel"
-              },
-              confirmProps: {
-                color: "red"
-              }
-            });
-          }}>
-            Delete
-          </Button>
-          {!Settings.isRemote() && (
-              <Button onClick={() => {
-                close();
-                modals.openModal(this.createTrimSongModal());
-              }}>
-                Trim
-              </Button>
-          )}
-          {
-            User.getCurrentUser()?.premium && !Settings.isRemote() && (
-              <Button onClick={() => {
-                close();
-                this.sync();
-              }}>
-                Sync with remote
-              </Button>
-            )
-          }
-          {
-            User.getCurrentUser()?.premium && Settings.isRemote() && toxenapi.isDesktop() && (
-              <Button onClick={async () => {
-                close();
-                // Create the song on local with the info, then sync it
-
-                // Check if sone already exists locally
-                let localSongs = await Song.loadLocalSongs();
-                
-                const existingSong = localSongs.find(s => s.uid === this.uid);
-
-                // Create the song locally
-                const localDir = existingSong
-                  ? existingSong.dirnameLocal()
-                  : toxenapi.path.resolve(Settings.get("libraryDirectory"), this.uid);
-                
-                if ((await toxenapi.fs.promises.stat(localDir).catch(() => false))) {
-                  const id = modals.openConfirmModal({
-                    title: "Song already exists locally",
-                    children: (
-                      <Stack>
-                        <p>
-                          If you continue, the existing song will be deleted and replaced with the remote version. All unsynced local changes will be lost.
-                          <br />
-                          If you meant to sync the song differences, change to local mode and sync the song.
-                        </p>
-                      </Stack>
-                    ),
-                    labels: {
-                      confirm: "Delete and redownload song",
-                      cancel: "Cancel"
-                    },
-                    confirmProps: {
-                      color: "red"
-                    },
-                    onConfirm: () => {
-                      modals.closeModal(id);
-                      this.downloadRemoteToLocal(localDir).then(() => {
-                        Toxen.log("Song downloaded to local.", 2000);
-                      }).catch(error => {
-                        Toxen.error("Failed to download song to local: " + error.message);
-                      });
-                    },
-                    onCancel: () => {
-                      modals.closeModal(id);
-                    }
-                  });
-                }
-                else {
-                  this.downloadRemoteToLocal(localDir).then(() => {
-                    Toxen.log("Song downloaded to local.", 2000);
-                  }).catch(error => {
-                    Toxen.error("Failed to download song to local: " + error.message);
-                  });
-                }
-              }}>
-                Download to local
-              </Button>
-            )
-          }
-          {Settings.isAdvanced<JSX.Element>(
-            <>
-              <Button onClick={() => {
-                close();
-                this.copyUID()
-              }}>
-                Copy UID
-              </Button>
-              {toxenapi.isDesktop() && (
+              });
+            }}>
+              Delete
+            </Button>
+            {!Settings.isRemote() && (
                 <Button onClick={() => {
                   close();
-                  toxenapi.remote.shell.openPath(this.dirname());
+                  modals.openModal(this.createTrimSongModal());
                 }}>
-                  Open in file explorer
+                  Trim
                 </Button>
-              )}
-            </>
-          )}
-        </Stack>
-      )
-    });
+            )}
+            {
+              User.getCurrentUser()?.premium && !Settings.isRemote() && (
+                <Button onClick={() => {
+                  close();
+                  this.sync();
+                }}>
+                  Sync with remote
+                </Button>
+              )
+            }
+            {
+              User.getCurrentUser()?.premium && Settings.isRemote() && toxenapi.isDesktop() && (
+                <Button onClick={async () => {
+                  close();
+                  // Create the song on local with the info, then sync it
+
+                  // Check if sone already exists locally
+                  let localSongs = await Song.loadLocalSongs();
+                  
+                  const existingSong = localSongs.find(s => s.uid === this.uid);
+
+                  // Create the song locally
+                  const localDir = existingSong
+                    ? existingSong.dirnameLocal()
+                    : toxenapi.path.resolve(Settings.get("libraryDirectory"), this.uid);
+                  
+                  if ((await toxenapi.fs.promises.stat(localDir).catch(() => false))) {
+                    const id = modals.openConfirmModal({
+                      title: "Song already exists locally",
+                      children: (
+                        <Stack>
+                          <p>
+                            If you continue, the existing song will be deleted and replaced with the remote version. All unsynced local changes will be lost.
+                            <br />
+                            If you meant to sync the song differences, change to local mode and sync the song.
+                          </p>
+                        </Stack>
+                      ),
+                      labels: {
+                        confirm: "Delete and redownload song",
+                        cancel: "Cancel"
+                      },
+                      confirmProps: {
+                        color: "red"
+                      },
+                      onConfirm: () => {
+                        modals.closeModal(id);
+                        this.downloadRemoteToLocal(localDir).then(() => {
+                          Toxen.log("Song downloaded to local.", 2000);
+                        }).catch(error => {
+                          Toxen.error("Failed to download song to local: " + error.message);
+                        });
+                      },
+                      onCancel: () => {
+                        modals.closeModal(id);
+                      }
+                    });
+                  }
+                  else {
+                    this.downloadRemoteToLocal(localDir).then(() => {
+                      Toxen.log("Song downloaded to local.", 2000);
+                    }).catch(error => {
+                      Toxen.error("Failed to download song to local: " + error.message);
+                    });
+                  }
+                }}>
+                  Download to local
+                </Button>
+              )
+            }
+            {Settings.isAdvanced<JSX.Element>(
+              <>
+                <Button onClick={() => {
+                  close();
+                  this.copyUID()
+                }}>
+                  Copy UID
+                </Button>
+                {toxenapi.isDesktop() && (
+                  <Button onClick={() => {
+                    close();
+                    toxenapi.remote.shell.openPath(this.dirname());
+                  }}>
+                    Open in file explorer
+                  </Button>
+                )}
+              </>
+            )}
+          </Stack>
+        )
+      });
+    }
+    // If more than one are selected and this one is selected
+    // Show the multi song context menu
+    else if (selectedSongs.length > 1) {
+      modalId = modals.openModal({
+        title: "Manage playlists",
+        children: (
+          <Stack>
+            <p>
+              Manage playlists for the {selectedSongs.length} selected songs.
+            </p>
+            <Button onClick={() => {
+              close();
+              Song.deselectAll();
+            }}>
+              Deselect all
+            </Button>
+            <Button onClick={() => {
+              close();
+              modals.openModal(Song.createManageMultiSongsPlaylists(selectedSongs));
+            }}>
+              Manage playlists
+            </Button>
+            <Button onClick={() => {
+              close();
+              Song.clearQueue();
+              selectedSongs.forEach(s => s.addToQueue());
+            }}>
+              Add all to queue
+            </Button>
+            <Button onClick={() => {
+              close();
+              selectedSongs.forEach(s => s.removeFromQueue());
+            }}>
+              Remove all from queue
+            </Button>
+            <Button onClick={() => {
+              close();
+              modals.openConfirmModal({
+                title: "Delete songs",
+                children: `Are you sure you want to delete ${selectedSongs.length} songs?`,
+                onConfirm: async () => {
+                  try {
+                    await Promise.all(selectedSongs.map(s => s.delete()));
+                  } catch (error) {
+                    Toxen.error(error);
+                  }
+                },
+                labels: {
+                  confirm: "Delete",
+                  cancel: "Cancel"
+                },
+                confirmProps: {
+                  color: "red"
+                }
+              });
+            }}>
+              Delete all
+            </Button>
+            {
+              User.getCurrentUser()?.premium && Settings.isRemote() && toxenapi.isDesktop() && (
+                <Button onClick={() => {
+                  close();
+                  Song.downloadAllMissingRemoteToLocal(selectedSongs);
+                }}>
+                  Download all missing to local
+                </Button>
+              )
+            }
+            {
+              User.getCurrentUser()?.premium && !Settings.isRemote() && toxenapi.isDesktop() && (
+                <Button onClick={() => {
+                  close();
+                  Toxen.syncSongs(selectedSongs);
+                }}>
+                  Sync selected with remote
+                </Button>
+              )
+            }
+          </Stack>
+        )
+      });
+    }
   }
 
   public async downloadRemoteToLocal(): Promise<void>;
