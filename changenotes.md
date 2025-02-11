@@ -1,6 +1,14 @@
+## 1.12.5 - 11-02-2025
+## New features
+- Preloading of storyboard image assets
+- Performance settings tab
+  - Added setting for enabling/disabling hiding song elements when not in view (On by default, always on for remote server)
+
 ## 1.12.4 - 7-02-2025
-### New features:
+### New features
 - More like a returning feature - The multi-select is back, and you can now select multiple by holding `CTRL` and dragging your mouse across songs.
+### Why did this take so long to fix
+- Functional icon on desktop again!
 ## 1.12.3 - 7-02-2025
 ### New features
 - Toxen Stream downloading of missing songs from remote.
