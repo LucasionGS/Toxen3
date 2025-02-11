@@ -11,7 +11,7 @@ export default class Stats {
   public static async save() {
     localStorage.setItem("statistics-backup", Stats.toString());
     try {
-      toxenapi.saveStats(Stats);
+      await toxenapi.saveStats(Stats);
       Stats.events.emit("saved", {
         savedAt: Date.now()
       });

@@ -276,7 +276,7 @@ namespace StoryboardParser {
     storyboard: [],
   };
 
-  export function setStoryboard(config: StoryboardConfig) {
+  export function setStoryboard(config: StoryboardConfig, song?: Song) {
     if (config) {
       loadedStoryboard = config;
     }
@@ -290,6 +290,30 @@ namespace StoryboardParser {
     if (loadedStoryboard) loadedStoryboard.storyboard.sort((a, b) => a.startTime - b.startTime);
     eventIndex = 0;
 
+    Promise.resolve().then(() => {
+      // Async preload all assets
+      song ??= Song.getCurrent(); // Assume the song loaded is the current song, if not provided
+      const isLoading: Record<string, boolean> = {};
+      loadedStoryboard.storyboard.forEach(event => {
+        const component = components[event.component];
+        if (component) {
+          component.arguments.forEach(arg => {
+            const value = event.data[arg.identifier];
+            if (arg.type === "SelectImage" && typeof value === "string") {
+              const src = `${song.dirname(value)}?h=${song.hash}`;
+              if (isLoading[src]) return;
+              const img = new Image();
+              img.src = src;
+              isLoading[src] = true;
+              img.onload = () => {
+                console.log("Preloaded image: " + img.src);
+              }
+            }
+          });
+        }
+      });
+    });
+    
     return loadedStoryboard;
   }
 
@@ -318,12 +342,13 @@ namespace StoryboardParser {
     }
   }
 
+  /**
+   * Not implemented used ?
+   */
   export function loadStoryboard(storyboard: string) {
     const timeline = parseStoryboard(storyboard);
     setStoryboard(timeline);
   }
-
-
 
   // These events are for debugging and testing purposes.
   // setloadedStoryboard([

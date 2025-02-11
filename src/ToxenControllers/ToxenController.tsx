@@ -92,6 +92,7 @@ export default class ToxenController {
     if (window.localStorage.getItem("toxen.settings") == null) {
       $settings.applyDefaultSettings();
       await $settings.save();
+      return $settings.data;
     }
     try {
       let data = window.localStorage.getItem("toxen.settings");

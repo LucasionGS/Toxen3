@@ -52,6 +52,8 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
     }
   }
 
+  const song = Toxen.editingSong;
+  
   const mouseEventHandler = React.useCallback((e: MouseEvent) => {
     if (!isStarted) return false;
     // Mouse position is relative to the canvas
@@ -248,7 +250,7 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
       if (ctx) {
         if (!config) {
           Toxen.editingSong.readStoryboardFile(false).then((config) => {
-            config = StoryboardParser.setStoryboard(config);
+            config = StoryboardParser.setStoryboard(config, song);
             setConfig(config);
             _setBpm(config.bpm ?? 120);
             _setBpmOffset(config.bpmOffset ?? 0);
@@ -308,7 +310,6 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
   
   props.controllerSetter?.(controller);
   
-  const song = Toxen.editingSong;
   return (
     <div className="storyboard-editor" style={{ display: isStarted ? "": "none" }}>
       <div style={{ display: "flex" }}>
@@ -494,7 +495,6 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
 
     ctx.fillStyle = "rgba(255, 0, 0, 0.5)";
     if (event.component === "visualizerColor") {
-      // debugger
       const color = (event.data.color ?? [255, 255, 255]) as [number, number, number];
       ctx.fillStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, 0.5)`;
     }
@@ -588,7 +588,7 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
           title: "Edit Event",
           children: <EditEvent event={event} config={config} close={() => {
             modals.closeModal(modalId);
-            StoryboardParser.setStoryboard(config);
+            StoryboardParser.setStoryboard(config, song);
           }} />
         });
       }

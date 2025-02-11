@@ -236,9 +236,9 @@ export default class Song implements ISong {
 
   public async applyStoryboard() {
     let storyboard = await this.readStoryboardFile();
-    if (!storyboard) return StoryboardParser.setStoryboard(null);
+    if (!storyboard) return StoryboardParser.setStoryboard(null, this);
 
-    StoryboardParser.setStoryboard(storyboard);
+    StoryboardParser.setStoryboard(storyboard, this);
   }
 
   public getDisplayName() {
@@ -418,7 +418,7 @@ export default class Song implements ISong {
       if (!options.disableHistory) Song.historyAdd(this);
       Toxen.musicPlayer.setSource(src, true);
       await Toxen.background.setBackground(bg + "?h=" + this.hash);
-      Stats.set("songsPlayed", (Stats.get("songsPlayed") ?? 0) + 1)
+      Stats.set("songsPlayed", (Stats.get("songsPlayed") ?? 0) + 1);
       Toxen.setAllVisualColors(this.visualizerColor);
       Toxen.background.storyboard.setSong(this);
       Toxen.background.visualizer.update();

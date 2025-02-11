@@ -63,9 +63,11 @@ export default class DesktopController extends ToxenController {
       await fsp.mkdir(this.CrossPlatform.getToxenDataPath(), { recursive: true });
     }
     
-    let ws = fs.createWriteStream(this.settingsFilePath);
-    ws.write(Buffer.from($settings.toString()));
-    ws.close();
+    return new Promise<void>((resolve, reject) => {
+      let ws = fs.createWriteStream(this.settingsFilePath);
+      ws.write(Buffer.from($settings.toString()));
+      ws.close(() => resolve());
+    })
   }
 
   /**
@@ -77,7 +79,7 @@ export default class DesktopController extends ToxenController {
       if (await fsp.stat(musicPath).then(() => false).catch(() => true)) {
         await fsp.mkdir(musicPath, { recursive: true });
       }
-      $settings.applyDefaultSettings({
+      await $settings.applyDefaultSettings({
         libraryDirectory: musicPath
       });
       await $settings.save();
@@ -85,7 +87,7 @@ export default class DesktopController extends ToxenController {
     try {
       let data = await fsp.readFile(this.settingsFilePath, "utf8");
       $settings.data = JSON.parse(data);
-      $settings.applyDefaultSettings();
+      await $settings.applyDefaultSettings();
       return $settings.data;
     } catch (error) {
       throw "Unable to parse settings file";
@@ -101,9 +103,11 @@ export default class DesktopController extends ToxenController {
     if (!(await fsp.stat(CrossPlatform.getToxenDataPath()).then(() => true).catch(() => false))) {
       await fsp.mkdir(CrossPlatform.getToxenDataPath(), { recursive: true });
     }
-    let ws = fs.createWriteStream(this.statisticsFilePath);
-    ws.write(Buffer.from($stats.toString()));
-    ws.close();
+    return new Promise<void>((resolve, reject) => {
+      let ws = fs.createWriteStream(this.statisticsFilePath);
+      ws.write(Buffer.from($stats.toString()));
+      ws.close(() => resolve());
+    })
   }
 
   /**

@@ -117,7 +117,7 @@ export default class Playlist {
           await Playlist.save();
         }
         try {
-          let iPlaylists: IPlaylist[] = await Toxen.fetch(Settings.getUser().getPlaylistsPath()).then(r => r.json()).catch(() => []);
+          let iPlaylists: IPlaylist[] = await Toxen.fetch(Settings.getUser().getPlaylistsPath()).then(r => r.json()).catch(() => [] as any);
           let playlists: Playlist[] = iPlaylists.map(pl => Playlist.create(pl));
           return playlists;
         } catch (error) {

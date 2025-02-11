@@ -703,9 +703,9 @@ export default class ToxenAppRenderer extends React.Component {
   componentDidMount() {
     Promise.resolve()
       .then(Settings.load) // Load settings and apply them.
+      .then(Stats.load) // Load stats and apply them.
       .then(async () => {
         Toxen.updateSettings();
-        Stats.load();
         if (toxenapi.isDesktop()) {
           let win = toxenapi.remote.getCurrentWindow();
           if (Settings.get("restoreWindowSize")) {

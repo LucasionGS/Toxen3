@@ -14,7 +14,7 @@ export default class Settings {
     opts = opts || {};
     try {
       try {
-        toxenapi.saveSettings(Settings);
+        await toxenapi.saveSettings(Settings);
         if (!opts.suppressNotification) Toxen.notify({
           content: "Your settings have been saved.",
           expiresIn: 3000
@@ -44,7 +44,7 @@ export default class Settings {
     });
   }
 
-  public static applyDefaultSettings(overrideDefault?: Partial<ISettings>, forceReset?: boolean) {
+  public static async applyDefaultSettings(overrideDefault?: Partial<ISettings>, forceReset?: boolean) {
     // Default settings for Toxen.
     const defaultSettings: Partial<ISettings> = {
       showAdvancedSettings: false,
@@ -68,6 +68,7 @@ export default class Settings {
       visualizerStyleOptions: {},
       remoteSyncOnStartup: false,
       remoteSyncOnSongEdit: false,
+      hideOffScreenSongElements: true
     };
 
     let toUse: Partial<ISettings> = {};
@@ -77,7 +78,7 @@ export default class Settings {
     }
     toUse = Object.assign(toUse, overrideDefault || {});
 
-    Settings.apply(toUse);
+    await Settings.apply(toUse, false, false);
     // if (overrideDefault) Settings.apply(overrideDefault);
   }
 
@@ -140,7 +141,7 @@ export default class Settings {
   /**
    * Applies the defined data to the ISettings.
    */
-  public static async apply(data: Partial<ISettings>, save?: boolean) {
+  public static async apply(data: Partial<ISettings>, save?: boolean, useSpecialCases?: boolean) {
     if (!Settings.data) Settings.data = {} as ISettings;
     let key: keyof ISettings;
     for (key in data) {
@@ -151,25 +152,27 @@ export default class Settings {
         JSONX.setObjectValue(Settings.data, key, value);
 
         // Special cases
-        if (value !== preValue) {
-          if (key === "libraryDirectory" || key === "isRemote") {
-            await Toxen.loadSongs();
-            setTimeout(() => {
-              const cur = Song.getCurrent();
-              let next: Song;
-              if (cur) {
-                next = Toxen.getPlayableSongs().find(s => s.uid === cur.uid);
-              }
-
-              if (next) {
-                next.play();
-              }
-              else {
-                Toxen.musicPlayer.playRandom();
-              }
-            }, 10);
+        if (useSpecialCases ?? true) {
+          if (value !== preValue) {
+            if (key === "libraryDirectory" || key === "isRemote") {
+              await Toxen.loadSongs();
+              setTimeout(() => {
+                const cur = Song.getCurrent();
+                let next: Song;
+                if (cur) {
+                  next = Toxen.getPlayableSongs().find(s => s.uid === cur.uid);
+                }
+  
+                if (next) {
+                  next.play();
+                }
+                else {
+                  Toxen.musicPlayer.playRandom();
+                }
+              }, 10);
+            }
+            else if (key === "theme") Toxen.setThemeByName(value as typeof data[typeof key]);
           }
-          else if (key === "theme") Toxen.setThemeByName(value as typeof data[typeof key]);
         }
       }
     }
@@ -327,6 +330,9 @@ export interface ISettings {
   // Syncing
   remoteSyncOnStartup: boolean;
   remoteSyncOnSongEdit: boolean;
+
+  // Performance
+  hideOffScreenSongElements: boolean;
 }
 
 export enum VisualizerStyle {

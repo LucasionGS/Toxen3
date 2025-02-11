@@ -79,10 +79,10 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
       this.lastBackground = backgroundFile;
       if (backgroundFile) {
         const img = new Image();
-        const fullFile = Toxen.background.storyboard.getBackground(true);
+        const fullFile = `${Toxen.background.storyboard.getBackground(true)}?h=${song.hash}`;
         img.src = fullFile;
         img.onload = () => {
-          Toxen.background.setBackground(`${img.src}?h=${song.hash}`);
+          if (this.lastBackground === backgroundFile) Toxen.background.setBackground(img.src);
         }
       }
       else {

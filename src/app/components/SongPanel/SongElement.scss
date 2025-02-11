@@ -38,7 +38,7 @@
   border: solid 1px;
   box-sizing: border-box;
   height: min-content;
-  transition: all 0.1s ease-in-out;
+  transition: all 0.15s ease-in-out;
   border-top-right-radius: 0px;
   border-bottom-right-radius: 0px;
 
@@ -49,12 +49,6 @@
     padding-left: 8px;
 
     transition: padding-left 0.1s ease-in-out;
-  }
-
-  &:hover {
-    .song-title {
-      padding-left: 32px;
-    }
   }
 
   &.selected {
@@ -77,23 +71,44 @@
   }
 
   &:hover {
+    .song-title {
+      padding-left: 32px;
+    }
+
     width: 100%;
     border-top-right-radius: 10px;
     border-bottom-right-radius: 10px;
     cursor: pointer;
-    // Animation
-    // & + * {
-    //   width: 98%;
-    //   border-bottom-right-radius: 10px;
-    //   & + * {
-    //     width: 94%;
-    //     border-bottom-right-radius: 10px;
-    //   }
-    // }
 
     .song-title {
       // word-break: keep-all;
       white-space: initial;
     }
+  }
+}
+
+.song-element-permadiv:has(+ .song-element-permadiv + .song-element-permadiv .song-element:hover) .song-element {
+  width: 92%;
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+
+.song-element-permadiv:has(+ .song-element-permadiv .song-element:hover) .song-element {
+  width: 95%;
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+
+.song-element-permadiv:has(.song-element:hover) {
+  & + .song-element-permadiv .song-element {
+    width: 95%;
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+  }
+
+  & + .song-element-permadiv + .song-element-permadiv .song-element {
+    width: 92%;
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
   }
 }

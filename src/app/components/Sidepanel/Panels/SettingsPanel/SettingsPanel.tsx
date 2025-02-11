@@ -14,6 +14,7 @@ import { useForceUpdate } from "@mantine/hooks";
 import LoginForm from "../../../LoginForm/LoginForm";
 import User from "../../../../toxen/User";
 import { bytesToString } from "../../../AppBar/AppBar";
+import { Tab } from "react-bootstrap";
 
 interface SettingsPanelProps { }
 
@@ -39,6 +40,9 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           </Tabs.Tab>
           <Tabs.Tab value="Visuals">
             Visuals
+          </Tabs.Tab>
+          <Tabs.Tab value="Performance">
+            Performance
           </Tabs.Tab>
           <Tabs.Tab value="Account">
             Account
@@ -378,6 +382,21 @@ export default function SettingsPanel(props: SettingsPanelProps) {
             onSaveEnd={(allOptions) => Settings.apply({ visualizerStyleOptions: allOptions }, true)}
           />
           
+        </Tabs.Panel>
+
+        <Tabs.Panel value="Performance">
+          <h2>Performance</h2>
+          <Checkbox
+            onClick={(e) => Settings.apply({ hideOffScreenSongElements: e.currentTarget.checked }, true)}
+            defaultChecked={Settings.get("hideOffScreenSongElements")}
+            name="hideOffScreenSongElements"
+            label="Hide Off-Screen Song Elements"
+          />
+          <br />
+          <sup>
+            Hides song elements that are off-screen. This can improve performance by not loading images that aren't visible.
+            This only overrides local, remote will always use this option.
+          </sup>
         </Tabs.Panel>
 
         <Tabs.Panel value="Account">

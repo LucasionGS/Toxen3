@@ -34,7 +34,7 @@ export default function StoryboardEditorPanel() {
 
   if (!config) {
     song.readStoryboardFile(false).then((config) => {
-      config = StoryboardParser.setStoryboard(config);
+      config = StoryboardParser.setStoryboard(config, song);
       setConfig(config);
     });
     return (<div>No config</div>);

@@ -3,6 +3,7 @@ import Song from '../../toxen/Song';
 import "./SongElement.scss";
 import RenderIfVisible from "react-render-if-visible";
 import { useModals } from '@mantine/modals';
+import Settings from '../../toxen/Settings';
 
 function SongElementDiv(props: { songElement: SongElement }) {
   /// Observer object is cool and all but holy shit it makes this laggy
@@ -112,12 +113,21 @@ export default class SongElement extends Component<SongElementProps, SongElement
   public divPermanentElement: HTMLDivElement;
 
   render() {
-    return (
-      <div ref={ref => this.divPermanentElement = ref}>
-        <RenderIfVisible defaultHeight={64} visibleOffset={500}>
+    if (Settings.isRemote() || Settings.get("hideOffScreenSongElements")) {
+      return (
+        <div className="song-element-permadiv" ref={ref => this.divPermanentElement = ref}>
+          <RenderIfVisible defaultHeight={64} visibleOffset={500}>
+            <SongElementDiv songElement={this} />
+          </RenderIfVisible>
+        </div>
+      );
+    }
+    else {
+      return (
+        <div className="song-element-permadiv" ref={ref => this.divPermanentElement = ref}>
           <SongElementDiv songElement={this} />
-        </RenderIfVisible>
-      </div>
-    );
+        </div>
+      );
+    }
   }
 }
