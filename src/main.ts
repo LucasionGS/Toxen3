@@ -20,6 +20,18 @@ if (require('electron-squirrel-startup')) { // eslint-disable-line global-requir
 
 
 const createWindow = (): void => {
+  const loadingWindow = new BrowserWindow({
+    width: 200,
+    height: 200,
+    frame: false,
+    center: true,
+    icon: "./src/icons/sizes/icon.ico",
+    darkTheme: true,
+    title: "Loading Toxen...",
+    transparent: true,
+    opacity: 0.8,
+  });
+  
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     width: 1280,
@@ -33,7 +45,8 @@ const createWindow = (): void => {
     frame: false,
     center: true,
     icon: "./src/icons/sizes/icon.ico",
-    darkTheme: true,
+    // darkTheme: true,
+    show: false
   });
   remote.enable(mainWindow.webContents);
 
@@ -41,16 +54,20 @@ const createWindow = (): void => {
   
   console.log(process.cwd());
   
-
+  
   // and load the index.html of the app.
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
+    loadingWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL + "/loading.html");
   } else {
+    loadingWindow.loadFile(Path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/loading.html`));
     mainWindow.loadFile(Path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`));
   };
-
-  // Open the DevTools.
-  // mainWindow.webContents.openDevTools();
+  
+  mainWindow.once("ready-to-show", () => {
+    loadingWindow.close();
+    mainWindow.show();
+  });
 };
 
 // This method will be called when Electron has finished
