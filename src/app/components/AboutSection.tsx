@@ -7,7 +7,8 @@ import ExternalUrl from './ExternalUrl/ExternalUrl';
 import SidepanelSection from './Sidepanel/SidepanelSection';
 import SidepanelSectionHeader from './Sidepanel/SidepanelSectionHeader';
 // import packageJson from '../../../package.json';
-import { Tabs } from "@mantine/core";
+import { Tabs, Button } from "@mantine/core";
+import Song from '../toxen/Song';
 
 export default function AboutSection() {
   const packageJson = toxenapi.packageJson;
@@ -28,9 +29,10 @@ export default function AboutSection() {
         <Tabs.Panel value="Statistics">
           <h2>Statistics</h2>
           <p>Toxen launched {Stats.get("timesOpened")} times</p>
-          <p>{Toxen.songList.length} total songs</p>
+          <p>{Toxen.getAllSongs().length} total songs</p>
           <p>{Stats.get("songsPlayed") ?? 0} songs played</p>
           <TimePlayed />
+          <TotalDuration />
         </Tabs.Panel>
         {
           toxenapi.isDesktop() && (
@@ -85,4 +87,54 @@ function TimePlayed() {
   }, []);
   
   return (<p>{new Time(secondsPlayed * 1000).toTimestamp()} time played</p>);
+}
+function TotalDuration() {
+  const [totalDuration, setTotalDuration] = useState(0);
+  const [canLoadDurations, setCanLoadDurations] = useState(false);
+  const [loadingDurations, setLoadingDurations] = useState(Song.isCalculatingFullDuration());
+  const [loadMessage, setLoadMessage] = useState("");
+  const [missingDurations, setMissingDurations] = useState(0);
+
+  useEffect(() => {
+    let _missingDurations = 0;
+    const totalDuration = Toxen.songList.reduce((prev, curr) => {
+      if (isNaN(curr.duration)) {
+        _missingDurations++;
+        return prev;
+      }
+      return prev + curr.duration;
+    }, 0);
+    setTotalDuration(totalDuration);
+    setMissingDurations(_missingDurations);
+    setCanLoadDurations(_missingDurations > 0);
+  }, []);
+
+  return (
+    <>
+      <p>{new Time(totalDuration ?? 0).toTimestampLiteral()} total track duration</p>
+      {
+        canLoadDurations && (
+          <Button loading={loadingDurations} onClick={() => {
+            Song.calculateFullDuration(Toxen.getAllSongs(), (song, duration, i, total) => {
+              console.log(`Calculated ${i}/${total} durations`);
+              setLoadMessage(`Calculated ${i}/${total} durations`);
+
+              if (i + 1 === total) {
+                setLoadMessage("");
+                setTotalDuration(Toxen.getAllSongs().reduce((prev, curr) => {
+                  return prev + curr.duration;
+                }, 0));
+              }
+            }).then(() => {
+              setLoadingDurations(false);
+            });
+            setLoadingDurations(true);
+          }}>{loadingDurations ? "Loading..." : `Load ${missingDurations} missing durations`}</Button>
+        )
+      }
+      {
+        loadMessage && <p>{loadMessage}</p>
+      }
+    </>
+  );
 }

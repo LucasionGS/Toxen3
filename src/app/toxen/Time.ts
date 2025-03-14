@@ -104,7 +104,10 @@ export default class Time {
   }
 
   public toTimestampLiteral() {
-    return `${this.hours} hours, ${this.minutes} min, ${this.seconds} sec`;
+    let data = `${this.seconds} sec`;
+    if (this.minutes) data = `${this.minutes} min, ${data}`;
+    if (this.hours) data = `${this.hours} hours, ${data}`;
+    return data;
   }
 
   private static splitSecondsAndMilliseconds(seconds: number) {

@@ -102,4 +102,5 @@ export interface IStatistics {
   secondsPlayed: number,
   songsPlayed: number;
   timesOpened: number;
+  totalDuration: number;
 }

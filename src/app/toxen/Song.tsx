@@ -60,6 +60,10 @@ export default class Song implements ISong {
 
   // Hash used for sync
   public hash: string;
+  /**
+   * The duration of the song in seconds.
+   */
+  public duration: number;
 
   /**
    * The files that are in the song's directory. Maps to an object.
@@ -324,6 +328,7 @@ export default class Song implements ISong {
       "useFloatingTitleSubtitles",
       "files",
       "hash",
+      "duration",
     ];
     const obj = {} as any;
     keys.forEach(key => {
@@ -381,86 +386,85 @@ export default class Song implements ISong {
 
     options ?? (options = {});
     let src = this.mediaFile();
-    if (Toxen.musicPlayer.state.src != src) {
-      // if (HueManager.isEnabled()) {
-      //   HueManager.start().catch((error) => Toxen.error(error.message));
-      // }
-      // else {
-      //   HueManager.stop();
-      // }
-      if (Settings.isRemote() && this.isVideo()) Toxen.log("Streaming a video can take some time to load... Using audio files is much faster.", 3000);
-      if (this.lastBlobUrl) URL.revokeObjectURL(this.lastBlobUrl);
-      let bg = this.backgroundFile();
+    if (Toxen.musicPlayer.state.src === src) return;
+    // if (HueManager.isEnabled()) {
+    //   HueManager.start().catch((error) => Toxen.error(error.message));
+    // }
+    // else {
+    //   HueManager.stop();
+    // }
+    if (Settings.isRemote() && this.isVideo()) Toxen.log("Streaming a video can take some time to load... Using audio files is much faster.", 3000);
+    if (this.lastBlobUrl) URL.revokeObjectURL(this.lastBlobUrl);
+    let bg = this.backgroundFile();
 
-      if (!Settings.isRemote() && toxenapi.isDesktop()) {
-        // Check if needs conversion
-        const convertable = Toxen.getSupportedConvertableAudioFiles();
-        if (convertable.includes(toxenapi.path.extname(src).toLowerCase())) {
-          const id = Toxen.notify({
-            title: "Converting " + this.getDisplayName() + " to MP3",
-            content: `0% complete`,
+    if (!Settings.isRemote() && toxenapi.isDesktop()) {
+      // Check if needs conversion
+      const convertable = Toxen.getSupportedConvertableAudioFiles();
+      if (convertable.includes(toxenapi.path.extname(src).toLowerCase())) {
+        const id = Toxen.notify({
+          title: "Converting " + this.getDisplayName() + " to MP3",
+          content: `0% complete`,
+        });
+        toxenapi.ffmpeg.convertToMp3(this, (progress) => { // Purposely don't await, let it run in the background
+          updateNotification({
+            id,
+            message: <div>
+              {Math.round(progress.percent)}% complete
+              <br />
+              {progress.timemark}
+            </div>,
           });
-          toxenapi.ffmpeg.convertToMp3(this, (progress) => { // Purposely don't await, let it run in the background
-            updateNotification({
-              id,
-              message: <div>
-                {Math.round(progress.percent)}% complete
-                <br />
-                {progress.timemark}
-              </div>,
-            });
-          });
-        }
-      }
-
-      await this.applySubtitles();
-      await this.applyStoryboard();
-      if (!options.disableHistory) Song.historyAdd(this);
-      Toxen.musicPlayer.setSource(src, true);
-      await Toxen.background.setBackground(bg + "?h=" + this.hash);
-      Stats.set("songsPlayed", (Stats.get("songsPlayed") ?? 0) + 1);
-      Toxen.setAllVisualColors(this.visualizerColor);
-      Toxen.background.storyboard.setSong(this);
-      Toxen.background.visualizer.update();
-      let img = new Image();
-      img.src = (Toxen.background.getBackground() || ToxenMax)
-      this.setCurrent();
-      this.setAppTitle();
-      const addToMetadata = (blob?: Blob) => {
-        if (this !== Song.getCurrent()) {
-          return;
-        }
-        
-        Toxen.discord?.setPresence(this);
-        navigator.mediaSession.metadata = new MediaMetadata({
-          title: this.title ?? "Unknown Title",
-          artist: this.artist ?? "Unknown Artist",
-          album: this.album ?? "",
-          artwork: blob ? [
-            { src: (this.lastBlobUrl = URL.createObjectURL(blob)), sizes: `${img.naturalWidth}x${img.naturalHeight}`, type: "image/png" }
-          ] : undefined
         });
       }
-
-      if (Toxen.getSupportedImageFiles().includes(toxenapi.getFileExtension(bg).toLowerCase())) {
-        const onLoad = () => {
-          let canvas = document.createElement("canvas");
-          let ctx = canvas.getContext("2d");
-          canvas.width = img.naturalWidth;
-          canvas.height = img.naturalHeight;
-          try { ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight); } catch (error) {
-            console.error(error);
-            return addToMetadata();
-          }
-          canvas.toBlob(addToMetadata);
-        }
-        img.addEventListener("load", onLoad);
-      }
-      addToMetadata();
-
-      if (Toxen.background.visualizer.isStopped())
-      Toxen.background.visualizer.start();
     }
+
+    await this.applySubtitles();
+    await this.applyStoryboard();
+    if (!options.disableHistory) Song.historyAdd(this);
+    Toxen.musicPlayer.setSource(src, true);
+    await Toxen.background.setBackground(bg + "?h=" + this.hash);
+    Stats.set("songsPlayed", (Stats.get("songsPlayed") ?? 0) + 1);
+    Toxen.setAllVisualColors(this.visualizerColor);
+    Toxen.background.storyboard.setSong(this);
+    Toxen.background.visualizer.update();
+    let img = new Image();
+    img.src = (Toxen.background.getBackground() || ToxenMax)
+    this.setCurrent();
+    this.setAppTitle();
+    const addToMetadata = (blob?: Blob) => {
+      if (this !== Song.getCurrent()) {
+        return;
+      }
+      
+      Toxen.discord?.setPresence(this);
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: this.title ?? "Unknown Title",
+        artist: this.artist ?? "Unknown Artist",
+        album: this.album ?? "",
+        artwork: blob ? [
+          { src: (this.lastBlobUrl = URL.createObjectURL(blob)), sizes: `${img.naturalWidth}x${img.naturalHeight}`, type: "image/png" }
+        ] : undefined
+      });
+    }
+
+    if (Toxen.getSupportedImageFiles().includes(toxenapi.getFileExtension(bg).toLowerCase())) {
+      const onLoad = () => {
+        let canvas = document.createElement("canvas");
+        let ctx = canvas.getContext("2d");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        try { ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight); } catch (error) {
+          console.error(error);
+          return addToMetadata();
+        }
+        canvas.toBlob(addToMetadata);
+      }
+      img.addEventListener("load", onLoad);
+    }
+    addToMetadata();
+
+    if (Toxen.background.visualizer.isStopped())
+    Toxen.background.visualizer.start();
   }
 
   public static async convertAllNecessary(songs: Song[]) {
@@ -1543,6 +1547,60 @@ export default class Song implements ISong {
       id: "trim-song-modal"
     }
   }
+
+  public getDuration(format: "s" | "ms" = "ms") {
+    if (format === "s") return this.duration / 1000;
+    return this.duration;
+  }
+
+  public async calculateDuration(): Promise<number> {
+    const mediaFile = this.mediaFile();
+    if (!mediaFile) throw new Error("No media file found for song: " + this.getDisplayName());
+    const audio = new Audio(mediaFile);
+    return await Song.calculateDurationFrom(audio);
+  }
+
+  public static async calculateDurationFrom(audio: HTMLAudioElement): Promise<number> {
+    if (!isNaN(audio.duration) && typeof audio.duration === "number") return Math.round(audio.duration * 1000);
+    return new Promise<number>((resolve, reject) => {
+      audio.addEventListener("loadedmetadata", () => {
+        resolve(Math.round(audio.duration * 1000));
+      });
+      audio.addEventListener("error", reject);
+      audio.load();
+    });
+  }
+
+  private static calculatingFullDuration = false;
+  public static isCalculatingFullDuration() { return this.calculatingFullDuration; }
+  public static async calculateFullDuration(songs: Song[], callbackPerSong?: (song: Song, duration: number | null, index: number, total: number) => void): Promise<number> {
+    Song.calculatingFullDuration = true;
+    let total = 0;
+    let index = 0;
+    let totalSongs = songs.length;
+    for (const song of songs) {
+      try {
+        const duration = (song.duration && !isNaN(song.duration)) ? song.duration : await song.calculateDuration();
+        total += duration;
+        
+        if (song.duration !== duration) {
+          song.duration = duration;
+          try {
+            await song.saveInfo();
+          } catch (error) {
+            await song.saveInfo({ callSync: false });
+          }
+        }
+        if (callbackPerSong) callbackPerSong(song, duration, index, totalSongs);
+      } catch (error) {
+        if (callbackPerSong) callbackPerSong(song, null, index, totalSongs);
+        Toxen.error("Failed to calculate and save song duration: " + song.getDisplayName());
+      }
+      index++;
+    }
+    Song.calculatingFullDuration = false;
+    return total;
+  }
 }
 
 export interface ISong {
@@ -1602,6 +1660,7 @@ export interface ISong {
   }
 
   hash: string;
+  duration: number; // In milliseconds
 }
 
 interface ISongPaths {
