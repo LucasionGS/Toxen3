@@ -465,6 +465,11 @@ export default class Song implements ISong {
 
     if (Toxen.background.visualizer.isStopped())
     Toxen.background.visualizer.start();
+
+    if (this.duration) {
+      this.duration = await this.calculateDuration();
+      this.saveInfo();
+    }
   }
 
   public static async convertAllNecessary(songs: Song[]) {
