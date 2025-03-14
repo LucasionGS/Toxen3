@@ -29,8 +29,8 @@ export default function AboutSection() {
         <Tabs.Panel value="Statistics">
           <h2>Statistics</h2>
           <p>Toxen launched {Stats.get("timesOpened")} times</p>
-          <p>{Toxen.getAllSongs().length} total songs</p>
-          <p>{Stats.get("songsPlayed") ?? 0} songs played</p>
+          <p>{Toxen.getAllSongs().length} total tracks</p>
+          <p>{Stats.get("songsPlayed") ?? 0} tracks played</p>
           <TimePlayed />
           <TotalDuration />
         </Tabs.Panel>
