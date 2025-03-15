@@ -5,7 +5,9 @@ import pkg from './package.json';
 
 export const builtins = ['electron', ...builtinModules.map((m) => [m, `node:${m}`]).flat()];
 
-export const external = [...builtins, ...Object.keys('dependencies' in pkg ? (pkg.dependencies as Record<string, unknown>) : {})];
+export const excludeDeps = ["pg-hstore"];
+export const external = [...builtins, ...Object.keys('dependencies' in pkg ? (pkg.dependencies as Record<string, unknown>) : {}), ...excludeDeps];
+
 
 export function getBuildConfig(env: ConfigEnv<'build'>): UserConfig {
   const { root, mode, command } = env;
@@ -20,6 +22,9 @@ export function getBuildConfig(env: ConfigEnv<'build'>): UserConfig {
       outDir: '.vite/build',
       watch: command === 'serve' ? {} : null,
       minify: command === 'build',
+    },
+    optimizeDeps: {
+      exclude: excludeDeps,
     },
     clearScreen: false,
   };
@@ -48,6 +53,7 @@ export function getBuildDefine(env: ConfigEnv<'build'>) {
     const def = {
       [VITE_DEV_SERVER_URL]: command === 'serve' ? JSON.stringify(process.env[VITE_DEV_SERVER_URL]) : undefined,
       [VITE_NAME]: JSON.stringify(name),
+      packageJson: JSON.stringify(pkg),
     };
     return { ...acc, ...def };
   }, {} as Record<string, any>);

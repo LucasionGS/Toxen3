@@ -35,13 +35,13 @@ import ThemeContainer from "./components/ThemeContainer/ThemeContainer";
 import ThemeEditorPanel from "./components/ThemeEditorPanel/ThemeEditorPanel";
 import Theme from "./toxen/Theme";
 import AppBar from "./components/AppBar/AppBar";
-import AdjustPanel from "./components/AdjustPanel/AdjustPanel";
+// import AdjustPanel from "./components/AdjustPanel/AdjustPanel";
 import { Button } from "@mantine/core";
 import { Notifications, showNotification } from "@mantine/notifications";
 import SettingsPanel from "./components/Sidepanel/Panels/SettingsPanel/SettingsPanel";
 // import MigrationPanel from "./components/Sidepanel/Panels/MigrationPanel/MigrationPanel";
 import EditSong from "./components/Sidepanel/Panels/EditSong/EditSong";
-import InitialData from "./windows/SubtitleCreator/models/InitialData";
+// import InitialData from "./windows/SubtitleCreator/models/InitialData";
 import User from "./toxen/User";
 import { IconLayoutNavbarExpand } from "@tabler/icons-react";
 // import HueManager from "./toxen/philipshue/HueManager";
@@ -704,6 +704,11 @@ export default class ToxenAppRenderer extends React.Component {
     Promise.resolve()
       .then(Settings.load) // Load settings and apply them.
       .then(Stats.load) // Load stats and apply them.
+      .then(async () => {
+        if (toxenapi.isDesktop()) {
+          await toxenapi.syncDatabase();
+        }
+      })
       .then(async () => {
         Toxen.updateSettings();
         if (toxenapi.isDesktop()) {

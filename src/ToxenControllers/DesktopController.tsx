@@ -26,6 +26,7 @@ import System from "../app/toxen/System";
 import { Checkbox, Menu, RangeSlider, Button, Progress, Group, Stack } from "@mantine/core";
 import { hideNotification, updateNotification } from "@mantine/notifications";
 import Discord from "../app/toxen/desktop/Discord";
+import { TrackCache } from "./desktop/sequelize";
 
 /**
  * DesktopController is a controller for desktop-specific functions. Overwrites the web version of the controller.
@@ -190,7 +191,7 @@ export default class DesktopController extends ToxenController {
     zip.end();
 
     // Wait for the zip file to be written
-    return await new Promise((resolve, reject) => {
+    return await new Promise<void>((resolve, reject) => {
       zipStream.on("finish", resolve);
       zipStream.on("error", reject);
     })
@@ -272,7 +273,7 @@ export default class DesktopController extends ToxenController {
       zip.end();
       song.setProgressBar(0.5);
   
-      return await new Promise((resolve, reject) => {
+      return await new Promise<void>((resolve, reject) => {
         zipStream.on("finish", resolve);
         zipStream.on("error", reject);
       }).then(async () => {
@@ -475,10 +476,21 @@ export default class DesktopController extends ToxenController {
     });
   }
 
+  public async syncDatabase() {
+    return (
+      await TrackCache.init()
+    );
+  }
+
   public async loadLocalSongs($toxen: typeof Toxen, $song: typeof Song, $settings: typeof Settings, reload?: boolean, forEach?: (song: Song) => void) {
     return Promise.resolve().then(async () => {
       if (reload !== true && !$settings.isRemote() && $toxen.songList) {
         return $toxen.songList;
+      }
+
+      const cache = await TrackCache.getAll();
+      if (cache.length > 0) {
+        return $song.sortSongs(cache);
       }
 
       let songs: Song[] = [];
@@ -559,7 +571,9 @@ export default class DesktopController extends ToxenController {
         }
       }
       await dir.close();
-      return $song.sortSongs(songs);
+      const sortedSongs = $song.sortSongs(songs);
+      TrackCache.setBulk(sortedSongs);
+      return sortedSongs;
     });
   }
 
