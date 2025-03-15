@@ -190,7 +190,7 @@ export default class DesktopController extends ToxenController {
     zip.end();
 
     // Wait for the zip file to be written
-    return await new Promise((resolve, reject) => {
+    return await new Promise<void>((resolve, reject) => {
       zipStream.on("finish", resolve);
       zipStream.on("error", reject);
     })
@@ -272,7 +272,7 @@ export default class DesktopController extends ToxenController {
       zip.end();
       song.setProgressBar(0.5);
   
-      return await new Promise((resolve, reject) => {
+      return await new Promise<void>((resolve, reject) => {
         zipStream.on("finish", resolve);
         zipStream.on("error", reject);
       }).then(async () => {
