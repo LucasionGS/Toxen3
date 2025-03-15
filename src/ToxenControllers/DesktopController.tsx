@@ -488,6 +488,7 @@ export default class DesktopController extends ToxenController {
         return $toxen.songList;
       }
 
+      // debugger;
       const cache = await TrackCache.getAll();
       if (cache.length > 0) {
         return $song.sortSongs(cache);

@@ -1,36 +1,64 @@
-import sqlite3 from "better-sqlite3";
+import fs from "fs";
+import path from "path";
 import { Toxen } from "../../app/ToxenApp";
 import CrossPlatform from "../../app/toxen/desktop/CrossPlatform";
-import fs from "fs";
-import Song from "../../app/toxen/Song";
+import Song, { ISong } from "../../app/toxen/Song";
 
-if (!(fs.existsSync(CrossPlatform.getToxenDataPath()))) {
+const dataFilePath = CrossPlatform.getToxenDataPath("trackCache.json");
+
+if (!fs.existsSync(CrossPlatform.getToxenDataPath())) {
   fs.mkdirSync(CrossPlatform.getToxenDataPath(), { recursive: true });
 }
-export const Database = new sqlite3(CrossPlatform.getToxenDataPath("toxen.sqlite"));
 
-type DBSong = {
-  uid: string;
-  json: string;
+if (!fs.existsSync(dataFilePath)) {
+  fs.writeFileSync(dataFilePath, JSON.stringify({}));
 }
-export class TrackCache {
-  declare uid: string;
-  declare json: string;
 
-  public static init() {
+// type DBSong = {
+//   uid: string;
+//   json: string;
+// };
+
+export class TrackCache {
+  private static loadData(): Record<string, Song> {
     try {
-      Database.prepare("CREATE TABLE IF NOT EXISTS TrackCache (uid TEXT PRIMARY KEY, json TEXT NOT NULL)").run();
-      return Promise.resolve(true);
+      const data = fs.readFileSync(dataFilePath, "utf-8");
+      const parsedData = JSON.parse(data);
+      return Object.entries(parsedData).reduce((acc, [uid, song]) => {
+        acc[uid] = Object.assign(new Song(), song);
+        return acc;
+      }, {} as Record<string, Song>);
     } catch (err) {
       console.error(err);
-      return Promise.reject(err);
+      return {};
     }
+  }
+
+  private static saveData(data: Record<string, ISong> | (Song | ISong)[]) {
+    if (Array.isArray(data)) {
+      data = data.reduce((acc, song) => {
+        acc[song.uid] = song instanceof Song ? song.toISong() : song;
+        return acc;
+      }, {} as Record<string, ISong>);
+    }
+    try {
+      fs.writeFileSync(dataFilePath, JSON.stringify(data));
+    } catch (err) {
+      console.error(err);
+      throw err;
+    }
+  }
+
+  public static async init() {
+    // No initialization needed for JSON storage
+    return Promise.resolve(true);
   }
 
   public static async get(uid: string): Promise<Song> {
     try {
-      const row: DBSong = Database.prepare<[string], DBSong>("SELECT * FROM TrackCache WHERE uid = ? LIMIT 1").get(uid);
-      return row ? Object.assign(new Song(), JSON.parse(row.json)) : null;
+      const data = this.loadData();
+      const song = data[uid];
+      return song;
     } catch (err) {
       console.error(err);
       return null;
@@ -39,18 +67,19 @@ export class TrackCache {
 
   public static async getAll(): Promise<Song[]> {
     try {
-      const rows: DBSong[] = Database.prepare<[], DBSong>("SELECT * FROM TrackCache").all();
-      return rows.map(row => Object.assign(new Song(), JSON.parse(row.json)));
+      const data = this.loadData();
+      return Object.values(data);
     } catch (err) {
       console.error(err);
       return [];
     }
   }
 
-  public static async set(uid: string, song: Song) {
+  public static async set(song: Song) {
     try {
-      Database.prepare("INSERT OR REPLACE INTO TrackCache (uid, json) VALUES (?, ?)")
-        .run(uid, JSON.stringify(song.toISong()));
+      const data = this.loadData();
+      data[song.uid] = song;
+      this.saveData(data);
     } catch (err) {
       console.error(err);
       throw err;
@@ -58,16 +87,12 @@ export class TrackCache {
   }
 
   public static async setBulk(tracks: Song[]) {
-    const insert = Database.prepare("INSERT OR REPLACE INTO TrackCache (uid, json) VALUES (?, ?)");
-    const transaction = Database.transaction((data: { uid: string; json: string }[]) => {
-      for (const item of data) {
-        insert.run(item.uid, item.json);
-      }
-    });
-
     try {
-      const data = tracks.map(t => ({ uid: t.uid, json: JSON.stringify(t.toISong()) }));
-      transaction(data);
+      const data = this.loadData();
+      for (const track of tracks) {
+        data[track.uid] = track;
+      }
+      this.saveData(data);
     } catch (err) {
       console.error(err);
       throw err;
@@ -76,7 +101,9 @@ export class TrackCache {
 
   public static async remove(uid: string) {
     try {
-      Database.prepare("DELETE FROM TrackCache WHERE uid = ?").run(uid);
+      const data = this.loadData();
+      delete data[uid];
+      this.saveData(data);
     } catch (err) {
       console.error(err);
       throw err;
@@ -85,7 +112,7 @@ export class TrackCache {
 
   public static async clear() {
     try {
-      Database.prepare("DELETE FROM TrackCache").run();
+      this.saveData({});
     } catch (err) {
       console.error(err);
       throw err;
