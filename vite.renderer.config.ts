@@ -1,6 +1,6 @@
 import type { ConfigEnv, UserConfig } from 'vite';
 import { defineConfig } from 'vite';
-import { excludeDeps, external, pluginExposeRenderer } from './vite.base.config';
+import { external, pluginExposeRenderer } from './vite.base.config';
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import renderer from "vite-plugin-electron-renderer";
@@ -32,16 +32,6 @@ export default defineConfig((env) => {
     build: {
       outDir: `.vite/renderer/${name}`,
       chunkSizeWarningLimit: 4096,
-      rollupOptions: {
-        external: excludeDeps,
-      },
-      commonjsOptions: {
-        ignore: excludeDeps,
-      },
-    },
-    
-    optimizeDeps: {
-      exclude: excludeDeps
     },
     plugins: [
       toxenApi("desktop"),
@@ -53,10 +43,6 @@ export default defineConfig((env) => {
       preserveSymlinks: true,
       alias: {
         'node-aead-crypto': path.resolve(__dirname, './emptyModule.js'),
-        ...excludeDeps.reduce((acc, dep) => {
-          acc[dep] = path.resolve(__dirname, './emptyModule.js');
-          return acc;
-        }, {} as Record<string, string>),
       }
     },
     clearScreen: false,
