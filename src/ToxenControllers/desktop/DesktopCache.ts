@@ -20,7 +20,9 @@ if (!fs.existsSync(dataFilePath)) {
 // };
 
 export class TrackCache {
+  private static _cache: Record<string, Song> = null;
   private static loadData(): Record<string, Song> {
+    if (this._cache) return this._cache;
     try {
       const data = fs.readFileSync(dataFilePath, "utf-8");
       const parsedData = JSON.parse(data);
@@ -29,24 +31,44 @@ export class TrackCache {
         return acc;
       }, {} as Record<string, Song>);
     } catch (err) {
-      console.error(err);
+      console.log("Missing file, creating new one...");
+      TrackCache.clear();
       return {};
     }
   }
 
-  private static saveData(data: Record<string, ISong> | (Song | ISong)[]) {
-    if (Array.isArray(data)) {
-      data = data.reduce((acc, song) => {
-        acc[song.uid] = song instanceof Song ? song.toISong() : song;
-        return acc;
-      }, {} as Record<string, ISong>);
-    }
-    try {
-      fs.writeFileSync(dataFilePath, JSON.stringify(data));
-    } catch (err) {
-      console.error(err);
-      throw err;
-    }
+  private static saveTimeout: [NodeJS.Timeout, () => void, (err: any) => void] | null = null;
+  private static saveData(data: Record<string, ISong> | (Song | ISong)[], zeroDelay = false): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      if (this.saveTimeout) {
+        clearTimeout(this.saveTimeout[0]);
+        this.saveTimeout[2](new Error("New save queued"));
+      }
+
+      this.saveTimeout = [setTimeout(() => {
+        if (Array.isArray(data)) {
+          data = data.reduce((acc, song) => {
+            acc[song.uid] = song instanceof Song ? song.toISong() : song;
+            return acc;
+          }, {} as Record<string, ISong>);
+        }
+        try {
+          for (const songUid of Object.keys(data)) {
+            const song = data[songUid];
+            if ((song instanceof Song)) {
+              data[songUid] = song.toISong();
+            }
+          }
+          console.log("Saving cache...");
+          fs.promises.writeFile(dataFilePath, JSON.stringify(data));
+          this.saveTimeout?.[1]?.(); // Resolve
+          this.saveTimeout = null;
+        } catch (err) {
+          console.error(err);
+          throw err;
+        }
+      }, zeroDelay ? 0 : 1000), resolve, reject];
+    });
   }
 
   public static async init() {
@@ -112,7 +134,7 @@ export class TrackCache {
 
   public static async clear() {
     try {
-      this.saveData({});
+      return this.saveData({}, true);
     } catch (err) {
       console.error(err);
       throw err;

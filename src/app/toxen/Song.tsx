@@ -22,6 +22,7 @@ import Playlist from "./Playlist";
 import StoryboardParser from "./StoryboardParser";
 import User from "./User";
 import { hideNotification, updateNotification } from "@mantine/notifications";
+import { TrackCache } from "../../ToxenControllers/desktop/DesktopCache";
 // import HueManager from "./philipshue/HueManager";
 
 export default class Song implements ISong {
@@ -466,7 +467,7 @@ export default class Song implements ISong {
     if (Toxen.background.visualizer.isStopped())
     Toxen.background.visualizer.start();
 
-    if (this.duration) {
+    if (!this.duration) {
       this.duration = await this.calculateDuration();
       this.saveInfo();
     }
@@ -1098,7 +1099,10 @@ export default class Song implements ISong {
 
   public static async loadLocalSongs(reload?: boolean, forEach?: (song: Song) => void) {
     if (toxenapi.isDesktop()) {
-      return toxenapi.loadLocalSongs(Toxen, Song, Settings, reload, forEach);
+      console.time("loadLocalSongs");
+      const list = await toxenapi.loadLocalSongs(Toxen, Song, Settings, reload, forEach);
+      console.timeEnd("loadLocalSongs");
+      return list;
     }
     else {
       toxenapi.throwDesktopOnly("Unable to load local songs on web version.");
@@ -1160,6 +1164,7 @@ export default class Song implements ISong {
             Toxen.error("Failed to delete song: " + this.dirname());
           }
         }
+        TrackCache.remove(this.uid);
         Toxen.songList = Toxen.songList.filter(s => s !== this);
         Toxen.songPanel.update();
       }
@@ -1223,6 +1228,7 @@ export default class Song implements ISong {
         return;
       }
       await toxenapi.fs.promises.writeFile(toxenapi.path.resolve(localPath, "info.json"), JSON.stringify(this.toISong()));
+      TrackCache.set(this);
       if ((opts.callSync ?? true) && Settings.get("remoteSyncOnSongEdit")) {
         await this.sync(null, { silenceValidated: true });
       }

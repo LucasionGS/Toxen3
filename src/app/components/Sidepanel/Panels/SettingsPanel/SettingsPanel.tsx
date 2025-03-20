@@ -15,6 +15,7 @@ import LoginForm from "../../../LoginForm/LoginForm";
 import User from "../../../../toxen/User";
 import { bytesToString } from "../../../AppBar/AppBar";
 import { Tab } from "react-bootstrap";
+import { TrackCache } from "../../../../../ToxenControllers/desktop/DesktopCache";
 
 interface SettingsPanelProps { }
 
@@ -458,6 +459,24 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           {
             toxenapi.isDesktop() && (
               <>
+                <Button
+                  onClick={() => {
+                    TrackCache.clear().then(() => {
+                      Toxen.loadSongs();
+                    });
+                    Toxen.notify({
+                      title: "Cleared cache",
+                      content: "Toxen will now re-scan all tracks in the library.",
+                      expiresIn: 2000
+                    });
+                  }}>
+                  Clear track cache
+                </Button>
+                <br />
+                <sup>
+                  Clears the cache of all tracks. This will make Toxen re-scan all tracks in the library.
+                </sup>
+
                 <Checkbox onClick={(e) => Settings.apply({ discordPresence: e.currentTarget.checked }, true)} defaultChecked={Settings.get("discordPresence")} name="discordPresence" label="Discord Presence" />
                 <br />
                 <sup>Enables Discord presence integration. It will show you are using Toxen in your status.</sup>
