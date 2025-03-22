@@ -473,6 +473,7 @@ export default function SettingsPanel(props: SettingsPanelProps) {
                   Clear track cache
                 </Button>
                 <br />
+                <br />
                 <sup>
                   Clears the cache of all tracks. This will make Toxen re-scan all tracks in the library.
                 </sup>
