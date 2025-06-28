@@ -1,9 +1,72 @@
+// Legacy SCSS variables (kept for compatibility)
 $bgColor: #202124;
 $greenColor: #b6ffba;
 
-body {
+:root {
+  // Layout variables
   --appbar-height: 32px;
   --bodyHeight: calc(100vh - var(--appbar-height));
+  
+  // Core color palette
+  --primary-bg: #202124;
+  --secondary-bg: #2a2a2a;
+  --tertiary-bg: #353535;
+  --surface-bg: rgba(255, 255, 255, 0.05);
+  --surface-bg-hover: rgba(255, 255, 255, 0.08);
+  --surface-bg-active: rgba(255, 255, 255, 0.12);
+  
+  // Accent colors
+  --accent-color: #b6ffba;
+  --accent-color-rgb: 182, 255, 186;
+  --accent-color-dim: rgba(182, 255, 186, 0.15);
+  --accent-color-hover: rgba(182, 255, 186, 0.25);
+  --accent-color-active: rgba(182, 255, 186, 0.4);
+  
+  // Text colors
+  --text-primary: #ffffff;
+  --text-secondary: #e1e1e1;
+  --text-muted: #a7a7a7;
+  --text-inverse: #000000;
+  
+  // Border colors
+  --border-primary: var(--accent-color-dim);
+  --border-secondary: rgba(255, 255, 255, 0.1);
+  --border-focus: var(--accent-color);
+  
+  // Shadow colors
+  --shadow-light: rgba(0, 0, 0, 0.1);
+  --shadow-medium: rgba(0, 0, 0, 0.2);
+  --shadow-heavy: rgba(0, 0, 0, 0.4);
+  --shadow-accent: rgba(var(--accent-color-rgb), 0.2);
+  
+  // Status colors
+  --success-color: #4ade80;
+  --success-bg: rgba(74, 222, 128, 0.1);
+  --warning-color: #fbbf24;
+  --warning-bg: rgba(251, 191, 36, 0.1);
+  --error-color: #ef4444;
+  --error-bg: rgba(239, 68, 68, 0.1);
+  --info-color: #3b82f6;
+  --info-bg: rgba(59, 130, 246, 0.1);
+  
+  // Music player specific colors
+  --player-progress: rgba(0, 255, 0, 0.25);
+  --player-selected: #ff6b35;
+  --player-playing: var(--accent-color);
+  
+  // Glassmorphism effects
+  --glass-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  --glass-border: 1px solid var(--border-primary);
+  --glass-backdrop: blur(15px) saturate(1.2);
+  
+  // Animation variables
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.3s ease;
+  --transition-slow: 0.5s ease;
+  --transition-spring: 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+body {
   position: absolute;
   top: calc(100vh - var(--bodyHeight));
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -11,8 +74,8 @@ body {
   width: 100vw;
   height: var(--bodyHeight);
   padding: 0;
-  background-color: $bgColor;
-  color: white;
+  background-color: var(--primary-bg);
+  color: var(--text-primary);
   font-size: 18px;
   button {
     font-size: 18px;
@@ -28,7 +91,7 @@ body[fullscreen], body[miniplayer] {
 // }
 
 a {
-  color: white;
+  color: var(--text-primary);
 }
 
 body.inactive *.hide-on-inactive {
@@ -55,10 +118,10 @@ body[miniplayer] *.hide-on-inactive {
 code {
   display: inline-block;
   font-size: inherit;
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: var(--surface-bg);
   border-radius: 10px;
   padding: 4px;
-  color: orange;
+  color: var(--warning-color);
 }
 
 // For explanations
@@ -66,7 +129,6 @@ sup, sub {
   padding-bottom: 16px;
   transform: translateY(-1em);
   display: block;
-  // color: gray;
-  color: #678f6a;
+  color: var(--text-muted);
   white-space: normal
 }

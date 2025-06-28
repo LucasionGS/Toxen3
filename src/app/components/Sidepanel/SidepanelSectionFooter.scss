@@ -19,7 +19,7 @@
   border-radius: 0 0 var(--sidebar-radius) var(--sidebar-radius);
   box-shadow: 
     0 -4px 20px rgba(0, 0, 0, 0.3),
-    0 0 0 1px rgba(182, 255, 186, 0.1);
+    0 0 0 1px var(--accent-color-dim);
   backdrop-filter: blur(20px) saturate(1.2);
   
   // Subtle glow effect
@@ -52,7 +52,7 @@
       box-shadow: 
         0 8px 25px rgba(0, 0, 0, 0.2),
         0 0 0 1px var(--accent-color-hover),
-        0 0 20px rgba(182, 255, 186, 0.1);
+        0 0 20px var(--accent-color-dim);
     }
     
     &:active {

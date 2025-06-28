@@ -1,7 +1,4 @@
 @use "../../../root.scss" as *;
-$sidePanelColor: #0f0f0f;
-$sidePanelColorLight: #1a1a1a;
-$sidePanelColorMid: #252525;
 
 :root {
   --sidebar-transition-in: width 0.5s cubic-bezier(0.25, 0.8, 0.25, 1),
@@ -12,20 +9,14 @@ $sidePanelColorMid: #252525;
   --panel-icons-width: 80px;
   --panel-icons-width-expanded: 160px;
 
-  --accent-color: #b6ffba;
-  --accent-color-rgb: 182, 255, 186;
-  --accent-color-dim: rgba(182, 255, 186, 0.15);
-  --accent-color-hover: rgba(182, 255, 186, 0.25);
-  --accent-color-active: rgba(182, 255, 186, 0.4);
   --sidebar-radius: 16px;
-  --bg-color: #202124;
+  --sidepanel-color: var(--primary-bg);
+  --sidepanel-color-light: var(--secondary-bg);
+  --sidepanel-color-mid: var(--tertiary-bg);
   
-  // New design tokens
-  --sidebar-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  // Design tokens
+  --sidebar-shadow: 0 20px 60px var(--shadow-heavy);
   --sidebar-shadow-hover: 0 25px 80px rgba(0, 0, 0, 0.5);
-  --text-primary: #ffffff;
-  --text-secondary: #e1e1e1;
-  --text-muted: #a7a7a7;
 }
 
 // Inactivity
@@ -39,7 +30,7 @@ body.inactive .sidepanel:not(.show) {
   position: fixed;
   transition: var(--sidebar-transition-out), opacity 0.4s ease-in-out;
   bottom: 0;
-  background: linear-gradient(135deg, $sidePanelColor 0%, $sidePanelColorLight 50%, $sidePanelColorMid 100%);
+  background: linear-gradient(135deg, var(--secondary-bg) 0%, var(--tertiary-bg) 50%, var(--secondary-bg) 100%);
   // overflow: hidden;
   border: none;
   box-sizing: border-box;
@@ -131,7 +122,7 @@ body[miniplayer] .sidepanel {
     rgba(0, 0, 0, 0.2) 50%,
     rgba(0, 0, 0, 0.1) 100%
   );
-  border-right: 2px solid var(--accent-color-dim);
+  border-right: 2px solid var(--border-primary);
   width: var(--panel-icons-width);
   user-select: none;
   overflow-y: auto;
@@ -152,7 +143,7 @@ body[miniplayer] .sidepanel {
     border-radius: 3px;
   }
   &::-webkit-scrollbar-thumb {
-    background: var(--accent-color-dim);
+    background: var(--border-primary);
     border-radius: 3px;
     transition: background 0.2s ease;
   }
@@ -171,8 +162,8 @@ body[miniplayer] .sidepanel {
     background: linear-gradient(
       to bottom,
       transparent 0%,
-      var(--accent-color-dim) 20%,
-      var(--accent-color-dim) 80%,
+      var(--border-primary) 20%,
+      var(--border-primary) 80%,
       transparent 100%
     );
     pointer-events: none;
@@ -211,7 +202,7 @@ body[miniplayer] .sidepanel {
     background: var(--accent-color-hover);
     transform: translateX(6px) scale(1.05);
     border-color: var(--accent-color-dim);
-    box-shadow: 0 4px 16px rgba(182, 255, 186, 0.1);
+    box-shadow: 0 4px 16px var(--accent-color-dim);
     
     &::before {
       opacity: 1;
@@ -260,13 +251,13 @@ body[miniplayer] .sidepanel {
   }
 
   &.active {
-    background: linear-gradient(135deg, var(--accent-color) 0%, rgba(182, 255, 186, 0.8) 100%);
+    background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-color-active) 100%);
     border-color: var(--accent-color);
-    box-shadow: 0 0 0 2px var(--accent-color-dim), 0 8px 24px rgba(182, 255, 186, 0.2);
+    box-shadow: 0 0 0 2px var(--accent-color-dim), 0 8px 24px var(--accent-color-dim);
     transform: translateX(8px);
     
     i {
-      color: $sidePanelColor;
+      color: var(--sidepanel-color);
       font-weight: 600;
     }
     
@@ -317,7 +308,7 @@ body[miniplayer] .sidepanel {
   }
   
   .sidepanel-icon.active .sidepanel-icon-title {
-    color: $sidePanelColor;
+    color: var(--sidepanel-color);
     font-weight: 600;
     text-shadow: none;
   }
@@ -379,7 +370,7 @@ body[miniplayer] .sidepanel {
     bottom: 0;
     background: 
       radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
-      radial-gradient(circle at 75% 75%, rgba(182, 255, 186, 0.01) 0%, transparent 50%);
+      radial-gradient(circle at 75% 75%, rgba(var(--accent-color-rgb), 0.01) 0%, transparent 50%);
     pointer-events: none;
     z-index: 1;
   }
@@ -606,7 +597,7 @@ body[miniplayer] .sidepanel {
       transform: translateY(-2px) scale(1.02);
       box-shadow: 
         0 8px 25px rgba(0, 0, 0, 0.2),
-        0 0 20px rgba(182, 255, 186, 0.15);
+        0 0 20px var(--accent-color-dim);
     }
     
     &:active {
@@ -616,10 +607,10 @@ body[miniplayer] .sidepanel {
     
     &[data-variant="filled"] {
       background: var(--accent-color);
-      color: $sidePanelColor;
+      color: var(--sidepanel-color);
       
       &:hover {
-        background: rgba(182, 255, 186, 0.9);
+        background: var(--accent-color-hover);
         transform: translateY(-2px) scale(1.02);
       }
     }
@@ -681,7 +672,7 @@ body[miniplayer] .sidepanel {
       
       &[data-active] {
         background: var(--accent-color);
-        color: $sidePanelColor;
+        color: var(--sidepanel-color);
         font-weight: 600;
       }
     }
@@ -884,7 +875,7 @@ body[miniplayer] .sidepanel {
     box-shadow: 0 0 0 0 var(--accent-color);
   }
   50% {
-    box-shadow: 0 0 0 8px rgba(182, 255, 186, 0);
+    box-shadow: 0 0 0 8px rgba(var(--accent-color-rgb), 0);
   }
 }
 
@@ -940,7 +931,7 @@ body[miniplayer] .sidepanel {
     background: linear-gradient(
       90deg,
       transparent 0%,
-      rgba(182, 255, 186, 0.1) 50%,
+      var(--accent-color-dim) 50%,
       transparent 100%
     );
     background-size: 200% 100%;

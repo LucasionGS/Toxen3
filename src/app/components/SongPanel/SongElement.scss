@@ -1,15 +1,15 @@
-// Song Element Color Variables - matching the new sidepanel aesthetic
+// Song Element Color Variables - using the new theming system
 :root {
-  --song-element-bg: rgba(15, 15, 15, 0.85);
-  --song-element-bg-hover: rgba(26, 26, 26, 0.9);
-  --song-element-border: rgba(182, 255, 186, 0.3);
-  --song-element-border-selected: #ff6b35;
-  --song-element-border-playing: #b6ffba;
-  --song-element-text: #ffffff;
-  --song-element-text-dim: rgba(255, 255, 255, 0.8);
-  --song-element-progress: rgba(0, 255, 0, 0.25);
-  --song-element-shadow: rgba(0, 0, 0, 0.4);
-  --song-element-shadow-playing: rgba(182, 255, 186, 0.4);
+  --song-element-bg: var(--secondary-bg);
+  --song-element-bg-hover: var(--tertiary-bg);
+  --song-element-border: var(--border-primary);
+  --song-element-border-selected: var(--player-selected);
+  --song-element-border-playing: var(--player-playing);
+  --song-element-text: var(--text-primary);
+  --song-element-text-dim: var(--text-secondary);
+  --song-element-progress: var(--player-progress);
+  --song-element-shadow: var(--shadow-medium);
+  --song-element-shadow-playing: var(--shadow-accent);
   --song-element-shadow-selected: rgba(255, 107, 53, 0.6);
 }
 
@@ -122,7 +122,7 @@
       box-shadow: 
         0 10px 40px var(--song-element-shadow-selected),
         0 0 0 2px rgba(255, 107, 53, 0.5),
-        0 0 20px rgba(182, 255, 186, 0.3),
+        0 0 20px var(--accent-color-dim),
         inset 0 2px 0 rgba(255, 255, 255, 0.3) !important;
     }
   }
@@ -133,11 +133,11 @@
     border-color: var(--song-element-border-playing);
     border-width: 2px;
     border-radius: 12px;
-    background: rgba(182, 255, 186, 0.15);
+    background: var(--accent-color-dim);
     transform: translateX(8px);
     box-shadow: 
       0 6px 20px var(--song-element-shadow-playing),
-      0 0 0 1px rgba(182, 255, 186, 0.2),
+      0 0 0 1px var(--accent-color-hover),
       inset 0 1px 0 rgba(255, 255, 255, 0.2);
   }
 

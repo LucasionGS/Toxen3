@@ -128,13 +128,13 @@ export default class DesktopController extends ToxenController {
   public readonly themeFolderPath = CrossPlatform.getToxenDataPath("themes");
   
   public async saveTheme(theme: Theme): Promise<void> {
-    const data = JSON.stringify(this, null, 2);
-    return fsp.writeFile(`${this.themeFolderPath}/${theme.name}.json`, data);
+    const data = JSON.stringify(theme, null, 2);
+    return fsp.writeFile(`${this.themeFolderPath}/${theme.name}.theme.json`, data);
   }
   
   public async loadThemes($theme: typeof Theme): Promise<Theme[]> {
     const themes: Theme[] = await fsp.readdir(this.themeFolderPath).then(async (files) => {
-      const themeFiles = files.filter((file) => file.endsWith(".json"));
+      const themeFiles = files.filter((file) => file.endsWith(".theme.json"));
       const themePromises = themeFiles.map((file) => {
         return fsp.readFile(`${this.themeFolderPath}/${file}`, "utf8").then((data) => {
           return $theme.create(JSON.parse(data));
@@ -153,13 +153,18 @@ export default class DesktopController extends ToxenController {
    * Loads and applies the external CSS file to `Theme.customCSS`, if it exists.
    */
   public loadThemeExternalCSS(theme: Theme) {
-    const cssPath = `${this.themeFolderPath}/${theme.name}.css`;
+    const cssPath = `${this.themeFolderPath}/${theme.name}.theme.css`;
     
     if (fs.existsSync(cssPath)) {
       const css = fs.readFileSync(cssPath, "utf8");
-      theme.customCSS = css;
+      // If there's existing customCSS from JSON, append the external CSS
+      if (theme.customCSS && theme.customCSS.trim()) {
+        theme.customCSS += "\n\n/* External CSS */\n" + css;
+      } else {
+        theme.customCSS = css;
+      }
     }
-    else theme.customCSS = "";
+    // Don't overwrite existing customCSS if no external file exists
   }
 
   public getYtdlp() {
@@ -588,5 +593,45 @@ export default class DesktopController extends ToxenController {
         throw await res.text();
       }
     });
+  }
+
+  /**
+   * Export a theme as a .theme.json file
+   * Desktop version: Opens file save dialog and saves to chosen location
+   */
+  public async exportTheme(theme: Theme): Promise<void> {
+    // Desktop version: open file dialog and save theme to chosen location
+    try {
+      // Create the theme data object
+      const themeData = {
+        name: theme.name,
+        displayName: theme.displayName,
+        description: theme.description,
+        styles: theme.styles,
+        customCSS: theme.customCSS || ""
+      };
+
+      // Convert to JSON string with formatting
+      const jsonString = JSON.stringify(themeData, null, 2);
+
+      // Show save dialog
+      const result = await this.remote.dialog.showSaveDialog({
+        title: 'Export Theme',
+        defaultPath: `${theme.name}.theme.json`,
+        filters: [
+          { name: 'Theme Files', extensions: ['theme.json'] },
+          { name: 'JSON Files', extensions: ['json'] },
+          { name: 'All Files', extensions: ['*'] }
+        ]
+      });
+
+      if (!result.canceled && result.filePath) {
+        // Write theme to selected file
+        await fsp.writeFile(result.filePath, jsonString, 'utf8');
+      }
+    } catch (error) {
+      console.error('Failed to export theme:', error);
+      throw new Error('Failed to export theme');
+    }
   }
 }

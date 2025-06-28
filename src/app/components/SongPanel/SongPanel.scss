@@ -19,12 +19,12 @@
   }
   
   &::-webkit-scrollbar-thumb {
-    background: rgba(182, 255, 186, 0.3);
+    background: var(--accent-color-hover);
     border-radius: 3px;
     transition: background 0.2s ease;
     
     &:hover {
-      background: rgba(182, 255, 186, 0.5);
+      background: var(--accent-color);
     }
   }
 }

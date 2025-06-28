@@ -1,3 +1,24 @@
+## 2.1.0 - TBD
+### New Features
+- **Complete Theme System Overhaul** 
+  - Completely rebuilt the theming system from the ground up to use CSS variables throughout.
+  - Users can now customize ALL major UI colors, not just the accent color
+  - Create and save custom themes with proper metadata
+  - Live preview theme changes as you edit them
+  - Built-in theme presets for quick customization
+  - Themes now support custom CSS for advanced users
+  - All colors are properly organized into categories
+  - Theme changes now apply instantly across the entire application
+  - Enhanced theme editor with intuitive color swatches and organized sections
+  - Ability to discard changes and revert to saved themes
+  - Drag-and-drop importing of *.theme.json files
+  - Theme export functionality to share themes with others
+  - **Web Support**: Full theming functionality now available for web users using localStorage
+    - Web users can create, edit, save, import, and export themes just like desktop users
+    - Themes are stored in browser localStorage for persistence
+    - Custom CSS is fully supported (stored within the theme JSON)
+    - No external file dependencies - everything works in-memory
+
 ## 2.0.0 - 28-06-2025
 ### New Features
 - Major redesign!

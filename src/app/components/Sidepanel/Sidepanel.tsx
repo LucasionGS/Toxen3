@@ -214,7 +214,7 @@ export default class Sidepanel extends React.Component<Props, State> {
                 e.preventDefault();
                 e.stopPropagation();
                 if (!Toxen.isMode("Player")) {
-                  Toxen.sendError("CURRENTLY_EDITING_SONG");
+                  Toxen.sendModeError(Toxen.getMode());
                   Toxen.sidePanel.show(true);
                   return;
                 }

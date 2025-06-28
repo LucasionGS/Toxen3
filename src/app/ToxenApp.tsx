@@ -92,6 +92,9 @@ export class Toxen {
   public static setAppBarUser: (user: User) => void = () => void 0;
 
   private static mode: ToxenInteractionMode = ToxenInteractionMode.Player;
+  public static getMode(): ToxenInteractionMode {
+    return Toxen.mode;
+  }
 
   public static setMode(mode: "StoryboardEditor", song: Song): void;
   public static setMode(mode: ToxenInteractionMode.StoryboardEditor, song: Song): void;
@@ -225,6 +228,39 @@ export class Toxen {
   public static sendError(error: keyof typeof Toxen.presetErrors) {
     const [message, expiresIn] = Toxen.presetErrors[error] as [string, number];
     return Toxen.error(message, expiresIn);
+  }
+
+  public static sendModeError(mode: ToxenInteractionMode | keyof typeof ToxenInteractionMode) {
+    if (typeof mode == "string") {
+      mode = ToxenInteractionMode[mode];
+    }
+
+    switch (mode) {
+      case ToxenInteractionMode.StoryboardEditor:
+        if (Toxen.isMode(ToxenInteractionMode.StoryboardEditor)) {
+          Toxen.error("You are currently editing a storyboard. Please save or cancel your changes.");
+          return;
+        }
+        break;
+      case ToxenInteractionMode.SubtitlesEditor:
+        if (Toxen.isMode(ToxenInteractionMode.SubtitlesEditor)) {
+          Toxen.error("You are currently editing subtitles. Please save or cancel your changes.");
+          return;
+        }
+        break;
+      case ToxenInteractionMode.ThemeEditor:
+        if (Toxen.isMode(ToxenInteractionMode.ThemeEditor)) {
+          Toxen.sendError("CURRENTLY_EDITING_THEME");
+          return;
+        }
+        break;
+      case ToxenInteractionMode.Player:
+        if (!Toxen.isMode(ToxenInteractionMode.Player)) {
+          Toxen.error("You are not in player mode. Please switch to player mode to perform this action.");
+          return;
+        }
+        break;
+    }
   }
 
   public static async filterSupportedFiles(path: string, supported: string[]) {

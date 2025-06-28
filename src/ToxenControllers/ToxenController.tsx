@@ -125,21 +125,56 @@ export default class ToxenController {
     }
   }
 
-  public async saveTheme(theme: Theme) {
-    this.throwDesktopOnly("saveTheme");
+  public async saveTheme(theme: Theme): Promise<void> {
+    // Web version: save themes to localStorage
+    try {
+      const existingThemes = this.getStoredThemes();
+      const themeIndex = existingThemes.findIndex(t => t.name === theme.name);
+      
+      if (themeIndex !== -1) {
+        // Update existing theme
+        existingThemes[themeIndex] = theme;
+      } else {
+        // Add new theme
+        existingThemes.push(theme);
+      }
+      
+      localStorage.setItem('toxen_themes', JSON.stringify(existingThemes));
+    } catch (error) {
+      console.error('Failed to save theme to localStorage:', error);
+      throw new Error('Failed to save theme');
+    }
   }
 
-  public async loadThemes(theme: typeof Theme): Promise<Theme[]> {
-    console.warn("Loading themes is not available on the web version yet.");
-    return []; // No themes available on web version yet
+  public async loadThemes($theme: typeof Theme): Promise<Theme[]> {
+    // Web version: load themes from localStorage
+    try {
+      const storedThemes = this.getStoredThemes();
+      return storedThemes.map(themeData => $theme.create(themeData));
+    } catch (error) {
+      console.error('Failed to load themes from localStorage:', error);
+      return [];
+    }
+  }
+
+  private getStoredThemes(): any[] {
+    try {
+      const stored = localStorage.getItem('toxen_themes');
+      return stored ? JSON.parse(stored) : [];
+    } catch (error) {
+      console.error('Failed to parse stored themes:', error);
+      return [];
+    }
   }
 
   /**
    * Loads and applies the external CSS file to `Theme.customCSS`, if it exists.
+   * Web version: No external CSS files, customCSS is stored in the theme JSON in localStorage
    */
   public loadThemeExternalCSS(theme: Theme) {
-    // this.throwDesktopOnly("loadThemeExternalCSS");
-    console.warn("Loading external CSS is not available on the web version yet.");
+    // Web version: customCSS is already included in the theme JSON from localStorage
+    // No external files needed - everything is stored in memory/localStorage
+    // This is intentionally a no-op for web
   }
 
   /**
@@ -162,6 +197,50 @@ export default class ToxenController {
     result: Record<string, SongDiff>
   }> {
     this.throwDesktopOnly("fetchRemoteSongsData");
+  }
+
+  /**
+   * Export a theme as a downloadable .theme.json file
+   * Web version: Creates a blob and triggers browser download
+   */
+  public async exportTheme(theme: Theme): Promise<void> {
+    try {
+      // Create the theme data object
+      const themeData = {
+        name: theme.name,
+        displayName: theme.displayName,
+        description: theme.description,
+        styles: theme.styles,
+        customCSS: theme.customCSS || ""
+      };
+
+      // Convert to JSON string with formatting
+      const jsonString = JSON.stringify(themeData, null, 2);
+
+      // Create blob for download
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      
+      // Create download URL
+      const url = URL.createObjectURL(blob);
+      
+      // Create temporary download link
+      const downloadLink = document.createElement('a');
+      downloadLink.href = url;
+      downloadLink.download = `${theme.name}.theme.json`;
+      downloadLink.style.display = 'none';
+      
+      // Trigger download
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      
+      // Clean up URL
+      URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      console.error('Failed to export theme:', error);
+      throw new Error('Failed to export theme');
+    }
   }
 }
 

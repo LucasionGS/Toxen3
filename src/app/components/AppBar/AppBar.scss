@@ -5,10 +5,11 @@
   z-index: 100;
   width: 100vw;
   height: calc(100vh - var(--bodyHeight));
-  background-color: #1b1b1b;
-  border-bottom: #0b0b0b solid 2px;
+  background-color: var(--primary-bg);
+  // border-bottom: var(--border-primary) solid 2px;
+  border-bottom: var(--accent-color) solid 2px;
   box-sizing: border-box;
-  border-color: #b6ffba;
+  color: var(--text-primary);
 
   // Add electron titlebar functions
   user-select: none;
@@ -25,11 +26,13 @@
     flex-grow: 1;
     white-space: nowrap;
     overflow: hidden;
+    color: var(--text-primary);
     
     * {
       font-size: 1.1em !important;
       vertical-align: top;
       line-height: 110%;
+      color: inherit;
       // Remove extra space from le text
       margin: 0;
       padding: 0;
@@ -45,13 +48,17 @@
     font-weight: bold;
     height: calc(100vh - var(--bodyHeight));
     transition: all 0.1s ease-in-out;
+    color: var(--text-primary);
+    border: none;
+    background: transparent;
 
     &:hover {
-      background-color: #2b2b2b;
+      background-color: var(--surface-bg-hover);
     }
 
     &.appBar__closeButton:hover {
-      background-color: #ff2b2b;
+      background-color: var(--error-color);
+      color: white;
     }
   }
 }

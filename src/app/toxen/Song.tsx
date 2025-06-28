@@ -389,7 +389,7 @@ export default class Song implements ISong {
     //   expiresIn: 2000
     // });
 
-    if (!Toxen.isMode("Player") && Toxen.editingSong && Toxen.editingSong.uid !== this.uid) {
+    if (Toxen.isMode("StoryboardEditor") && Toxen.editingSong && Toxen.editingSong.uid !== this.uid) {
       Toxen.sendError("CURRENTLY_EDITING_SONG");
       return;
     }
@@ -469,7 +469,14 @@ export default class Song implements ISong {
           console.error(error);
           return addToMetadata();
         }
-        canvas.toBlob(addToMetadata);
+
+        try {
+          canvas.toBlob(addToMetadata);
+        } catch (error) {
+          console.error("Failed to convert canvas to blob:", error);
+          // Fallback to using the image directly
+          addToMetadata();
+        }
       }
       img.addEventListener("load", onLoad);
     }
@@ -657,8 +664,7 @@ export default class Song implements ISong {
             </p>
             <Button onClick={() => {
               close();
-              if (Toxen.isMode("ThemeEditor")) return Toxen.sendError("CURRENTLY_EDITING_THEME");
-              if (!Toxen.isMode("Player")) return Toxen.sendError("CURRENTLY_EDITING_SONG");
+              if (!Toxen.isMode("Player")) return Toxen.sendModeError(Toxen.getMode());
               Toxen.editSong(this);
             }}>
               Edit info

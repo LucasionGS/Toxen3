@@ -227,7 +227,6 @@ export default function SettingsPanel(props: SettingsPanelProps) {
             <Button.Group>
               <Button 
                 leftSection={<i className="fas fa-paint-brush" />} 
-                disabled={!Toxen.theme || true} 
                 onClick={() => Toxen.setMode("ThemeEditor")}
               >
                 Edit Theme
@@ -237,6 +236,24 @@ export default function SettingsPanel(props: SettingsPanelProps) {
                 onClick={() => Toxen.loadThemes()}
               >
                 Reload Themes
+              </Button>
+              <Button 
+                leftSection={<i className="fas fa-download" />} 
+                onClick={async () => {
+                  if (Toxen.theme) {
+                    try {
+                      await toxenapi.exportTheme(Toxen.theme);
+                      Toxen.log(`Theme "${Toxen.theme.displayName || Toxen.theme.name}" exported successfully.`, 3000);
+                    } catch (error) {
+                      Toxen.error(`Failed to export theme: ${error.message}`);
+                    }
+                  } else {
+                    Toxen.warn("No theme selected to export.");
+                  }
+                }}
+                disabled={!Toxen.theme}
+              >
+                Export Theme
               </Button>
             </Button.Group>
           </SidepanelSectionGroup>

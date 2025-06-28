@@ -149,10 +149,10 @@
     position: relative;
     background: linear-gradient(
       135deg,
-      rgba(8, 8, 12, 0.95) 0%,
-      rgba(12, 12, 18, 0.95) 100%
+      var(--secondary-bg) 0%,
+      var(--tertiary-bg) 100%
     );
-    border: 2px solid var(--accent-color-dim);
+    border: 2px solid var(--border-primary);
     border-radius: 16px;
     overflow: hidden;
     box-shadow: 

@@ -1,5 +1,6 @@
 import React from "react";
 import Song from "./Song";
+import Theme from "./Theme";
 import { Toxen } from "../ToxenApp";
 import { Progress } from "@mantine/core";
 import Settings from "./Settings";
@@ -228,6 +229,68 @@ export default class System {
           }
 
           break;
+        }
+        // Theme files
+        else if (file.name.endsWith('.theme.json')) {
+          Toxen.loadingScreen.setContent(
+            <Content>
+              Importing theme {file.name}...
+            </Content>
+          );
+
+          try {
+            let themeData: string;
+            
+            if (toxenapi.isDesktop() && file.path) {
+              // Desktop: read from file path
+              themeData = await toxenapi.fs.promises.readFile(file.path, 'utf8');
+            } else if (file instanceof File) {
+              // Web or dropped file: read from File object
+              themeData = await file.text();
+            } else {
+              throw new Error("Unable to read theme file");
+            }
+
+            // Parse and validate theme data
+            const themeObject = JSON.parse(themeData);
+            if (!themeObject.name || !themeObject.styles) {
+              throw new Error("Invalid theme file format");
+            }
+
+            // Create theme instance
+            const theme = Theme.create(themeObject);
+            
+            // Save the theme
+            await theme.save();
+            
+            // Add to themes list if not already present
+            const existingIndex = Toxen.themes.findIndex(t => t.name === theme.name);
+            if (existingIndex === -1) {
+              Toxen.themes.push(theme);
+            } else {
+              Toxen.themes[existingIndex] = theme;
+            }
+            
+            // Apply the theme immediately
+            Toxen.setTheme(theme);
+            
+            if (verbose) {
+              Toxen.log(`Theme "${theme.displayName || theme.name}" imported and applied successfully.`, 3000);
+            }
+            
+            Toxen.loadingScreen.setContent(
+              <Content>
+                Imported theme {theme.displayName || theme.name}
+              </Content>
+            );
+          } catch (error) {
+            Toxen.error(`Failed to import theme ${file.name}: ${error.message}`);
+            Toxen.loadingScreen.setContent(
+              <Content>
+                Failed to import {file.name}
+              </Content>
+            );
+          }
         }
         // Unsupported
         else {

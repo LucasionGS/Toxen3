@@ -41,29 +41,29 @@
   
   // Color variants
   &.tx-btn-action {
-    background: linear-gradient(135deg, #01861d 0%, #02a021 100%);
-    border-color: #01861d;
+    background: linear-gradient(135deg, var(--success-color) 0%, #02a021 100%);
+    border-color: var(--success-color);
     
     &:hover {
       background: linear-gradient(135deg, #02a021 0%, #03b324 100%);
-      box-shadow: 0 4px 16px rgba(1, 134, 29, 0.3);
+      box-shadow: 0 4px 16px rgba(var(--success-color-rgb, 1, 134, 29), 0.3);
     }
   }
   
   &.tx-btn-warning {
-    background: linear-gradient(135deg, #ffb300 0%, #ffc107 100%);
-    border-color: #ffb300;
-    color: #000;
+    background: linear-gradient(135deg, var(--warning-color) 0%, #ffc107 100%);
+    border-color: var(--warning-color);
+    color: var(--text-inverse);
     
     &:hover {
       background: linear-gradient(135deg, #ffc107 0%, #ffd54f 100%);
-      box-shadow: 0 4px 16px rgba(255, 179, 0, 0.3);
+      box-shadow: 0 4px 16px rgba(251, 179, 0, 0.3);
     }
   }
   
   &.tx-btn-cancel {
-    background: linear-gradient(135deg, #ff3d00 0%, #ff5722 100%);
-    border-color: #ff3d00;
+    background: linear-gradient(135deg, var(--error-color) 0%, #ff5722 100%);
+    border-color: var(--error-color);
     
     &:hover {
       background: linear-gradient(135deg, #ff5722 0%, #ff6f42 100%);
@@ -85,14 +85,14 @@
 /* Modern Input fields */
 .tx-form-field {
   position: relative;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--accent-color-dim);
+  background: var(--surface-bg);
+  border: 1px solid var(--border-primary);
   border-radius: 10px;
   color: var(--text-primary);
   padding: 12px 16px;
   font-size: 14px;
   line-height: 1.4;
-  transition: all 0.3s ease;
+  transition: all var(--transition-normal);
   backdrop-filter: blur(5px);
 
   &:is([type="text"], [type="password"], [type="number"]) {
@@ -101,9 +101,9 @@
 
   &:focus {
     outline: none;
-    border-color: var(--accent-color);
-    box-shadow: 0 0 0 2px var(--accent-color-dim);
-    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--border-focus);
+    box-shadow: 0 0 0 2px var(--border-primary);
+    background: var(--surface-bg-hover);
   }
   
   &::placeholder {
@@ -112,7 +112,7 @@
 
   &.read-only {
     color: var(--text-muted);
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--surface-bg);
     border-color: var(--text-muted);
     cursor: not-allowed;
   }
