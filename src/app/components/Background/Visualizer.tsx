@@ -152,6 +152,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     if (
       // Settings.get("visualizerStyle") === VisualizerStyle.CircleWaveform ||
       (Settings.get("visualizerShuffle") ?? false) &&
+      Settings.get("visualizerStyle") !== VisualizerStyle.PulseWave &&
       Settings.get("visualizerStyle") !== VisualizerStyle.Waveform
     ) {
       let seed = 1;
@@ -551,7 +552,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           }
           break;
         }
-        case VisualizerStyle.Waveform: {
+        case VisualizerStyle.PulseWave: {
           // Generate a smooth waveform between the higest points of each bar.
           const maxHeight = getMaxHeight(0.25);
           const unitW = vWidth / len;
@@ -607,6 +608,180 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
               ctx.restore();
             }
           }
+          break;
+        }
+        case VisualizerStyle.Waveform: {
+          // Smooth connected wave that looks like a real audio waveform (inspired by toxen-poly)
+          const maxHeight = getMaxHeight(0.25);
+          const centerY = vHeight / 2;
+          const stepX = vWidth / (len - 1);
+          
+          // Create a smooth waveform by interpolating between points
+          const wavePoints: { x: number; y: number }[] = [];
+          
+          // Generate wave points with smoothing
+          for (let i = 0; i < len; i++) {
+            // Reduce the maximum amplitude to 25% of screen height
+            const rawAmplitude = (dataArray[i] / 255) * maxHeight;
+            
+            // Apply smoothing by averaging with neighboring values
+            let smoothedAmplitude = rawAmplitude;
+            if (i > 0 && i < len - 1) {
+              const prevAmplitude = (dataArray[i - 1] / 255) * maxHeight;
+              const nextAmplitude = (dataArray[i + 1] / 255) * maxHeight;
+              smoothedAmplitude = (prevAmplitude + rawAmplitude + nextAmplitude) / 3;
+            }
+            
+            // Add subtle wave motion
+            const x = i * stepX;
+            const waveMotion = Math.sin(time * 0.001 + i * 0.15) * 3;
+            const amplitude = smoothedAmplitude * Math.sin(i * 0.2 + time * 0.002);
+            const y = centerY + waveMotion + amplitude;
+            
+            wavePoints.push({ x, y });
+          }
+          
+          // Set up glow effect for the waveform
+          if (Toxen.background.storyboard.getVisualizerGlow()) {
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = storedColor;
+          }
+          
+          // Set up colors
+          if (Toxen.background.storyboard.getVisualizerRainbow()) {
+            // Create a gradient along the waveform
+            const gradient = ctx.createLinearGradient(0, 0, vWidth, 0);
+            const steps = 6;
+            for (let i = 0; i <= steps; i++) {
+              const hue = (i / steps * 360 + time * 0.1) % 360;
+              gradient.addColorStop(i / steps, `hsl(${hue}, 70%, 60%)`);
+            }
+            ctx.strokeStyle = gradient;
+            ctx.fillStyle = gradient;
+          } else {
+            ctx.strokeStyle = storedColor;
+            ctx.fillStyle = storedColor;
+          }
+          
+          this.useAlpha(opacity, ctx => {
+            ctx.save();
+            
+            // Draw the main waveform line with smooth curves
+            ctx.beginPath();
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            // Start the path
+            ctx.moveTo(wavePoints[0].x, wavePoints[0].y);
+            
+            // Create smooth curves between points using quadratic curves
+            for (let i = 1; i < wavePoints.length - 1; i++) {
+              const current = wavePoints[i];
+              const next = wavePoints[i + 1];
+              const controlX = (current.x + next.x) / 2;
+              const controlY = (current.y + next.y) / 2;
+              
+              ctx.quadraticCurveTo(current.x, current.y, controlX, controlY);
+            }
+            
+            // Complete the path to the last point
+            const lastPoint = wavePoints[wavePoints.length - 1];
+            ctx.lineTo(lastPoint.x, lastPoint.y);
+            
+            // Stroke the waveform line
+            ctx.stroke();
+            
+            // Create a filled area under/over the waveform for more visual impact
+            ctx.beginPath();
+            ctx.moveTo(wavePoints[0].x, centerY);
+            
+            // Trace the top of the waveform
+            ctx.lineTo(wavePoints[0].x, wavePoints[0].y);
+            for (let i = 1; i < wavePoints.length - 1; i++) {
+              const current = wavePoints[i];
+              const next = wavePoints[i + 1];
+              const controlX = (current.x + next.x) / 2;
+              const controlY = (current.y + next.y) / 2;
+              ctx.quadraticCurveTo(current.x, current.y, controlX, controlY);
+            }
+            ctx.lineTo(lastPoint.x, lastPoint.y);
+            
+            // Close the path back to center line
+            ctx.lineTo(lastPoint.x, centerY);
+            ctx.closePath();
+            
+            // Fill with a more transparent version
+            const currentAlpha = ctx.globalAlpha;
+            ctx.globalAlpha = currentAlpha * 0.3;
+            ctx.fill();
+            ctx.globalAlpha = currentAlpha;
+            
+            // Add some additional wave details for more authentic look
+            ctx.beginPath();
+            ctx.lineWidth = 1;
+            ctx.setLineDash([2, 3]);
+            
+            // Draw additional harmonic lines
+            for (let h = 0; h < 2; h++) {
+              const harmonicOffset = (h + 1) * 30;
+              ctx.beginPath();
+              ctx.moveTo(0, centerY + harmonicOffset);
+              
+              for (let i = 0; i < len; i++) {
+                // Reduce harmonic amplitude and add smoothing
+                let rawAmplitude = (dataArray[i] / 255) * 12 * (1 - h * 0.4);
+                
+                // Smooth harmonics as well
+                if (i > 0 && i < len - 1) {
+                  const prevAmp = (dataArray[i - 1] / 255) * 12 * (1 - h * 0.4);
+                  const nextAmp = (dataArray[i + 1] / 255) * 12 * (1 - h * 0.4);
+                  rawAmplitude = (prevAmp + rawAmplitude + nextAmp) / 3;
+                }
+                
+                const x = i * stepX;
+                const y = centerY + harmonicOffset + rawAmplitude * Math.sin(i * 0.4 + time * 0.003 + h);
+                
+                if (i === 0) {
+                  ctx.moveTo(x, y);
+                } else {
+                  ctx.lineTo(x, y);
+                }
+              }
+              
+              ctx.globalAlpha = currentAlpha * 0.3 * (1 - h * 0.2);
+              ctx.stroke();
+              
+              // Mirror below center
+              ctx.beginPath();
+              ctx.moveTo(0, centerY - harmonicOffset);
+              
+              for (let i = 0; i < len; i++) {
+                let rawAmplitude = (dataArray[i] / 255) * 12 * (1 - h * 0.4);
+                
+                if (i > 0 && i < len - 1) {
+                  const prevAmp = (dataArray[i - 1] / 255) * 12 * (1 - h * 0.4);
+                  const nextAmp = (dataArray[i + 1] / 255) * 12 * (1 - h * 0.4);
+                  rawAmplitude = (prevAmp + rawAmplitude + nextAmp) / 3;
+                }
+                
+                const x = i * stepX;
+                const y = centerY - harmonicOffset - rawAmplitude * Math.sin(i * 0.4 + time * 0.003 + h);
+                
+                if (i === 0) {
+                  ctx.moveTo(x, y);
+                } else {
+                  ctx.lineTo(x, y);
+                }
+              }
+              
+              ctx.stroke();
+            }
+            
+            ctx.globalAlpha = currentAlpha;
+            ctx.setLineDash([]);
+            ctx.restore();
+          });
           break;
         }
         case VisualizerStyle.Orb: {
@@ -738,7 +913,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
       type TextPosition = ISong["floatingTitlePosition"];
 
       const position: TextPosition = Toxen.background.storyboard?.getFloatingTitlePosition() ?? "center";
-      const isCenterType = style === VisualizerStyle.Center || style === VisualizerStyle.Waveform;
+      const isCenterType = style === VisualizerStyle.Center || style === VisualizerStyle.PulseWave || style === VisualizerStyle.Waveform;
       const margin = 16;
       switch (position) {
         default: // Also center

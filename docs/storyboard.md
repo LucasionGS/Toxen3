@@ -36,4 +36,7 @@ These are specific values:
   - `circlelogo`
   - `mirroredsingularity`
   - `mirroredsingularitywithlogo`
+  - `pulsewave`
+  - `waveform`
+  - `orb`
 

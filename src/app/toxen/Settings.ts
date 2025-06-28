@@ -347,6 +347,7 @@ export enum VisualizerStyle {
   SingularityWithLogo = "circlelogo",
   MirroredSingularity = "mirroredsingularity",
   MirroredSingularityWithLogo = "mirroredsingularitywithlogo",
+  PulseWave = "pulsewave",
   Waveform = "waveform",
   Orb = "orb",
 };

@@ -1,3 +1,11 @@
+## 1.12.6 - TBD
+### New Features
+- Added new `Waveform` visualizer - A smooth connected wave that looks like a real audio waveform, inspired by the implementation from toxen-poly. This replaces the old waveform style which has been renamed to `PulseWave`.
+  - Features smooth curves and harmonic lines for a more authentic waveform appearance
+  - Supports rainbow mode with gradient colors across the waveform
+  - Includes glow effects when visualizer glow is enabled
+  - Uses quadratic curves for smooth interpolation between audio data points
+
 ## 1.12.5 - 11-02-2025
 ## New features
 - Preloading of storyboard image assets
