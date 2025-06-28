@@ -123,7 +123,6 @@ export default function EditSong(props: EditSongProps) {
           onChange={(list) => (Toxen.editingSong.tags = list) && Toxen.editingSong.saveInfo()}
           defaultValue={Toxen.editingSong.tags}
         />
-        <br />
         <SelectAsync
           allowDeselect={false}
           label="Media File"
@@ -170,7 +169,6 @@ export default function EditSong(props: EditSongProps) {
             }
           }}
         />
-        <br />
         {Toxen.playlist && Toxen.playlist.songList.includes(Toxen.editingSong) ? (
           <>
             <Button.Group>
@@ -197,8 +195,6 @@ export default function EditSong(props: EditSongProps) {
                 ) : null
               }
             </Button.Group>
-            <br />
-            <br />
             <sup>
               Set the background this song will use specifically when playlist "{Toxen.playlist.name}" is selected
             </sup>
@@ -284,7 +280,6 @@ export default function EditSong(props: EditSongProps) {
             Toxen.editingSong.saveInfo()
           }}
         />
-        <br />
         <Checkbox
           label="Force Visualizer Rainbow Mode"
           name="visualizerForceRainbowMode"
@@ -295,7 +290,6 @@ export default function EditSong(props: EditSongProps) {
             // Toxen.setAllVisualColors(Toxen.editingSong.visualizerColor);
           }}
         />
-        <br />
         <sup>Enable to force Rainbow mode onto this song. If disabled, but the global settings have it enabled, this will also be enabled.</sup>
 
         <Select
@@ -313,7 +307,6 @@ export default function EditSong(props: EditSongProps) {
             Toxen.editingSong.saveInfo();
           }}
         />
-        <br />
         <sup>Enables pulsing on the background image of a song. Pulse is based off music intensity and volume.</sup>
 
         <Select
@@ -340,7 +333,6 @@ export default function EditSong(props: EditSongProps) {
             forceUpdate();
           }}
         />
-        <br />
         <sup>Select which style for the visualizer to use for this song.</sup>
 
         {/* Specific VS settings */}
@@ -354,7 +346,6 @@ export default function EditSong(props: EditSongProps) {
             forceUpdate();
           }}
         />
-        <br />
 
         {/* Visualizer Glow */}
         <Select
@@ -372,7 +363,6 @@ export default function EditSong(props: EditSongProps) {
             Toxen.editingSong.saveInfo();
           }}
         />
-        <br />
         <sup>Enables a glow effect on the visualizer for this song.</sup>
 
         {/* Star Rush Effect */}
@@ -391,7 +381,6 @@ export default function EditSong(props: EditSongProps) {
             Toxen.editingSong.saveInfo();
           }}
         />
-        <br />
         <sup>Enables a particle effect where white stars/snow shoot outward from the center, accelerating as they move.</sup>
 
         <Select
@@ -414,7 +403,6 @@ export default function EditSong(props: EditSongProps) {
             Toxen.editingSong.saveInfo();
           }}
         />
-        <br />
         <sup>Controls the intensity of the star rush effect for this song.</sup>
 
 
@@ -427,7 +415,6 @@ export default function EditSong(props: EditSongProps) {
             Toxen.editingSong.saveInfo();
           }}
         />
-        <br />
         <sup>Gives the floating title an underline</sup>
 
         <TextInput
@@ -439,7 +426,6 @@ export default function EditSong(props: EditSongProps) {
           onBlur={() => Toxen.editingSong.saveInfo()}
           onKeyDown={textInputSaveOnEnter}
         />
-        <br />
         <sup>Set the text for the floating title. (Defaults to song title, if empty)</sup>
 
         {/* useFloatingTitleSubtitles */}
@@ -452,7 +438,6 @@ export default function EditSong(props: EditSongProps) {
             Toxen.editingSong.saveInfo();
           }}
         />
-        <br />
         <sup>Use the subtitles if selected, as the text for the floating title. This overrides the text field.</sup>
 
         <Checkbox
@@ -477,7 +462,6 @@ export default function EditSong(props: EditSongProps) {
           deselectable
           showText
         />
-        <br />
         <sup>Set the position of the floating title.</sup>
 
         <Checkbox
@@ -489,7 +473,6 @@ export default function EditSong(props: EditSongProps) {
             Toxen.editingSong.saveInfo();
           }}
         />
-        <br />
         <sup>Enables the floating title to react to the music.</sup>
 
         <Checkbox
@@ -501,7 +484,6 @@ export default function EditSong(props: EditSongProps) {
             Toxen.editingSong.saveInfo();
           }}
         />
-        <br />
         <sup>Enables the floating title to override the visualizer if necessary. Otherwise its just placed on top.</sup>
       </>
       <hr />
@@ -566,8 +548,6 @@ export default function EditSong(props: EditSongProps) {
           ).popup();
         }
       }}><i className="fas fa-file-export"></i>&nbsp;Export Image File</Button>
-
-      <br />
 
       <Button onClick={async () => {
         if (toxenapi.isDesktop()) {

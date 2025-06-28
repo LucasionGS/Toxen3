@@ -109,10 +109,8 @@ export default function SettingsPanel(props: SettingsPanelProps) {
                 <Button leftSection={<i className="fas fa-folder-open" />} onClick={() => toxenapi.remote.shell.openPath(Settings.get("libraryDirectory"))}>
                   &nbsp;Open Music Folder
                 </Button>
-                <br />
-                <br />
                 <sup>
-                  Music Library to fetch songs from.<br />
+                  Music Library to fetch songs from.
                 </sup>
               </>
             );
@@ -122,11 +120,9 @@ export default function SettingsPanel(props: SettingsPanelProps) {
         <Tabs.Panel value="Sidepanel">
           <h2>Sidepanel</h2>
           <Checkbox onClick={(e) => Settings.apply({ panelVerticalTransition: e.currentTarget.checked }, true)} defaultChecked={Settings.get("panelVerticalTransition")} name="panelVerticalTransition" label="Vertical Transition" />
-          <br />
           <sup>Makes the Sidepanel appear from the bottom instead of the side.</sup>
 
           <Checkbox onClick={(e) => Settings.apply({ exposePanelIcons: e.currentTarget.checked }, true)} defaultChecked={Settings.get("exposePanelIcons")} name="exposePanelIcons" label="Expose Panel Icons" />
-          <br />
           <sup>Exposes the icons when the panel is hidden. Only applies when Vertical Transition is off.</sup>
 
           <Select
@@ -146,7 +142,6 @@ export default function SettingsPanel(props: SettingsPanelProps) {
               }
             ]}
           />
-          <br />
           <sup>Choose which side the sidepanel should appear on.</sup>
 
           {(function () {
@@ -180,12 +175,9 @@ export default function SettingsPanel(props: SettingsPanelProps) {
                   }}>
                   Reset background
                 </Button>
-                <br />
-                <br />
                 <sup>
                   Set a background for the sidepanel.
                 </sup>
-                <br />
               </>
             );
           })()}
@@ -194,14 +186,12 @@ export default function SettingsPanel(props: SettingsPanelProps) {
         <Tabs.Panel value="Controls">
           <h2>Controls</h2>
           <Checkbox onClick={(e) => Settings.apply({ pauseWithClick: e.currentTarget.checked }, true)} defaultChecked={Settings.get("pauseWithClick")} name="pauseWithClick" label="Pause With Click" />
-          <br />
           <sup>Pauses/Plays the song when you click on the background.</sup>
         </Tabs.Panel>
 
         <Tabs.Panel value="Window">
           <h2>Window</h2>
           <Checkbox onClick={(e) => Settings.apply({ restoreWindowSize: e.currentTarget.checked }, true)} defaultChecked={Settings.get("restoreWindowSize")} name="restoreWindowSize" label="Restore Window Size On Startup" />
-          <br />
           <sup>Saves and restores the window size from last session.</sup>
         </Tabs.Panel>
 
@@ -460,7 +450,6 @@ export default function SettingsPanel(props: SettingsPanelProps) {
               }))
             ]}
           />
-          <br />
           <sup>Select which style for the visualizer to use.</sup>
 
           {/* Specific VS settings */}
@@ -481,7 +470,6 @@ export default function SettingsPanel(props: SettingsPanelProps) {
             name="hideOffScreenSongElements"
             label="Hide Off-Screen Song Elements"
           />
-          <br />
           <sup>
             Hides song elements that are off-screen. This can improve performance by not loading images that aren't visible.
             This only overrides local, remote will always use this option.
@@ -490,7 +478,6 @@ export default function SettingsPanel(props: SettingsPanelProps) {
 
         <Tabs.Panel value="Account">
           <LoginForm />
-          <br />
           {user && (() => {
             const usedQuota = user ?
               `${bytesToString(user.storage_used)}/${bytesToString(user.storage_quota)} used (${(user.storage_used / user.storage_quota * 100).toFixed(2)}%)`
@@ -506,14 +493,12 @@ export default function SettingsPanel(props: SettingsPanelProps) {
                     toxenapi.isDesktop() && (
                       <>
                         <Checkbox onClick={(e) => Settings.apply({ remoteSyncOnStartup: e.currentTarget.checked }, true)} defaultChecked={Settings.get("remoteSyncOnStartup")} name="remoteSyncOnStartup" label="Sync on startup" />
-                        <br />
                         <sup>
                           Syncs your local library with the remote library on startup.
                           <br />
                           Uploads new songs and updates existing ones. Update is two-way.
                         </sup>
                         <Checkbox onClick={(e) => Settings.apply({ remoteSyncOnSongEdit: e.currentTarget.checked }, true)} defaultChecked={Settings.get("remoteSyncOnSongEdit")} name="remoteSyncOnSongEdit" label="Sync on edit" />
-                        <br />
                         <sup>
                           Syncs individual songs when you edit them automatically.
                         </sup>
@@ -534,25 +519,21 @@ export default function SettingsPanel(props: SettingsPanelProps) {
             Settings.apply({ showAdvancedSettings: e.currentTarget.checked }, true);
             Toxen.reloadSection();
           }} defaultChecked={Settings.get("showAdvancedSettings")} name="showAdvancedSettings" label="Show Advanced UI" />
-          <br />
           <sup>
             Enables the viewing of advanced settings and UI elements. This will display a few more buttons around in Toxen,
             along with more technical settings that users usually don't have to worry about.
           </sup>
 
           <Checkbox onClick={(e) => Settings.apply({ progressBarShowMs: e.currentTarget.checked }, true)} defaultChecked={Settings.get("progressBarShowMs")} name="progressBarShowMs" label="Progress Bar: Show milliseconds" />
-          <br />
           <sup>Enables showing the milliseconds in the progress bar.</sup>
 
           {
             toxenapi.isDesktop() && (
               <>
                 <Checkbox onClick={(e) => Settings.apply({ discordPresence: e.currentTarget.checked }, true)} defaultChecked={Settings.get("discordPresence")} name="discordPresence" label="Discord Presence" />
-                <br />
                 <sup>Enables Discord presence integration. It will show you are using Toxen in your status.</sup>
 
                 <Checkbox onClick={(e) => Settings.apply({ discordPresenceDetailed: e.currentTarget.checked }, true)} defaultChecked={Settings.get("discordPresenceDetailed")} name="discordPresenceDetailed" label="Discord Presence: Show details" />
-                <br />
                 <sup>Enables a detailed activity status in Discord presence. It'll show what song you are listening to, and how far into it you are.</sup>
 
                 {
@@ -623,7 +604,6 @@ export function VisualizerStyleOptions(props: {
               max={option.max}
               step={option.step ?? 1}
             />
-            <br />
           </React.Fragment>
         );
 

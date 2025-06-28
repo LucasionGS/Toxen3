@@ -80,7 +80,6 @@ export default function LoginForm(props: { onSuccessfulLogin?: () => void }) {
         }}>
           <TextInput label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           <TextInput label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          <br />
           <Button loading={loading} type="submit">
             {loading ? "Logging in..." : "Login"}
           </Button>
