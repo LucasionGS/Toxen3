@@ -12,7 +12,7 @@ const SearchField = () => {
     if (newValue === "") Toxen.songPanel.update();
   };
   return (
-    <Group justify="left" wrap="nowrap">
+    <Group justify="left" wrap="nowrap" align="center">
       <Button
         onClick={(e: any) => {
           e.preventDefault();
@@ -20,11 +20,14 @@ const SearchField = () => {
           Toxen.songPanel.update();
         }}
         variant="outline"
+        style={{
+          marginBottom: 16
+        }}
       >
         <IconSearch />
       </Button>
       <TextInput
-        leftSection={<IconSearch />}
+        // leftSection={<IconSearch />}
         placeholder="Search..."
         spellCheck={false}
         type="search"
