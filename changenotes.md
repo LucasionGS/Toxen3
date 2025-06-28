@@ -1,4 +1,4 @@
-## 2.1.0 - TBD
+## 2.1.0 - 20-06-2025
 ### New Features
 - Cursor now hides when the application is idle.
 
