@@ -98,6 +98,10 @@ body.inactive *.hide-on-inactive {
   opacity: 0 !important;
 }
 
+body.inactive {
+  cursor: none;
+}
+
 body[miniplayer] *.hide-on-inactive {
   opacity: 0 !important;
 }
