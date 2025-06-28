@@ -1,5 +1,9 @@
 ## 2.1.0 - TBD
 ### New Features
+- Cursor now hides when the application is idle.
+
+That basically all noteworthy things... Oh well I guess there is this too:
+### The Theme Update
 - **Complete Theme System Overhaul** 
   - Completely rebuilt the theming system from the ground up to use CSS variables throughout.
   - Users can now customize ALL major UI colors, not just the accent color
