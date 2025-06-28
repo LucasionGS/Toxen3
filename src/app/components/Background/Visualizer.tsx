@@ -9,6 +9,7 @@ import StoryboardParser from '../../toxen/StoryboardParser';
 // import HueManager from '../../toxen/philipshue/HueManager';
 import MathX from '../../toxen/MathX';
 import { ISong } from '../../toxen/Song';
+import { ThemeStyleTemplate } from '../../toxen/Theme';
 
 const imgSize = 256;
 const toxenLogo = new Image(imgSize, imgSize);
@@ -1513,11 +1514,15 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     this.loop(0);
   }
 
-  public static readonly DEFAULT_COLOR: string = "#ffffff";
-  // public color: string = Visualizer.DEFAULT_COLOR;
-  // public setColor(color: string) {
-  //   this.color = color || Visualizer.DEFAULT_COLOR;
-  // }
+  public static DEFAULT_COLOR(): string {
+    if (Toxen.theme && Toxen.theme.styles["accentColor"]) {
+      return ThemeStyleTemplate["Core Colors"]["accentColor"].parser(
+        Toxen.theme.styles["accentColor"].value
+      );
+    }
+    
+    return "#ffffff";
+  };
 
   public canvas: HTMLCanvasElement;
   public width: number = 0;

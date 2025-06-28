@@ -70,7 +70,7 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
     return this.data.visualizerColor
       || (this.state.song && this.state.song.visualizerColor)
       || Settings.get("visualizerColor")
-      || Visualizer.DEFAULT_COLOR;
+      || Visualizer.DEFAULT_COLOR();
   }
   // Visualizer Rainbow Mode
   public getVisualizerRainbow() {

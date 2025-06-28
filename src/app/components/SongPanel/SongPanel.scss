@@ -43,7 +43,12 @@
   &:nth-child(8) { --animation-index: 7; }
   &:nth-child(9) { --animation-index: 8; }
   &:nth-child(10) { --animation-index: 9; }
-  
+  &:nth-child(11) { --animation-index: 10; }
+  &:nth-child(12) { --animation-index: 11; }
+  &:nth-child(13) { --animation-index: 12; }
+  &:nth-child(14) { --animation-index: 13; }
+  &:nth-child(15) { --animation-index: 14; }
+
   // Continue pattern for more elements if needed
-  &:nth-child(n+11) { --animation-index: 10; }
+  &:nth-child(n+15) { --animation-index: 5; }
 }
