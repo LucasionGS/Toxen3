@@ -1,68 +1,133 @@
-/* Buttons */
+/* Modern Buttons */
 .tx-btn {
-  background-color: #1976D2; // Default color
-  border: none;
-  padding: 0.35em;
-  margin: 0.05em;
+  background: linear-gradient(135deg, var(--accent-color-dim) 0%, var(--accent-color-hover) 100%);
+  border: 1px solid var(--accent-color-dim);
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin: 4px;
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  
   &:hover {
-    cursor: pointer;
-    filter: brightness(0.9);
-  }
-  color: white;
-  
-  // Colors
-  &.tx-btn-action {
-    background-color: #01861d; // Action color
-  }
-  
-  &.tx-btn-warning {
-    background-color: #ffb300; // Warning color
-  }
-  
-  &.tx-btn-cancel {
-    background-color: #ff3d00; // Cancel color
-  }
-  
-  &.tx-btn-next {
-    background-color: #707070; // Next step color
+    background: linear-gradient(135deg, var(--accent-color-hover) 0%, var(--accent-color) 100%);
+    border-color: var(--accent-color);
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 4px 16px rgba(var(--accent-color-rgb), 0.3);
   }
   
   &:focus {
     outline: none;
+    box-shadow: 0 0 0 3px var(--accent-color-dim);
   }
   
   &:active {
-    filter: brightness(0.8);
+    transform: translateY(0) scale(0.98);
+    transition: all 0.1s ease;
   }
 
   &:disabled {
-    background-color: #bdbdbd; // Disabled color
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--text-muted);
+    color: var(--text-muted);
     cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+  
+  // Color variants
+  &.tx-btn-action {
+    background: linear-gradient(135deg, #01861d 0%, #02a021 100%);
+    border-color: #01861d;
+    
+    &:hover {
+      background: linear-gradient(135deg, #02a021 0%, #03b324 100%);
+      box-shadow: 0 4px 16px rgba(1, 134, 29, 0.3);
+    }
+  }
+  
+  &.tx-btn-warning {
+    background: linear-gradient(135deg, #ffb300 0%, #ffc107 100%);
+    border-color: #ffb300;
+    color: #000;
+    
+    &:hover {
+      background: linear-gradient(135deg, #ffc107 0%, #ffd54f 100%);
+      box-shadow: 0 4px 16px rgba(255, 179, 0, 0.3);
+    }
+  }
+  
+  &.tx-btn-cancel {
+    background: linear-gradient(135deg, #ff3d00 0%, #ff5722 100%);
+    border-color: #ff3d00;
+    
+    &:hover {
+      background: linear-gradient(135deg, #ff5722 0%, #ff6f42 100%);
+      box-shadow: 0 4px 16px rgba(255, 61, 0, 0.3);
+    }
+  }
+  
+  &.tx-btn-next {
+    background: linear-gradient(135deg, #707070 0%, #858585 100%);
+    border-color: #707070;
+    
+    &:hover {
+      background: linear-gradient(135deg, #858585 0%, #9e9e9e 100%);
+      box-shadow: 0 4px 16px rgba(112, 112, 112, 0.3);
+    }
   }
 }
 
-
-/* Input fields */
+/* Modern Input fields */
 .tx-form-field {
   position: relative;
-  background-color: #202020;
-  color: white;
-  border: 1px white solid;
-  padding: 1%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--accent-color-dim);
+  border-radius: 10px;
+  color: var(--text-primary);
+  padding: 12px 16px;
+  font-size: 14px;
+  line-height: 1.4;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(5px);
 
-  &:is([type="text"], [type="password"]) {
+  &:is([type="text"], [type="password"], [type="number"]) {
     min-width: 256px;
   }
 
   &:focus {
     outline: none;
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px var(--accent-color-dim);
+    background: rgba(255, 255, 255, 0.08);
+  }
+  
+  &::placeholder {
+    color: var(--text-muted);
   }
 
   &.read-only {
-    color: gray;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.02);
+    border-color: var(--text-muted);
+    cursor: not-allowed;
+  }
+  
+  // Select styling
+  &[type="select"], select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath fill='none' stroke='%23ffffff' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M2 5l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 40px;
   }
 }
-
 
 .tx-whitespace-nowrap {
   white-space: nowrap;

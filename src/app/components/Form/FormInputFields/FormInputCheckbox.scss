@@ -1,10 +1,54 @@
 .form-input-checkbox {
-  :is(&, & *):hover {
-    cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    .toggle-icon {
+      transform: scale(1.1);
+    }
   }
 
-  .toggle-icon * {
-    font-size: 1.5em;
-    transform: translateY(0.125em);
+  .toggle-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    transition: all 0.3s ease;
+    
+    * {
+      font-size: 1.5em;
+      color: var(--accent-color);
+      transition: all 0.3s ease;
+    }
+    
+    // Unchecked state
+    &:nth-child(2) * {
+      color: var(--text-muted);
+      
+      .form-input-checkbox:hover & {
+        color: var(--accent-color-dim);
+      }
+    }
+    
+    // Checked state
+    &:nth-child(1) * {
+      color: var(--accent-color);
+      filter: drop-shadow(0 0 4px rgba(var(--accent-color-rgb), 0.4));
+    }
+  }
+  
+  // Label styling
+  label {
+    color: var(--text-primary);
+    font-weight: 500;
+    line-height: 1.4;
+    cursor: pointer;
+    margin: 0;
   }
 }

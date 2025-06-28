@@ -1,9 +1,24 @@
-// For explanations
+// Enhanced explanations styling
 sup, sub {
-  padding-bottom: 16px;
-  transform: translateY(-1em);
   display: block;
-  // color: gray;
-  color: #678f6a;
-  white-space: normal
+  margin: 16px 0;
+  padding: 12px 16px;
+  background: linear-gradient(
+    135deg,
+    rgba(var(--accent-color-rgb), 0.1) 0%,
+    rgba(var(--accent-color-rgb), 0.05) 100%
+  );
+  border: 1px solid var(--accent-color-dim);
+  border-radius: 10px;
+  color: var(--accent-color);
+  font-size: 13px;
+  line-height: 1.5;
+  backdrop-filter: blur(10px);
+  white-space: normal;
+  transform: none;
+  
+  &::before {
+    content: "ℹ️ ";
+    margin-right: 8px;
+  }
 }

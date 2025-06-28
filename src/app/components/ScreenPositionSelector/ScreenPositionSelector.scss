@@ -1,33 +1,56 @@
 @use "../../../root.scss" as *;
 
 .screen-position-selector {
-  border: 1px solid white;
+  border: 1px solid var(--accent-color-dim);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
   width: fit-content;
-  padding: 8px;
-  background-color: $bgColor;
+  padding: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 .screen-position-selector-item {
   width: 100px;
   height: 50px;
-
-  border: 1px solid white;
-
+  border: 1px solid var(--accent-color-dim);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 75%;
-
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
   user-select: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(5px);
 
   &:hover {
-    background-color: #333;
+    background: var(--accent-color-dim);
+    border-color: var(--accent-color);
+    color: var(--text-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(var(--accent-color-rgb), 0.3);
   }
   
   &.screen-position-selector-item--selected {
-    background-color: adjust-color($greenColor, $alpha: -0.5);
+    background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-color-hover) 100%);
+    border-color: var(--accent-color);
+    color: var(--text-primary);
+    font-weight: 600;
+    box-shadow: 0 4px 16px rgba(var(--accent-color-rgb), 0.4);
+    
+    &:hover {
+      transform: translateY(-2px) scale(1.02);
+    }
   }
 }

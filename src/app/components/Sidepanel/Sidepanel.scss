@@ -13,10 +13,12 @@ $sidePanelColorMid: #252525;
   --panel-icons-width-expanded: 160px;
 
   --accent-color: #b6ffba;
+  --accent-color-rgb: 182, 255, 186;
   --accent-color-dim: rgba(182, 255, 186, 0.15);
   --accent-color-hover: rgba(182, 255, 186, 0.25);
   --accent-color-active: rgba(182, 255, 186, 0.4);
   --sidebar-radius: 16px;
+  --bg-color: #202124;
   
   // New design tokens
   --sidebar-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
@@ -411,19 +413,27 @@ body[miniplayer] .sidepanel {
   .mantine-PasswordInput-root,
   .mantine-Textarea-root,
   .mantine-Select-root,
-  .mantine-NumberInput-root {
+  .mantine-NumberInput-root,
+  .mantine-ColorInput-root,
+  .mantine-TagsInput-root {
     margin-bottom: 16px;
     
     .mantine-TextInput-input,
     .mantine-PasswordInput-input,
     .mantine-Textarea-input,
     .mantine-Select-input,
-    .mantine-NumberInput-input {
+    .mantine-NumberInput-input,
+    .mantine-ColorInput-input,
+    .mantine-TagsInput-input {
       background: rgba(255, 255, 255, 0.05);
       border: 1px solid var(--accent-color-dim);
       border-radius: 10px;
       color: var(--text-primary);
+      padding: 12px 16px;
+      font-size: 14px;
+      line-height: 1.4;
       transition: all 0.3s ease;
+      backdrop-filter: blur(5px);
       
       &:focus {
         border-color: var(--accent-color);
@@ -440,11 +450,122 @@ body[miniplayer] .sidepanel {
     .mantine-PasswordInput-label,
     .mantine-Textarea-label,
     .mantine-Select-label,
-    .mantine-NumberInput-label {
+    .mantine-NumberInput-label,
+    .mantine-ColorInput-label,
+    .mantine-TagsInput-label {
       color: var(--accent-color);
       font-weight: 600;
       margin-bottom: 8px;
       font-size: 14px;
+    }
+  }
+
+  // ColorInput specific styling
+  .mantine-ColorInput-root {
+    .mantine-ColorInput-dropdown {
+      background: rgba(26, 26, 26, 0.95);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--accent-color-dim);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+    
+    .mantine-ColorInput-wrapper {
+      position: relative;
+      
+      .mantine-ColorPicker-root {
+        background: rgba(26, 26, 26, 0.95);
+        border: 1px solid var(--accent-color-dim);
+        border-radius: 12px;
+        padding: 16px;
+      }
+      
+      .mantine-ColorPicker-saturation {
+        border-radius: 8px;
+        margin-bottom: 12px;
+      }
+      
+      .mantine-ColorPicker-hue {
+        border-radius: 8px;
+        margin-bottom: 8px;
+      }
+      
+      .mantine-ColorPicker-alpha {
+        border-radius: 8px;
+      }
+    }
+  }
+
+  // TagsInput specific styling
+  .mantine-TagsInput-root {
+    .mantine-TagsInput-pill {
+      background: linear-gradient(135deg, var(--accent-color-dim) 0%, var(--accent-color-hover) 100%);
+      border: 1px solid var(--accent-color-dim);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-weight: 500;
+      padding: 0px 12px;
+      margin: 2px;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        background: linear-gradient(135deg, var(--accent-color-hover) 0%, var(--accent-color) 100%);
+        transform: translateY(-1px);
+      }
+      
+      .mantine-TagsInput-pillLabel {
+        color: var(--text-primary);
+      }
+      
+      .mantine-TagsInput-remove {
+        color: var(--text-secondary);
+        transition: color 0.2s ease;
+        
+        &:hover {
+          color: #ff4757;
+        }
+      }
+    }
+  }
+
+  // Select dropdown styling
+  .mantine-Select-root {
+    .mantine-Select-dropdown {
+      background: rgba(26, 26, 26, 0.95);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--accent-color-dim);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      padding: 8px;
+      
+      .mantine-Select-option {
+        background: transparent;
+        border-radius: 8px;
+        color: var(--text-primary);
+        padding: 10px 12px;
+        margin: 2px 0;
+        transition: all 0.2s ease;
+        
+        &:hover {
+          background: var(--accent-color-dim);
+          color: var(--text-primary);
+        }
+        
+        &[data-selected] {
+          background: var(--accent-color);
+          color: var(--text-primary);
+          font-weight: 600;
+        }
+      }
+    }
+    
+    .mantine-Select-input {
+      cursor: pointer;
+      
+      &[data-expanded] {
+        border-color: var(--accent-color);
+        background: rgba(255, 255, 255, 0.08);
+      }
     }
   }
   
@@ -842,4 +963,226 @@ body[miniplayer] .sidepanel {
   padding: 12px 16px;
   justify-content: flex-start;
   min-width: 0; // Allow flex items to shrink
+}
+
+// Global Modal Styling
+// These styles are applied globally since modals are portal-based
+.mantine-Modal-root {
+  .mantine-Modal-overlay {
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    transition: all 0.3s ease;
+  }
+  
+  .mantine-Modal-content {
+    background: linear-gradient(
+      135deg,
+      rgba(26, 26, 26, 0.95) 0%,
+      rgba(35, 35, 35, 0.95) 100%
+    );
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--accent-color-dim);
+    border-radius: 16px;
+    box-shadow: 
+      0 20px 60px rgba(0, 0, 0, 0.4),
+      0 0 0 1px rgba(255, 255, 255, 0.1);
+    padding: 0;
+    overflow: hidden;
+    
+    .mantine-Modal-header {
+      background: linear-gradient(
+        135deg,
+        rgba(var(--accent-color-rgb), 0.15) 0%,
+        rgba(var(--accent-color-rgb), 0.05) 100%
+      );
+      border-bottom: 1px solid var(--accent-color-dim);
+      padding: 20px 24px;
+      margin: 0;
+      
+      .mantine-Modal-title {
+        color: var(--text-primary);
+        font-weight: 700;
+        font-size: 18px;
+        line-height: 1.3;
+      }
+      
+      .mantine-Modal-close {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--accent-color-dim);
+        border-radius: 8px;
+        color: var(--text-secondary);
+        width: 36px;
+        height: 36px;
+        transition: all 0.2s ease;
+        
+        &:hover {
+          background: var(--accent-color-dim);
+          color: var(--text-primary);
+          transform: scale(1.05);
+        }
+      }
+    }
+    
+    .mantine-Modal-body {
+      padding: 24px;
+      color: var(--text-primary);
+      
+      // Apply enhanced styling to form elements in modals
+      .mantine-TextInput-root,
+      .mantine-PasswordInput-root,
+      .mantine-Textarea-root,
+      .mantine-Select-root,
+      .mantine-NumberInput-root,
+      .mantine-ColorInput-root,
+      .mantine-TagsInput-root {
+        margin-bottom: 16px;
+        
+        .mantine-TextInput-input,
+        .mantine-PasswordInput-input,
+        .mantine-Textarea-input,
+        .mantine-Select-input,
+        .mantine-NumberInput-input,
+        .mantine-ColorInput-input,
+        .mantine-TagsInput-input {
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid var(--accent-color-dim);
+          border-radius: 10px;
+          color: var(--text-primary);
+          padding: 12px 16px;
+          font-size: 14px;
+          backdrop-filter: blur(5px);
+          
+          &:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px var(--accent-color-dim);
+            background: rgba(255, 255, 255, 0.08);
+          }
+        }
+        
+        .mantine-TextInput-label,
+        .mantine-PasswordInput-label,
+        .mantine-Textarea-label,
+        .mantine-Select-label,
+        .mantine-NumberInput-label,
+        .mantine-ColorInput-label,
+        .mantine-TagsInput-label {
+          color: var(--accent-color);
+          font-weight: 600;
+          margin-bottom: 8px;
+        }
+      }
+      
+      .mantine-Button-root {
+        background: linear-gradient(135deg, var(--accent-color-dim) 0%, var(--accent-color-hover) 100%);
+        border: 1px solid var(--accent-color-dim);
+        border-radius: 10px;
+        color: var(--text-primary);
+        font-weight: 600;
+        transition: all 0.3s ease;
+        
+        &:hover {
+          background: linear-gradient(135deg, var(--accent-color-hover) 0%, var(--accent-color) 100%);
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(var(--accent-color-rgb), 0.3);
+        }
+        
+        &[data-variant="outline"] {
+          background: transparent;
+          border: 2px solid var(--accent-color-dim);
+          
+          &:hover {
+            background: var(--accent-color-dim);
+            border-color: var(--accent-color);
+          }
+        }
+        
+        &[data-variant="light"] {
+          background: rgba(var(--accent-color-rgb), 0.1);
+          border: 1px solid var(--accent-color-dim);
+          
+          &:hover {
+            background: rgba(var(--accent-color-rgb), 0.2);
+          }
+        }
+      }
+    }
+  }
+}
+
+// Global dropdown/popover styling
+.mantine-Popover-dropdown {
+  background: rgba(26, 26, 26, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--accent-color-dim);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  padding: 8px;
+}
+
+// Global notification styling
+.mantine-Notification-root {
+  background: linear-gradient(
+    135deg,
+    rgba(26, 26, 26, 0.95) 0%,
+    rgba(35, 35, 35, 0.95) 100%
+  );
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--accent-color-dim);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  
+  .mantine-Notification-title {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+  
+  .mantine-Notification-description {
+    color: var(--text-secondary);
+  }
+  
+  .mantine-Notification-closeButton {
+    color: var(--text-secondary);
+    
+    &:hover {
+      background: var(--accent-color-dim);
+      color: var(--text-primary);
+    }
+  }
+}
+
+// Global Menu styling (for context menus, etc.)
+.mantine-Menu-dropdown {
+  background: rgba(26, 26, 26, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--accent-color-dim);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  padding: 8px;
+  
+  .mantine-Menu-item {
+    background: transparent;
+    border-radius: 8px;
+    color: var(--text-primary);
+    padding: 10px 12px;
+    margin: 2px 0;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      background: var(--accent-color-dim);
+      color: var(--text-primary);
+    }
+    
+    &[data-disabled] {
+      color: var(--text-muted);
+      
+      &:hover {
+        background: transparent;
+      }
+    }
+  }
+  
+  .mantine-Menu-divider {
+    border-color: var(--accent-color-dim);
+    margin: 8px 0;
+  }
 }
