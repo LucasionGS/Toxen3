@@ -1,5 +1,9 @@
-## 1.12.6 - TBD
+## 2.0.0 - 28-06-2025
 ### New Features
+- Major redesign!
+  - The entire UI has been redesigned to be more smooth looking, nicer animations, and better structured. This is the primary reason for the major version bump, as it is a significant change to the user interface. But things are still were you expect them to be, so you shouldn't have any issues finding your way around.
+    - Further customization will be added in the future, including a theme editor for changing colors, among other things.
+  - Storyboard editor doesn't look like shit anymore!
 - Added new `Waveform` visualizer - A smooth connected wave that looks like a real audio waveform, inspired by the implementation from toxen-poly. This replaces the old waveform style which has been renamed to `PulseWave`.
   - Features smooth curves and harmonic lines for a more authentic waveform appearance
   - Supports rainbow mode with gradient colors across the waveform
@@ -20,6 +24,7 @@
   - Adjustable intensity from 0.25x to 2x for customizable visual impact
   - Particles fade out as they age and are removed when off-screen for optimal performance
   - **Storyboard support**: Can be controlled dynamically with `starRushEffect`, `starRushIntensity`, and `starRushIntensityTransition` storyboard events
+- Background dim is available on a per-song basis
 
 ## 1.12.5 - 11-02-2025
 ## New features
