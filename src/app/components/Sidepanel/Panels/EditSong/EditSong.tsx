@@ -158,9 +158,15 @@ export default function EditSong(props: EditSongProps) {
             let path = song.dirname();
 
             let supported = Toxen.getSupportedImageFiles();
-            return await Toxen.filterSupportedFiles(path, supported);
+            return [
+              "<Empty>",
+              ...(await Toxen.filterSupportedFiles(path, supported))
+            ];
           })}
           onChange={(v) => {
+            if (v === "<Empty>") {
+              v = null;
+            }
             Toxen.editingSong.paths.background = v;
             Toxen.editingSong.saveInfo();
             let current = Song.getCurrent();
@@ -213,9 +219,15 @@ export default function EditSong(props: EditSongProps) {
             let path = song.dirname();
 
             let supported = Toxen.getSupportedSubtitleFiles();
-            return await Toxen.filterSupportedFiles(path, supported);
+            return [
+              "<Empty>",
+              ...(await Toxen.filterSupportedFiles(path, supported))
+            ];
           })}
           onChange={(v) => {
+            if (v === "<Empty>") {
+              v = null;
+            }
             Toxen.editingSong.paths.subtitles = v;
             Toxen.editingSong.saveInfo();
             let current = Song.getCurrent();
@@ -246,9 +258,15 @@ export default function EditSong(props: EditSongProps) {
             let path = song.dirname();
 
             let supported = Toxen.getSupportedStoryboardFiles();
-            return await Toxen.filterSupportedFiles(path, supported);
+            return [
+              "<Empty>",
+              ...(await Toxen.filterSupportedFiles(path, supported))
+            ];
           })}
           onChange={(v) => {
+            if (v === "<Empty>") {
+              v = null;
+            }
             console.log("changed", v);
             Toxen.editingSong.paths.storyboard = v;
             Toxen.editingSong.saveInfo();
@@ -449,7 +467,6 @@ export default function EditSong(props: EditSongProps) {
             Toxen.editingSong.saveInfo();
           }}
         />
-        <br />
         <sup>Enables the floating title for this song.</sup>
         <ScreenPositionSelector
           onChange={v => {

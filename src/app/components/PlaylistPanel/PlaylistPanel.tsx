@@ -238,9 +238,7 @@ function PlaylistItem(props: PlaylistItemProps) {
                 Playlist.save();
                 update();
               }}
-            >
-              Show playlist background
-            </Checkbox>
+            />
           )}
           <Button
             color="red"
