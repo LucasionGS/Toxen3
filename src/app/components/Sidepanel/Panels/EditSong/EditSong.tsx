@@ -532,7 +532,6 @@ export default function EditSong(props: EditSongProps) {
                   let fileData: Buffer;
                   try {
                     if (Settings.isRemote()) {
-                      // @ts-expect-error
                       fileData = Buffer.from(await Toxen.fetch(file).then(res => res.arrayBuffer()));
                     }
                     else {
@@ -565,7 +564,6 @@ export default function EditSong(props: EditSongProps) {
                   let fileData: Buffer;
                   try {
                     if (Settings.isRemote()) {
-                      // @ts-expect-error
                       fileData = Buffer.from(await Toxen.fetch(file).then(res => res.arrayBuffer()));
                     }
                     else {
@@ -593,7 +591,6 @@ export default function EditSong(props: EditSongProps) {
                   let fileData: Buffer;
                   try {
                     if (Settings.isRemote()) {
-                      // @ts-expect-error
                       fileData = Buffer.from(await Toxen.fetch(file).then(res => res.arrayBuffer()));
                     }
                     else {
