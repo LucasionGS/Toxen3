@@ -1,4 +1,4 @@
-@import "../../../root.scss";
+@use "../../../root.scss" as *;
 
 .screen-position-selector {
   border: 1px solid white;

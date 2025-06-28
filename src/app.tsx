@@ -240,7 +240,7 @@ Toxen.whenReady().then(async () => {
   // Save Stats
   setInterval(() => Stats.save(), 30000);
 
-  if (Settings.get("remoteSyncOnStartup")) {
+  if (Settings.get("remoteSyncOnStartup") && (await User.refreshUser())?.premium) {
     Toxen.syncSongs();
   }
 

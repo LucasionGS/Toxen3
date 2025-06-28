@@ -1223,7 +1223,7 @@ export default class Song implements ISong {
         return;
       }
       await toxenapi.fs.promises.writeFile(toxenapi.path.resolve(localPath, "info.json"), JSON.stringify(this.toISong()));
-      if ((opts.callSync ?? true) && Settings.get("remoteSyncOnSongEdit")) {
+      if ((opts.callSync ?? true) && Settings.get("remoteSyncOnSongEdit") && User.getCurrentUser()?.premium) {
         await this.sync(null, { silenceValidated: true });
       }
       // Toxen.notify({
@@ -1376,7 +1376,7 @@ export default class Song implements ISong {
 
   public static async createCompareLocalSongsData(songs?: Song[]) {
     const user = Settings.getUser();
-    if (!user.premium) throw new Error("You must be a premium user to compare songs against the remote.");
+    if (user && !user.premium) throw new Error("You must be a premium user to compare songs against the remote.");
 
     if (!toxenapi.isDesktop()) {
       toxenapi.throwDesktopOnly();
@@ -1420,7 +1420,7 @@ export default class Song implements ISong {
     const data = await this.createCompareLocalSongsData(songs);
 
     const user = Settings.getUser();
-    if (!user.premium) throw new Error("You must be a premium user to compare songs against the remote.");
+    if (user && !user.premium) throw new Error("You must be a premium user to compare songs against the remote.");
 
     if (!toxenapi.isDesktop()) {
       toxenapi.throwDesktopOnly();

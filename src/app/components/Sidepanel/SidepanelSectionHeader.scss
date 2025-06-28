@@ -1,4 +1,4 @@
-@import "Sidepanel.scss";
+@use "Sidepanel.scss" as *;
 
 .sidepanel-section-header {
   position: sticky;

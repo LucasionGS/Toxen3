@@ -1,4 +1,4 @@
-@import "../../../root.scss";
+@use "../../../root.scss" as *;
 $sidePanelColor: #1b1b1b;
 
 :root {

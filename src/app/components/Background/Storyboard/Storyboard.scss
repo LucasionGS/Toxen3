@@ -1,4 +1,4 @@
-@import "../../../../root.scss";
+@use "../../../../root.scss" as *;
 .toxen-storyboard {
   width: 100vw;
   height: var(--bodyHeight);

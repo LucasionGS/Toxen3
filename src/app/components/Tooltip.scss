@@ -1,4 +1,4 @@
-@import "../../root.scss";
+@use "../../root.scss" as *;
 
 .tooltip {
   position: absolute;

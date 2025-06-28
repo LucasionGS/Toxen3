@@ -627,6 +627,7 @@ export class Toxen {
   }
 
   public static async syncSongs(songs?: Song[]) {
+    // If not logged in, return
     if (!toxenapi.isDesktop()) {
       return toxenapi.throwDesktopOnly();
     }
