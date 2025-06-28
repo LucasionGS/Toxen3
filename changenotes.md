@@ -5,6 +5,13 @@
   - Supports rainbow mode with gradient colors across the waveform
   - Includes glow effects when visualizer glow is enabled
   - Uses quadratic curves for smooth interpolation between audio data points
+- Added new `Waveform Circle` visualizer
+  - Circular waveform that follows audio data with smooth curves
+  - Configurable position (X/Y), size, smoothing level, and line thickness
+  - Music-reactive with dynamic radius based on audio intensity
+  - Supports rainbow mode with radial gradient colors
+  - Includes glow effects and filled areas for enhanced visual impact
+  - Features subtle wave motion and slower rotation for a mesmerizing effect
 - Added new `Star Rush Effect` - A particle background effect where white stars/snow shoot outward from the center, accelerating as they move.
   - Configurable globally in Settings > Visual > Star Rush Effect
   - Can be overridden per-song in the song editor under "Song-specific visuals"

@@ -904,6 +904,170 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           }
           break;
         }
+        case VisualizerStyle.WaveformCircle: {
+          // Combines Orb's circular distribution with Waveform's smooth rendering
+          const vsOptions = {
+            x: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.WaveformCircle, "x") ?? 50,
+            y: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.WaveformCircle, "y") ?? 50,
+            size: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.WaveformCircle, "size") ?? 0,
+            smoothing: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.WaveformCircle, "smoothing") ?? 0.7,
+            thickness: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.WaveformCircle, "thickness") ?? 3,
+          }
+          
+          const maxHeight = getMaxHeight(0.4); // Slightly higher amplitude than regular waveform
+          const rSizeX = vWidth / 2;
+          const rSizeY = vHeight / 2;
+          let centerX = typeof vsOptions.x === "number" && vsOptions.x > -0.1 ? (vWidth / 100 * vsOptions.x) : rSizeX;
+          let centerY = typeof vsOptions.y === "number" && vsOptions.y > -0.1 ? (vHeight / 100 * vsOptions.y) : rSizeY;
+          const baseRadius = (vsOptions.size > 0 ? (
+            vsOptions.size + (vsOptions.size * (dynLight / 4))
+          ) : (
+            (Math.min(rSizeX, rSizeY) * 0.3) + (Math.min(rSizeX, rSizeY) * 0.15) * dynLight
+          ));
+
+          if (pulseEnabled) {
+            centerX = rSizeX + ((centerX - rSizeX) * (1 + (dynLight / 4)));
+            centerY = rSizeY + ((centerY - rSizeY) * (1 + (dynLight / 4)));
+          }
+          
+          const rotation = Math.PI / 2 + ((time / 30000) * Math.PI); // Slower rotation than Orb
+
+          // Pre-process audio data with smoothing
+          const smoothedData: number[] = [];
+          for (let i = 0; i < len; i++) {
+            let smoothedValue = dataArray[i];
+            if (vsOptions.smoothing > 0 && i > 0 && i < len - 1) {
+              const prev = dataArray[i - 1];
+              const next = dataArray[i + 1];
+              const current = dataArray[i];
+              smoothedValue = current * (1 - vsOptions.smoothing) + (prev + next) * vsOptions.smoothing / 2;
+            }
+            smoothedData.push(smoothedValue);
+          }
+
+          // Generate circular waveform points
+          const wavePoints: { x: number; y: number; amplitude: number }[] = [];
+          const unitAngle = (2 * Math.PI) / len;
+          const unitH = maxHeight / dataSize;
+          
+          for (let i = 0; i < len; i++) {
+            const amplitude = Math.max(1, smoothedData[i] * unitH);
+            const angle = i * unitAngle + rotation;
+            
+            // Add subtle wave motion like in the linear waveform
+            const waveMotion = Math.sin(time * 0.0008 + i * 0.1) * (amplitude * 0.1);
+            const dynamicRadius = baseRadius + amplitude + waveMotion;
+            
+            // Original angle point
+            const x = centerX + Math.cos(angle) * dynamicRadius;
+            const y = centerY + Math.sin(angle) * dynamicRadius;
+            wavePoints.push({ x, y, amplitude });
+          }
+
+          // Set up glow effect
+          if (Toxen.background.storyboard.getVisualizerGlow()) {
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = storedColor;
+          }
+          
+          // Set up colors
+          if (Toxen.background.storyboard.getVisualizerRainbow()) {
+            const gradient = ctx.createRadialGradient(centerX, centerY, baseRadius, centerX, centerY, baseRadius + maxHeight);
+            const steps = 8;
+            for (let i = 0; i <= steps; i++) {
+              const hue = (i / steps * 360 + time * 0.05) % 360;
+              gradient.addColorStop(i / steps, `hsl(${hue}, 70%, 60%)`);
+            }
+            ctx.strokeStyle = gradient;
+            ctx.fillStyle = gradient;
+          } else {
+            ctx.strokeStyle = storedColor;
+            ctx.fillStyle = storedColor;
+          }
+
+          this.useAlpha(opacity, ctx => {
+            ctx.save();
+            
+            // Draw the main circular waveform with smooth curves
+            ctx.beginPath();
+            ctx.lineWidth = vsOptions.thickness;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            
+            // Start the circular path
+            ctx.moveTo(wavePoints[0].x, wavePoints[0].y);
+            
+            // Create smooth curves between points using quadratic curves
+            for (let i = 1; i < wavePoints.length; i++) {
+              const current = wavePoints[i];
+              const prev = wavePoints[i - 1];
+              
+              // Calculate control point for smooth curve
+              // Use the actual array index for angle calculation since we have len*2 points
+              const pointIndex = i;
+              const totalPoints = wavePoints.length;
+              const controlAngle = (pointIndex * (2 * Math.PI) / totalPoints + rotation) - (Math.PI / totalPoints);
+              const controlRadius = baseRadius + (prev.amplitude + current.amplitude) / 2;
+              const controlX = centerX + Math.cos(controlAngle) * controlRadius;
+              const controlY = centerY + Math.sin(controlAngle) * controlRadius;
+              
+              ctx.quadraticCurveTo(controlX, controlY, current.x, current.y);
+            }
+            
+            // Close the circular path smoothly
+            const firstPoint = wavePoints[0];
+            const lastPoint = wavePoints[wavePoints.length - 1];
+            const closingControlAngle = rotation - (Math.PI / wavePoints.length);
+            const closingControlRadius = baseRadius + (lastPoint.amplitude + firstPoint.amplitude) / 2;
+            const closingControlX = centerX + Math.cos(closingControlAngle) * closingControlRadius;
+            const closingControlY = centerY + Math.sin(closingControlAngle) * closingControlRadius;
+            
+            ctx.quadraticCurveTo(closingControlX, closingControlY, firstPoint.x, firstPoint.y);
+            ctx.closePath();
+            
+            // Stroke the circular waveform
+            ctx.stroke();
+            
+            // Create a filled area between the base circle and waveform for visual impact
+            ctx.beginPath();
+            
+            // Draw inner circle (base radius)
+            ctx.arc(centerX, centerY, baseRadius, 0, Math.PI * 2, false);
+            
+            // Draw outer waveform path (reverse direction for proper fill)
+            ctx.moveTo(wavePoints[0].x, wavePoints[0].y);
+            for (let i = wavePoints.length - 1; i > 0; i--) {
+              const current = wavePoints[i];
+              const next = wavePoints[i - 1];
+              
+              const pointIndex = i;
+              const totalPoints = wavePoints.length;
+              const controlAngle = (pointIndex * (2 * Math.PI) / totalPoints + rotation) - (Math.PI / totalPoints);
+              const controlRadius = baseRadius + (current.amplitude + next.amplitude) / 2;
+              const controlX = centerX + Math.cos(controlAngle) * controlRadius;
+              const controlY = centerY + Math.sin(controlAngle) * controlRadius;
+              
+              ctx.quadraticCurveTo(controlX, controlY, next.x, next.y);
+            }
+            ctx.closePath();
+            
+            // Fill with a more transparent version
+            const currentAlpha = ctx.globalAlpha;
+            ctx.globalAlpha = currentAlpha * 0.2;
+            ctx.fill();
+            ctx.globalAlpha = currentAlpha;
+            
+            // Add center circle for reference (subtle)
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, baseRadius * 0.1, 0, Math.PI * 2);
+            ctx.globalAlpha = currentAlpha * 0.5;
+            ctx.fill();
+            ctx.globalAlpha = currentAlpha;
+            
+            ctx.restore();
+          });
+          break;
+        }
       }
     }
 

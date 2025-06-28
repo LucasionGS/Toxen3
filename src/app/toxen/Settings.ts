@@ -356,6 +356,7 @@ export enum VisualizerStyle {
   PulseWave = "pulsewave",
   Waveform = "waveform",
   Orb = "orb",
+  WaveformCircle = "waveformcircle",
 };
 
 export type VisualizerStyleOptionsTypes =
@@ -407,6 +408,53 @@ export const visualizerStyleOptions: Partial<Record<VisualizerStyle, VisualizerS
       key: "opaque",
       type: "boolean",
       defaultValue: "",
+    }
+  ],
+  [VisualizerStyle.WaveformCircle]: [
+    {
+      name: "X Position",
+      key: "x",
+      type: "range",
+      defaultValue: -0.1,
+      min: -0.1,
+      max: 100,
+      step: 0.1,
+    },
+    {
+      name: "Y Position",
+      key: "y",
+      type: "range",
+      defaultValue: -0.1,
+      min: -0.1,
+      max: 100,
+      step: 0.1,
+    },
+    {
+      name: "Size",
+      key: "size",
+      type: "range",
+      defaultValue: 0,
+      min: 0,
+      max: 1000,
+      step: 0.1,
+    },
+    {
+      name: "Smoothing",
+      key: "smoothing",
+      type: "range",
+      defaultValue: 0.7,
+      min: 0,
+      max: 1,
+      step: 0.1,
+    },
+    {
+      name: "Thickness",
+      key: "thickness",
+      type: "range",
+      defaultValue: 3,
+      min: 1,
+      max: 10,
+      step: 0.5,
     }
   ],
 }
