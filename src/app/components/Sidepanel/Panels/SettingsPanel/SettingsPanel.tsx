@@ -9,6 +9,7 @@ import Song from "../../../../toxen/Song";
 import { Toxen } from "../../../../ToxenApp";
 import TButton from "../../../Button/Button";
 import { PanelDirection } from "../../Sidepanel";
+import SidepanelSectionGroup from "../../SidepanelSectionGroup";
 import "./SettingsPanel.scss";
 import { useForceUpdate } from "@mantine/hooks";
 import LoginForm from "../../../LoginForm/LoginForm";
@@ -207,173 +208,236 @@ export default function SettingsPanel(props: SettingsPanelProps) {
         <Tabs.Panel value="Visuals">
           <h2>Visuals</h2>
 
-          {/* Edit theme button */}
-          {(() => {
-            const btn = React.createRef<TButton & HTMLButtonElement>();
-            return (
-              <>
+          <SidepanelSectionGroup 
+            title="Theme & Appearance" 
+            icon={<i className="fas fa-palette" />}
+            collapsible
+          >
+            <Select
+              allowDeselect={false}
+              onChange={(value) => {
+                Toxen.setThemeByName(value as string);
+              }}
+              defaultValue={Toxen.theme?.name ?? ""}
+              name="theme"
+              label="Theme"
+              data={[
+                {
+                  value: "",
+                  label: "<Default>"
+                },
+                ...Toxen.themes.map(t => ({
+                  value: t.name,
+                  label: t.getDisplayName()
+                }))
+              ]}
+            />
+            <sup>Select the theme you want to use.</sup>
+            
+            <Button.Group>
+              <Button 
+                leftSection={<i className="fas fa-paint-brush" />} 
+                disabled={!Toxen.theme || true} 
+                onClick={() => Toxen.setMode("ThemeEditor")}
+              >
+                Edit Theme
+              </Button>
+              <Button 
+                leftSection={<i className="fas fa-sync-alt" />} 
+                onClick={() => Toxen.loadThemes()}
+              >
+                Reload Themes
+              </Button>
+            </Button.Group>
+          </SidepanelSectionGroup>
 
-                <Select
-                  allowDeselect={false}
-                  onChange={(value) => {
-                    Toxen.setThemeByName(value as string);
-                  }}
-                  defaultValue={Toxen.theme?.name ?? ""}
-                  name="theme"
-                  label="Theme"
-                  data={[
-                    {
-                      value: "",
-                      label: "<Default>"
-                    },
-                    ...Toxen.themes.map(t => ({
-                      value: t.name,
-                      label: t.getDisplayName()
-                    }))
-                  ]}
-                />
-                <br />
-                <sup>Select the theme you want to use.</sup>
-                <Button leftSection={<i className="fas fa-paint-brush" />} ref={btn} disabled={!Toxen.theme || true} onClick={() => {
-                  Toxen.setMode("ThemeEditor");
-                }}>Edit Theme</Button>
-                <Button leftSection={<i className="fas fa-paint-brush" />} onClick={() => {
-                  // e.preventDefault();
-                  Toxen.loadThemes();
-                }}>Reload Theme</Button>
-              </>
-            );
-          })()}
+          <SidepanelSectionGroup 
+            title="Background Settings" 
+            icon={<i className="fas fa-image" />}
+            collapsible
+          >
+            {(function () {
+              const [bg, setBg] = React.useState(Settings.get("defaultBackground"));
+              const callback = async () => {
+                const bg = await Settings.selectFile({
+                  filters: [
+                    { name: "Images", extensions: Toxen.getSupportedImageFiles().map(f => f.replace(".", "")) }
+                  ]
+                });
 
-          <br />
-          <br />
-          {(function () {
-            const [bg, setBg] = React.useState(Settings.get("defaultBackground"));
-            const callback = async () => {
-              const bg = await Settings.selectFile({
-                filters: [
-                  { name: "Images", extensions: Toxen.getSupportedImageFiles().map(f => f.replace(".", "")) }
-                ]
-              });
+                if (bg) {
+                  Settings.apply({ defaultBackground: bg }, true);
+                  setBg(bg);
+                }
+              };
+              return (
+                <>
+                  <TextInput 
+                    disabled 
+                    onClick={callback} 
+                    value={bg} 
+                    name="defaultBackground" 
+                    label="Default Background" 
+                  />
+                  <Button 
+                    leftSection={<i className="fas fa-folder" />} 
+                    onClick={callback}
+                  >
+                    Change Default Background
+                  </Button>
+                  <sup>
+                    Set a default background which will apply for songs without one.
+                    Click the button to open a select prompt.
+                    You can also set a background for a specific song by clicking the song in the song list.
+                  </sup>
+                </>
+              );
+            })()}
 
-              if (bg) {
-                Settings.apply({ defaultBackground: bg }, true);
-                setBg(bg);
-              }
-            };
-            return (
-              <>
-                <TextInput disabled onClick={callback} value={bg} name="defaultBackground" label="Default Background" />
-                <Button leftSection={<i className="fas fa-folder" />} onClick={callback}>
-                  Change default background
-                </Button>
-                <br />
-                <br />
-                <sup>
-                  Set a default background which will apply for songs without one.<br />
-                  Click the button <code>Change default background</code> to open a select prompt.
-                  You can also set a background for a specific song by clicking the song in the song list.<br />
-                </sup>
-                <br />
-              </>
-            );
-          })()}
+            <Text>Background Dim</Text>
+            <Slider 
+              onChange={v => Settings.set("backgroundDim", v)} 
+              onChangeEnd={v => Settings.apply({ backgroundDim: v }, true)} 
+              defaultValue={Settings.get("backgroundDim")} 
+              name="backgroundDim" 
+              label={(value) => `${value}%`} 
+              min={0} 
+              max={100} 
+            />
+            <sup>
+              Set the base background dim level between 0-100%.
+              This is how dark the background will appear. Can be dynamically changed by having Dynamic Lighting enabled.
+            </sup>
 
-          <Text>Background Dim</Text>
-          <Slider onChange={v => Settings.set("backgroundDim", v)} onChangeEnd={v => Settings.apply({ backgroundDim: v }, true)} defaultValue={Settings.get("backgroundDim")} name="backgroundDim" label={(value) => `${value}%`} min={0} max={100} />
-          <br />
-          <sup>
-            Set the base background dim level between <code>0-100%</code>.<br />
-            This is how dark the background will appear. Can be dynamically changed by having <code>Dynamic Lighting</code> enabled.
-          </sup>
-          <br />
+            <Checkbox 
+              onClick={(e) => Settings.apply({ backgroundDynamicLighting: e.currentTarget.checked }, true)} 
+              defaultChecked={Settings.get("backgroundDynamicLighting")} 
+              name="backgroundDynamicLighting" 
+              label="Dynamic Lighting" 
+            />
+            <sup>
+              Enables dynamic lighting on the background image on songs.
+              <br />⚠ Flashing colors ⚠
+            </sup>
 
-          <Text>Visualizer Intensity</Text>
-          <Slider onChange={v => Settings.set("visualizerIntensity", v / 100)} onChangeEnd={v => Settings.apply({ visualizerIntensity: v / 100 }, true)} defaultValue={(Settings.get("visualizerIntensity") * 100) || 100} name="visualizerIntensity" label={(value) => `${value}%`} min={50} max={200} />
-          <br />
-          <sup>
-            Set the base intensity level of the visualizer. <code>0-100%</code>.<br />
-            Default is <code>100%</code><br />
-          </sup>
-          <br />
+            <Checkbox 
+              onClick={(e) => Settings.apply({ visualizerPulseBackground: e.currentTarget.checked }, true)} 
+              defaultChecked={Settings.get("visualizerPulseBackground")} 
+              name="visualizerPulseBackground" 
+              label="Background Pulsing" 
+            />
+            <sup>
+              Enables pulsing on the background image of a song. Pulse is based off music intensity and volume.
+            </sup>
+          </SidepanelSectionGroup>
 
-          <Checkbox onClick={(e) => Settings.apply({ visualizerNormalize: e.currentTarget.checked }, true)} defaultChecked={Settings.get("visualizerNormalize")} name="visualizerNormalize" label="Normalize Visualizer" />
-          <br />
-          <sup>
-            Normalize the visualizer to the intensity level of the song. This will make the visuals more smoothed out and less intense.
-          </sup>
+          <SidepanelSectionGroup 
+            title="Audio Visualizer" 
+            icon={<i className="fas fa-wave-square" />}
+            collapsible
+          >
+            <Text>Visualizer Intensity</Text>
+            <Slider 
+              onChange={v => Settings.set("visualizerIntensity", v / 100)} 
+              onChangeEnd={v => Settings.apply({ visualizerIntensity: v / 100 }, true)} 
+              defaultValue={(Settings.get("visualizerIntensity") * 100) || 100} 
+              name="visualizerIntensity" 
+              label={(value) => `${value}%`} 
+              min={50} 
+              max={200} 
+            />
+            <sup>
+              Set the base intensity level of the visualizer. 0-100%.
+              Default is 100%.
+            </sup>
 
-          <Text>Visualizer Size</Text>
-          <Slider onChange={v => Settings.set("fftSize", v)} onChangeEnd={v => Settings.apply({ fftSize: v }, true)} defaultValue={Settings.get("fftSize") || 6} name="fftSize" label={(v) => v} min={1} max={10} />
-          <br />
-          <sup>
-            Set the base size visualizer. <code>1-10</code>.<br />
-            This can have a high impact on performance. Higher numbers can cause major slow-downs.<br />
-            Default is <code>6</code><br />
-          </sup>
-          <br />
+            <Checkbox 
+              onClick={(e) => Settings.apply({ visualizerNormalize: e.currentTarget.checked }, true)} 
+              defaultChecked={Settings.get("visualizerNormalize")} 
+              name="visualizerNormalize" 
+              label="Normalize Visualizer" 
+            />
+            <sup>
+              Normalize the visualizer to the intensity level of the song. This will make the visuals more smoothed out and less intense.
+            </sup>
 
-          <ColorInput onChange={(c) => Settings.apply({ visualizerColor: c }, true)} defaultValue={Settings.get("visualizerColor")} name="visualizerColor" label="Visualizer Color" />
-          <br />
-          <sup>Default color for the visualizer if a song specific isn't set.</sup>
-          <br />
+            <Text>Visualizer Size</Text>
+            <Slider 
+              onChange={v => Settings.set("fftSize", v)} 
+              onChangeEnd={v => Settings.apply({ fftSize: v }, true)} 
+              defaultValue={Settings.get("fftSize") || 6} 
+              name="fftSize" 
+              label={(v) => v} 
+              min={1} 
+              max={10} 
+            />
+            <sup>
+              Set the base size visualizer. 1-10.
+              This can have a high impact on performance. Higher numbers can cause major slow-downs.
+              Default is 6.
+            </sup>
 
-          <Checkbox onClick={(e) => Settings.apply({ visualizerRainbowMode: e.currentTarget.checked }, true)} defaultChecked={Settings.get("visualizerRainbowMode")} name="visualizerRainbowMode" label="Rainbow Mode" />
-          <br />
-          <sup>
-            Override the visualizer color to show a colorful rainbow visualizer.
-            <br />
-            <code>⚠ Flashing colors ⚠</code>
-          </sup>
-          <br />
+            <ColorInput 
+              onChange={(c) => Settings.apply({ visualizerColor: c }, true)} 
+              defaultValue={Settings.get("visualizerColor")} 
+              name="visualizerColor" 
+              label="Visualizer Color" 
+            />
+            <sup>Default color for the visualizer if a song specific isn't set.</sup>
 
-          <Checkbox onClick={(e) => Settings.apply({ visualizerGlow: e.currentTarget.checked }, true)} defaultChecked={Settings.get("visualizerGlow")} name="visualizerGlow" label="Visualizer Glow" />
-          <br />
-          <sup>
-            Enable a glow effect on the visualizer.
-          </sup>
-          <br />
+            <Checkbox 
+              onClick={(e) => Settings.apply({ visualizerRainbowMode: e.currentTarget.checked }, true)} 
+              defaultChecked={Settings.get("visualizerRainbowMode")} 
+              name="visualizerRainbowMode" 
+              label="Rainbow Mode" 
+            />
+            <sup>
+              Override the visualizer color to show a colorful rainbow visualizer.
+              <br />⚠ Flashing colors ⚠
+            </sup>
 
-          <Checkbox onClick={(e) => Settings.apply({ starRushEffect: e.currentTarget.checked }, true)} defaultChecked={Settings.get("starRushEffect")} name="starRushEffect" label="Star Rush Effect" />
-          <br />
-          <sup>
-            Enable a particle effect where white stars/snow shoot outward from the center, accelerating as they move.
-          </sup>
-          <br />
+            <Checkbox 
+              onClick={(e) => Settings.apply({ visualizerGlow: e.currentTarget.checked }, true)} 
+              defaultChecked={Settings.get("visualizerGlow")} 
+              name="visualizerGlow" 
+              label="Visualizer Glow" 
+            />
+            <sup>
+              Enable a glow effect on the visualizer.
+            </sup>
+          </SidepanelSectionGroup>
 
-          <Text>Star Rush Intensity</Text>
-          <Slider 
-            onChange={v => Settings.set("starRushIntensity", v)} 
-            onChangeEnd={v => Settings.apply({ starRushIntensity: v }, true)} 
-            defaultValue={Settings.get("starRushIntensity") || 1} 
-            name="starRushIntensity" 
-            label={(value) => `${value}x`} 
-            min={0.25} 
-            max={2} 
-            step={0.25}
-          />
-          <br />
-          <sup>
-            Set the intensity level of the star rush particle effect. <code>0.25x-2x</code>.<br />
-            Higher values create more particles and faster movement.
-          </sup>
-          <br />
+          <SidepanelSectionGroup 
+            title="Visual Effects" 
+            icon={<i className="fas fa-magic" />}
+            collapsible
+          >
+            <Checkbox 
+              onClick={(e) => Settings.apply({ starRushEffect: e.currentTarget.checked }, true)} 
+              defaultChecked={Settings.get("starRushEffect")} 
+              name="starRushEffect" 
+              label="Star Rush Effect" 
+            />
+            <sup>
+              Enable a particle effect where white stars/snow shoot outward from the center, accelerating as they move.
+            </sup>
 
-          <Checkbox onClick={(e) => Settings.apply({ backgroundDynamicLighting: e.currentTarget.checked }, true)} defaultChecked={Settings.get("backgroundDynamicLighting")} name="backgroundDynamicLighting" label="Dynamic Lighting" />
-          <br />
-          <sup>
-            Enables dynamic lighting in on the background image on songs.
-            <br />
-            <code>⚠ Flashing colors ⚠</code>
-          </sup>
-          <br />
-
-          <Checkbox onClick={(e) => Settings.apply({ visualizerPulseBackground: e.currentTarget.checked }, true)} defaultChecked={Settings.get("visualizerPulseBackground")} name="visualizerPulseBackground" label="Background pulsing" />
-          <br />
-          <sup>
-            Enables pulsing on the background image of a song. Pulse is based off music intensity and volume.
-          </sup>
-          <br />
+            <Text>Star Rush Intensity</Text>
+            <Slider 
+              onChange={v => Settings.set("starRushIntensity", v)} 
+              onChangeEnd={v => Settings.apply({ starRushIntensity: v }, true)} 
+              defaultValue={Settings.get("starRushIntensity") || 1} 
+              name="starRushIntensity" 
+              label={(value) => `${value}x`} 
+              min={0.25} 
+              max={2} 
+              step={0.25}
+            />
+            <sup>
+              Set the intensity level of the star rush particle effect. 0.25x-2x.
+              Higher values create more particles and faster movement.
+            </sup>
+          </SidepanelSectionGroup>
 
 
           <Select

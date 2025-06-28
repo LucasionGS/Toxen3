@@ -1,12 +1,63 @@
-@use "Sidepanel.scss";
+@use "Sidepanel.scss" as *;
 
 .sidepanel-section-footer {
   position: sticky;
-  height: min-content;
-  bottom: -16px;
-  width: 110%;
-  background-color: $sidePanelColor;
-  padding-top: 16px;
-  z-index: 1;
-  border-top: solid 1px white;
+  bottom: 0px;
+  transform: translate(-24px, 24px);
+  width: calc(100% + 48px);
+  background: linear-gradient(
+    135deg,
+    rgba(15, 15, 15, 0.95) 0%,
+    rgba(26, 26, 26, 0.95) 50%,
+    rgba(37, 37, 37, 0.95) 100%
+  );
+  padding: 20px 24px;
+  z-index: 10;
+  border-top: 2px solid var(--accent-color-dim);
+  color: var(--text-primary);
+  overflow: hidden;
+  border-radius: 0 0 var(--sidebar-radius) var(--sidebar-radius);
+  box-shadow: 
+    0 -4px 20px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(182, 255, 186, 0.1);
+  backdrop-filter: blur(20px) saturate(1.2);
+  
+  // Subtle glow effect
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      var(--accent-color-dim) 25%,
+      var(--accent-color) 50%,
+      var(--accent-color-dim) 75%,
+      transparent 100%
+    );
+  }
+
+  // Enhanced button styling within footers
+  .mantine-Button-root {
+    border-radius: 12px;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    border: 1px solid var(--accent-color-dim);
+    backdrop-filter: blur(10px);
+    
+    &:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 
+        0 8px 25px rgba(0, 0, 0, 0.2),
+        0 0 0 1px var(--accent-color-hover),
+        0 0 20px rgba(182, 255, 186, 0.1);
+    }
+    
+    &:active {
+      transform: translateY(-1px) scale(1.01);
+      transition: all 0.15s ease;
+    }
+  }
 }

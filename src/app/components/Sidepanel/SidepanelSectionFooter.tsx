@@ -1,10 +1,18 @@
 import React from 'react'
-import "./SidepanelSectionHeader.scss";
+import "./SidepanelSectionFooter.scss";
 
-export default function SidepanelSectionFooter(props: {children?: React.ReactNode }) {
+interface Props {
+  children?: React.ReactNode | (() => React.ReactNode);
+}
+
+/**
+ * A footer for a section in the sidepanel.
+ * @param props Only takes children. If children is a function, it will be called to render the children. Useful for dynamic content.
+ */
+export default function SidepanelSectionFooter(props: Props) {
   return (
     <div className="sidepanel-section-footer">
-      {props.children}
+      {typeof props.children === "function" ? props.children() : props.children}
     </div>
   )
 }

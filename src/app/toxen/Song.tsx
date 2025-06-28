@@ -436,6 +436,8 @@ export default class Song implements ISong {
     let img = new Image();
     img.src = (Toxen.background.getBackground() || ToxenMax)
     this.setCurrent();
+    // Reset progress bar when starting a new song
+    this.setProgressBar(0);
     this.setAppTitle();
     const addToMetadata = (blob?: Blob) => {
       if (this !== Song.getCurrent()) {
@@ -1057,7 +1059,13 @@ export default class Song implements ISong {
       if (cur) cur.setCurrent(false);
     }
     this._isPlaying = mode;
-    if (this.currentElement) this.currentElement.setState({ playing: mode });
+    if (this.currentElement) {
+      this.currentElement.setState({ playing: mode });
+      // Reset progress bar when song stops playing
+      if (!mode) {
+        this.currentElement.setState({ progressBar: 0 });
+      }
+    }
   }
 
   public scrollTo() {

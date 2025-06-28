@@ -4,19 +4,101 @@
   position: sticky;
   height: min-content;
   top: 0px;
-  transform: translate(-16px, -16px);
-  width: calc(100% + 32px);
-  background-color: $sidePanelColor;
-  padding: 16px;
-  z-index: 1;
-  border-bottom: solid 1px #b6ffba;
-  // color: #b6ffba;
-  color: white;
+  transform: translate(-24px, -24px);
+  width: calc(100% + 48px);
+  background: linear-gradient(
+    135deg,
+    rgba(15, 15, 15, 0.95) 0%,
+    rgba(26, 26, 26, 0.95) 50%,
+    rgba(37, 37, 37, 0.95) 100%
+  );
+  padding: 24px;
+  z-index: 10;
+  border-bottom: 2px solid var(--accent-color);
+  color: var(--text-primary);
   overflow: hidden;
+  border-radius: var(--sidebar-radius) var(--sidebar-radius) 0 0;
+  box-shadow: 
+    0 4px 20px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(182, 255, 186, 0.1);
+  backdrop-filter: blur(20px) saturate(1.2);
+  
+  // Subtle animated gradient overlay
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      45deg,
+      transparent 0%,
+      rgba(182, 255, 186, 0.03) 25%,
+      transparent 50%,
+      rgba(182, 255, 186, 0.03) 75%,
+      transparent 100%
+    );
+    background-size: 200% 200%;
+    animation: headerShimmer 8s ease-in-out infinite;
+    pointer-events: none;
+  }
 
   h1, h2, h3, h4, h5, h6 {
     margin: 0;
     padding: 0;
+    font-weight: 700;
+    color: var(--text-primary);
+    position: relative;
+    z-index: 2;
+  }
+
+  h1 {
+    font-size: 28px;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-color) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 0 20px rgba(182, 255, 186, 0.1);
+  }
+
+  h2 {
+    font-size: 20px;
+    margin-bottom: 8px;
+    color: var(--text-secondary);
+  }
+
+  // Enhanced button styling within headers
+  .mantine-Button-root {
+    border-radius: 12px;
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    position: relative;
+    z-index: 2;
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--accent-color-dim);
+    
+    &:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 
+        0 8px 25px rgba(0, 0, 0, 0.2),
+        0 0 0 1px var(--accent-color-hover),
+        0 0 20px rgba(182, 255, 186, 0.1);
+    }
+    
+    &:active {
+      transform: translateY(-1px) scale(1.01);
+      transition: all 0.15s ease;
+    }
+  }
+}
+
+@keyframes headerShimmer {
+  0%, 100% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 100%;
   }
 }
 

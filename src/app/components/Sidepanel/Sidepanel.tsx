@@ -184,25 +184,33 @@ export default class Sidepanel extends React.Component<Props, State> {
           <div className="sidepanel-icon sidepanel-icon-toggle" onClick={e => {
             e.preventDefault();
             e.stopPropagation();
+            this.show(false);
             if (typeof this.props.onClose === "function") this.props.onClose();
           }}>
-            <i className="far fa-times-circle"></i>
+            <i className="fas fa-chevron-left"></i>
             {
-              this.state.show ?
-                <span className="sidepanel-icon-title">&nbsp;Close</span>
-                : <span className="sidepanel-icon-title">&nbsp;Show</span>
+              this.state.show && (
+                <span className="sidepanel-icon-title">Close</span>
+              )
             }
           </div>
           {this.sections.map(s => (s.props.icon || s.props.title) && (
             <div className={s.props.advancedOnly ? "advanced-only" : ""} key={String(s.props.id)}>
-              {s.props.separator === true ? (<hr />) : ""}
+              {s.props.separator === true ? (<hr style={{ 
+                border: 'none', 
+                borderTop: '1px solid var(--accent-color-dim)', 
+                margin: '8px 0' 
+              }} />) : ""}
               <div className={(() => {
                 const classes = [
                   "sidepanel-icon"
                 ];
-                if (s.props.disabled) classes.push("sidepanel-icon-disabled")
+                if (s.props.disabled) classes.push("sidepanel-icon-disabled");
+                if (this.state.sectionId === s.props.id) classes.push("active");
                 return classes.join(" ");
-              })()} title={s.props.title} onClick={s.props.disabled ? null : (e) => {
+              })()} 
+                title={s.props.title} 
+                onClick={s.props.disabled ? null : (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 if (!Toxen.isMode("Player")) {
@@ -212,12 +220,11 @@ export default class Sidepanel extends React.Component<Props, State> {
                 }
                 this.setSectionId(s.props.id);
                 if (this.state.exposeIcons && !this.state.show) this.show(true);
-              }}
-                style={{
-                  width: panelIconsWidth
-                }}>
+              }}>
                 {s.props.icon}
-                {s.props.title && (<span className="sidepanel-icon-title">&nbsp;{s.props.title}</span>)}
+                {s.props.title && this.state.show && (
+                  <span className="sidepanel-icon-title">{s.props.title}</span>
+                )}
               </div>
             </div>))}
         </div>

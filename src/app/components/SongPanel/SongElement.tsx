@@ -4,6 +4,7 @@ import "./SongElement.scss";
 import RenderIfVisible from "react-render-if-visible";
 import { useModals } from '@mantine/modals';
 import Settings from '../../toxen/Settings';
+import { Toxen } from '../../ToxenApp';
 
 function SongElementDiv(props: { songElement: SongElement }) {
   /// Observer object is cool and all but holy shit it makes this laggy
@@ -52,14 +53,8 @@ function SongElementDiv(props: { songElement: SongElement }) {
             if (e.ctrlKey && e.buttons === 1) return songElement.select();
           }}
         >
-          <div style={{ // Progress bar
-            position: "absolute",
-            top: 0,
-            left: 0,
-            height: "100%",
-            width: (songElement.state.progressBar * 90) + "%",
-            backgroundColor: "rgba(0, 255, 0, 0.2)",
-            transition: "width 0.2s ease-in-out",
+          <div className="song-progress-bar" style={{ 
+            width: (songElement.state.progressBar * 100) + "%",
           }} />
           <p className="song-title" >
             {song.getDisplayName()}
@@ -97,6 +92,16 @@ export default class SongElement extends Component<SongElementProps, SongElement
 
   componentDidMount() {
     if (typeof this.props.getRef === "function") this.props.getRef(this);
+    
+    // Set this element as the current element for the song
+    this.props.song.currentElement = this;
+  }
+
+  componentWillUnmount() {
+    // Clear reference if this was the current element
+    if (this.props.song.currentElement === this) {
+      this.props.song.currentElement = null;
+    }
   }
 
   public play() {
@@ -111,6 +116,14 @@ export default class SongElement extends Component<SongElementProps, SongElement
 
   public divElement: HTMLDivElement;
   public divPermanentElement: HTMLDivElement;
+
+  public setPlaying(playing: boolean) {
+    this.setState({ playing });
+  }
+
+  public setProgressBar(progress: number) {
+    this.setState({ progressBar: progress });
+  }
 
   render() {
     if (Settings.isRemote() || Settings.get("hideOffScreenSongElements")) {

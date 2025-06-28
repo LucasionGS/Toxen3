@@ -1,0 +1,49 @@
+// Song Panel Styling - matching the new sidepanel aesthetic
+.song-panel {
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  
+  // Smooth scrolling
+  scroll-behavior: smooth;
+  
+  // Custom scrollbar styling
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+  }
+  
+  &::-webkit-scrollbar-thumb {
+    background: rgba(182, 255, 186, 0.3);
+    border-radius: 3px;
+    transition: background 0.2s ease;
+    
+    &:hover {
+      background: rgba(182, 255, 186, 0.5);
+    }
+  }
+}
+
+// Animation delays for staggered song element appearance
+.song-element-permadiv {
+  --animation-index: 0;
+  
+  &:nth-child(1) { --animation-index: 0; }
+  &:nth-child(2) { --animation-index: 1; }
+  &:nth-child(3) { --animation-index: 2; }
+  &:nth-child(4) { --animation-index: 3; }
+  &:nth-child(5) { --animation-index: 4; }
+  &:nth-child(6) { --animation-index: 5; }
+  &:nth-child(7) { --animation-index: 6; }
+  &:nth-child(8) { --animation-index: 7; }
+  &:nth-child(9) { --animation-index: 8; }
+  &:nth-child(10) { --animation-index: 9; }
+  
+  // Continue pattern for more elements if needed
+  &:nth-child(n+11) { --animation-index: 10; }
+}

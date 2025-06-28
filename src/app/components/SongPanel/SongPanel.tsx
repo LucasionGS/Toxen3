@@ -1,5 +1,6 @@
 import React, { Component } from 'react'
 import { Toxen } from '../../ToxenApp';
+import './SongPanel.scss';
 
 interface SongPanelProps {
   getRef?: ((songPanel: SongPanel) => void)
@@ -45,10 +46,10 @@ export default class SongPanel extends Component<SongPanelProps, SongPanelState>
 
     Toxen.searchedSongList = songs;
     return (
-      <>
+      <div className="song-panel">
         {/* {Toxen.playlist ? <>Playlist: <code>{Toxen.playlist.name}</code><br /></> : ""} */}
         {songs.map(s => s.Element(s.dirname()))}
-      </>
+      </div>
     );
   }
 }

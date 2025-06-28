@@ -26,13 +26,21 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
     }
   }
 
+  private _interval: NodeJS.Timeout;
   componentDidMount() {
     if (typeof this.props.getRef === "function") this.props.getRef(this);
 
-    setInterval(() => {
+    this._interval = setInterval(() => {
       try {
         Toxen.musicControls.setValue(this.media.currentTime);
         Toxen.musicControls.setBackgroundRange(this.media.buffered.start(0) || 0, this.media.buffered.end(this.media.buffered.length - 1) || 0);
+        
+        // Update current song's progress bar
+        const currentSong = Song.getCurrent();
+        if (currentSong && this.media.duration && !isNaN(this.media.duration) && this.media.duration > 0) {
+          const progress = Math.min(this.media.currentTime / this.media.duration, 1);
+          currentSong.setProgressBar(progress);
+        }
       } catch {
         // Nothing
       }
@@ -41,6 +49,12 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
 
   componentDidUpdate() {
     this.setVolume(this.props.useSubtitleEditorMode ? 50 : Settings.get("volume"));
+  }
+
+  componentWillUnmount() {
+    if (this._interval) {
+      clearInterval(this._interval);
+    }
   }
 
   /**
@@ -177,6 +191,13 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
     if (this.props.useSubtitleEditorMode) return;
     ToxenEvent.emit("songEnded");
     StoryboardParser.resetCurrentEvents();
+    
+    // Reset current song's progress bar before moving to next song
+    const currentSong = Song.getCurrent();
+    if (currentSong) {
+      currentSong.setProgressBar(0);
+    }
+    
     if (Settings.get("repeat") || Toxen.getPlayableSongs().length === 1) {
       this.play();
     }
