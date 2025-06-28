@@ -5,6 +5,14 @@
   - Supports rainbow mode with gradient colors across the waveform
   - Includes glow effects when visualizer glow is enabled
   - Uses quadratic curves for smooth interpolation between audio data points
+- Added new `Star Rush Effect` - A particle background effect where white stars/snow shoot outward from the center, accelerating as they move.
+  - Configurable globally in Settings > Visual > Star Rush Effect
+  - Can be overridden per-song in the song editor under "Song-specific visuals"
+  - Music-reactive: particle spawn rate and speed increase with audio intensity
+  - **Visualizer-reactive**: particle speed and acceleration are also affected by visualizer intensity
+  - Adjustable intensity from 0.25x to 2x for customizable visual impact
+  - Particles fade out as they age and are removed when off-screen for optimal performance
+  - **Storyboard support**: Can be controlled dynamically with `starRushEffect`, `starRushIntensity`, and `starRushIntensityTransition` storyboard events
 
 ## 1.12.5 - 11-02-2025
 ## New features

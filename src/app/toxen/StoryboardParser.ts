@@ -653,6 +653,82 @@ namespace StoryboardParser {
     }
   });
 
+  addStoryboardComponent("starRushEffect", {
+    name: "Star Rush Effect",
+    arguments: [
+      {
+        name: "Enabled",
+        identifier: "enabled",
+        type: "Boolean"
+      },
+    ],
+    action: (args) => {
+      let enabled = getAsType<"Boolean">(args.enabled);
+      Toxen.background.storyboard.data.starRushEffect = enabled;
+    }
+  });
+
+  addStoryboardComponent("starRushIntensity", {
+    name: "Star Rush Intensity",
+    arguments: [
+      {
+        name: "Intensity",
+        identifier: "intensity",
+        type: "Number"
+      },
+    ],
+    action: (args) => {
+      let intensity = getAsType<"Number">(args.intensity);
+      intensity = Math.max(0, Math.min(5, intensity)); // Clamp to 0 - 5 for safety
+      Toxen.background.storyboard.data.starRushIntensity = intensity;
+    }
+  });
+
+  addStoryboardComponent("starRushIntensityTransition", {
+    name: "Star Rush Intensity Transition",
+    arguments: [
+      {
+        name: "From Intensity",
+        identifier: "fromIntensity",
+        type: "Number"
+      },
+      {
+        name: "To Intensity",
+        identifier: "toIntensity",
+        type: "Number"
+      },
+      {
+        name: "Duration for transition in seconds",
+        identifier: "duration",
+        type: "Number"
+      },
+    ],
+    action: (args, { currentSongTime, eventStartTime }, { setState, getState }) => {
+      let state = getState<number>();
+      if (state) {
+        Toxen.background.storyboard.data.starRushIntensity = state;
+        return;
+      }
+      let fromIntensity = getAsType<"Number">(args.fromIntensity);
+      fromIntensity = Math.max(0, Math.min(5, fromIntensity)); // Clamp to 0 - 5
+      let toIntensity = getAsType<"Number">(args.toIntensity);
+      toIntensity = Math.max(0, Math.min(5, toIntensity));
+      let intensity = toIntensity;
+      let duration = getAsType<"Number">(args.duration);
+      if (duration > 0) {
+        let fadeProgress = (currentSongTime - eventStartTime) / duration;
+        if (fadeProgress >= 1) {
+          fadeProgress = 1;
+          setState(toIntensity);
+        }
+        if (fadeProgress < 1) {
+          intensity = fromIntensity + (toIntensity - fromIntensity) * fadeProgress;
+        }
+      }
+      Toxen.background.storyboard.data.starRushIntensity = intensity;
+    }
+  });
+
   addStoryboardComponent("text", {
     name: "Text",
     arguments: [

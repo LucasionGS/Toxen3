@@ -18,6 +18,18 @@ interface VisualizerProps { }
 
 interface VisualizerState { }
 
+interface StarRushParticle {
+  x: number;
+  y: number;
+  vx: number; // velocity x
+  vy: number; // velocity y
+  age: number; // time since creation
+  maxAge: number; // when to remove particle
+  size: number;
+  opacity: number;
+  acceleration: number;
+}
+
 export default class Visualizer extends Component<VisualizerProps, VisualizerState> {
   constructor(props: VisualizerProps) {
     super(props);
@@ -31,6 +43,11 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
    * Dynamic dim for the background of the visualizer.
    */
   private dynamicDim = 0;
+  
+  // Star rush particle system
+  private starRushParticles: StarRushParticle[] = [];
+  private lastParticleSpawn = 0;
+  
   public getDynamicDim() {
     return this.dynamicDim;
   }
@@ -209,6 +226,11 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
       ctx.shadowBlur = height / 3; // Shadow based on height of the bar
     };
 
+    if (!Toxen.musicPlayer.media.paused) {
+      // Star rush particle effect
+      this.updateStarRushParticles(time, vWidth, vHeight, dataArray, dynLight);
+    }
+    
     if (style !== VisualizerStyle.None) {
       let useLogo = false;
       switch (style) {
@@ -888,6 +910,9 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     ctx.shadowBlur = oldShadowBlur;
     ctx.shadowColor = oldShadowColor;
 
+    // // Star rush particle effect
+    // this.updateStarRushParticles(time, vWidth, vHeight, dataArray, dynLight);
+
     // Add floating title if enabled
     const usingSubtitles = Toxen.background.storyboard?.getFloatingSubtitles();
     const enabled = Toxen.background.storyboard?.getFloatingTitle();
@@ -1136,6 +1161,153 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     ctx.shadowColor = oldColor;
   }
 
+  /**
+   * Updates and renders the star rush particle effect
+   */
+  private updateStarRushParticles(time: number, vWidth: number, vHeight: number, dataArray: Uint8Array, dynLight: number) {
+    const starRushEnabled = Toxen.background.storyboard.getStarRushEffect();
+    if (!starRushEnabled) return;
+
+    const ctx = this.ctx;
+    const centerX = vWidth / 2;
+    const centerY = vHeight / 2;
+    const intensity = Toxen.background.storyboard.getStarRushIntensity();
+    const visualizerIntensity = Toxen.background.storyboard.getVisualizerIntensity();
+    
+    // Calculate average audio intensity for particle spawning
+    const avgAudio = dataArray.reduce((sum, val) => sum + val, 0) / dataArray.length;
+    const audioIntensity = (avgAudio / 255) * intensity;
+    
+    // Spawn new particles based on audio intensity and time
+    const timeSinceLastSpawn = time - this.lastParticleSpawn;
+    const spawnRate = Math.max(16, 100 - (audioIntensity * 80)); // Spawn more frequently with louder audio
+    
+    if (timeSinceLastSpawn > spawnRate) {
+      const particlesToSpawn = Math.floor(1 + audioIntensity * 3); // Spawn more particles with louder audio
+      
+      for (let i = 0; i < particlesToSpawn; i++) {
+        this.createStarRushParticle(centerX, centerY, audioIntensity, visualizerIntensity);
+      }
+      
+      this.lastParticleSpawn = time;
+    }
+    
+    // Update existing particles
+    for (let i = this.starRushParticles.length - 1; i >= 0; i--) {
+      const particle = this.starRushParticles[i];
+      this.updateStarRushParticle(particle, time, visualizerIntensity);
+      
+      // Remove particles that are too old or off-screen
+      if (particle.age >= particle.maxAge || 
+          particle.x < -50 || particle.x > vWidth + 50 || 
+          particle.y < -50 || particle.y > vHeight + 50) {
+        this.starRushParticles.splice(i, 1);
+      }
+    }
+    
+    // Render all particles
+    this.renderStarRushParticles(ctx);
+  }
+
+  /**
+   * Creates a new star rush particle
+   */
+  private createStarRushParticle(centerX: number, centerY: number, audioIntensity: number, visualizerIntensity: number) {
+    const angle = Math.random() * Math.PI * 2; // Random direction
+    // Initial speed affected by both audio and visualizer intensity
+    const baseSpeed = 0.5 + Math.random() * 1.5;
+    const visualizerSpeedMultiplier = 0.5 + (visualizerIntensity * 0.5); // 0.5x to 1.5x based on visualizer intensity
+    const initialSpeed = baseSpeed * visualizerSpeedMultiplier;
+    const maxAge = 3000 + Math.random() * 2000; // 3-5 seconds lifetime
+    
+    // Calculate offset distance from center in the direction of travel
+    const offsetDistance = 20 + Math.random() * 30; // Start particles 20-50 pixels from center
+    const startOffsetX = Math.cos(angle) * offsetDistance;
+    const startOffsetY = Math.sin(angle) * offsetDistance;
+    
+    const particle: StarRushParticle = {
+      x: centerX + startOffsetX, // Start offset in the direction of travel
+      y: centerY + startOffsetY,
+      vx: Math.cos(angle) * initialSpeed,
+      vy: Math.sin(angle) * initialSpeed,
+      age: 0,
+      maxAge: maxAge,
+      size: 1 + Math.random() * 2 + (audioIntensity * 2), // Size varies with audio
+      opacity: 0.8 + Math.random() * 0.2,
+      acceleration: 1.002 + audioIntensity * 0.003 + visualizerIntensity * 0.001 // Particles accelerate more with audio and visualizer intensity
+    };
+    
+    this.starRushParticles.push(particle);
+  }
+
+  /**
+   * Updates a single star rush particle
+   */
+  private updateStarRushParticle(particle: StarRushParticle, time: number, visualizerIntensity: number) {
+    // Age the particle
+    particle.age += 16; // Assuming ~60fps (16ms per frame)
+    
+    // Calculate distance from center for acceleration
+    const dx = particle.x - (this.canvas.width / 2);
+    const dy = particle.y - (this.canvas.height / 2);
+    const distanceFromCenter = Math.sqrt(dx * dx + dy * dy);
+    
+    // Accelerate particles as they move outward (the further, the faster)
+    // Visualizer intensity affects both base acceleration and distance-based acceleration
+    const baseAccelerationMultiplier = 1 + (distanceFromCenter * 0.00005);
+    const visualizerAccelerationBoost = 1 + (visualizerIntensity * 0.002); // Up to 20% boost from visualizer intensity
+    const accelerationMultiplier = baseAccelerationMultiplier * visualizerAccelerationBoost;
+    
+    particle.vx *= particle.acceleration * accelerationMultiplier;
+    particle.vy *= particle.acceleration * accelerationMultiplier;
+    
+    // Update position
+    particle.x += particle.vx;
+    particle.y += particle.vy;
+    
+    // Fade out as particle ages
+    const ageRatio = particle.age / particle.maxAge;
+    particle.opacity = Math.max(0, 0.8 * (1 - ageRatio));
+  }
+
+  /**
+   * Renders all star rush particles
+   */
+  private renderStarRushParticles(ctx: CanvasRenderingContext2D) {
+    ctx.save();
+    
+    for (const particle of this.starRushParticles) {
+      if (particle.opacity <= 0) continue;
+      
+      ctx.save();
+      ctx.globalAlpha = particle.opacity;
+      
+      // Create a radial gradient for the particle
+      const gradient = ctx.createRadialGradient(
+        particle.x, particle.y, 0,
+        particle.x, particle.y, particle.size
+      );
+      gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+      gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.6)');
+      gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Add a small bright center dot
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+      ctx.beginPath();
+      ctx.arc(particle.x, particle.y, particle.size * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.restore();
+    }
+    
+    ctx.restore();
+  }
+
   private initializeAudioAnalyser() {
     const audioFile = Toxen.musicPlayer.media;
     const audioContext = new AudioContext();
@@ -1163,6 +1335,8 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
   private stopped = true;
   public stop() {
     this.stopped = true;
+    // Clear star rush particles when stopping
+    this.starRushParticles = [];
   }
   public isStopped() {
     return this.stopped;

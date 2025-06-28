@@ -58,6 +58,10 @@ export default class Song implements ISong {
   public floatingTitleOverrideVisualizer: boolean;
   public useFloatingTitleSubtitles: boolean;
 
+  // Star rush effect settings
+  public starRushEffect: boolean | null; // null = use global setting
+  public starRushIntensity: number | null; // null = use global setting
+
   // Hash used for sync
   public hash: string;
   /**
@@ -326,6 +330,8 @@ export default class Song implements ISong {
       "floatingTitleReactive",
       "floatingTitleOverrideVisualizer",
       "useFloatingTitleSubtitles",
+      "starRushEffect",
+      "starRushIntensity",
       "files",
       "hash",
       "duration",
@@ -1652,6 +1658,10 @@ export interface ISong {
   floatingTitleReactive: boolean;
   floatingTitleOverrideVisualizer: boolean;
   useFloatingTitleSubtitles: boolean;
+
+  // Star rush effect settings
+  starRushEffect: boolean | null; // null = use global setting
+  starRushIntensity: number | null; // null = use global setting
 
   /**
    * The files that are in the song's directory. Maps to a datetime number.  

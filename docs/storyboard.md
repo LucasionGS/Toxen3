@@ -10,6 +10,33 @@ storyboard:
       color: [255, 255, 255] # The color to use as RGB. Colors can also be specified as hex strings, e.g. "#FFFFFF"
 ```
 
+## Star Rush Effect Example
+```yaml
+storyboard:
+  # Enable star rush effect at song start
+  - start: 0
+    end: 10
+    component: starRushEffect
+    data:
+      enabled: true
+      
+  # Gradually increase intensity during chorus
+  - start: 30
+    end: 45
+    component: starRushIntensityTransition
+    data:
+      fromIntensity: 1
+      toIntensity: 3
+      duration: 15
+      
+  # Set fixed high intensity for dramatic section
+  - start: 60
+    end: 90
+    component: starRushIntensity
+    data:
+      intensity: 2.5
+```
+
 Data can have a couple different types. The following types are supported:
 - `Number` - A number  
 Example: `1`, `2.5`, `0.5`

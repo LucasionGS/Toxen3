@@ -375,6 +375,48 @@ export default function EditSong(props: EditSongProps) {
         <br />
         <sup>Enables a glow effect on the visualizer for this song.</sup>
 
+        {/* Star Rush Effect */}
+        <Select
+          allowDeselect={false}
+          label="Star Rush Effect"
+          name="starRushEffect"
+          defaultValue={Toxen.editingSong.starRushEffect ? "enabled" : Toxen.editingSong.starRushEffect === false ? "disabled" : ""}
+          data={[
+            { value: "", label: "<Default>" },
+            { value: "enabled", label: "Enabled" },
+            { value: "disabled", label: "Disabled" }
+          ]}
+          onChange={(v) => {
+            Toxen.editingSong.starRushEffect = v === "enabled" ? true : v === "disabled" ? false : null;
+            Toxen.editingSong.saveInfo();
+          }}
+        />
+        <br />
+        <sup>Enables a particle effect where white stars/snow shoot outward from the center, accelerating as they move.</sup>
+
+        <Select
+          allowDeselect={false}
+          label="Star Rush Intensity"
+          name="starRushIntensity"
+          defaultValue={Toxen.editingSong.starRushIntensity?.toString() || ""}
+          data={[
+            { value: "", label: "<Default>" },
+            { value: "0.25", label: "Very Low (0.25x)" },
+            { value: "0.5", label: "Low (0.5x)" },
+            { value: "0.75", label: "Reduced (0.75x)" },
+            { value: "1", label: "Normal (1x)" },
+            { value: "1.25", label: "High (1.25x)" },
+            { value: "1.5", label: "Very High (1.5x)" },
+            { value: "2", label: "Maximum (2x)" }
+          ]}
+          onChange={(v) => {
+            Toxen.editingSong.starRushIntensity = v ? parseFloat(v) : null;
+            Toxen.editingSong.saveInfo();
+          }}
+        />
+        <br />
+        <sup>Controls the intensity of the star rush effect for this song.</sup>
+
 
         <Checkbox
           label="Floating Title"
@@ -475,6 +517,7 @@ export default function EditSong(props: EditSongProps) {
                   let fileData: Buffer;
                   try {
                     if (Settings.isRemote()) {
+                      // @ts-expect-error
                       fileData = Buffer.from(await Toxen.fetch(file).then(res => res.arrayBuffer()));
                     }
                     else {
@@ -507,6 +550,7 @@ export default function EditSong(props: EditSongProps) {
                   let fileData: Buffer;
                   try {
                     if (Settings.isRemote()) {
+                      // @ts-expect-error
                       fileData = Buffer.from(await Toxen.fetch(file).then(res => res.arrayBuffer()));
                     }
                     else {
@@ -536,6 +580,7 @@ export default function EditSong(props: EditSongProps) {
                   let fileData: Buffer;
                   try {
                     if (Settings.isRemote()) {
+                      // @ts-expect-error
                       fileData = Buffer.from(await Toxen.fetch(file).then(res => res.arrayBuffer()));
                     }
                     else {

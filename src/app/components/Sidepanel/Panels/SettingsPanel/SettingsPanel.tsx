@@ -334,6 +334,31 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           </sup>
           <br />
 
+          <Checkbox onClick={(e) => Settings.apply({ starRushEffect: e.currentTarget.checked }, true)} defaultChecked={Settings.get("starRushEffect")} name="starRushEffect" label="Star Rush Effect" />
+          <br />
+          <sup>
+            Enable a particle effect where white stars/snow shoot outward from the center, accelerating as they move.
+          </sup>
+          <br />
+
+          <Text>Star Rush Intensity</Text>
+          <Slider 
+            onChange={v => Settings.set("starRushIntensity", v)} 
+            onChangeEnd={v => Settings.apply({ starRushIntensity: v }, true)} 
+            defaultValue={Settings.get("starRushIntensity") || 1} 
+            name="starRushIntensity" 
+            label={(value) => `${value}x`} 
+            min={0.25} 
+            max={2} 
+            step={0.25}
+          />
+          <br />
+          <sup>
+            Set the intensity level of the star rush particle effect. <code>0.25x-2x</code>.<br />
+            Higher values create more particles and faster movement.
+          </sup>
+          <br />
+
           <Checkbox onClick={(e) => Settings.apply({ backgroundDynamicLighting: e.currentTarget.checked }, true)} defaultChecked={Settings.get("backgroundDynamicLighting")} name="backgroundDynamicLighting" label="Dynamic Lighting" />
           <br />
           <sup>

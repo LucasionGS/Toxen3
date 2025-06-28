@@ -68,7 +68,9 @@ export default class Settings {
       visualizerStyleOptions: {},
       remoteSyncOnStartup: false,
       remoteSyncOnSongEdit: false,
-      hideOffScreenSongElements: true
+      hideOffScreenSongElements: true,
+      starRushEffect: false,
+      starRushIntensity: 1
     };
 
     let toUse: Partial<ISettings> = {};
@@ -333,6 +335,10 @@ export interface ISettings {
 
   // Performance
   hideOffScreenSongElements: boolean;
+
+  // Background Effects
+  starRushEffect: boolean;
+  starRushIntensity: number;
 }
 
 export enum VisualizerStyle {

@@ -59,6 +59,8 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
       floatingTitleOverrideVisualizer: null,
       floatingTitlePosition: null,
       useFloatingTitleSubtitles: null,
+      starRushEffect: null,
+      starRushIntensity: null,
     }
   }
 
@@ -216,6 +218,23 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
     return this.data.floatingTitlePosition ?? (this.state.song && this.state.song.floatingTitlePosition || "center");
   }
 
+  // Star rush effect settings
+  public getStarRushEffect() {
+    return this.data.starRushEffect ?? (
+      (this.state.song && this.state.song.starRushEffect)
+      ?? Settings.get("starRushEffect")
+      ?? false
+    );
+  }
+
+  public getStarRushIntensity() {
+    return this.data.starRushIntensity ?? (
+      (this.state.song && this.state.song.starRushIntensity)
+      ?? Settings.get("starRushIntensity")
+      ?? 1
+    );
+  }
+
 
   public storyboardUpdate() {
     
@@ -240,6 +259,8 @@ interface StoryboardData {
   floatingTitleReactive: boolean;
   floatingTitleOverrideVisualizer: boolean;
   floatingTitlePosition: ISong["floatingTitlePosition"];
+  starRushEffect: boolean;
+  starRushIntensity: number;
 }
 
 function stripHtml(html: string)
