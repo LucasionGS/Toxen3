@@ -1,5 +1,292 @@
+// Enhanced storyboard event styling
 .sbevent-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.04) 100%
+  );
+  border: 1px solid var(--accent-color-dim);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+  
+  // Subtle gradient overlay
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, 
+      transparent 0%, 
+      var(--accent-color) 50%, 
+      transparent 100%
+    );
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
   &:hover {
-    background-color: gray;
+    background: linear-gradient(
+      135deg,
+      rgba(var(--accent-color-rgb), 0.15) 0%,
+      rgba(var(--accent-color-rgb), 0.08) 100%
+    );
+    border-color: var(--accent-color);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(var(--accent-color-rgb), 0.2);
+    
+    &::before {
+      opacity: 1;
+    }
+  }
+  
+  &:active {
+    transform: translateY(0);
+    transition: all 0.1s ease;
+  }
+  
+  // Icon styling
+  .tabler-icon {
+    color: var(--accent-color);
+    transition: all 0.3s ease;
+    
+    .sbevent-header:hover & {
+      color: var(--text-primary);
+      transform: scale(1.1);
+    }
+  }
+  
+  // Time code styling
+  code {
+    background: rgba(var(--accent-color-rgb), 0.2);
+    color: var(--accent-color);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', 'Consolas', monospace;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    border: 1px solid var(--accent-color-dim);
+  }
+  
+  // Component name styling
+  .component-name {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 14px;
+    flex: 1;
+  }
+  
+  // New event indicator
+  &.new-event {
+    border-color: #4ade80;
+    background: linear-gradient(
+      135deg,
+      rgba(74, 222, 128, 0.15) 0%,
+      rgba(74, 222, 128, 0.08) 100%
+    );
+    
+    code {
+      background: rgba(74, 222, 128, 0.2);
+      color: #4ade80;
+      border-color: rgba(74, 222, 128, 0.3);
+    }
+    
+    .tabler-icon {
+      color: #4ade80;
+    }
+    
+    &::before {
+      background: linear-gradient(90deg, 
+        transparent 0%, 
+        #4ade80 50%, 
+        transparent 100%
+      );
+      opacity: 1;
+    }
+  }
+}
+
+// Event content styling
+.sbevent-content {
+  padding: 20px 24px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  border: 1px solid var(--accent-color-dim);
+  border-radius: 12px;
+  margin-top: 8px;
+  backdrop-filter: blur(5px);
+  
+  h3 {
+    color: var(--accent-color);
+    font-weight: 700;
+    font-size: 16px;
+    margin: 0 0 16px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    
+    &::before {
+      content: '⚙️';
+      font-size: 14px;
+    }
+  }
+  
+  // Form elements within event content
+  .mantine-TextInput-root,
+  .mantine-Select-root,
+  .mantine-Group-root {
+    margin-bottom: 16px;
+  }
+  
+  // Component properties section
+  .component-properties {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--accent-color-dim);
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 16px;
+    
+    h4 {
+      color: var(--text-primary);
+      font-weight: 600;
+      margin: 0 0 12px 0;
+      font-size: 14px;
+    }
+    
+    small {
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.4;
+      display: block;
+      margin-top: 8px;
+      font-style: italic;
+    }
+  }
+  
+  // Action buttons
+  .mantine-Group-root:last-child {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--accent-color-dim);
+  }
+}
+
+// Storyboard editor panel improvements
+.storyboard-editor-panel {
+  .add-event-button {
+    margin: 24px 0;
+    width: 100%;
+    
+    .mantine-Button-root {
+      background: linear-gradient(
+        135deg, 
+        rgba(74, 222, 128, 0.15) 0%, 
+        rgba(74, 222, 128, 0.08) 100%
+      );
+      border: 1px solid rgba(74, 222, 128, 0.3);
+      color: #4ade80;
+      font-weight: 600;
+      padding: 16px 24px;
+      height: auto;
+      
+      &:hover {
+        background: linear-gradient(
+          135deg, 
+          rgba(74, 222, 128, 0.25) 0%, 
+          rgba(74, 222, 128, 0.15) 100%
+        );
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(74, 222, 128, 0.2);
+      }
+    }
+  }
+  
+  // Playback controls section
+  .playback-controls {
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(255, 255, 255, 0.03) 100%
+    );
+    border: 1px solid var(--accent-color-dim);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    
+    .control-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      
+      .mantine-Button-root {
+        min-width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        
+        &[data-color="blue"] {
+          background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+          
+          &:hover {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+          }
+        }
+      }
+    }
+    
+    .mantine-Slider-root {
+      margin-top: 16px;
+    }
+  }
+  
+  // Time input improvements
+  .mantine-TextInput-root {
+    .mantine-TextInput-input {
+      font-family: 'JetBrains Mono', 'Consolas', monospace;
+      letter-spacing: 0.5px;
+      text-align: center;
+    }
+  }
+}
+
+// BPM Finder integration
+.bpm-finder-section {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 193, 7, 0.1) 0%,
+    rgba(255, 193, 7, 0.05) 100%
+  );
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px 0;
+  
+  h4 {
+    color: #ffc107;
+    font-weight: 600;
+    margin: 0 0 12px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    
+    &::before {
+      content: '🎵';
+      font-size: 14px;
+    }
   }
 }
