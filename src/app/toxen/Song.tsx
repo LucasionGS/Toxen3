@@ -62,6 +62,9 @@ export default class Song implements ISong {
   public starRushEffect: boolean | null; // null = use global setting
   public starRushIntensity: number | null; // null = use global setting
 
+  // Background dim setting
+  public backgroundDim: number | null; // null = use global setting, 0-100 range
+
   // Hash used for sync
   public hash: string;
   /**
@@ -332,6 +335,7 @@ export default class Song implements ISong {
       "useFloatingTitleSubtitles",
       "starRushEffect",
       "starRushIntensity",
+      "backgroundDim",
       "files",
       "hash",
       "duration",
@@ -1670,6 +1674,9 @@ export interface ISong {
   // Star rush effect settings
   starRushEffect: boolean | null; // null = use global setting
   starRushIntensity: number | null; // null = use global setting
+
+  // Background dim setting
+  backgroundDim: number | null; // null = use global setting, 0-100 range
 
   /**
    * The files that are in the song's directory. Maps to a datetime number.  

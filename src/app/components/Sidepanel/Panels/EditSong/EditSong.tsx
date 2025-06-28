@@ -10,7 +10,7 @@ import SidepanelSectionHeader from "../../SidepanelSectionHeader";
 import "./EditSong.scss";
 // import fsp from "fs/promises";
 // import Path from "path";
-import { Button, Checkbox, ColorInput, InputLabel, NumberInput, Radio, Select, TextInput } from "@mantine/core";
+import { Button, Checkbox, ColorInput, InputLabel, NumberInput, Radio, Select, Slider, TextInput } from "@mantine/core";
 import ListInput from "../../../ListInput/ListInput";
 import SelectAsync from "../../../SelectAsync/SelectAsync";
 import { useModals } from "@mantine/modals";
@@ -326,6 +326,22 @@ export default function EditSong(props: EditSongProps) {
           }}
         />
         <sup>Enables pulsing on the background image of a song. Pulse is based off music intensity and volume.</sup>
+
+        <InputLabel>Background Dim</InputLabel>
+        <Slider
+          defaultValue={Toxen.editingSong.backgroundDim ?? -1}
+          onChange={(v) => {
+            Toxen.editingSong.backgroundDim = v === -1 ? null : v;
+          }}
+          onChangeEnd={(v) => {
+            Toxen.editingSong.backgroundDim = v === -1 ? null : v;
+            Toxen.editingSong.saveInfo();
+          }}
+          label={(value) => value === -1 ? "Default" : `${value}%`}
+          min={-1}
+          max={100}
+        />
+        <sup>Set the background dim level for this song. Default uses the global setting.</sup>
 
         <Select
           allowDeselect={false}

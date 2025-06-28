@@ -150,9 +150,14 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
   public getBackgroundDim() {
     return this.data.backgroundDim
       ?? (
-        // (this.state.song && this.state.song.backgroundDim) || // TODO: Add support for this
-        Settings.get("backgroundDim")
-        || 0
+        (
+          (
+            this.state.song
+            && typeof this.state.song.backgroundDim === "number"
+              ? this.state.song.backgroundDim : null
+          )
+        ) ??
+        (Settings.get("backgroundDim") || 0)
       );
   }
 
