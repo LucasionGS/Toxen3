@@ -50,6 +50,11 @@
         border-right: 1px solid var(--border-color);
         padding-right: 1rem;
       }
+
+      small {
+        max-width: 200px;
+        line-height: 1.2;
+      }
     }
   }
 
@@ -94,6 +99,12 @@
     border-radius: 4px;
     margin-bottom: 0.5rem;
     overflow: hidden;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+      background: var(--timeline-track-hover-background, rgba(0, 0, 0, 0.15));
+    }
 
     .timeline-cursor {
       position: absolute;
@@ -162,9 +173,13 @@
       font-size: 0.75rem;
       color: var(--text-color-secondary);
       transform: translateX(-50%);
+      padding: 2px 4px;
+      border-radius: 2px;
+      transition: all 0.2s ease;
 
       &:hover {
         color: var(--accent-color, #ffa500);
+        background: var(--timeline-scale-hover-background, rgba(255, 165, 0, 0.1));
       }
     }
   }
@@ -242,6 +257,7 @@
         display: flex;
         gap: 0.25rem;
         justify-content: flex-end;
+        flex-wrap: wrap;
       }
     }
   }
@@ -282,6 +298,8 @@
     --sidebar-background: rgba(255, 255, 255, 0.02);
     --timeline-background: rgba(255, 255, 255, 0.02);
     --timeline-track-background: rgba(255, 255, 255, 0.1);
+    --timeline-track-hover-background: rgba(255, 255, 255, 0.15);
+    --timeline-scale-hover-background: rgba(255, 165, 0, 0.1);
     --timeline-item-background: rgba(100, 150, 255, 0.8);
     --timeline-item-hover-background: rgba(100, 150, 255, 1);
     --timeline-item-selected-background: #ffa500;
@@ -304,6 +322,8 @@
     --sidebar-background: rgba(0, 0, 0, 0.01);
     --timeline-background: rgba(0, 0, 0, 0.02);
     --timeline-track-background: rgba(0, 0, 0, 0.05);
+    --timeline-track-hover-background: rgba(0, 0, 0, 0.08);
+    --timeline-scale-hover-background: rgba(255, 140, 0, 0.1);
     --timeline-item-background: rgba(100, 150, 255, 0.8);
     --timeline-item-hover-background: rgba(100, 150, 255, 1);
     --timeline-item-selected-background: #ff8c00;

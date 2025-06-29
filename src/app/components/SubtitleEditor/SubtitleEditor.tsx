@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
-import { Button, TextInput, NumberInput, Select, ColorPicker, Modal, ActionIcon, Tooltip } from '@mantine/core';
-import { IconPlus, IconTrash, IconPlayerPlay, IconPlayerPause, IconUpload, IconDownload, IconEdit, IconCheck, IconX } from '@tabler/icons-react';
+import { Button, TextInput, NumberInput, Select, ColorPicker, Modal, ActionIcon, Tooltip, Group, Stack } from '@mantine/core';
+import { IconPlus, IconTrash, IconPlayerPlay, IconPlayerPause, IconUpload, IconDownload, IconEdit, IconCheck, IconX, IconClock, IconArrowLeft, IconArrowRight } from '@tabler/icons-react';
 import SubtitleParser from '../../toxen/SubtitleParser';
 import Time from '../../toxen/Time';
 import Song from '../../toxen/Song';
@@ -51,12 +51,14 @@ export default class SubtitleEditor extends Component<SubtitleEditorProps, Subti
 
   componentDidMount() {
     // Component is now mounted and ready
+    document.addEventListener('keydown', this.handleKeyDown);
   }
 
   componentWillUnmount() {
     if (this.updateInterval) {
       clearInterval(this.updateInterval);
     }
+    document.removeEventListener('keydown', this.handleKeyDown);
     // Mode will be handled by onClose callback
   }
 
@@ -213,7 +215,7 @@ export default class SubtitleEditor extends Component<SubtitleEditorProps, Subti
       }
 
       this.setState({ isDirty: false });
-      Toxen.log("Subtitles saved successfully");
+      Toxen.log("Subtitles saved successfully", 500);
       
       // Reload subtitles in the player
       await this.props.song.applySubtitles();
@@ -247,7 +249,7 @@ export default class SubtitleEditor extends Component<SubtitleEditorProps, Subti
 
       this.setState({ subtitles, selectedItem: null, editingItem: null });
       this.markDirty();
-      Toxen.log("Subtitles imported successfully");
+      Toxen.log("Subtitles imported successfully", 1000);
     } catch (error) {
       Toxen.error(`Failed to import subtitles: ${error.message}`);
     }
@@ -281,7 +283,7 @@ export default class SubtitleEditor extends Component<SubtitleEditorProps, Subti
       const content = SubtitleParser.exportByExtension(subtitles, type);
       await toxenapi.fs.promises.writeFile(result.filePath, content, 'utf8');
       
-      Toxen.log("Subtitles exported successfully", 500);
+      Toxen.log("Subtitles exported successfully", 1000);
     } catch (error) {
       Toxen.error(`Failed to export subtitles: ${error.message}`);
     }
@@ -299,7 +301,12 @@ export default class SubtitleEditor extends Component<SubtitleEditorProps, Subti
           <span>{currentTime.toTimestamp()}</span>
         </div>
         
-        <div className="timeline-track" style={{ width: timelineWidth }}>
+        <div 
+          className="timeline-track" 
+          style={{ width: timelineWidth }}
+          onClick={this.handleTimelineClick}
+          onContextMenu={this.handleTimelineRightClick}
+        >
           {/* Current time indicator */}
           <div 
             className="timeline-cursor"
@@ -319,8 +326,14 @@ export default class SubtitleEditor extends Component<SubtitleEditorProps, Subti
                   left: `${startPercent}%`,
                   width: `${Math.max(widthPercent, 1)}%`
                 }}
-                onClick={() => this.setState({ selectedItem: item })}
-                onDoubleClick={() => this.setState({ editingItem: item })}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  this.setState({ selectedItem: item });
+                }}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  this.setState({ editingItem: item });
+                }}
               >
                 <div className="timeline-item-content">
                   {item.text.substring(0, 20)}{item.text.length > 20 ? '...' : ''}
@@ -340,6 +353,7 @@ export default class SubtitleEditor extends Component<SubtitleEditorProps, Subti
                 className="timeline-scale-mark"
                 style={{ left: `${i * 10}%` }}
                 onClick={() => this.seekToTime(time)}
+                title={`Click to jump to ${time.toTimestamp()}`}
               >
                 {time.toTimestamp()}
               </div>
@@ -401,6 +415,24 @@ export default class SubtitleEditor extends Component<SubtitleEditorProps, Subti
                 )}
               </div>
               <div className="subtitle-item-actions">
+                <Tooltip label="Set start to current time">
+                  <ActionIcon
+                    size="sm"
+                    onClick={() => this.setTimingToCurrent(item, 'start')}
+                    variant="light"
+                  >
+                    <IconArrowLeft size={14} />
+                  </ActionIcon>
+                </Tooltip>
+                <Tooltip label="Set end to current time">
+                  <ActionIcon
+                    size="sm"
+                    onClick={() => this.setTimingToCurrent(item, 'end')}
+                    variant="light"
+                  >
+                    <IconArrowRight size={14} />
+                  </ActionIcon>
+                </Tooltip>
                 <Tooltip label="Edit">
                   <ActionIcon
                     size="sm"
@@ -457,32 +489,157 @@ export default class SubtitleEditor extends Component<SubtitleEditorProps, Subti
             onChange={(e) => this.updateSubtitleItem(selectedItem, { text: e.currentTarget.value })}
             placeholder="Subtitle text..."
           />
-        </div>
-
-        <div className="property-group">
+        </div>        <div className="property-group">
           <label>Start Time</label>
-          <TextInput
-            value={selectedItem.start.toTimestamp()}
-            onChange={(e) => {
-              try {
-                const time = Time.fromTimestamp(e.currentTarget.value);
-                this.updateSubtitleItem(selectedItem, { start: time });
-              } catch {}
-            }}
-          />
+          <Group gap="xs">
+            <TextInput
+              value={selectedItem.start.toTimestamp()}
+              onChange={(e) => {
+                try {
+                  const time = Time.fromTimestamp(e.currentTarget.value);
+                  this.updateSubtitleItem(selectedItem, { start: time });
+                } catch {}
+              }}
+              style={{ flex: 1 }}
+            />
+            <Tooltip label="Set to current time (Ctrl+S)">
+              <ActionIcon 
+                onClick={() => this.setTimingToCurrent(selectedItem, 'start')}
+                variant="light"
+                size="lg"
+              >
+                <IconClock size={16} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
+          <Group gap="xs" mt="xs">
+            <Button.Group>
+              <Button 
+                size="xs" 
+                variant="light" 
+                onClick={() => this.adjustTiming(selectedItem, 'start', -1000)}
+              >-1s</Button>
+              <Button 
+                size="xs" 
+                variant="light" 
+                onClick={() => this.adjustTiming(selectedItem, 'start', -500)}
+              >-500ms</Button>
+              <Button 
+                size="xs" 
+                variant="light" 
+                onClick={() => this.adjustTiming(selectedItem, 'start', -100)}
+              >-100ms</Button>
+              <Button 
+                size="xs" 
+                variant="light" 
+                onClick={() => this.adjustTiming(selectedItem, 'start', 100)}
+              >+100ms</Button>
+              <Button 
+                size="xs" 
+                variant="light" 
+                onClick={() => this.adjustTiming(selectedItem, 'start', 500)}
+              >+500ms</Button>
+              <Button 
+                size="xs" 
+                variant="light" 
+                onClick={() => this.adjustTiming(selectedItem, 'start', 1000)}
+              >+1s</Button>
+            </Button.Group>
+          </Group>
         </div>
 
         <div className="property-group">
           <label>End Time</label>
-          <TextInput
-            value={selectedItem.end.toTimestamp()}
-            onChange={(e) => {
-              try {
-                const time = Time.fromTimestamp(e.currentTarget.value);
-                this.updateSubtitleItem(selectedItem, { end: time });
-              } catch {}
-            }}
-          />
+          <Group gap="xs">
+            <TextInput
+              value={selectedItem.end.toTimestamp()}
+              onChange={(e) => {
+                try {
+                  const time = Time.fromTimestamp(e.currentTarget.value);
+                  this.updateSubtitleItem(selectedItem, { end: time });
+                } catch {}
+              }}
+              style={{ flex: 1 }}
+            />
+            <Tooltip label="Set to current time (Ctrl+E)">
+              <ActionIcon 
+                onClick={() => this.setTimingToCurrent(selectedItem, 'end')}
+                variant="light"
+                size="lg"
+              >
+                <IconClock size={16} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
+          <Group gap="xs" mt="xs">
+            <Button.Group>
+              <Button 
+                size="xs" 
+                variant="light" 
+                onClick={() => this.adjustTiming(selectedItem, 'end', -1000)}
+              >-1s</Button>
+              <Button 
+                size="xs" 
+                variant="light" 
+                onClick={() => this.adjustTiming(selectedItem, 'end', -500)}
+              >-500ms</Button>
+              <Button 
+                size="xs" 
+                variant="light" 
+                onClick={() => this.adjustTiming(selectedItem, 'end', -100)}
+              >-100ms</Button>
+              <Button 
+                size="xs" 
+                variant="light" 
+                onClick={() => this.adjustTiming(selectedItem, 'end', 100)}
+              >+100ms</Button>
+              <Button 
+                size="xs" 
+                variant="light" 
+                onClick={() => this.adjustTiming(selectedItem, 'end', 500)}
+              >+500ms</Button>
+              <Button 
+                size="xs" 
+                variant="light" 
+                onClick={() => this.adjustTiming(selectedItem, 'end', 1000)}
+              >+1s</Button>
+            </Button.Group>
+          </Group>
+        </div>
+
+        <div className="property-group">
+          <label>Duration</label>
+          <Group gap="xs">
+            <TextInput
+              value={`${((selectedItem.end.valueOf() - selectedItem.start.valueOf()) / 1000).toFixed(2)}s`}
+              readOnly
+              style={{ flex: 1 }}
+            />
+          </Group>
+          <Group gap="xs" mt="xs">
+            <Button.Group>
+              <Button 
+                size="xs" 
+                variant="light" 
+                onClick={() => this.adjustDuration(selectedItem, -500)}
+              >-500ms</Button>
+              <Button 
+                size="xs" 
+                variant="light" 
+                onClick={() => this.adjustDuration(selectedItem, -200)}
+              >-200ms</Button>
+              <Button 
+                size="xs" 
+                variant="light" 
+                onClick={() => this.adjustDuration(selectedItem, 200)}
+              >+200ms</Button>
+              <Button 
+                size="xs" 
+                variant="light" 
+                onClick={() => this.adjustDuration(selectedItem, 500)}
+              >+500ms</Button>
+            </Button.Group>
+          </Group>
         </div>
 
         {subtitles.type === 'tst' && (
@@ -526,6 +683,124 @@ export default class SubtitleEditor extends Component<SubtitleEditorProps, Subti
     );
   }
 
+  private adjustTiming(item: SubtitleParser.SubtitleItem, field: 'start' | 'end', milliseconds: number) {
+    const currentTime = item[field].valueOf();
+    const newTime = Math.max(0, currentTime + milliseconds);
+    this.updateSubtitleItem(item, { [field]: new Time(newTime) });
+  }
+
+  private setTimingToCurrent(item: SubtitleParser.SubtitleItem, field: 'start' | 'end') {
+    const currentTime = this.state.currentTime;
+    this.updateSubtitleItem(item, { [field]: new Time(currentTime.valueOf()) });
+  }
+
+  private adjustDuration(item: SubtitleParser.SubtitleItem, milliseconds: number) {
+    const currentDuration = item.end.valueOf() - item.start.valueOf();
+    const newDuration = Math.max(500, currentDuration + milliseconds); // Minimum 500ms duration
+    const newEndTime = item.start.valueOf() + newDuration;
+    this.updateSubtitleItem(item, { end: new Time(newEndTime) });
+  }
+
+  private handleKeyDown = (e: KeyboardEvent) => {
+    const { selectedItem } = this.state;
+    if (!selectedItem) return;
+
+    // Only handle if not typing in an input field
+    if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'TEXTAREA') {
+      return;
+    }
+
+    switch (e.key) {
+      case 'ArrowLeft':
+        if (e.shiftKey && e.ctrlKey) {
+          this.adjustTiming(selectedItem, 'start', -100);
+        } else if (e.ctrlKey) {
+          this.adjustTiming(selectedItem, 'start', -500);
+        } else if (e.shiftKey) {
+          this.adjustTiming(selectedItem, 'start', -1000);
+        }
+        e.preventDefault();
+        break;
+      
+      case 'ArrowRight':
+        if (e.shiftKey && e.ctrlKey) {
+          this.adjustTiming(selectedItem, 'start', 100);
+        } else if (e.ctrlKey) {
+          this.adjustTiming(selectedItem, 'start', 500);
+        } else if (e.shiftKey) {
+          this.adjustTiming(selectedItem, 'start', 1000);
+        }
+        e.preventDefault();
+        break;
+
+      case 'ArrowUp':
+        if (e.shiftKey && e.ctrlKey) {
+          this.adjustTiming(selectedItem, 'end', 100);
+        } else if (e.ctrlKey) {
+          this.adjustTiming(selectedItem, 'end', 500);
+        } else if (e.shiftKey) {
+          this.adjustTiming(selectedItem, 'end', 1000);
+        }
+        e.preventDefault();
+        break;
+      
+      case 'ArrowDown':
+        if (e.shiftKey && e.ctrlKey) {
+          this.adjustTiming(selectedItem, 'end', -100);
+        } else if (e.ctrlKey) {
+          this.adjustTiming(selectedItem, 'end', -500);
+        } else if (e.shiftKey) {
+          this.adjustTiming(selectedItem, 'end', -1000);
+        }
+        e.preventDefault();
+        break;
+
+      case 's':
+        if (e.ctrlKey) {
+          this.setTimingToCurrent(selectedItem, 'start');
+          e.preventDefault();
+        }
+        break;
+
+      case 'e':
+        if (e.ctrlKey) {
+          this.setTimingToCurrent(selectedItem, 'end');
+          e.preventDefault();
+        }
+        break;
+
+      case ' ':
+        this.togglePlayback();
+        e.preventDefault();
+        break;
+    }
+  };
+
+  private handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percentage = clickX / rect.width;
+    const duration = Toxen.musicPlayer?.media?.duration ? new Time(Toxen.musicPlayer.media.duration * 1000) : new Time(180000);
+    const clickTime = new Time(duration.valueOf() * percentage);
+    
+    // Left click to seek
+    if (e.button === 0) {
+      this.seekToTime(clickTime);
+    }
+  };
+
+  private handleTimelineRightClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percentage = clickX / rect.width;
+    const duration = Toxen.musicPlayer?.media?.duration ? new Time(Toxen.musicPlayer.media.duration * 1000) : new Time(180000);
+    const clickTime = new Time(duration.valueOf() * percentage);
+    
+    // Right click to seek
+    this.seekToTime(clickTime);
+  };
+
   render() {
     const { subtitles, isDirty, isPlaying } = this.state;
     
@@ -568,8 +843,14 @@ export default class SubtitleEditor extends Component<SubtitleEditorProps, Subti
               size="sm"
               onClick={() => this.togglePlayback()}
             >
-              {isPlaying ? 'Pause' : 'Play'}
+              {isPlaying ? 'Pause' : 'Play'} (Space)
             </Button>
+          </div>
+
+          <div className="toolbar-group">
+            <small style={{ color: 'var(--text-color-secondary)', fontSize: '0.75rem' }}>
+              Shortcuts: ←→ (start), ↑↓ (end), Ctrl+S/E (set to current), Shift/Ctrl for bigger steps | Click timeline to seek
+            </small>
           </div>
 
           <div className="toolbar-group">

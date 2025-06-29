@@ -102,7 +102,7 @@ namespace SubtitleParser {
     let hours = (time.getHours()).toString().padStart(2, "0");
     let minutes = (time.getMinutes()).toString().padStart(2, "0");
     let seconds = (time.getSeconds()).toString().padStart(2, "0");
-    let milliseconds = (time.getMilliseconds()).toString().padStart(3, "0");
+    let milliseconds = (time.getMilliseconds()).toString().padStart(3, "0").slice(0, 3);
     return `${hours}:${minutes}:${seconds},${milliseconds}`;
   }
   
