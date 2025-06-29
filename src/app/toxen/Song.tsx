@@ -394,6 +394,11 @@ export default class Song implements ISong {
       return;
     }
 
+    if (Toxen.isMode("SubtitlesEditor") && Toxen.editingSong && Toxen.editingSong.uid !== this.uid) {
+      Toxen.sendError("CURRENTLY_EDITING_SUBTITLES");
+      return;
+    }
+
     options ?? (options = {});
     let src = this.mediaFile();
     if (Toxen.musicPlayer.state.src === src) return;

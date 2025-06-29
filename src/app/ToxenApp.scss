@@ -91,3 +91,28 @@ body[miniplayer] .miniplayer-overlay {
     }
   }
 }
+
+// Subtitle Editor Overlay
+.subtitle-editor-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  .subtitle-editor {
+    width: 95%;
+    height: 90%;
+    max-width: 1400px;
+    max-height: 900px;
+    background: var(--background-color, #1a1a1a);
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+  }
+}

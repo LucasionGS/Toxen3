@@ -358,6 +358,18 @@ export default class System {
     }
     return result;
   }
+
+  public static isWindows() {
+    return toxenapi.isDesktop() && toxenapi.remote.process.platform === "win32";
+  }
+
+  public static isMac() {
+    return toxenapi.isDesktop() && toxenapi.remote.process.platform === "darwin";
+  }
+
+  public static isLinux() {
+    return toxenapi.isDesktop() && toxenapi.remote.process.platform === "linux";
+  }
 }
 
 export interface ToxenFile {

@@ -75,7 +75,7 @@ namespace SubtitleParser {
         // content = exportLrc(data);
         break;
       default:
-        throw new Error("Unsupported extension");
+        throw new Error("Unsupported extension:" + extension);
     }
     return content;
   }
@@ -85,7 +85,7 @@ namespace SubtitleParser {
       case ".srt": return parseSrt(data);
       case ".tst": return parseTst(data);
       case ".lrc": return parseLrc(data);
-      default: throw new Error("Unsupported extension");
+      default: throw new Error("Unsupported extension: " + extension);
     }
   }
 

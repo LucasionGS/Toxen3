@@ -19,6 +19,7 @@ import SidepanelSectionHeader from "./components/Sidepanel/SidepanelSectionHeade
 import SearchField from "./components/SongPanel/SearchField";
 import Stats from "./toxen/Statistics";
 import StoryboardEditorPanel from "./components/StoryboardEditorPanel/StoryboardEditorPanel";
+import SubtitleEditorPanel from "./components/SubtitleEditorPanel/SubtitleEditorPanel";
 import { MessageCardOptions } from "./components/MessageCard/MessageCards";
 import ExternalUrl from "./components/ExternalUrl/ExternalUrl";
 import showdown from "showdown";
@@ -48,6 +49,7 @@ import { IconLayoutNavbarExpand } from "@tabler/icons-react";
 import ImportPanel from "./components/Sidepanel/Panels/ImportPanel/ImportPanel";
 // import YTDlpWrap from "yt-dlp-wrap";
 import StoryboardEditor, { StoryboardEditorController } from "./components/StoryboardEditor/StoryboardEditor";
+import SubtitleEditor from "./components/SubtitleEditor/SubtitleEditor";
 import { modals } from "@mantine/modals";
 import LoginForm from "./components/LoginForm/LoginForm";
 
@@ -66,6 +68,12 @@ export class Toxen {
   public static setTitle(title: string) {
     Toxen.setAppBarText(title);
     document.title = title;
+  }
+
+  public static cleanPath(path: string) {
+    // Remove unsupported characters
+    const cleaner = /[*?"<>|]/g;
+    return path.replace(cleaner, "_")
   }
 
   // private static reloadables: Record<string, () => void> = {};
@@ -98,6 +106,8 @@ export class Toxen {
 
   public static setMode(mode: "StoryboardEditor", song: Song): void;
   public static setMode(mode: ToxenInteractionMode.StoryboardEditor, song: Song): void;
+  public static setMode(mode: "SubtitlesEditor", song: Song): void;
+  public static setMode(mode: ToxenInteractionMode.SubtitlesEditor, song: Song): void;
   public static setMode(mode: ToxenInteractionMode | keyof typeof ToxenInteractionMode): void;
   public static setMode(mode: ToxenInteractionMode | keyof typeof ToxenInteractionMode, data?: any) {
     if (typeof mode == "string") {
@@ -109,6 +119,10 @@ export class Toxen {
     switch (mode) {
       case ToxenInteractionMode.Player: {
         Toxen.sidePanel.setSectionId("songPanel");
+        if (Toxen.subtitleEditorOpen) {
+          Toxen.subtitleEditorOpen = false;
+          Toxen.appRenderer?.forceUpdate();
+        }
         break;
       }
 
@@ -121,7 +135,14 @@ export class Toxen {
       }
 
       case ToxenInteractionMode.SubtitlesEditor: {
-        // Some action here
+        Toxen.editingSong = data as Song;
+        if (Toxen.editingSong) {
+          Toxen.editingSong.play();
+        }
+        Toxen.sidePanel.setHidden(true);
+        Toxen.subtitleEditorOpen = true;
+        // Force re-render to show subtitle editor
+        Toxen.appRenderer?.forceUpdate();
         break;
       }
 
@@ -224,6 +245,7 @@ export class Toxen {
   private static presetErrors = {
     CURRENTLY_EDITING_SONG: ["You are currently editing a song. Please save or cancel your changes.", 5000],
     CURRENTLY_EDITING_THEME: ["You are currently editing a theme. Please save or cancel your changes.", 5000],
+    CURRENTLY_EDITING_SUBTITLES: ["You are currently editing subtitles. Please save or cancel your changes.", 5000],
   }
   public static sendError(error: keyof typeof Toxen.presetErrors) {
     const [message, expiresIn] = Toxen.presetErrors[error] as [string, number];
@@ -443,6 +465,8 @@ export class Toxen {
   public static loadingScreen: LoadingScreen;
   public static background: Background;
   public static storyboardEditorController: StoryboardEditorController;
+  public static subtitleEditorOpen: boolean = false;
+  public static appRenderer: React.Component;
 
   public static songSearch = "";
   /**
@@ -738,6 +762,9 @@ export const ToxenEvent = new ToxenEventEmitter();
 //#region ToxenApp Layout
 export default class ToxenAppRenderer extends React.Component {
   componentDidMount() {
+    // Set reference for force updates
+    Toxen.appRenderer = this;
+    
     Promise.resolve()
       .then(Settings.load) // Load settings and apply them.
       .then(Stats.load) // Load stats and apply them.
@@ -866,6 +893,18 @@ export default class ToxenAppRenderer extends React.Component {
           <AppBar />
           <Background ref={ref => Toxen.background = ref} />
           <StoryboardEditor controllerSetter={sec => Toxen.storyboardEditorController = sec} />
+          {Toxen.subtitleEditorOpen && (
+            <div className="subtitle-editor-overlay">
+              <SubtitleEditor 
+                song={Toxen.editingSong} 
+                onClose={() => {
+                  Toxen.subtitleEditorOpen = false;
+                  Toxen.setMode(ToxenInteractionMode.Player);
+                  Toxen.appRenderer?.forceUpdate();
+                }} 
+              />
+            </div>
+          )}
           <MusicControls ref={ref => Toxen.musicControls = ref} />
           <LoadingScreen ref={ls => Toxen.loadingScreen = ls} initialShow={true} />
           <div className="song-panel-toggle hide-on-inactive" onClick={() => Toxen.sidePanel.show()}>
@@ -1046,6 +1085,10 @@ export default class ToxenAppRenderer extends React.Component {
 
           <SidepanelSection key="storyboardEditor" id="storyboardEditor">
             <StoryboardEditorPanel />
+          </SidepanelSection>
+
+          <SidepanelSection key="subtitleEditor" id="subtitleEditor" title="Subtitles" icon={<i className="fas fa-closed-captioning"></i>}>
+            <SubtitleEditorPanel />
           </SidepanelSection>
 
           <SidepanelSection key="themeEditor" id="themeEditor">
