@@ -10,13 +10,14 @@ import SidepanelSectionHeader from "../../SidepanelSectionHeader";
 import "./EditSong.scss";
 // import fsp from "fs/promises";
 // import Path from "path";
-import { Button, Checkbox, ColorInput, InputLabel, NumberInput, Radio, Select, Slider, TextInput } from "@mantine/core";
+import { Button, Checkbox, ColorInput, InputLabel, Loader, NumberInput, Radio, Select, Slider, TextInput } from "@mantine/core";
 import ListInput from "../../../ListInput/ListInput";
 import SelectAsync from "../../../SelectAsync/SelectAsync";
 import { useModals } from "@mantine/modals";
 import ScreenPositionSelector from "../../../ScreenPositionSelector/ScreenPositionSelector";
 import { VisualizerStyleOptions } from "../SettingsPanel/SettingsPanel";
 import { useForceUpdate } from "@mantine/hooks";
+import { hideNotification, updateNotification } from "@mantine/notifications";
 
 interface EditSongProps { }
 
@@ -246,6 +247,68 @@ export default function EditSong(props: EditSongProps) {
           onBlur={() => Toxen.editingSong.saveInfo()}
           onKeyDown={textInputSaveOnEnter}
         />
+
+        {/* Whisper Transcription - Advanced UI only */}
+        {Settings.isAdvanced() && toxenapi.isDesktop() && (
+          <>
+            <InputLabel>Auto-transcribe with Whisper</InputLabel>
+            <Button
+              leftSection={<i className="fas fa-microphone"></i>}
+              onClick={async () => {
+                try {
+                  const infoLog = Toxen.notify({
+                    title: "Whisper",
+                    content: (<>
+                      <Loader size="xs" /> Transcribing with Whisper...
+                      <br />
+                      This may take a while depending on the audio length.
+                    </>),
+                    expiresIn: null,
+                    type: "normal",
+                    disableClose: true,
+                  });
+                  await toxenapi.transcribeWithWhisper(Toxen, Song, Toxen.editingSong);
+                  
+                  updateNotification({
+                    id: infoLog,
+                    message: (<>
+                      <i className="fas fa-check"></i>&nbsp;
+                      Transcription completed successfully!
+                    </>)
+                  });
+
+                  setTimeout(() => {
+                    // Close the notification after a short delay
+                    hideNotification(infoLog);
+                  }, 2000);
+                  
+                  // Update UI
+                  forceUpdate();
+                } catch (error) {
+                  console.error("Whisper transcription failed:", error);
+                  if (error.message.includes("command not found") || error.message.includes("not recognized")) {
+                    Toxen.error("Whisper not found. Please install Whisper with 'pip install openai-whisper' and ensure it's in your PATH.");
+                  } else if (error.message.includes("timeout")) {
+                    Toxen.error("Whisper transcription timed out. Try with a shorter audio file.");
+                  } else {
+                    Toxen.error(`Whisper transcription failed: ${error.message}`);
+                  }
+                }
+              }}
+              variant="light"
+              color="blue"
+              fullWidth
+            >
+              Generate Subtitles with Whisper
+            </Button>
+            <sup>
+              Requires OpenAI Whisper installed globally ('pip install openai-whisper'). 
+              Will create an SRT file with automatic transcription.
+              <br />
+              <strong>Note:</strong> This may take a while depending on the audio length, AND it will likely be incorrect, so used the Subtitle Editor to fix it.
+            </sup>
+          </>
+        )}
         <SelectAsync
           allowDeselect={false}
           label="Storyboard file"
