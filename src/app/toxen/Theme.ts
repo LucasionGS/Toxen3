@@ -1,6 +1,8 @@
+import { Toxen } from "../ToxenApp";
+
 export default class Theme implements ITheme {
   public static async load(): Promise<Theme[]> {
-    return toxenapi.loadThemes(Theme);
+    return toxenapi.loadThemes(Toxen, Theme);
   }
 
   public save() {

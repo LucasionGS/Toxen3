@@ -146,7 +146,7 @@ export default class ToxenController {
     }
   }
 
-  public async loadThemes($theme: typeof Theme): Promise<Theme[]> {
+  public async loadThemes($toxen: typeof Toxen, $theme: typeof Theme): Promise<Theme[]> {
     // Web version: load themes from localStorage
     try {
       const storedThemes = this.getStoredThemes();

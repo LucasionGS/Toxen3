@@ -132,17 +132,22 @@ export default class DesktopController extends ToxenController {
     return fsp.writeFile(`${this.themeFolderPath}/${theme.name}.theme.json`, data);
   }
   
-  public async loadThemes($theme: typeof Theme): Promise<Theme[]> {
+  public async loadThemes($toxen: typeof Toxen, $theme: typeof Theme): Promise<Theme[]> {
     const themes: Theme[] = await fsp.readdir(this.themeFolderPath).then(async (files) => {
       const themeFiles = files.filter((file) => file.endsWith(".theme.json"));
       const themePromises = themeFiles.map((file) => {
         return fsp.readFile(`${this.themeFolderPath}/${file}`, "utf8").then((data) => {
-          return $theme.create(JSON.parse(data));
+          try {
+            return $theme.create(JSON.parse(data));
+          } catch (error) {
+            $toxen.error(`Failed to load theme ${file}: ${error.message}`);
+            return null; // Skip invalid themes
+          }
         });
       });
-      return Promise.all(themePromises);
+      return (await Promise.all(themePromises)).filter(theme => theme !== null);
     }).catch(async (): Promise<Theme[]> => {
-      await fsp.mkdir(this.themeFolderPath);
+      await fsp.mkdir(this.themeFolderPath, { recursive: true });
       return [];
     });
 
