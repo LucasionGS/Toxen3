@@ -851,13 +851,13 @@ export default class ToxenAppRenderer extends React.Component {
   render = () => {
     return (
       <div>
-        <div className="miniplayer-overlay" onDoubleClick={e => {
+        {/* <div className="miniplayer-overlay" onDoubleClick={e => {
           e.preventDefault();
           Toxen.toggleMiniplayer(false);
         }}>
           <div className="miniplayer-overlay-header" />
           <IconLayoutNavbarExpand size="20vh" />
-        </div>
+        </div> */}
         <ThemeContainer ref={ref => Toxen.themeContainer = ref} />
         <div
           className="content-container"

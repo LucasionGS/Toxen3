@@ -66,3 +66,9 @@
 body[fullscreen] .appBar, body[miniplayer] .appBar {
   display: none;
 }
+
+.window-draggable {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-app-region: drag;
+}

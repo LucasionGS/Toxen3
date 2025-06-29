@@ -28,6 +28,16 @@ export default class AppBar extends Component<AppBarProps, AppBarState> {
         {
           toxenapi.isDesktop() && (
             <>
+              {/* Mini-player */}
+              <div className="appBarButton appBar__miniplayerButton"
+                title="Enable Mini-player"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  Toxen.toggleMiniplayer();
+                }}>
+                <i className="fas fa-window-restore"></i>
+              </div>
               {/* Toxen Action button */}
               <div className="appBarButton appBar__actionButton"
                 onClick={(e) => {

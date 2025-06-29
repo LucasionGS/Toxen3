@@ -70,6 +70,11 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
     return (
       <div className="toxen-music-controls">
         <div className="toxen-music-controls-buttons hide-on-inactive">
+          <div hidden={!Toxen.isMiniplayer()} className="ctrl-btn" onClick={() => {
+            Toxen.toggleMiniplayer();
+          }}>
+            <span><i className="fas fa-window-maximize"></i></span>
+          </div>
           <div className="ctrl-btn" onClick={() => {
             Settings.set("shuffle", !Settings.get("shuffle"));
             Settings.save({ suppressNotification: true });
@@ -93,6 +98,9 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
           }}>
             <span hidden={!Settings.get("repeat")}><i className="fas fa-redo" style={styleForEnabled}></i></span>
             <span hidden={Settings.get("repeat")}><i className="fas fa-redo"></i></span>
+          </div>
+          <div hidden={!Toxen.isMiniplayer()} className="ctrl-btn window-draggable">
+            <span><i className="fas fa-arrows-alt"></i></span>
           </div>
         </div>
 

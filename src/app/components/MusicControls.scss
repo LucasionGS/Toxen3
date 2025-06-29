@@ -67,10 +67,22 @@ body[miniplayer] .toxen-music-controls {
   bottom: -32px;
   left: 0;
   transform: translateX(0);
+  transform: translateY(-32px);
+  transition: transform 0.3s ease-in-out, width 0.3s ease-in-out;
   .toxen-music-controls-progress-bar > * {
     transform: translateY(0);
   }
+  
+  .ctrl-btn * {
+    margin: 4px;
+    font-size: 24px;
+  }
 }
+
+body[miniplayer].inactive .toxen-music-controls {
+  transform: translateY(0);
+}
+
 
 @if ToxenIsWeb() {
   @media screen and ((max-width: 768px)) { // Mobile view

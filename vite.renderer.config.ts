@@ -20,6 +20,7 @@ export default defineConfig((env) => {
           functions: {
             "ToxenIsWeb()": () => {
               const val = process.env["TOXEN_IS_WEB"] === "true" ? sass.types.Boolean.TRUE : sass.types.Boolean.FALSE;
+              // const val = sass.types.Boolean.TRUE;
               return val;
             }
           }
