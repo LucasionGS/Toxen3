@@ -1,4 +1,4 @@
-## 2.2.0 - Upcoming preview
+## 2.2.0 - 30-06-2025
 ### New Features
 - **Audio Effects Panel** - Real-time audio effects!
   - **Bass Boost**: Enhance low frequencies with adjustable dB boost (0-20dB) (don't blow your ears out kthx)
