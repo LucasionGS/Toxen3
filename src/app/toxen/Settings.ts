@@ -70,7 +70,14 @@ export default class Settings {
       remoteSyncOnSongEdit: false,
       hideOffScreenSongElements: true,
       starRushEffect: false,
-      starRushIntensity: 1
+      starRushIntensity: 1,
+      
+      // Audio Effects
+      audioEffectsEnabled: false,
+      audioReverbLevel: 0,
+      audioEchoLevel: 0,
+      audioBassBoostLevel: 0,
+      audio3DLevel: 0,
     };
 
     let toUse: Partial<ISettings> = {};
@@ -339,6 +346,13 @@ export interface ISettings {
   // Background Effects
   starRushEffect: boolean;
   starRushIntensity: number;
+
+  // Audio Effects
+  audioEffectsEnabled: boolean;
+  audioReverbLevel: number;
+  audioEchoLevel: number;
+  audioBassBoostLevel: number;
+  audio3DLevel: number;
 }
 
 export enum VisualizerStyle {

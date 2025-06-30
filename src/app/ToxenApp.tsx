@@ -36,7 +36,7 @@ import ThemeContainer from "./components/ThemeContainer/ThemeContainer";
 import ThemeEditorPanel from "./components/ThemeEditorPanel/ThemeEditorPanel";
 import Theme from "./toxen/Theme";
 import AppBar from "./components/AppBar/AppBar";
-import AdjustPanel from "./components/AdjustPanel/AdjustPanel";
+import EffectsPanel from "./components/EffectsPanel/EffectsPanel";
 import { Button } from "@mantine/core";
 import { Notifications, showNotification } from "@mantine/notifications";
 import SettingsPanel from "./components/Sidepanel/Panels/SettingsPanel/SettingsPanel";
@@ -52,6 +52,7 @@ import StoryboardEditor, { StoryboardEditorController } from "./components/Story
 import SubtitleEditor from "./components/SubtitleEditor/SubtitleEditor";
 import { modals } from "@mantine/modals";
 import LoginForm from "./components/LoginForm/LoginForm";
+import AudioEffects from "./toxen/AudioEffects";
 
 declare const SUBTITLE_CREATOR_WEBPACK_ENTRY: any;
 // const browser = remote.getCurrentWindow();
@@ -364,6 +365,7 @@ export class Toxen {
   public static playlistPanel: PlaylistPanel;
   public static musicPlayer: MusicPlayer;
   public static musicControls: MusicControls;
+  public static audioEffects: AudioEffects;
   public static subtitles: Subtitles;
   public static themeContainer: ThemeContainer;
   public static updateSongPanels() {
@@ -1029,9 +1031,9 @@ export default class ToxenAppRenderer extends React.Component {
           </SidepanelSection>
 
           {/* Playlist Management Panel */}
-          {/* <SidepanelSection key="adjust" id="adjust" title="Adjust" icon={<i className="fas fa-sliders-h"></i>} disabled>
-            <AdjustPanel />
-          </SidepanelSection> */}
+          <SidepanelSection key="effects" id="effects" title="Effects" icon={<i className="fa-solid fa-wand-magic-sparkles"></i>}>
+            <EffectsPanel />
+          </SidepanelSection>
 
           {/* Import Panel */}
           <SidepanelSection key="importSong" id="importSong" title="Import" icon={<i className="fas fa-file-import"></i>} disabled={!toxenapi.isDesktop()}>

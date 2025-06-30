@@ -1479,9 +1479,37 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     const source = audioContext.createMediaElementSource(audioFile);
     const analyser = audioContext.createAnalyser();
     analyser.fftSize = Visualizer.DEFAULT_FFTSIZE;
-    source.connect(audioContext.destination);
+    
+    // Store references for audio effects to use
+    this.audioContext = audioContext;
+    this.sourceNode = source;
+    
+    // Connect source -> analyser for visualization
     source.connect(analyser);
+    
+    // Create a gain node for effects processing
+    this.effectsGainNode = audioContext.createGain();
+    
+    // Connect source -> analyser for visualization
+    source.connect(analyser);
+    
+    // Connect source -> effects gain -> destination for audio output
+    source.connect(this.effectsGainNode);
+    this.effectsGainNode.connect(audioContext.destination);
+    
     this.audioData = analyser;
+    
+    // Initialize audio effects if they exist, but don't let them break audio flow
+    setTimeout(() => {
+      if (Toxen.audioEffects && !Toxen.audioEffects.initialized) {
+        try {
+          Toxen.audioEffects.connectToSharedAudioGraph(audioContext, source, this.effectsGainNode);
+        } catch (error) {
+          console.warn('Audio effects failed to initialize, using direct audio path:', error);
+          // Ensure audio still flows even if effects fail
+        }
+      }
+    }, 100);
   }
 
 
@@ -1496,6 +1524,9 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
   }
 
   private audioData: AnalyserNode;
+  private audioContext: AudioContext | null = null;
+  private sourceNode: MediaElementAudioSourceNode | null = null;
+  private effectsGainNode: GainNode | null = null;
 
   private stopped = true;
   public stop() {

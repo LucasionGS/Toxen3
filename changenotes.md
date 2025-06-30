@@ -1,3 +1,23 @@
+## 2.2.0 - Upcoming preview
+### New Features
+- **Audio Effects Panel** - Real-time audio effects!
+  - **Bass Boost**: Enhance low frequencies with adjustable dB boost (0-20dB) (don't blow your ears out kthx)
+  - **Echo/Delay**: Adds echo effects with slight 300ms delay
+  - **Reverb**: Echo but cooler
+  - **3D Audio**: Spatial audio that moves sound around your head in real-time. Don't get dizzy
+  - **Real-time Controls**: All effects update immediately with smooth parameter changes
+  - **Individual Control**: Each effect can be enabled/disabled and adjusted separately
+
+- **Subtitle Editor & AI Generation** - Subtitle creation and editing capabilities
+  - **Visual Timeline Editor**: Subtitle editing via an interface
+  - **Whisper AI Integration (Experimental)**: Automatic subtitle generation using OpenAI's Whisper
+    - Enabling Advanced UI will allow you to use this feature.
+    - It requires you have installed `openai-whisper` locally via Python's package manager PIP.
+      - `pip install openai-whisper`
+    - As with most things in Toxen, this is run fully locally. The processing can be very heavy, and take time. It is only recommended if you have a beast of a computer to process it, and it can take a while to process the audio.
+    - As it is AI, mistakes can and likely will happen, so manual editing is still recommended. Like using the fancy subtitle editor ;)
+    - Using the AI is entirely optional, and will only work if you have it installed already, and is entirely separate from Toxen.
+
 ## 2.1.0 - 28-06-2025
 ### New Features
 - Cursor now hides when the application is idle.

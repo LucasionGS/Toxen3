@@ -1,5 +1,5 @@
 # Toxen storyboards
-A storyboard is writte non YAML format. It is a list of objects, each object is a dictionary with data about the event to play.
+A storyboard is written in YAML format. It is a list of objects, each object is a dictionary with data about the event to play.
 ## Example
 ```yaml
 storyboard:

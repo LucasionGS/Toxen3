@@ -10,6 +10,7 @@ import ToxenMax from "../../../icons/skull_max.png";
 import Settings from '../../toxen/Settings';
 import Asyncifier from '../../toxen/Asyncifier';
 import Subtitles from '../Subtitles/Subtitles';
+import AudioEffects from '../../toxen/AudioEffects';
 
 interface BackgroundProps {
   getRef?: ((ref: Background) => void),
@@ -93,7 +94,21 @@ export default class Background extends Component<BackgroundProps, BackgroundSta
           (() => {
             let musicPlayer: { current: MusicPlayer } = { current: null };
             return (<>
-              <MusicPlayer ref={ref => Toxen.musicPlayer = musicPlayer.current = ref} />
+              <MusicPlayer ref={ref => {
+                Toxen.musicPlayer = musicPlayer.current = ref;
+                if (ref) {
+                  // Initialize audio effects when music player is ready
+                  if (!Toxen.audioEffects) {
+                    Toxen.audioEffects = new AudioEffects();
+                  }
+                  // Initialize audio effects with the media element
+                  setTimeout(() => {
+                    if (ref.media) {
+                      Toxen.audioEffects.initialize(ref.media);
+                    }
+                  }, 100);
+                }
+              }} />
               <Subtitles ref={ref => Toxen.subtitles = ref} musicPlayer={musicPlayer} />
               <Storyboard ref={ref => this.storyboard = ref} />
               <Visualizer ref={ref => this.visualizer = ref} />
