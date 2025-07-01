@@ -6,6 +6,7 @@ import StoryboardParser from "../../toxen/StoryboardParser";
 import { useModals } from "@mantine/modals";
 import { ModalsContextProps } from "@mantine/modals/lib/context";
 import SelectAsync from "../SelectAsync/SelectAsync";
+import BackgroundFileSelector from "../BackgroundFileSelector/BackgroundFileSelector";
 import { VisualizerStyle } from "../../toxen/Settings";
 import { hexToRgbArray, rgbArrayToHex } from "../Form/FormInputFields/FormInputColorPicker";
 import Time from "../../toxen/Time";
@@ -1436,25 +1437,16 @@ function ComponentButton(props: { event: StoryboardParser.SBEvent, component: St
     case "SelectImage": return (
       <>
         <div>
-          <SelectAsync
-            allowDeselect={false}
+          <BackgroundFileSelector
             label={dataName + (required ? " *" : "")}
-            data={(async () => {
-              const song = Toxen.editingSong;
-              if (!song)
-                return [];
-              const path = song.dirname();
-
-              const supported = Toxen.getSupportedImageFiles();
-              return await Toxen.filterSupportedFiles(path, supported);
-            })}
-            value={value as string}
-            onChange={(value) => {
-              setValue(event.data[dataId] = value as string);
+            defaultValue={value as string}
+            sourceDir={Toxen.editingSong?.dirname()}
+            description={description}
+            onChange={(selectedValue) => {
+              setValue(event.data[dataId] = selectedValue as string);
             }}
           />
         </div>
-        <small>{description}</small>
       </>
     );
 

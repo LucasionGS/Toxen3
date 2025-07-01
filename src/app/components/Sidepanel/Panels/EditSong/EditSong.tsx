@@ -3,6 +3,7 @@ import React from "react";
 import Converter from "../../../../toxen/Converter";
 import Settings, { VisualizerStyle } from "../../../../toxen/Settings";
 import Song from "../../../../toxen/Song";
+import Playlist from "../../../../toxen/Playlist";
 import SubtitleParser from "../../../../toxen/SubtitleParser";
 import System from "../../../../toxen/System";
 import { Toxen } from "../../../../ToxenApp";
@@ -13,6 +14,7 @@ import "./EditSong.scss";
 import { Button, Checkbox, ColorInput, InputLabel, Loader, NumberInput, Radio, Select, Slider, TextInput } from "@mantine/core";
 import ListInput from "../../../ListInput/ListInput";
 import SelectAsync from "../../../SelectAsync/SelectAsync";
+import BackgroundFileSelector from "../../../BackgroundFileSelector/BackgroundFileSelector";
 import { useModals } from "@mantine/modals";
 import ScreenPositionSelector from "../../../ScreenPositionSelector/ScreenPositionSelector";
 import { VisualizerStyleOptions } from "../SettingsPanel/SettingsPanel";
@@ -147,27 +149,11 @@ export default function EditSong(props: EditSongProps) {
             }
           }}
         />
-        <SelectAsync
-          allowDeselect={false}
+        <BackgroundFileSelector
           label="Background file"
-          name="paths.background"
           defaultValue={Toxen.editingSong.paths.background}
-          data={(async () => {
-            let song = Toxen.editingSong;
-            if (!song)
-              return [];
-            let path = song.dirname();
-
-            let supported = Toxen.getSupportedImageFiles();
-            return [
-              "<Empty>",
-              ...(await Toxen.filterSupportedFiles(path, supported))
-            ];
-          })}
+          sourceDir={Toxen.editingSong.dirname()}
           onChange={(v) => {
-            if (v === "<Empty>") {
-              v = null;
-            }
             Toxen.editingSong.paths.background = v;
             Toxen.editingSong.saveInfo();
             let current = Song.getCurrent();
@@ -177,35 +163,96 @@ export default function EditSong(props: EditSongProps) {
           }}
         />
         {Toxen.playlist && Toxen.playlist.songList.includes(Toxen.editingSong) ? (
-          <>
-            <Button.Group>
-              <Button
-                onClick={() => {
-                  Toxen.playlist.promptSetBackground(modals, Toxen.editingSong);
-                }}
-              >
-                <i className="fas fa-image"></i>&nbsp;
-                Set playlist background
-              </Button>
-              {
-                Toxen.playlist.songBackground && Toxen.playlist.songBackground[Toxen.editingSong.uid] ? (
-                  <Button
-                    onClick={() => {
-                      Toxen.playlist.removeBackground(Toxen.editingSong);
-                      Toxen.reloadSection();
-                    }}
-                    color="red"
-                  >
-                    <i className="fas fa-times"></i>&nbsp;
-                    Remove playlist background
-                  </Button>
-                ) : null
+          <BackgroundFileSelector
+            label={`Playlist background for "${Toxen.playlist.name}"`}
+            defaultValue={Toxen.playlist.songBackground?.[Toxen.editingSong.uid] || ""}
+            getSourceDir={() => Playlist.getPlaylistBackgroundsDir()}
+            description={`Background this song will use specifically when playlist "${Toxen.playlist.name}" is selected`}
+            onCopyFile={async (sourceFile: string, fileName: string) => {
+              if (!toxenapi.isDesktop()) {
+                Toxen.error('File operations are only available in desktop version', 3000);
+                return false;
               }
-            </Button.Group>
-            <sup>
-              Set the background this song will use specifically when playlist "{Toxen.playlist.name}" is selected
-            </sup>
-          </>
+              
+              try {
+                const playlistBackgroundsDir = Playlist.getPlaylistBackgroundsDir(true);
+                
+                // Generate a unique filename to avoid conflicts
+                let uniqueFileName = fileName;
+                let counter = 1;
+                const baseName = toxenapi.path.parse(fileName).name;
+                const ext = toxenapi.path.extname(fileName);
+                
+                while (toxenapi.fs.existsSync(toxenapi.joinPath(playlistBackgroundsDir, uniqueFileName))) {
+                  uniqueFileName = `${baseName}_${counter}${ext}`;
+                  counter++;
+                }
+                
+                const targetPath = toxenapi.joinPath(playlistBackgroundsDir, uniqueFileName);
+                toxenapi.fs.copyFileSync(sourceFile, targetPath);
+                
+                Toxen.log(`Playlist background copied: ${uniqueFileName}`, 3000);
+                return true;
+              } catch (error) {
+                Toxen.error(`Failed to copy playlist background: ${error.message}`, 5000);
+                return false;
+              }
+            }}
+            onDelete={async (fileName: string) => {
+              return new Promise((resolve) => {
+                modals.openConfirmModal({
+                  title: 'Delete playlist background',
+                  children: (
+                    <div>
+                      <p>Are you sure you want to delete <strong>"{fileName}"</strong>?</p>
+                      <p><small>This will remove the background from the playlist backgrounds directory and any songs using it will fall back to their individual backgrounds or the default playlist background.</small></p>
+                    </div>
+                  ),
+                  labels: { confirm: 'Delete', cancel: 'Cancel' },
+                  confirmProps: { color: 'red' },
+                  onConfirm: async () => {
+                    if (!toxenapi.isDesktop()) {
+                      Toxen.error('File operations are only available in desktop version', 3000);
+                      resolve(false);
+                      return;
+                    }
+                    
+                    try {
+                      const filePath = toxenapi.joinPath(Playlist.getPlaylistBackgroundsDir(), fileName);
+                      toxenapi.fs.unlinkSync(filePath);
+                      Toxen.log(`Playlist background deleted: ${fileName}`, 3000);
+                      resolve(true);
+                    } catch (error) {
+                      Toxen.error(`Failed to delete playlist background: ${error.message}`, 5000);
+                      resolve(false);
+                    }
+                  },
+                  onCancel: () => resolve(false)
+                });
+              });
+            }}
+            onChange={(v: string | null) => {
+              if (v && v !== "<Empty>") {
+                // Set the song-specific background
+                if (!Toxen.playlist.songBackground) Toxen.playlist.songBackground = {};
+                Toxen.playlist.songBackground[Toxen.editingSong.uid] = v;
+              } else {
+                // Remove the song-specific background
+                if (Toxen.playlist.songBackground && Toxen.playlist.songBackground[Toxen.editingSong.uid]) {
+                  delete Toxen.playlist.songBackground[Toxen.editingSong.uid];
+                }
+              }
+              
+              // Save the playlist
+              Playlist.save();
+              
+              // Update background if this song is currently playing
+              let current = Song.getCurrent();
+              if (Toxen.editingSong == current) {
+                Toxen.background.setBackground(current.backgroundFile() + "?h=" + current.hash);
+              }
+            }}
+          />
         ) : null}
 
         <SelectAsync

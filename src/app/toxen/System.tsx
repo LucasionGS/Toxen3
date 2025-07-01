@@ -118,26 +118,33 @@ export default class System {
 
           let song = Song.getCurrent();
           if (!song) break;
-          let imageName = song.paths.background || file.name; // name with extension
-          // let ext = toxenapi.getFileExtension(imageName); // getting extension
-          // imageName = toxenapi.getBasename(imageName, ext); // Removing extension for path testing
-          // imageName = imageName.replace(/^(.*?)(?:_\$tx(\d+))?$/, (_, $1: string, $2: string) => {
-          //   return `${$1}_$tx${(+$2 || 0) + 1}`;
-          // });
-          // imageName += ext; // Reading the extension
-
+          
+          // Always use the new file name to avoid overwriting existing backgrounds
+          // since users can now delete backgrounds if they want to remove them
+          let imageName = file.name; // name with extension
+          
           if (toxenapi.isLocal(Settings)) {
             let dest = song.dirname(imageName);
+            
+            // Check if file already exists and generate unique name if needed
+            if (await toxenapi.fs.promises.stat(dest).then(() => true).catch(() => false)) {
+              const ext = toxenapi.path.extname(imageName);
+              const baseName = toxenapi.path.basename(imageName, ext);
+              let counter = 1;
+              
+              do {
+                imageName = `${baseName}_${counter}${ext}`;
+                dest = song.dirname(imageName);
+                counter++;
+              } while (await toxenapi.fs.promises.stat(dest).then(() => true).catch(() => false));
+            }
+            
             let prePic = song.backgroundFile() || null;
             const postProcess = async () => {
-              // if (prePic !== dest && await toxenapi.fs.promises.stat(prePic).then(() => true).catch(() => false))
-              // {
-              //   await toxenapi.fs.promises.rm(prePic);
-              //   const local = toxenapi.path.relative(song.dirname(), prePic);
-              //   song.setFile(local, "d");
-              // }
+              // Set the new background file without deleting the old one
+              // since users can now manually delete backgrounds if they want to
               song.paths.background = toxenapi.getBasename(dest);
-              song.setFile(song.paths.background = toxenapi.getBasename(dest), "u");
+              song.setFile(song.paths.background, "u");
               await song.saveInfo();
               Toxen.background.setBackground(dest + "?h=" + song.hash);
             };
@@ -155,8 +162,17 @@ export default class System {
 
           }
           else if (file instanceof File) {
-            // let reader = new FileReader();
-            // let base64 = reader.result as string;
+            // For remote/web version, also ensure we don't overwrite existing backgrounds
+            // Check if current song already has this background name and generate unique name if needed
+            if (song.paths.background === imageName) {
+              const ext = imageName.substring(imageName.lastIndexOf('.'));
+              const baseName = imageName.substring(0, imageName.lastIndexOf('.'));
+              let counter = 1;
+              
+              // Generate unique name - we can't easily check server files, so just increment
+              imageName = `${baseName}_${counter}${ext}`;
+            }
+            
             song.paths.background = imageName;
 
             // Upload to server

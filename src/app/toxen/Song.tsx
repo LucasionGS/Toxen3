@@ -22,6 +22,7 @@ import Playlist from "./Playlist";
 import StoryboardParser from "./StoryboardParser";
 import User from "./User";
 import { hideNotification, updateNotification } from "@mantine/notifications";
+import PlaylistManager from "../components/PlaylistManager/PlaylistManager";
 // import HueManager from "./philipshue/HueManager";
 
 export default class Song implements ISong {
@@ -1019,19 +1020,11 @@ export default class Song implements ISong {
   public createManagePlaylists(): ModalSettings {
     return {
       title: "Manage playlists",
+      size: "lg",
       children: (
-        <>
-          {
-            Toxen.playlists.map(p => (
-              <span>
-                <Checkbox style={{ marginTop: 8 }} size={"lg"} label={p.name} defaultChecked={p.songList.includes(this)} onChange={async (e) => {
-                  e.target.checked ? p.addSong(this) : p.removeSong(this);
-                  await Playlist.save();
-                }} />
-              </span>
-            ))
-          }
-        </>
+        <PlaylistManager 
+          songs={[this]}
+        />
       )
     }
   }
@@ -1039,28 +1032,11 @@ export default class Song implements ISong {
   public static createManageMultiSongsPlaylists(songs: Song[]): ModalSettings {
     return {
       title: "Manage playlists",
+      size: "lg",
       children: (
-        <>
-          {
-            Toxen.playlists.map(p => {
-              const result = songs.reduce<boolean>((prev, cur) => {
-                if (prev === null) return null;
-                const next = p.songList.includes(cur);
-
-                return prev || next;
-              }, false);
-
-              return (
-                <span>
-                  <Checkbox style={{ marginTop: 8 }} size={"lg"} label={p.name} defaultChecked={result} onChange={async (e) => {
-                    e.target.checked ? songs.forEach(s => p.addSong(s)) : songs.forEach(s => p.removeSong(s));
-                    await Playlist.save();
-                  }} />
-                </span>
-              );
-            })
-          }
-        </>
+        <PlaylistManager 
+          songs={songs}
+        />
       )
     }
   }

@@ -1,0 +1,166 @@
+.background-file-option {
+  padding: 8px;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  position: relative;
+  
+  &:hover {
+    background-color: var(--surface-bg-hover);
+    
+    .background-file-options {
+      opacity: 1;
+    }
+  }
+  
+  &.browse-option {
+    border-top: 1px solid var(--border-secondary);
+    margin-top: 4px;
+    background-color: var(--surface-bg);
+    
+    &:hover {
+      background-color: var(--accent-color-dim);
+    }
+    
+    .background-file-preview {
+      background-color: var(--accent-color-dim);
+      border-color: var(--accent-color);
+    }
+    
+    .background-file-icon.browse {
+      color: var(--accent-color);
+    }
+  }
+}
+
+.background-file-options {
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  
+  &:hover {
+    background-color: var(--surface-bg-hover) !important;
+  }
+}
+
+.background-file-selected {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.background-file-preview {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--surface-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-secondary);
+  
+  &.small {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .background-file-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  
+  .background-file-icon {
+    color: var(--text-muted);
+    
+    &.empty {
+      color: var(--text-muted);
+    }
+    
+    &.hidden {
+      display: none;
+    }
+  }
+}
+
+.background-file-info {
+  flex: 1;
+  min-width: 0; // Allows text to truncate
+  
+  .mantine-Text-root {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+// Hover effects for better UX
+.background-file-option:hover .background-file-preview {
+  border-color: var(--accent-color-hover);
+  transform: scale(1.05);
+  transition: all var(--transition-fast);
+}
+
+// Focus styles for accessibility
+.mantine-Select-option[data-selected="true"] .background-file-preview {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 1px var(--accent-color-dim);
+}
+
+// Current background preview (shown to the left of the selector)
+.background-selector-preview {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--border-secondary);
+  flex-shrink: 0;
+  
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  
+  .background-file-preview-fallback {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-bg);
+  }
+  
+  &.no-background {
+    background: var(--surface-bg-hover);
+    border-style: dashed;
+    border-color: var(--border-secondary);
+    
+    .background-file-icon.empty {
+      color: var(--text-muted);
+      opacity: 0.6;
+    }
+  }
+  
+  &.no-image {
+    border-color: var(--border-secondary);
+    
+    .background-file-icon {
+      color: var(--text-muted);
+    }
+  }
+  
+  &.loading {
+    border-color: var(--accent-color-dim);
+  }
+}

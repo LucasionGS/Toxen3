@@ -9,7 +9,7 @@
   color: white;
   
   .tooltip-text {
-    background-color: $bgColor;
+    background-color: var(--primary-bg);
     display: block;
     padding: 4px;
     border-top-left-radius: 10px;
@@ -23,6 +23,6 @@
     border-left: 20px solid transparent;
     border-right: 20px solid transparent;
     
-    border-top: 20px solid $bgColor;
+    border-top: 20px solid var(--primary-bg);
   }
 }

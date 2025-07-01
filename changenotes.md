@@ -1,3 +1,35 @@
+## 2.3.0 - 01-07-2025
+### New Features
+- **Enhanced Background Management** - Completely redesigned background selection across the entire application
+  - **Visual Preview System**: All background selectors now show live previews of images before selection
+  - **Unified Interface**: Consistent design and functionality for song backgrounds, playlist backgrounds, and storyboard images
+  - **Browse Integration**: Built-in file browser for selecting new backgrounds with instant preview
+  - **Improved Playlist Backgrounds**: Better management of playlist-specific backgrounds with visual indicators
+  - **Delete Confirmation**: Safe deletion of background images with confirmation dialogs to prevent accidents
+
+- **Modernized Playlist Management** - Complete overhaul of playlist creation and management
+  - **Visual Playlist Cards**: Playlists now display as cards with background previews
+  - **Enhanced Playlist Panel**: New layout with badges, song counts, and active playlist indicators
+  - **Improved Selection Interface**: Better playlist selection when adding songs with search and visual feedback
+  - **Streamlined Creation**: Simplified playlist creation workflow with inline forms and validation
+  - **Background Indicators**: Visual cues showing which playlists have custom backgrounds
+  - **Better Organization**: Improved layout and spacing for easier navigation
+
+- **Enhanced Song Editor Integration** - Better background management within song editing
+  - **Unified Background Selector**: Same interface for both song and playlist-specific backgrounds
+  - **Visual Feedback**: Live preview of selected backgrounds with proper fallbacks
+
+- **Storyboard Editor Improvements** - Enhanced image selection for storyboard events
+  - **Consistent Interface**: All image selection fields now use the new visual selector
+  - **Better File Management**: Improved handling of storyboard image assets
+  - **Visual Integration**: Preview system integrated into storyboard workflow
+
+### UI/UX Improvements
+- **Theme Consistency**: All new components fully integrated with the existing theme system
+- **Smooth Animations**: Enhanced transitions and hover effects throughout playlist and background management
+- **Better Visual Hierarchy**: Improved spacing, typography, and layout for better readability
+- **Responsive Design**: Better handling of different screen sizes and resolutions
+
 ## 2.2.0 - 30-06-2025
 ### New Features
 - **Audio Effects Panel** - Real-time audio effects!
