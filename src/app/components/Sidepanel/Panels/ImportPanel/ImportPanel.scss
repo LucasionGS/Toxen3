@@ -1,0 +1,392 @@
+.import-panel {
+  .media-downloader-modal {
+    .video-results {
+      max-height: 500px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      
+      &::-webkit-scrollbar {
+        width: 8px;
+      }
+      
+      &::-webkit-scrollbar-track {
+        background: var(--surface-bg);
+        border-radius: 4px;
+      }
+      
+      &::-webkit-scrollbar-thumb {
+        background: var(--border-secondary);
+        border-radius: 4px;
+        transition: background var(--transition-fast);
+        
+        &:hover {
+          background: var(--border-primary);
+        }
+      }
+    }
+  }
+}
+
+.video-card {
+  position: relative;
+  overflow: hidden;
+  transition: all var(--transition-normal);
+  border: 1px solid var(--border-secondary);
+  background: var(--surface-bg);
+  
+  &:hover {
+    border-color: var(--accent-color-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--shadow-medium);
+  }
+  
+  .video-thumbnail-container {
+    position: relative;
+    height: 120px;
+    overflow: hidden;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    
+    .video-thumbnail {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform var(--transition-normal);
+    }
+    
+    .video-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(
+        to top,
+        rgba(0, 0, 0, 0.8) 0%,
+        rgba(0, 0, 0, 0.4) 50%,
+        transparent 100%
+      );
+      padding: 12px;
+      
+      .video-info {
+        width: 100%;
+        
+        .video-details {
+          flex: 1;
+          min-width: 0;
+          
+          .video-title {
+            color: white;
+            text-shadow: 0 1px 2px var(--shadow-heavy);
+            font-weight: 500;
+          }
+        }
+        
+        .video-badge {
+          flex-shrink: 0;
+          background: var(--accent-color-dim);
+          color: var(--accent-color);
+          border: 1px solid var(--accent-color-hover);
+          
+          &[data-color="green"] {
+            background: var(--success-bg);
+            color: var(--success-color);
+            border-color: var(--success-color);
+          }
+          
+          &[data-color="red"] {
+            background: var(--error-bg);
+            color: var(--error-color);
+            border-color: var(--error-color);
+          }
+          
+          &[data-color="blue"] {
+            background: var(--info-bg);
+            color: var(--info-color);
+            border-color: var(--info-color);
+          }
+        }
+      }
+    }
+    
+    &:hover .video-thumbnail {
+      transform: scale(1.05);
+    }
+  }
+  
+  .import-progress {
+    .mantine-Progress-bar {
+      background: linear-gradient(
+        90deg,
+        var(--accent-color) 0%,
+        var(--accent-color-hover) 100%
+      );
+    }
+    
+    &.mantine-Progress-striped .mantine-Progress-bar {
+      background-image: linear-gradient(
+        45deg,
+        rgba(255, 255, 255, 0.15) 25%,
+        transparent 25%,
+        transparent 50%,
+        rgba(255, 255, 255, 0.15) 50%,
+        rgba(255, 255, 255, 0.15) 75%,
+        transparent 75%,
+        transparent
+      );
+      background-size: 1rem 1rem;
+    }
+  }
+  
+  // Subtitle selection styling
+  .subtitle-section {
+    margin-bottom: 8px;
+    padding: 8px;
+    background: var(--surface-bg-hover);
+    border-radius: 6px;
+    border: 1px solid var(--border-secondary);
+    
+    .subtitle-header {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 6px;
+      
+      svg {
+        color: var(--info-color);
+      }
+      
+      .mantine-Text-root {
+        color: var(--text-primary);
+        font-weight: 500;
+      }
+      
+      .mantine-Badge-root {
+        background: var(--info-bg);
+        color: var(--info-color);
+        border: 1px solid var(--info-color);
+        font-size: 10px;
+      }
+    }
+    
+    .mantine-Select-root {
+      .mantine-Select-input {
+        font-size: 12px;
+        background: var(--surface-bg);
+        border-color: var(--border-secondary);
+        color: var(--text-primary);
+        
+        &:focus {
+          border-color: var(--info-color);
+          box-shadow: 0 0 0 1px var(--info-color-dim);
+        }
+        
+        &::placeholder {
+          color: var(--text-muted);
+        }
+      }
+      
+      .mantine-Select-dropdown {
+        background: var(--surface-bg);
+        border: 1px solid var(--border-secondary);
+        box-shadow: 0 4px 12px var(--shadow-medium);
+        
+        .mantine-Select-item {
+          font-size: 12px;
+          color: var(--text-primary);
+          
+          &[data-selected="true"] {
+            background: var(--info-bg);
+            color: var(--info-color);
+          }
+          
+          &:hover {
+            background: var(--surface-bg-hover);
+          }
+        }
+      }
+    }
+  }
+  
+  // Error alert styling
+  .mantine-Alert-root[data-color="red"] {
+    background: var(--error-bg);
+    border: 1px solid var(--error-color);
+    
+    .mantine-Alert-message {
+      color: var(--error-color);
+    }
+  }
+}
+
+// Loading state improvements
+.video-results {
+  .mantine-Loader-root {
+    margin: 2rem auto;
+    color: var(--accent-color);
+  }
+  
+  // Empty state
+  &:empty::after {
+    content: "Enter a URL above to load videos for import";
+    display: block;
+    text-align: center;
+    color: var(--text-muted);
+    font-style: italic;
+    padding: 2rem;
+    border: 2px dashed var(--border-secondary);
+    border-radius: 8px;
+    margin: 1rem 0;
+  }
+  
+  // Loading state overlay
+  &.loading {
+    position: relative;
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+    &::before {
+      content: "Loading video information...";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: var(--text-muted);
+      margin-top: 2rem;
+    }
+  }
+}
+
+// Alert styling improvements
+.mantine-Alert-root {
+  background: var(--surface-bg);
+  border: 1px solid var(--border-secondary);
+  
+  &[data-color="orange"] {
+    background: var(--warning-bg);
+    border-color: var(--warning-color);
+    
+    .mantine-Alert-icon {
+      color: var(--warning-color);
+    }
+  }
+  
+  &[data-color="red"] {
+    background: var(--error-bg);
+    border-color: var(--error-color);
+    
+    .mantine-Alert-icon {
+      color: var(--error-color);
+    }
+  }
+}
+
+// Button improvements
+.mantine-Button-root {
+  transition: all var(--transition-normal);
+  
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px var(--shadow-light);
+  }
+}
+
+// ActionIcon improvements
+.mantine-ActionIcon-root {
+  transition: all var(--transition-fast);
+  background: var(--surface-bg-hover);
+  border: 1px solid var(--border-secondary);
+  color: var(--text-secondary);
+  
+  &:hover:not(:disabled) {
+    background: var(--accent-color-dim);
+    border-color: var(--accent-color-hover);
+    color: var(--accent-color);
+    transform: scale(1.1);
+  }
+  
+  &[data-color="red"] {
+    color: var(--error-color);
+    
+    &:hover {
+      background: var(--error-bg);
+      border-color: var(--error-color);
+    }
+  }
+}
+
+// TextInput improvements
+.mantine-TextInput-root {
+  .mantine-TextInput-input {
+    background: var(--surface-bg);
+    border-color: var(--border-secondary);
+    color: var(--text-primary);
+    
+    &:focus {
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 1px var(--accent-color-dim);
+    }
+    
+    &::placeholder {
+      color: var(--text-muted);
+    }
+  }
+}
+
+// Modal styling
+.mantine-Modal-content {
+  background: var(--primary-bg);
+  border: 1px solid var(--border-secondary);
+  box-shadow: 0 8px 32px var(--shadow-heavy);
+}
+
+.mantine-Modal-header {
+  background: var(--surface-bg);
+  border-bottom: 1px solid var(--border-secondary);
+  
+  .mantine-Modal-title {
+    color: var(--text-primary);
+    font-weight: 600;
+  }
+}
+
+// Badge improvements in external links
+.mantine-Badge-root {
+  &[data-variant="light"] {
+    background: var(--surface-bg-hover);
+    color: var(--text-secondary);
+    border: 1px solid var(--border-secondary);
+    
+    &:hover {
+      background: var(--accent-color-dim);
+      color: var(--accent-color);
+      border-color: var(--accent-color-hover);
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .video-card {
+    .video-thumbnail-container {
+      height: 100px;
+      
+      .video-overlay {
+        padding: 8px;
+      }
+    }
+    
+    &:hover {
+      transform: none;
+    }
+  }
+  
+  .import-panel {
+    .media-downloader-modal .video-results {
+      max-height: 400px;
+    }
+  }
+}

@@ -71,6 +71,9 @@ namespace SubtitleParser {
       case ".tst":
         content = exportTst(data);
         break;
+      case ".vtt":
+        content = exportVtt(data);
+        break;
       case ".lrc":
         // content = exportLrc(data);
         break;
@@ -85,6 +88,7 @@ namespace SubtitleParser {
       case ".srt": return parseSrt(data);
       case ".tst": return parseTst(data);
       case ".lrc": return parseLrc(data);
+      case ".vtt": return parseVtt(data);
       default: throw new Error("Unsupported extension: " + extension);
     }
   }
@@ -233,6 +237,31 @@ namespace SubtitleParser {
     return text;
   }
 
+  function exportVttTime(time: Time): string {
+    let hours = time.getHours().toString().padStart(2, "0");
+    let minutes = time.getMinutes().toString().padStart(2, "0");
+    let seconds = time.getSeconds().toString().padStart(2, "0");
+    let milliseconds = time.getMilliseconds().toString().padStart(3, "0");
+    return `${hours}:${minutes}:${seconds}.${milliseconds}`;
+  }
+
+  export function exportVtt(items: SubtitleArray): string {
+    let text = "WEBVTT\n\n";
+    
+    for (let item of items) {
+      // Add cue identifier (optional but recommended)
+      text += `${item.id}\n`;
+      
+      // Add timestamp line
+      text += `${exportVttTime(item.start)} --> ${exportVttTime(item.end)}\n`;
+      
+      // Add subtitle text (convert <br> tags to line breaks)
+      text += `${item.text.replace(/<br\s*\/?>/g, "\n")}\n\n`;
+    }
+    
+    return text;
+  }
+
   function parseLrcTime(time: string): Time {
     let parts = time.split(/[.:]/g);
     let hours = parseInt(parts[0]);
@@ -287,6 +316,169 @@ namespace SubtitleParser {
       }
       else {
         item.end = new Time(item.start.valueOf() + 1500);
+      }
+    }
+    
+    return items;
+  }
+
+  function parseVttTime(time: string): Time {
+    // VTT time format: HH:MM:SS.mmm
+    // Split on colons first to get HH:MM:SS.mmm parts
+    let timeParts = time.split(':');
+    let hours = 0;
+    let minutes = 0; 
+    let seconds = 0;
+    let milliseconds = 0;
+
+    if (timeParts.length === 3) {
+      // HH:MM:SS.mmm format
+      hours = parseInt(timeParts[0]);
+      minutes = parseInt(timeParts[1]);
+      
+      // Split seconds and milliseconds on the dot
+      let secondsParts = timeParts[2].split('.');
+      seconds = parseInt(secondsParts[0]);
+      milliseconds = parseInt(secondsParts[1] || '0');
+      
+    } else if (timeParts.length === 2) {
+      // MM:SS.mmm format (no hours)
+      minutes = parseInt(timeParts[0]);
+      
+      // Split seconds and milliseconds on the dot
+      let secondsParts = timeParts[1].split('.');
+      seconds = parseInt(secondsParts[0]);
+      milliseconds = parseInt(secondsParts[1] || '0');
+    }
+
+    return new Time(hours * 3600000 + minutes * 60000 + seconds * 1000 + milliseconds);
+  }
+
+  export function parseVtt(text: string): SubtitleArray {
+    let lines = text.split(/\r?\n/);
+    let index = 0;
+    const items: SubtitleArray = new SubtitleArray();
+    items.type = "vtt";
+    
+    const getLine = () => lines[index];
+    const getNextLine = () => lines[++index];
+
+    // Skip WEBVTT header and any metadata
+    while (index < lines.length) {
+      let line = getLine();
+      
+      // Skip WEBVTT header
+      if (line && line.startsWith('WEBVTT')) {
+        getNextLine();
+        continue;
+      }
+      
+      // Skip metadata lines (Kind:, Language:, etc.)
+      if (line && line.includes(':') && !line.includes('-->')) {
+        getNextLine();
+        continue;
+      }
+      
+      // Skip NOTE blocks
+      if (line && line.startsWith('NOTE')) {
+        while (index < lines.length && getLine() && getLine().trim() !== '') {
+          getNextLine();
+        }
+        continue;
+      }
+      
+      // Skip STYLE blocks
+      if (line && line.startsWith('STYLE')) {
+        while (index < lines.length && getLine() && getLine().trim() !== '') {
+          getNextLine();
+        }
+        continue;
+      }
+      
+      // Skip empty lines
+      if (!line || line.trim() === '') {
+        getNextLine();
+        continue;
+      }
+      
+      break;
+    }
+
+    while (index < lines.length) {
+      let line = getLine();
+      
+      // Skip empty lines
+      while ((!line || line.trim() === '') && index < lines.length) { 
+        line = getNextLine(); 
+      }
+      if (index >= lines.length) { 
+        break; 
+      }
+
+      const item: SubtitleItem = {
+        id: null,
+        start: null,
+        end: null,
+        text: null,
+        options: {},
+      };
+
+      // Enhanced timestamp regex to handle positioning/styling attributes
+      const timestampRegex = /(\d{1,2}:\d{2}:\d{2}\.\d{3})\s+-->\s+(\d{1,2}:\d{2}:\d{2}\.\d{3})(?:\s+.*)?/;
+      
+      // Check if current line is a cue identifier (optional)
+      let cueId = null;
+      if (!timestampRegex.test(line)) {
+        // This might be a cue identifier
+        cueId = line.trim();
+        getNextLine();
+        if (index >= lines.length) break;
+        line = getLine();
+      }
+      
+      // Now check for timestamp line
+      if (timestampRegex.test(line)) {
+        const matches = line.match(timestampRegex);
+        item.start = parseVttTime(matches[1]);
+        item.end = parseVttTime(matches[2]);
+        item.id = items.length + 1;
+        
+        // Read subtitle text (may span multiple lines until next empty line or timestamp)
+        const textLines: string[] = [];
+        getNextLine();
+        
+        while (index < lines.length) {
+          let textLine = getLine();
+          
+          // Stop if we hit an empty line
+          if (!textLine || textLine.trim() === '') {
+            break;
+          }
+          
+          // Stop if we hit another timestamp line
+          if (timestampRegex.test(textLine)) {
+            break;
+          }
+          
+          // Clean up the text line
+          textLine = textLine
+            .replace(/<[^>]*>/g, '') // Remove HTML/VTT tags
+            .trim();
+          
+          if (textLine) {
+            textLines.push(textLine);
+          }
+          
+          getNextLine();
+        }
+        
+        item.text = textLines.join('\n');
+        if (item.text && item.text.trim()) {
+          items.push(item);
+        }
+      } else {
+        // Skip this line if it doesn't contain a valid timestamp
+        getNextLine();
       }
     }
     

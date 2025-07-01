@@ -512,8 +512,9 @@ export default class DesktopController extends ToxenController {
               if (ent.name.indexOf(" - ") > -1) {
                 let [artist, title] = name.split(" - ");
 
-                info.artist = artist;
-                info.title = title;
+                const prettify = (str: string) => str.replace(/[_ ]+/g, " ").trim();
+                info.artist = prettify(artist);
+                info.title = prettify(title);
               }
               else {
                 info.title = name;

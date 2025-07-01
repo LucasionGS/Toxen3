@@ -341,7 +341,8 @@ export class Toxen {
     return [
       ".srt",
       ".tst",
-      ".lrc"
+      ".lrc",
+      ".vtt"
     ];
   }
 

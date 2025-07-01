@@ -24,11 +24,19 @@
   - **Better File Management**: Improved handling of storyboard image assets
   - **Visual Integration**: Preview system integrated into storyboard workflow
 
+- **Media Importer Makeover** - Redesigned for easier usability
+  - **Download Subtitles**: Added the ability to import subtitles in your language of choice, if available.
+  - **No more thumbnail imports**: Disabled the automatic import of the thumbnail image when importing media. Pick your own backgrounds instead of the low-res thumbnail images.
+
 ### UI/UX Improvements
 - **Theme Consistency**: All new components fully integrated with the existing theme system
 - **Smooth Animations**: Enhanced transitions and hover effects throughout playlist and background management
 - **Better Visual Hierarchy**: Improved spacing, typography, and layout for better readability
 - **Responsive Design**: Better handling of different screen sizes and resolutions
+
+### More Support
+- VTT are now a supported subtitle format, allowing you to import and export subtitles in VTT format.
+
 
 ## 2.2.0 - 30-06-2025
 ### New Features

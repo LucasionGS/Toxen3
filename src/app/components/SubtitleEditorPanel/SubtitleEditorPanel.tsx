@@ -87,7 +87,7 @@ const SubtitleEditorPanel: React.FC = () => {
           </Stack>
 
           <Text size="xs" c="dimmed" style={{ marginTop: '1rem' }}>
-            The subtitle editor supports SRT, TST (Toxen Subtitle), and LRC formats.
+            The subtitle editor supports SRT, VTT, TST (Toxen Subtitle), and LRC formats.
             TST format supports advanced features like custom colors and fonts.
           </Text>
         </Stack>
