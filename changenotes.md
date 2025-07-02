@@ -1,4 +1,4 @@
-## 2.3.0 - 01-07-2025
+## 2.3.0 - 02-07-2025
 ### New Features
 - **Enhanced Background Management** - Completely redesigned background selection across the entire application
   - **Visual Preview System**: All background selectors now show live previews of images before selection
@@ -27,6 +27,10 @@
 - **Media Importer Makeover** - Redesigned for easier usability
   - **Download Subtitles**: Added the ability to import subtitles in your language of choice, if available.
   - **No more thumbnail imports**: Disabled the automatic import of the thumbnail image when importing media. Pick your own backgrounds instead of the low-res thumbnail images.
+
+- **Thumbnail Optimization** - Thumbnail caching for the song list
+  - **Thumbnail Caching**: Thumbnails are now cached for faster loading, more performant scrolling through the song list, and reduced memory usage
+  - **Optional**: It's entirely optional and can be enabled in the settings if you prefer to use it, and don't want the extremely large image displayed on each song element as is the usual behavior. Find it under `Settings > Performance > Enable Background Thumbnail Cache`. This is disabled by default.
 
 ### UI/UX Improvements
 - **Theme Consistency**: All new components fully integrated with the existing theme system

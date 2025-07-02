@@ -154,6 +154,9 @@ export default function EditSong(props: EditSongProps) {
           defaultValue={Toxen.editingSong.paths.background}
           sourceDir={Toxen.editingSong.dirname()}
           onChange={(v) => {
+            // Invalidate cache for old background before changing
+            Toxen.invalidateSongBackgroundCache(Toxen.editingSong);
+            
             Toxen.editingSong.paths.background = v;
             Toxen.editingSong.saveInfo();
             let current = Song.getCurrent();

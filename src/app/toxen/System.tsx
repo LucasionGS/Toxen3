@@ -141,6 +141,9 @@ export default class System {
             
             let prePic = song.backgroundFile() || null;
             const postProcess = async () => {
+              // Invalidate cache for old background before changing
+              Toxen.invalidateSongBackgroundCache(song);
+              
               // Set the new background file without deleting the old one
               // since users can now manually delete backgrounds if they want to
               song.paths.background = toxenapi.getBasename(dest);
@@ -172,6 +175,9 @@ export default class System {
               // Generate unique name - we can't easily check server files, so just increment
               imageName = `${baseName}_${counter}${ext}`;
             }
+            
+            // Invalidate cache for old background before changing
+            Toxen.invalidateSongBackgroundCache(song);
             
             song.paths.background = imageName;
 

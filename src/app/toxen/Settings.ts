@@ -78,6 +78,9 @@ export default class Settings {
       audioEchoLevel: 0,
       audioBassBoostLevel: 0,
       audio3DLevel: 0,
+      
+      // Performance
+      enableThumbnailCache: false,
     };
 
     let toUse: Partial<ISettings> = {};
@@ -342,6 +345,7 @@ export interface ISettings {
 
   // Performance
   hideOffScreenSongElements: boolean;
+  enableThumbnailCache: boolean;
 
   // Background Effects
   starRushEffect: boolean;

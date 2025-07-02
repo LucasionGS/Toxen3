@@ -54,6 +54,16 @@
       transform: translateX(0);
     }
   }
+
+  // Loading animation for thumbnails
+  @keyframes shimmer {
+    0% {
+      background-position: -200px 0;
+    }
+    100% {
+      background-position: calc(200px + 100%) 0;
+    }
+  }
 }
 
 .song-element {
@@ -78,6 +88,12 @@
   box-shadow: 
     0 2px 8px var(--song-element-shadow),
     inset 0 1px 0 rgba(255, 255, 255, 0.1);
+
+  // Loading state for thumbnail generation
+  &.loading-thumbnail {
+    background-size: 200px 100%, cover !important;
+    animation: shimmer 1.5s ease-in-out infinite;
+  }
 
   .song-title {
     color: var(--song-element-text);

@@ -5,6 +5,7 @@ import RenderIfVisible from "react-render-if-visible";
 import { useModals } from '@mantine/modals';
 import Settings from '../../toxen/Settings';
 import { Toxen } from '../../ToxenApp';
+import ImageCache from '../../toxen/ImageCache';
 
 function SongElementDiv(props: { songElement: SongElement }) {
   /// Observer object is cool and all but holy shit it makes this laggy
@@ -16,8 +17,66 @@ function SongElementDiv(props: { songElement: SongElement }) {
 
   const { songElement } = props;
   let song = songElement.props.song;
+  
+  // Use cached thumbnail instead of full background image
+  const [thumbnailUrl, setThumbnailUrl] = React.useState<string | null>(null);
+  const [isLoadingThumbnail, setIsLoadingThumbnail] = React.useState(false);
+  
+  React.useEffect(() => {
+    let isMounted = true;
+    
+    const loadThumbnail = async () => {
+      if (!song.backgroundFile()) {
+        setThumbnailUrl(null);
+        setIsLoadingThumbnail(false);
+        return;
+      }
+      
+      // Check if thumbnail caching is enabled
+      if (!Settings.get("enableThumbnailCache", true)) {
+        setThumbnailUrl(null);
+        setIsLoadingThumbnail(false);
+        return;
+      }
+      
+      setIsLoadingThumbnail(true);
+      
+      try {
+        const bgFile = `${song.backgroundFile()}?h=${song.hash}`;
+        const imageCache = ImageCache.getInstance();
+        
+        // Get thumbnail with appropriate size for song list items
+        const thumbnail = await imageCache.getThumbnail(
+          bgFile, 
+          song.hash, 
+          { width: 160, height: 90 } // Optimized size for song list
+        );
+        
+        if (isMounted) {
+          setThumbnailUrl(thumbnail);
+          setIsLoadingThumbnail(false);
+        }
+      } catch (error) {
+        console.warn('Failed to load thumbnail for song:', song.getDisplayName(), error);
+        if (isMounted) {
+          setThumbnailUrl(null);
+          setIsLoadingThumbnail(false);
+        }
+      }
+    };
+    
+    loadThumbnail();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [song.backgroundFile(), song.hash]);
+  
   let classes = ["song-element", songElement.state.selected ? "selected" : null].filter(a => a);
-  const bgFile = `${song.backgroundFile()}?h=${song.hash}`;
+  
+  // Add loading class if thumbnail is being loaded
+  if (isLoadingThumbnail) classes.push("loading-thumbnail");
+  
   if (songElement.state.playing) classes.push("playing");
 
   // const ContextMenu: typeof songElement.ContextMenu = songElement.ContextMenu.bind(songElement);
@@ -25,12 +84,23 @@ function SongElementDiv(props: { songElement: SongElement }) {
   // let setOpened: (opened: boolean) => void;
   const modals = useModals();
 
+  // Build background style with fallback
+  const backgroundStyle = Settings.get("enableThumbnailCache", true) 
+    ? (thumbnailUrl 
+        ? `linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0)) 0% 0% / cover, url("${thumbnailUrl}")`
+        : isLoadingThumbnail 
+        ? 'linear-gradient(90deg, rgba(255,255,255,0.1) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%), linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0.6))'
+        : undefined)
+    : (song.backgroundFile() 
+        ? `linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0)) 0% 0% / cover, url("${song.backgroundFile().replace(/\\/g, "/")}?h=${song.hash}")`
+        : undefined);
+
   return (
       <div style={{
         position: "relative",
       }} className="song-element-container">
         <div ref={ref => songElement.divElement = ref} className={classes.join(" ")} style={{
-          background: `linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0)) 0% 0% / cover, url("${bgFile.replace(/\\/g, "/")}")`,
+          background: backgroundStyle,
 
           /// Style if using Observer object
           // background: observer?.isIntersecting ? `linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0)) 0% 0% / cover, url("${bgFile.replace(/\\/g, "/")}")`: null,
@@ -123,6 +193,17 @@ export default class SongElement extends Component<SongElementProps, SongElement
 
   public setProgressBar(progress: number) {
     this.setState({ progressBar: progress });
+  }
+
+  /**
+   * Invalidate cached thumbnails for this song's background
+   * Call this when the background image changes
+   */
+  public invalidateBackgroundCache() {
+    if (this.props.song.backgroundFile()) {
+      const bgFile = `${this.props.song.backgroundFile()}?h=${this.props.song.hash}`;
+      ImageCache.getInstance().invalidate(bgFile);
+    }
   }
 
   render() {

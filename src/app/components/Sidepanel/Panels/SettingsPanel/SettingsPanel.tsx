@@ -491,6 +491,17 @@ export default function SettingsPanel(props: SettingsPanelProps) {
             Hides song elements that are off-screen. This can improve performance by not loading images that aren't visible.
             This only overrides local, remote will always use this option.
           </sup>
+          
+          <Checkbox
+            onClick={(e) => Settings.apply({ enableThumbnailCache: e.currentTarget.checked }, true)}
+            defaultChecked={Settings.get("enableThumbnailCache")}
+            name="enableThumbnailCache"
+            label="Enable Background Thumbnail Cache"
+          />
+          <sup>
+            Caches resized thumbnails of song backgrounds to improve performance when browsing large song lists.
+            Thumbnails are automatically updated when backgrounds change.
+          </sup>
         </Tabs.Panel>
 
         <Tabs.Panel value="Account">

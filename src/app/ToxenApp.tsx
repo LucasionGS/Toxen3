@@ -53,6 +53,7 @@ import SubtitleEditor from "./components/SubtitleEditor/SubtitleEditor";
 import { modals } from "@mantine/modals";
 import LoginForm from "./components/LoginForm/LoginForm";
 import AudioEffects from "./toxen/AudioEffects";
+import ImageCache from "./toxen/ImageCache";
 
 declare const SUBTITLE_CREATOR_WEBPACK_ENTRY: any;
 // const browser = remote.getCurrentWindow();
@@ -733,6 +734,26 @@ export class Toxen {
       syncSong(startingQueue[i]);
     }
   }
+
+  /**
+   * Initialize image cache and set up periodic cleanup
+   */
+  public static initializeImageCache() {
+    // Set up cache cleanup every 5 minutes
+    setInterval(() => {
+      ImageCache.getInstance().cleanup();
+    }, 5 * 60 * 1000);
+  }
+
+  /**
+   * Invalidate cache when a song's background changes
+   */
+  public static invalidateSongBackgroundCache(song: Song) {
+    if (song.backgroundFile()) {
+      const bgFile = `${song.backgroundFile()}?h=${song.hash}`;
+      ImageCache.getInstance().invalidate(bgFile);
+    }
+  }
 }
 
 class ToxenEventEmitter extends EventEmitter {
@@ -825,6 +846,9 @@ export default class ToxenAppRenderer extends React.Component {
 
         await Toxen.loadThemes(); // Loads themes
         await Toxen.loadSongs(); // Loads songs
+
+        // Initialize image cache for optimized background thumbnails
+        Toxen.initializeImageCache();
 
         Toxen.songPanel.update();
         // Toxen.sidePanel.show(true);
