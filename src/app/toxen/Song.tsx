@@ -165,20 +165,28 @@ export default class Song implements ISong {
   /**
    * Return the full path of the background file.
    */
-  public backgroundFile() {
-    // Check for playlist-specific background first
+  public backgroundFile(fallbackToGlobal: boolean = true) {
     const currentPlaylist = Toxen.playlist;
+    
+    // Check for playlist-specific background from new system first
     if (currentPlaylist && this.hasPlaylistSettings(currentPlaylist.name)) {
       const playlistSettings = this.getPlaylistSettings(currentPlaylist.name);
       if (playlistSettings?.paths?.background) {
         // Use playlist-specific background path
         if (Settings.isRemote()) {
-          return playlistSettings.paths.background ? `${this.dirname()}/${playlistSettings.paths.background}` : "";
+          return playlistSettings.paths.background ? `${this.dirname(playlistSettings.paths.background)}` : "";
         } else if (toxenapi.isDesktop()) {
-          return toxenapi.path.resolve(this.dirname(), playlistSettings.paths.background || "");
+          return this.dirname(playlistSettings.paths.background || "");
         }
       }
     }
+    
+    // Check for old playlist background system
+    // let cpBg: string;
+    // if (fallbackToGlobal && currentPlaylist && (cpBg = currentPlaylist.getBackgroundPath())) {
+    //   console.log("Using playlist background:", cpBg);
+    //   return cpBg;
+    // }
     
     // Fall back to song's default background
     if (Settings.isRemote()) return this.paths.background ? `${this.dirname()}/${this.paths.background}` : "";

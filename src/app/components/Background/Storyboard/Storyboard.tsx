@@ -30,6 +30,17 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
     return this.state.song;
   };
 
+  /**
+   * Gets the effective settings for the current song, considering playlist-specific overrides
+   */
+  public getEffectiveSongSettings(): ISong {
+    if (!this.state.song) return {} as ISong;
+    
+    // Get the current playlist and use it to get effective settings
+    const currentPlaylist = Toxen.playlist;
+    return this.state.song.getEffectiveSettings(currentPlaylist?.name);
+  }
+
   render() {
     return (
       <div className="toxen-storyboard">
@@ -68,14 +79,14 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
   // VisualizerColor
   public getVisualizerColor() {
     return this.data.visualizerColor
-      || (this.state.song && this.state.song.visualizerColor)
+      || (this.state.song && this.getEffectiveSongSettings().visualizerColor)
       || Settings.get("visualizerColor")
       || Visualizer.DEFAULT_COLOR();
   }
   // Visualizer Rainbow Mode
   public getVisualizerRainbow() {
     return this.data.visualizerForceRainbowMode
-      || (this.state.song && this.state.song.visualizerForceRainbowMode)
+      || (this.state.song && this.getEffectiveSongSettings().visualizerForceRainbowMode)
       || Settings.get("visualizerRainbowMode")
       || false;
   }
@@ -84,7 +95,7 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
   public getVisualizerStyle() {
     return this.data.visualizerStyle
       ?? (
-        (this.state.song && this.state.song.visualizerStyle)
+        (this.state.song && this.getEffectiveSongSettings().visualizerStyle)
         || Settings.get("visualizerStyle")
         || VisualizerStyle.ProgressBar
       );
@@ -93,7 +104,7 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
   // Visualizer options
   public getVisualizerOption(vs: VisualizerStyle, key: string) {
     const global = Settings.get("visualizerStyleOptions", {})[vs];
-    const song = this.state.song?.visualizerStyleOptions?.[vs];
+    const song = this.getEffectiveSongSettings()?.visualizerStyleOptions?.[vs];
     const defaultValue = visualizerStyleOptionsMap?.[vs]?.[key]["defaultValue"];
 
     if (song && song[key] !== undefined && song[key] !== defaultValue) return song[key];
@@ -105,7 +116,7 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
   public getVisualizerIntensity() {
     return this.data.visualizerIntensity
       ?? (
-        (this.state.song && this.state.song.visualizerIntensity)
+        (this.state.song && this.getEffectiveSongSettings().visualizerIntensity)
         || Settings.get("visualizerIntensity")
         || 1
       );
@@ -115,7 +126,7 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
   public getVisualizerNormalize() {
     return this.data.visualizerNormalize
       ?? (
-        (this.state.song && this.state.song.visualizerNormalize)
+        (this.state.song && this.getEffectiveSongSettings().visualizerNormalize)
         || Settings.get("visualizerNormalize")
         || false
       );
@@ -126,7 +137,8 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
     
     let result: boolean = null;
     if (this.state.song) {
-      result = this.state.song.visualizerPulseBackground === "pulse" ? true : this.state.song.visualizerPulseBackground === "pulse-off" ? false : null;
+      const effectiveSettings = this.getEffectiveSongSettings();
+      result = effectiveSettings.visualizerPulseBackground === "pulse" ? true : effectiveSettings.visualizerPulseBackground === "pulse-off" ? false : null;
     }
 
     if (result === null) {
@@ -139,7 +151,7 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
   public getVisualizerGlow() {
     return this.data.visualizerGlow
       ?? (
-        (this.state.song && this.state.song.visualizerGlow)
+        (this.state.song && this.getEffectiveSongSettings().visualizerGlow)
         ?? (
           Settings.get("visualizerGlow")
           || false
@@ -153,8 +165,8 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
         (
           (
             this.state.song
-            && typeof this.state.song.backgroundDim === "number"
-              ? this.state.song.backgroundDim : null
+            && typeof this.getEffectiveSongSettings().backgroundDim === "number"
+              ? this.getEffectiveSongSettings().backgroundDim : null
           )
         ) ??
         (Settings.get("backgroundDim") || 0)
@@ -173,7 +185,7 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
   public getFloatingSubtitles() {
     return !!Toxen.subtitles.state.subtitles && (this.data.useFloatingTitleSubtitles
       ?? (
-        (this.state.song && this.state.song.useFloatingTitleSubtitles)
+        (this.state.song && this.getEffectiveSongSettings().useFloatingTitleSubtitles)
         ?? false
       ));
   }
@@ -186,7 +198,12 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
     const bg = this.data.background
       ?? (
         // (Toxen.playlist &&Toxen.playlist.applyBackground && Toxen.playlist.getBackgroundPath()) ||
-        (Toxen.playlist && Toxen.playlist.getBackgroundPath()) ||
+        ((
+          Toxen.playlist &&
+          (this.state.song.getPlaylistSettings(Toxen.playlist.name)?.paths?.background
+          || Toxen.playlist.getBackgroundPath())
+        )
+        ) ||
         (this.state.song && this.state.song.paths.background)
         || null
       );
@@ -198,35 +215,35 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
   }
 
   public getFloatingTitle() {
-    return this.data.floatingTitle ?? (this.state.song && this.state.song.floatingTitle || false);
+    return this.data.floatingTitle ?? (this.state.song && this.getEffectiveSongSettings().floatingTitle || false);
   }
   public getFloatingTitleText() {
     if (this.getFloatingSubtitles()) {
       return (
         Toxen.subtitles.state.currentText
           ? stripHtml(Toxen.subtitles.state.currentText)
-          : (this.data.floatingTitleText ?? (this.state.song && this.state.song.floatingTitleText || ""))
+          : (this.data.floatingTitleText ?? (this.state.song && this.getEffectiveSongSettings().floatingTitleText || ""))
       );
     }
-    return this.data.floatingTitleText ?? (this.state.song && this.state.song.floatingTitleText || this.state.song?.title);
+    return this.data.floatingTitleText ?? (this.state.song && this.getEffectiveSongSettings().floatingTitleText || this.state.song?.title);
   }
   public getFloatingTitleUnderline() {
-    return this.data.floatingTitleUnderline ?? (this.state.song && this.state.song.floatingTitleUnderline || false);
+    return this.data.floatingTitleUnderline ?? (this.state.song && this.getEffectiveSongSettings().floatingTitleUnderline || false);
   }
   public getFloatingTitleReactive() {
-    return this.data.floatingTitleReactive ?? (this.state.song && this.state.song.floatingTitleReactive || false);
+    return this.data.floatingTitleReactive ?? (this.state.song && this.getEffectiveSongSettings().floatingTitleReactive || false);
   }
   public getFloatingTitleOverrideVisualizer() {
-    return this.data.floatingTitleOverrideVisualizer ?? (this.state.song && this.state.song.floatingTitleOverrideVisualizer || false);
+    return this.data.floatingTitleOverrideVisualizer ?? (this.state.song && this.getEffectiveSongSettings().floatingTitleOverrideVisualizer || false);
   }
   public getFloatingTitlePosition(): ISong["floatingTitlePosition"] {
-    return this.data.floatingTitlePosition ?? (this.state.song && this.state.song.floatingTitlePosition || "center");
+    return this.data.floatingTitlePosition ?? (this.state.song && this.getEffectiveSongSettings().floatingTitlePosition || "center");
   }
 
   // Star rush effect settings
   public getStarRushEffect() {
     return this.data.starRushEffect ?? (
-      (this.state.song && this.state.song.starRushEffect)
+      (this.state.song && this.getEffectiveSongSettings().starRushEffect)
       ?? Settings.get("starRushEffect")
       ?? false
     );
@@ -234,7 +251,7 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
 
   public getStarRushIntensity() {
     return this.data.starRushIntensity ?? (
-      (this.state.song && this.state.song.starRushIntensity)
+      (this.state.song && this.getEffectiveSongSettings().starRushIntensity)
       ?? Settings.get("starRushIntensity")
       ?? 1
     );

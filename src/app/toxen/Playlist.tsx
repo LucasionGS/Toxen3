@@ -338,10 +338,15 @@ export default class Playlist {
   private _cachedBackgroundName: string;
   public getBackgroundPath(onlyGlobal = false, ignoreApply = false) {
     const remote = Settings.isRemote();
-    const songId = Toxen.background.storyboard.state.song?.uid;
-    const songBg = onlyGlobal ? null : this.songBackground[songId];
+    const song = Toxen.background.storyboard.state.song;
+    const songBg = onlyGlobal ? null : song?.getPlaylistSettings(Toxen.playlist?.name)?.paths?.background;
     const bgUsed = songBg ?? this.background;
 
+    if (songBg) {
+      this._cachedBackgroundName = songBg;
+      return song.dirname(songBg);
+    }
+    
     if (!songBg && (!this.applyBackground && !ignoreApply)) return null;
     
     if (bgUsed === this._cachedBackgroundName) return this._cachedBackgroundPath;
