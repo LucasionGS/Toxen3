@@ -66,6 +66,14 @@ export default class Song implements ISong {
   // Background dim setting
   public backgroundDim: number | null; // null = use global setting, 0-100 range
 
+  /**
+   * Playlist-specific settings. Maps playlist IDs to song settings that override the default song settings
+   * when the song is played from that specific playlist.
+   */
+  public playlistSettings?: {
+    [playlistId: string]: Partial<Omit<ISong, 'uid' | 'files' | 'hash' | 'duration' | 'playlistSettings'>>;
+  };
+
   // Hash used for sync
   public hash: string;
   /**
@@ -158,6 +166,21 @@ export default class Song implements ISong {
    * Return the full path of the background file.
    */
   public backgroundFile() {
+    // Check for playlist-specific background first
+    const currentPlaylist = Toxen.playlist;
+    if (currentPlaylist && this.hasPlaylistSettings(currentPlaylist.name)) {
+      const playlistSettings = this.getPlaylistSettings(currentPlaylist.name);
+      if (playlistSettings?.paths?.background) {
+        // Use playlist-specific background path
+        if (Settings.isRemote()) {
+          return playlistSettings.paths.background ? `${this.dirname()}/${playlistSettings.paths.background}` : "";
+        } else if (toxenapi.isDesktop()) {
+          return toxenapi.path.resolve(this.dirname(), playlistSettings.paths.background || "");
+        }
+      }
+    }
+    
+    // Fall back to song's default background
     if (Settings.isRemote()) return this.paths.background ? `${this.dirname()}/${this.paths.background}` : "";
     else if (toxenapi.isDesktop()) return (this.paths && this.paths.background) ? toxenapi.path.resolve(this.dirname(), this.paths.background || "") : "";
     toxenapi.throwDesktopOnly("Unable to get background file.");
@@ -337,6 +360,7 @@ export default class Song implements ISong {
       "starRushEffect",
       "starRushIntensity",
       "backgroundDim",
+      "playlistSettings",
       "files",
       "hash",
       "duration",
@@ -374,6 +398,65 @@ export default class Song implements ISong {
    */
   public static randomFileHash() {
     return Math.random().toString(16).slice(2, 18) + Math.random().toString(16).slice(2, 18);
+  }
+
+  /**
+   * Gets the playlist-specific settings for this song when played from a specific playlist.
+   * @param playlistId The ID/name of the playlist
+   * @returns The playlist-specific settings, or undefined if none exist
+   */
+  public getPlaylistSettings(playlistId: string): Partial<Omit<ISong, 'uid' | 'files' | 'hash' | 'duration' | 'playlistSettings'>> | undefined {
+    return this.playlistSettings?.[playlistId];
+  }
+
+  /**
+   * Sets playlist-specific settings for this song when played from a specific playlist.
+   * @param playlistId The ID/name of the playlist
+   * @param settings The settings to apply when this song is played from the playlist
+   */
+  public setPlaylistSettings(playlistId: string, settings: Partial<Omit<ISong, 'uid' | 'files' | 'hash' | 'duration' | 'playlistSettings'>>): void {
+    if (!this.playlistSettings) {
+      this.playlistSettings = {};
+    }
+    this.playlistSettings[playlistId] = settings;
+  }
+
+  /**
+   * Removes playlist-specific settings for this song.
+   * @param playlistId The ID/name of the playlist
+   */
+  public removePlaylistSettings(playlistId: string): void {
+    if (this.playlistSettings && this.playlistSettings[playlistId]) {
+      delete this.playlistSettings[playlistId];
+    }
+  }
+
+  /**
+   * Gets the effective settings for this song, considering playlist-specific overrides.
+   * @param playlistId The ID/name of the current playlist (optional)
+   * @returns The effective settings to use for this song
+   */
+  public getEffectiveSettings(playlistId?: string): ISong {
+    const baseSettings = this.toISong();
+    
+    if (playlistId && this.playlistSettings?.[playlistId]) {
+      const playlistOverrides = this.playlistSettings[playlistId];
+      return {
+        ...baseSettings,
+        ...playlistOverrides
+      };
+    }
+    
+    return baseSettings;
+  }
+
+  /**
+   * Checks if this song has playlist-specific settings for a given playlist.
+   * @param playlistId The ID/name of the playlist
+   * @returns True if playlist-specific settings exist
+   */
+  public hasPlaylistSettings(playlistId: string): boolean {
+    return !!(this.playlistSettings && this.playlistSettings[playlistId]);
   }
 
   private lastBlobUrl: string;
@@ -440,7 +523,12 @@ export default class Song implements ISong {
     Toxen.musicPlayer.setSource(src, true);
     await Toxen.background.setBackground(bg + "?h=" + this.hash);
     Stats.set("songsPlayed", (Stats.get("songsPlayed") ?? 0) + 1);
-    Toxen.setAllVisualColors(this.visualizerColor);
+    
+    // Apply playlist-specific settings if playing from a playlist
+    const currentPlaylist = Toxen.playlist;
+    const effectiveSettings = this.getEffectiveSettings(currentPlaylist?.name);
+    
+    Toxen.setAllVisualColors(effectiveSettings.visualizerColor);
     Toxen.background.storyboard.setSong(this);
     Toxen.background.visualizer.update();
     let img = new Image();
@@ -1664,6 +1752,14 @@ export interface ISong {
 
   // Background dim setting
   backgroundDim: number | null; // null = use global setting, 0-100 range
+
+  /**
+   * Playlist-specific settings. Maps playlist IDs to song settings that override the default song settings
+   * when the song is played from that specific playlist.
+   */
+  playlistSettings?: {
+    [playlistId: string]: Partial<Omit<ISong, 'uid' | 'files' | 'hash' | 'duration' | 'playlistSettings'>>;
+  };
 
   /**
    * The files that are in the song's directory. Maps to a datetime number.  

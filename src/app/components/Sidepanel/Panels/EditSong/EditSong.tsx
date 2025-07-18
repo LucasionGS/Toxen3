@@ -27,6 +27,48 @@ export default function EditSong(props: EditSongProps) {
   const modals = useModals();
   const forceUpdate = useForceUpdate();
 
+  // State for playlist-specific settings mode
+  const [isPlaylistMode, setIsPlaylistMode] = React.useState(false);
+  const currentPlaylist = Toxen.playlist;
+  const hasPlaylistSettings = currentPlaylist ? Toxen.editingSong.hasPlaylistSettings(currentPlaylist.name) : false;
+  
+  // Get current settings (either playlist-specific or song default)
+  const getCurrentSettings = () => {
+    if (isPlaylistMode && currentPlaylist) {
+      return Toxen.editingSong.getPlaylistSettings(currentPlaylist.name) || {};
+    }
+    return Toxen.editingSong;
+  };
+
+  // Save settings to the appropriate location
+  const saveSettings = (key: string, value: any, saveToFile: boolean = true) => {
+    if (isPlaylistMode && currentPlaylist) {
+      const currentPlaylistSettings = Toxen.editingSong.getPlaylistSettings(currentPlaylist.name) || {};
+      const newSettings = { ...currentPlaylistSettings, [key]: value };
+      Toxen.editingSong.setPlaylistSettings(currentPlaylist.name, newSettings);
+    } else {
+      (Toxen.editingSong as any)[key] = value;
+    }
+
+    if (saveToFile) {
+      Toxen.editingSong.saveInfo();
+    }
+  };
+
+  // Get value for inputs
+  const getValue = (key: string): any => {
+    const settings = getCurrentSettings();
+    if (key.includes('.')) {
+      const keys = key.split('.');
+      let obj: any = settings;
+      for (const k of keys) {
+        obj = obj?.[k];
+      }
+      return obj;
+    }
+    return (settings as any)[key];
+  };
+
   function textInputSaveOnEnter(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter") {
       e.preventDefault();
@@ -35,7 +77,7 @@ export default function EditSong(props: EditSongProps) {
   }
 
   return (
-    <>
+    <div key={`${isPlaylistMode ? currentPlaylist?.name : 'song'}-${Toxen.editingSong.uid}`}>
       <SidepanelSectionHeader>
         <h1>Edit music details</h1>
         {/* <button className="tx-btn tx-btn-action" onClick={() => Toxen.editSongForm.submit()}>
@@ -56,81 +98,137 @@ export default function EditSong(props: EditSongProps) {
           Copy UUID
         </Button>
       </SidepanelSectionHeader>
+      
+      {/* Playlist-specific settings toggle */}
+      {currentPlaylist && currentPlaylist.songList.includes(Toxen.editingSong) && (
+        <div style={{ marginBottom: '1rem', padding: '0.75rem', background: 'var(--secondary-bg)', borderRadius: '8px', border: '1px solid var(--border-primary)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 500 }}>Settings Mode</h3>
+              <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
+                {isPlaylistMode 
+                  ? `Editing settings for when played from "${currentPlaylist.name}"`
+                  : 'Editing default song settings'
+                }
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.875rem', color: isPlaylistMode ? 'var(--text-secondary)' : 'var(--text-primary)' }}>
+                Song
+              </span>
+              <input
+                type="checkbox"
+                checked={isPlaylistMode}
+                onChange={(e) => setIsPlaylistMode(e.target.checked)}
+                style={{ 
+                  width: '40px', 
+                  height: '20px', 
+                  appearance: 'none',
+                  backgroundColor: isPlaylistMode ? 'var(--accent-color)' : 'var(--border-primary)',
+                  borderRadius: '10px',
+                  position: 'relative',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  (e.target as HTMLInputElement).style.backgroundColor = isPlaylistMode ? 'var(--accent-color-hover)' : 'var(--border-secondary)';
+                }}
+                onMouseLeave={(e) => {
+                  (e.target as HTMLInputElement).style.backgroundColor = isPlaylistMode ? 'var(--accent-color)' : 'var(--border-primary)';
+                }}
+              />
+              <span style={{ fontSize: '0.875rem', color: isPlaylistMode ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
+                Playlist
+              </span>
+            </div>
+          </div>
+          
+          {isPlaylistMode && (
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
+              {hasPlaylistSettings 
+                ? 'This song has custom settings for this playlist'
+                : 'No custom settings yet - changes will create playlist-specific settings'
+              }
+            </div>
+          )}
+        </div>
+      )}
+      
       <>
         <h2>General information</h2>
         <TextInput
           label="Artist"
           name="artist"
-          onChange={(v) => Toxen.editingSong.artist = v.currentTarget.value}
-          defaultValue={Toxen.editingSong.artist}
+          onChange={(v) => saveSettings('artist', v.currentTarget.value)}
+          defaultValue={getValue('artist')}
           onBlur={() => Toxen.editingSong.saveInfo()}
           onKeyDown={textInputSaveOnEnter}
         />
         <TextInput
           label="Title"
           name="title"
-          onChange={(v) => Toxen.editingSong.title = v.currentTarget.value}
-          defaultValue={Toxen.editingSong.title}
+          onChange={(v) => saveSettings('title', v.currentTarget.value)}
+          defaultValue={getValue('title')}
           onBlur={() => Toxen.editingSong.saveInfo()}
           onKeyDown={textInputSaveOnEnter}
         />
         <ListInput
           label="Co-Artists"
           name="coArtists"
-          onChange={(list) => (Toxen.editingSong.coArtists = list) && Toxen.editingSong.saveInfo()}
-          defaultValue={Toxen.editingSong.coArtists}
+          onChange={(list) => saveSettings('coArtists', list)}
+          defaultValue={getValue('coArtists')}
         />
         <TextInput
           label="Album"
           name="album"
-          onChange={(v) => Toxen.editingSong.album = v.currentTarget.value}
-          defaultValue={Toxen.editingSong.album}
+          onChange={(v) => saveSettings('album', v.currentTarget.value)}
+          defaultValue={getValue('album')}
           onBlur={() => Toxen.editingSong.saveInfo()}
           onKeyDown={textInputSaveOnEnter}
         />
         <TextInput
           label="Genre"
           name="genre"
-          onChange={(v) => Toxen.editingSong.genre = v.currentTarget.value}
-          defaultValue={Toxen.editingSong.genre}
+          onChange={(v) => saveSettings('genre', v.currentTarget.value)}
+          defaultValue={getValue('genre')}
           onBlur={() => Toxen.editingSong.saveInfo()}
           onKeyDown={textInputSaveOnEnter}
         />
         <TextInput
           label="Source"
           name="source"
-          onChange={(v) => Toxen.editingSong.source = v.currentTarget.value}
-          defaultValue={Toxen.editingSong.source}
+          onChange={(v) => saveSettings('source', v.currentTarget.value)}
+          defaultValue={getValue('source')}
           onBlur={() => Toxen.editingSong.saveInfo()}
           onKeyDown={textInputSaveOnEnter}
         />
         <TextInput
           label="Language"
           name="language"
-          onChange={(v) => Toxen.editingSong.language = v.currentTarget.value}
-          defaultValue={Toxen.editingSong.language}
+          onChange={(v) => saveSettings('language', v.currentTarget.value)}
+          defaultValue={getValue('language')}
           onBlur={() => Toxen.editingSong.saveInfo()}
           onKeyDown={textInputSaveOnEnter}
         />
         <NumberInput
           label="Release Year"
           name="year"
-          onChange={(v) => Toxen.editingSong.year = +v}
-          defaultValue={Toxen.editingSong.year}
+          onChange={(v) => saveSettings('year', +v)}
+          defaultValue={getValue('year')}
           onBlur={() => Toxen.editingSong.saveInfo()}
           onKeyDown={textInputSaveOnEnter}
         />
         <ListInput
           label="Tags"
           name="tags"
-          onChange={(list) => (Toxen.editingSong.tags = list) && Toxen.editingSong.saveInfo()}
-          defaultValue={Toxen.editingSong.tags}
+          onChange={(list) => saveSettings('tags', list)}
+          defaultValue={getValue('tags')}
         />
         <SelectAsync
           allowDeselect={false}
           label="Media File"
           name="paths.media"
-          defaultValue={Toxen.editingSong.paths.media}
+          defaultValue={getValue('paths.media')}
           data={(async () => {
             let song = Toxen.editingSong;
             if (!song)
@@ -141,8 +239,14 @@ export default function EditSong(props: EditSongProps) {
             return await Toxen.filterSupportedFiles(path, supported);
           })}
           onChange={(v) => {
-            Toxen.editingSong.paths.media = v;
-            Toxen.editingSong.saveInfo();
+            if (isPlaylistMode && currentPlaylist) {
+              const currentSettings = getCurrentSettings();
+              const paths = currentSettings.paths || {};
+              saveSettings('paths', { ...paths, media: v });
+            } else {
+              Toxen.editingSong.paths.media = v;
+              Toxen.editingSong.saveInfo();
+            }
             let current = Song.getCurrent();
             if (Toxen.editingSong == current) {
               Toxen.musicPlayer.setSource(current.mediaFile(), true);
@@ -151,118 +255,32 @@ export default function EditSong(props: EditSongProps) {
         />
         <BackgroundFileSelector
           label="Background file"
-          defaultValue={Toxen.editingSong.paths.background}
+          defaultValue={getValue('paths.background')}
           sourceDir={Toxen.editingSong.dirname()}
           onChange={(v) => {
             // Invalidate cache for old background before changing
             Toxen.invalidateSongBackgroundCache(Toxen.editingSong);
             
-            Toxen.editingSong.paths.background = v;
-            Toxen.editingSong.saveInfo();
+            if (isPlaylistMode && currentPlaylist) {
+              const currentSettings = getCurrentSettings();
+              const paths = currentSettings.paths || {};
+              saveSettings('paths', { ...paths, background: v });
+            } else {
+              Toxen.editingSong.paths.background = v;
+              Toxen.editingSong.saveInfo();
+            }
             let current = Song.getCurrent();
             if (Toxen.editingSong == current) {
               Toxen.background.setBackground(current.backgroundFile() + "?h=" + current.hash);
             }
           }}
         />
-        {Toxen.playlist && Toxen.playlist.songList.includes(Toxen.editingSong) ? (
-          <BackgroundFileSelector
-            label={`Playlist background for "${Toxen.playlist.name}"`}
-            defaultValue={Toxen.playlist.songBackground?.[Toxen.editingSong.uid] || ""}
-            getSourceDir={() => Playlist.getPlaylistBackgroundsDir()}
-            description={`Background this song will use specifically when playlist "${Toxen.playlist.name}" is selected`}
-            onCopyFile={async (sourceFile: string, fileName: string) => {
-              if (!toxenapi.isDesktop()) {
-                Toxen.error('File operations are only available in desktop version', 3000);
-                return false;
-              }
-              
-              try {
-                const playlistBackgroundsDir = Playlist.getPlaylistBackgroundsDir(true);
-                
-                // Generate a unique filename to avoid conflicts
-                let uniqueFileName = fileName;
-                let counter = 1;
-                const baseName = toxenapi.path.parse(fileName).name;
-                const ext = toxenapi.path.extname(fileName);
-                
-                while (toxenapi.fs.existsSync(toxenapi.joinPath(playlistBackgroundsDir, uniqueFileName))) {
-                  uniqueFileName = `${baseName}_${counter}${ext}`;
-                  counter++;
-                }
-                
-                const targetPath = toxenapi.joinPath(playlistBackgroundsDir, uniqueFileName);
-                toxenapi.fs.copyFileSync(sourceFile, targetPath);
-                
-                Toxen.log(`Playlist background copied: ${uniqueFileName}`, 3000);
-                return true;
-              } catch (error) {
-                Toxen.error(`Failed to copy playlist background: ${error.message}`, 5000);
-                return false;
-              }
-            }}
-            onDelete={async (fileName: string) => {
-              return new Promise((resolve) => {
-                modals.openConfirmModal({
-                  title: 'Delete playlist background',
-                  children: (
-                    <div>
-                      <p>Are you sure you want to delete <strong>"{fileName}"</strong>?</p>
-                      <p><small>This will remove the background from the playlist backgrounds directory and any songs using it will fall back to their individual backgrounds or the default playlist background.</small></p>
-                    </div>
-                  ),
-                  labels: { confirm: 'Delete', cancel: 'Cancel' },
-                  confirmProps: { color: 'red' },
-                  onConfirm: async () => {
-                    if (!toxenapi.isDesktop()) {
-                      Toxen.error('File operations are only available in desktop version', 3000);
-                      resolve(false);
-                      return;
-                    }
-                    
-                    try {
-                      const filePath = toxenapi.joinPath(Playlist.getPlaylistBackgroundsDir(), fileName);
-                      toxenapi.fs.unlinkSync(filePath);
-                      Toxen.log(`Playlist background deleted: ${fileName}`, 3000);
-                      resolve(true);
-                    } catch (error) {
-                      Toxen.error(`Failed to delete playlist background: ${error.message}`, 5000);
-                      resolve(false);
-                    }
-                  },
-                  onCancel: () => resolve(false)
-                });
-              });
-            }}
-            onChange={(v: string | null) => {
-              if (v && v !== "<Empty>") {
-                // Set the song-specific background
-                if (!Toxen.playlist.songBackground) Toxen.playlist.songBackground = {};
-                Toxen.playlist.songBackground[Toxen.editingSong.uid] = v;
-              } else {
-                // Remove the song-specific background
-                if (Toxen.playlist.songBackground && Toxen.playlist.songBackground[Toxen.editingSong.uid]) {
-                  delete Toxen.playlist.songBackground[Toxen.editingSong.uid];
-                }
-              }
-              
-              // Save the playlist
-              Playlist.save();
-              
-              // Update background if this song is currently playing
-              let current = Song.getCurrent();
-              if (Toxen.editingSong == current) {
-                Toxen.background.setBackground(current.backgroundFile() + "?h=" + current.hash);
-              }
-            }}
-          />
-        ) : null}
 
         <SelectAsync
           allowDeselect={false}
           label="Subtitle file"
           name="paths.subtitles"
-          defaultValue={Toxen.editingSong.paths.subtitles}
+          defaultValue={getValue('paths.subtitles')}
           data={(async () => {
             let song = Toxen.editingSong;
             if (!song)
@@ -279,8 +297,14 @@ export default function EditSong(props: EditSongProps) {
             if (v === "<Empty>") {
               v = null;
             }
-            Toxen.editingSong.paths.subtitles = v;
-            Toxen.editingSong.saveInfo();
+            if (isPlaylistMode && currentPlaylist) {
+              const currentSettings = getCurrentSettings();
+              const paths = currentSettings.paths || {};
+              saveSettings('paths', { ...paths, subtitles: v });
+            } else {
+              Toxen.editingSong.paths.subtitles = v;
+              Toxen.editingSong.saveInfo();
+            }
             let current = Song.getCurrent();
             if (Toxen.editingSong == current) {
               current.applySubtitles();
@@ -290,9 +314,9 @@ export default function EditSong(props: EditSongProps) {
         <NumberInput
           label="Subtitle Offset (ms)"
           name="subtitleDelay"
-          defaultValue={Toxen.editingSong.subtitleDelay}
+          defaultValue={getValue('subtitleDelay')}
           onChange={(v) => {
-            Toxen.editingSong.subtitleDelay = +v;
+            saveSettings('subtitleDelay', +v);
           }}
           onBlur={() => Toxen.editingSong.saveInfo()}
           onKeyDown={textInputSaveOnEnter}
@@ -363,7 +387,7 @@ export default function EditSong(props: EditSongProps) {
           allowDeselect={false}
           label="Storyboard file"
           name="paths.storyboard"
-          defaultValue={Toxen.editingSong.paths.storyboard}
+          defaultValue={getValue('paths.storyboard')}
           data={(async () => {
             let song = Toxen.editingSong;
             if (!song)
@@ -381,8 +405,14 @@ export default function EditSong(props: EditSongProps) {
               v = null;
             }
             console.log("changed", v);
-            Toxen.editingSong.paths.storyboard = v;
-            Toxen.editingSong.saveInfo();
+            if (isPlaylistMode && currentPlaylist) {
+              const currentSettings = getCurrentSettings();
+              const paths = currentSettings.paths || {};
+              saveSettings('paths', { ...paths, storyboard: v });
+            } else {
+              Toxen.editingSong.paths.storyboard = v;
+              Toxen.editingSong.saveInfo();
+            }
             let current = Song.getCurrent();
             if (Toxen.editingSong == current) {
               current.applyStoryboard();
@@ -400,24 +430,26 @@ export default function EditSong(props: EditSongProps) {
         <ColorInput
           label="Visualizer Color"
           name="visualizerColor"
-          defaultValue={Toxen.editingSong.visualizerColor ?? "<Default>"}
+          defaultValue={getValue('visualizerColor') ?? "<Default>"}
           onChange={(v) => {
-            Toxen.editingSong.visualizerColor = v;
-            // Toxen.editingSong.saveInfo();
+            saveSettings('visualizerColor', v, false);
+            Toxen.setAllVisualColors(v);
+          }}
+          onChangeEnd={(v) => {
+            saveSettings('visualizerColor', v);
             Toxen.setAllVisualColors(v);
           }}
           onBlur={() => {
-            Toxen.setAllVisualColors(Toxen.editingSong.visualizerColor);
-            Toxen.editingSong.saveInfo()
+            Toxen.setAllVisualColors(getValue('visualizerColor'));
+            Toxen.editingSong.saveInfo();
           }}
         />
         <Checkbox
           label="Force Visualizer Rainbow Mode"
           name="visualizerForceRainbowMode"
-          defaultChecked={Toxen.editingSong.visualizerForceRainbowMode}
+          defaultChecked={getValue('visualizerForceRainbowMode')}
           onChange={(v) => {
-            Toxen.editingSong.visualizerForceRainbowMode = v.currentTarget.checked;
-            Toxen.editingSong.saveInfo();
+            saveSettings('visualizerForceRainbowMode', v.currentTarget.checked);
             // Toxen.setAllVisualColors(Toxen.editingSong.visualizerColor);
           }}
         />
@@ -427,28 +459,26 @@ export default function EditSong(props: EditSongProps) {
           allowDeselect={false}
           label="Background pulsing"
           name="visualizerPulseBackground"
-          defaultValue={Toxen.editingSong.visualizerPulseBackground ?? ""}
+          defaultValue={getValue('visualizerPulseBackground') ?? ""}
           data={[
             { value: "", label: "<Default>" },
             { value: "pulse", label: "Enabled" },
             { value: "pulse-off", label: "Disabled" }
           ]}
           onChange={(v) => {
-            Toxen.editingSong.visualizerPulseBackground = v as any;
-            Toxen.editingSong.saveInfo();
+            saveSettings('visualizerPulseBackground', v as any);
           }}
         />
         <sup>Enables pulsing on the background image of a song. Pulse is based off music intensity and volume.</sup>
 
         <InputLabel>Background Dim</InputLabel>
         <Slider
-          defaultValue={Toxen.editingSong.backgroundDim ?? -1}
+          defaultValue={getValue('backgroundDim') ?? -1}
           onChange={(v) => {
-            Toxen.editingSong.backgroundDim = v === -1 ? null : v;
+            saveSettings('backgroundDim', v === -1 ? null : v);
           }}
           onChangeEnd={(v) => {
-            Toxen.editingSong.backgroundDim = v === -1 ? null : v;
-            Toxen.editingSong.saveInfo();
+            saveSettings('backgroundDim', v === -1 ? null : v);
           }}
           label={(value) => value === -1 ? "Default" : `${value}%`}
           min={-1}
@@ -460,7 +490,7 @@ export default function EditSong(props: EditSongProps) {
           allowDeselect={false}
           label="Visualizer Style"
           name="visualizerStyle"
-          defaultValue={Toxen.editingSong.visualizerStyle ?? ""}
+          defaultValue={getValue('visualizerStyle') ?? ""}
           data={[
             { value: "", label: "<Default>" },
             ...(() => {
@@ -475,8 +505,7 @@ export default function EditSong(props: EditSongProps) {
             })()
           ]}
           onChange={(v) => {
-            Toxen.editingSong.visualizerStyle = v as any;
-            Toxen.editingSong.saveInfo();
+            saveSettings('visualizerStyle', v as any);
             forceUpdate();
           }}
         />
@@ -484,12 +513,11 @@ export default function EditSong(props: EditSongProps) {
 
         {/* Specific VS settings */}
         <VisualizerStyleOptions
-          style={Toxen.editingSong.visualizerStyle}
-          allOptions={Toxen.editingSong.visualizerStyleOptions}
-          onSave={(allOptions) => Toxen.editingSong.visualizerStyleOptions = allOptions}
+          style={getValue('visualizerStyle')}
+          allOptions={getValue('visualizerStyleOptions')}
+          onSave={(allOptions) => saveSettings('visualizerStyleOptions', allOptions)}
           onSaveEnd={(allOptions) => {
-            Toxen.editingSong.visualizerStyleOptions = allOptions;
-            Toxen.editingSong.saveInfo();
+            saveSettings('visualizerStyleOptions', allOptions);
             forceUpdate();
           }}
         />
@@ -499,15 +527,14 @@ export default function EditSong(props: EditSongProps) {
           allowDeselect={false}
           label="Visualizer Glow"
           name="visualizerGlow"
-          defaultValue={Toxen.editingSong.visualizerGlow ? "enabled" : Toxen.editingSong.visualizerGlow === false ? "disabled" : ""}
+          defaultValue={getValue('visualizerGlow') ? "enabled" : getValue('visualizerGlow') === false ? "disabled" : ""}
           data={[
             { value: "", label: "<Default>" },
             { value: "enabled", label: "Enabled" },
             { value: "disabled", label: "Disabled" }
           ]}
           onChange={(v) => {
-            Toxen.editingSong.visualizerGlow = v === "enabled" ? true : v === "disabled" ? false : null;
-            Toxen.editingSong.saveInfo();
+            saveSettings('visualizerGlow', v === "enabled" ? true : v === "disabled" ? false : null);
           }}
         />
         <sup>Enables a glow effect on the visualizer for this song.</sup>
@@ -517,15 +544,14 @@ export default function EditSong(props: EditSongProps) {
           allowDeselect={false}
           label="Star Rush Effect"
           name="starRushEffect"
-          defaultValue={Toxen.editingSong.starRushEffect ? "enabled" : Toxen.editingSong.starRushEffect === false ? "disabled" : ""}
+          defaultValue={getValue('starRushEffect') ? "enabled" : getValue('starRushEffect') === false ? "disabled" : ""}
           data={[
             { value: "", label: "<Default>" },
             { value: "enabled", label: "Enabled" },
             { value: "disabled", label: "Disabled" }
           ]}
           onChange={(v) => {
-            Toxen.editingSong.starRushEffect = v === "enabled" ? true : v === "disabled" ? false : null;
-            Toxen.editingSong.saveInfo();
+            saveSettings('starRushEffect', v === "enabled" ? true : v === "disabled" ? false : null);
           }}
         />
         <sup>Enables a particle effect where white stars/snow shoot outward from the center, accelerating as they move.</sup>
@@ -534,7 +560,7 @@ export default function EditSong(props: EditSongProps) {
           allowDeselect={false}
           label="Star Rush Intensity"
           name="starRushIntensity"
-          defaultValue={Toxen.editingSong.starRushIntensity?.toString() || ""}
+          defaultValue={getValue('starRushIntensity')?.toString() || ""}
           data={[
             { value: "", label: "<Default>" },
             { value: "0.25", label: "Very Low (0.25x)" },
@@ -546,8 +572,7 @@ export default function EditSong(props: EditSongProps) {
             { value: "2", label: "Maximum (2x)" }
           ]}
           onChange={(v) => {
-            Toxen.editingSong.starRushIntensity = v ? parseFloat(v) : null;
-            Toxen.editingSong.saveInfo();
+            saveSettings('starRushIntensity', v ? parseFloat(v) : null);
           }}
         />
         <sup>Controls the intensity of the star rush effect for this song.</sup>
@@ -556,10 +581,9 @@ export default function EditSong(props: EditSongProps) {
         <Checkbox
           label="Floating Title"
           name="floatingTitle"
-          defaultChecked={Toxen.editingSong.floatingTitle}
+          defaultChecked={getValue('floatingTitle')}
           onChange={v => {
-            Toxen.editingSong.floatingTitle = v.currentTarget.checked;
-            Toxen.editingSong.saveInfo();
+            saveSettings('floatingTitle', v.currentTarget.checked);
           }}
         />
         <sup>Gives the floating title an underline</sup>
@@ -568,8 +592,8 @@ export default function EditSong(props: EditSongProps) {
           label="Floating Title: Text"
           name="floatingTitleText"
           placeholder="<Default>"
-          onChange={(v) => Toxen.editingSong.floatingTitleText = v.currentTarget.value}
-          defaultValue={Toxen.editingSong.floatingTitleText}
+          onChange={(v) => saveSettings('floatingTitleText', v.currentTarget.value)}
+          defaultValue={getValue('floatingTitleText')}
           onBlur={() => Toxen.editingSong.saveInfo()}
           onKeyDown={textInputSaveOnEnter}
         />
@@ -579,10 +603,9 @@ export default function EditSong(props: EditSongProps) {
         <Checkbox
           label="Floating Title: Use Subtitles"
           name="useFloatingTitleSubtitles"
-          defaultChecked={Toxen.editingSong.useFloatingTitleSubtitles}
+          defaultChecked={getValue('useFloatingTitleSubtitles')}
           onChange={v => {
-            Toxen.editingSong.useFloatingTitleSubtitles = v.currentTarget.checked;
-            Toxen.editingSong.saveInfo();
+            saveSettings('useFloatingTitleSubtitles', v.currentTarget.checked);
           }}
         />
         <sup>Use the subtitles if selected, as the text for the floating title. This overrides the text field.</sup>
@@ -590,19 +613,17 @@ export default function EditSong(props: EditSongProps) {
         <Checkbox
           label="Floating Title: Underline"
           name="floatingTitleUnderline"
-          defaultChecked={Toxen.editingSong.floatingTitleUnderline}
+          defaultChecked={getValue('floatingTitleUnderline')}
           onChange={v => {
-            Toxen.editingSong.floatingTitleUnderline = v.currentTarget.checked;
-            Toxen.editingSong.saveInfo();
+            saveSettings('floatingTitleUnderline', v.currentTarget.checked);
           }}
         />
         <sup>Enables the floating title for this song.</sup>
         <ScreenPositionSelector
           onChange={v => {
-            Toxen.editingSong.floatingTitlePosition = v === "" ? null : v;
-            Toxen.editingSong.saveInfo();
+            saveSettings('floatingTitlePosition', v === "" ? null : v);
           }}
-          defaultValue={Toxen.editingSong.floatingTitlePosition || ""}
+          defaultValue={getValue('floatingTitlePosition') || ""}
           label="Floating Title: Position"
           name="floatingTitlePosition"
           deselectable
@@ -613,10 +634,9 @@ export default function EditSong(props: EditSongProps) {
         <Checkbox
           label="Floating Title: Reactive"
           name="floatingTitleReactive"
-          defaultChecked={Toxen.editingSong.floatingTitleReactive}
+          defaultChecked={getValue('floatingTitleReactive')}
           onChange={v => {
-            Toxen.editingSong.floatingTitleReactive = v.currentTarget.checked;
-            Toxen.editingSong.saveInfo();
+            saveSettings('floatingTitleReactive', v.currentTarget.checked);
           }}
         />
         <sup>Enables the floating title to react to the music.</sup>
@@ -624,10 +644,9 @@ export default function EditSong(props: EditSongProps) {
         <Checkbox
           label="Floating Title: Override Visualizer"
           name="floatingTitleOverrideVisualizer"
-          defaultChecked={Toxen.editingSong.floatingTitleOverrideVisualizer}
+          defaultChecked={getValue('floatingTitleOverrideVisualizer')}
           onChange={v => {
-            Toxen.editingSong.floatingTitleOverrideVisualizer = v.currentTarget.checked;
-            Toxen.editingSong.saveInfo();
+            saveSettings('floatingTitleOverrideVisualizer', v.currentTarget.checked);
           }}
         />
         <sup>Enables the floating title to override the visualizer if necessary. Otherwise its just placed on top.</sup>
@@ -729,6 +748,6 @@ export default function EditSong(props: EditSongProps) {
           ).popup();
         }
       }}><i className="fas fa-file-export"></i>&nbsp;Export Subtitle File</Button>
-    </>
+    </div>
   )
 }
