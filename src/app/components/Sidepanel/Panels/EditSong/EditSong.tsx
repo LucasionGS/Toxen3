@@ -84,75 +84,31 @@ export default function EditSong(props: EditSongProps) {
           <i className="fas fa-save"></i>&nbsp;
           Save
         </button> */}
-        {
-          !Settings.isRemote() && toxenapi.isDesktop() && (
-          <Button onClick={() => toxenapi.remote.shell.openPath(Toxen.editingSong.dirname())} leftSection={<i className="fas fa-folder-open"></i>}>
-            Open music folder
-          </Button>
-          )
-        }
-        <Button onClick={() => Toxen.reloadSection()} leftSection={<i className="fas fa-redo"></i>}>
-          Reload data
-        </Button>
-        <Button className="advanced-only" onClick={() => Toxen.editingSong.copyUID()} leftSection={<i className="fas fa-redo"></i>}>
-          Copy UUID
-        </Button>
-      </SidepanelSectionHeader>
-      
-      {/* Playlist-specific settings toggle */}
-      {currentPlaylist && currentPlaylist.songList.includes(Toxen.editingSong) && (
-        <div style={{ marginBottom: '1rem', padding: '0.75rem', background: 'var(--secondary-bg)', borderRadius: '8px', border: '1px solid var(--border-primary)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 500 }}>Settings Mode</h3>
-              <p style={{ margin: 0, fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                {isPlaylistMode 
-                  ? `Editing settings for when played from "${currentPlaylist.name}"`
-                  : 'Editing default song settings'
-                }
-              </p>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.875rem', color: isPlaylistMode ? 'var(--text-secondary)' : 'var(--text-primary)' }}>
-                Song
-              </span>
-              <input
-                type="checkbox"
-                checked={isPlaylistMode}
-                onChange={(e) => setIsPlaylistMode(e.target.checked)}
-                style={{ 
-                  width: '40px', 
-                  height: '20px', 
-                  appearance: 'none',
-                  backgroundColor: isPlaylistMode ? 'var(--accent-color)' : 'var(--border-primary)',
-                  borderRadius: '10px',
-                  position: 'relative',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-                onMouseEnter={(e) => {
-                  (e.target as HTMLInputElement).style.backgroundColor = isPlaylistMode ? 'var(--accent-color-hover)' : 'var(--border-secondary)';
-                }}
-                onMouseLeave={(e) => {
-                  (e.target as HTMLInputElement).style.backgroundColor = isPlaylistMode ? 'var(--accent-color)' : 'var(--border-primary)';
-                }}
-              />
-              <span style={{ fontSize: '0.875rem', color: isPlaylistMode ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
-                Playlist
-              </span>
-            </div>
-          </div>
-          
-          {isPlaylistMode && (
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' }}>
-              {hasPlaylistSettings 
-                ? 'This song has custom settings for this playlist'
-                : 'No custom settings yet - changes will create playlist-specific settings'
-              }
-            </div>
+        <Button.Group>
+          {currentPlaylist && currentPlaylist.songList.includes(Toxen.editingSong) && (
+            <Button 
+              variant={isPlaylistMode ? "filled" : "light"} 
+              onClick={() => setIsPlaylistMode(!isPlaylistMode)}
+              leftSection={<i className="fas fa-list"></i>}
+            >
+              {isPlaylistMode ? `For Playlist: ${currentPlaylist.name}` : 'Song Settings'}
+            </Button>
           )}
-        </div>
-      )}
+          {
+            !Settings.isRemote() && toxenapi.isDesktop() && (
+            <Button onClick={() => toxenapi.remote.shell.openPath(Toxen.editingSong.dirname())} leftSection={<i className="fas fa-folder-open"></i>}>
+              Open music folder
+            </Button>
+            )
+          }
+          <Button onClick={() => Toxen.reloadSection()} leftSection={<i className="fas fa-redo"></i>}>
+            Reload data
+          </Button>
+          <Button className="advanced-only" onClick={() => Toxen.editingSong.copyUID()} leftSection={<i className="fas fa-redo"></i>}>
+            Copy UUID
+          </Button>
+        </Button.Group>
+      </SidepanelSectionHeader>
       
       <>
         <h2>General information</h2>
