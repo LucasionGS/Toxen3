@@ -30,7 +30,7 @@ export default function EditSong(props: EditSongProps) {
   // State for playlist-specific settings mode
   const [isPlaylistMode, setIsPlaylistMode] = React.useState(false);
   const currentPlaylist = Toxen.playlist;
-  const hasPlaylistSettings = currentPlaylist ? Toxen.editingSong.hasPlaylistSettings(currentPlaylist.name) : false;
+  // const hasPlaylistSettings = currentPlaylist ? Toxen.editingSong.hasPlaylistSettings(currentPlaylist.name) : false;
   
   // Get current settings (either playlist-specific or song default)
   const getCurrentSettings = () => {
