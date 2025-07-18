@@ -76,6 +76,8 @@ export default function EditSong(props: EditSongProps) {
     }
   }
 
+  const inActivePlaylist = currentPlaylist && currentPlaylist.songList.includes(Toxen.editingSong);
+  
   return (
     <div key={`${isPlaylistMode ? currentPlaylist?.name : 'song'}-${Toxen.editingSong.uid}`}>
       <SidepanelSectionHeader>
@@ -85,11 +87,12 @@ export default function EditSong(props: EditSongProps) {
           Save
         </button> */}
         <Button.Group>
-          {currentPlaylist && currentPlaylist.songList.includes(Toxen.editingSong) && (
+          {inActivePlaylist && (
             <Button 
               variant={isPlaylistMode ? "filled" : "light"} 
               onClick={() => setIsPlaylistMode(!isPlaylistMode)}
               leftSection={<i className="fas fa-list"></i>}
+              title={isPlaylistMode ? `Switch to Song Settings` : `Switch to Playlist-specific settings for: ${currentPlaylist.name}`}
             >
               {isPlaylistMode ? `For Playlist: ${currentPlaylist.name}` : 'Song Settings'}
             </Button>
@@ -111,75 +114,79 @@ export default function EditSong(props: EditSongProps) {
       </SidepanelSectionHeader>
       
       <>
-        <h2>General information</h2>
-        <TextInput
-          label="Artist"
-          name="artist"
-          onChange={(v) => saveSettings('artist', v.currentTarget.value)}
-          defaultValue={getValue('artist')}
-          onBlur={() => Toxen.editingSong.saveInfo()}
-          onKeyDown={textInputSaveOnEnter}
-        />
-        <TextInput
-          label="Title"
-          name="title"
-          onChange={(v) => saveSettings('title', v.currentTarget.value)}
-          defaultValue={getValue('title')}
-          onBlur={() => Toxen.editingSong.saveInfo()}
-          onKeyDown={textInputSaveOnEnter}
-        />
-        <ListInput
-          label="Co-Artists"
-          name="coArtists"
-          onChange={(list) => saveSettings('coArtists', list)}
-          defaultValue={getValue('coArtists')}
-        />
-        <TextInput
-          label="Album"
-          name="album"
-          onChange={(v) => saveSettings('album', v.currentTarget.value)}
-          defaultValue={getValue('album')}
-          onBlur={() => Toxen.editingSong.saveInfo()}
-          onKeyDown={textInputSaveOnEnter}
-        />
-        <TextInput
-          label="Genre"
-          name="genre"
-          onChange={(v) => saveSettings('genre', v.currentTarget.value)}
-          defaultValue={getValue('genre')}
-          onBlur={() => Toxen.editingSong.saveInfo()}
-          onKeyDown={textInputSaveOnEnter}
-        />
-        <TextInput
-          label="Source"
-          name="source"
-          onChange={(v) => saveSettings('source', v.currentTarget.value)}
-          defaultValue={getValue('source')}
-          onBlur={() => Toxen.editingSong.saveInfo()}
-          onKeyDown={textInputSaveOnEnter}
-        />
-        <TextInput
-          label="Language"
-          name="language"
-          onChange={(v) => saveSettings('language', v.currentTarget.value)}
-          defaultValue={getValue('language')}
-          onBlur={() => Toxen.editingSong.saveInfo()}
-          onKeyDown={textInputSaveOnEnter}
-        />
-        <NumberInput
-          label="Release Year"
-          name="year"
-          onChange={(v) => saveSettings('year', +v)}
-          defaultValue={getValue('year')}
-          onBlur={() => Toxen.editingSong.saveInfo()}
-          onKeyDown={textInputSaveOnEnter}
-        />
-        <ListInput
-          label="Tags"
-          name="tags"
-          onChange={(list) => saveSettings('tags', list)}
-          defaultValue={getValue('tags')}
-        />
+        {!isPlaylistMode && (<>
+          <h2>General information</h2>
+          <TextInput
+            label="Artist"
+            name="artist"
+            onChange={(v) => saveSettings('artist', v.currentTarget.value)}
+            defaultValue={getValue('artist')}
+            onBlur={() => Toxen.editingSong.saveInfo()}
+            onKeyDown={textInputSaveOnEnter}
+          />
+          <TextInput
+            label="Title"
+            name="title"
+            onChange={(v) => saveSettings('title', v.currentTarget.value)}
+            defaultValue={getValue('title')}
+            onBlur={() => Toxen.editingSong.saveInfo()}
+            onKeyDown={textInputSaveOnEnter}
+          />
+          <ListInput
+            label="Co-Artists"
+            name="coArtists"
+            onChange={(list) => saveSettings('coArtists', list)}
+            defaultValue={getValue('coArtists')}
+          />
+          <TextInput
+            label="Album"
+            name="album"
+            onChange={(v) => saveSettings('album', v.currentTarget.value)}
+            defaultValue={getValue('album')}
+            onBlur={() => Toxen.editingSong.saveInfo()}
+            onKeyDown={textInputSaveOnEnter}
+          />
+          <TextInput
+            label="Genre"
+            name="genre"
+            onChange={(v) => saveSettings('genre', v.currentTarget.value)}
+            defaultValue={getValue('genre')}
+            onBlur={() => Toxen.editingSong.saveInfo()}
+            onKeyDown={textInputSaveOnEnter}
+          />
+          <TextInput
+            label="Source"
+            name="source"
+            onChange={(v) => saveSettings('source', v.currentTarget.value)}
+            defaultValue={getValue('source')}
+            onBlur={() => Toxen.editingSong.saveInfo()}
+            onKeyDown={textInputSaveOnEnter}
+          />
+          <TextInput
+            label="Language"
+            name="language"
+            onChange={(v) => saveSettings('language', v.currentTarget.value)}
+            defaultValue={getValue('language')}
+            onBlur={() => Toxen.editingSong.saveInfo()}
+            onKeyDown={textInputSaveOnEnter}
+          />
+          <NumberInput
+            label="Release Year"
+            name="year"
+            onChange={(v) => saveSettings('year', +v)}
+            defaultValue={getValue('year')}
+            onBlur={() => Toxen.editingSong.saveInfo()}
+            onKeyDown={textInputSaveOnEnter}
+          />
+          <ListInput
+            label="Tags"
+            name="tags"
+            onChange={(list) => saveSettings('tags', list)}
+            defaultValue={getValue('tags')}
+          />
+
+        </>)
+        }
         <SelectAsync
           allowDeselect={false}
           label="Media File"

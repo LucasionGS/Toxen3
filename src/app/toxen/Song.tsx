@@ -165,7 +165,7 @@ export default class Song implements ISong {
   /**
    * Return the full path of the background file.
    */
-  public backgroundFile(fallbackToGlobal: boolean = true) {
+  public backgroundFile() {
     const currentPlaylist = Toxen.playlist;
     
     // Check for playlist-specific background from new system first
