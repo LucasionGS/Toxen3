@@ -823,7 +823,6 @@ namespace StoryboardParser {
     ],
     action: (args, { currentSongTime, eventStartTime, bpm: songBpm }, { setState, getState }, ctx) => {
       // Draw a pulse on the visualizer
-      let state = getState<{ lastPulse: number }>() ?? { lastPulse: null };
       let color = getAsType<"Color">(args.color);
       let intensity = getAsType<"Number">(args.intensity) / 0.5;
       let bpm = getAsType<"Number">(args.bpm || songBpm);
@@ -851,31 +850,37 @@ namespace StoryboardParser {
           break;
       }
 
+      if (bpm <= 0) return;
+
       const currentSongTimeMs = Math.round(currentSongTime * 1000);
-      let recurring = bpm > 0 ? Math.round(60 / bpm * 1000) : 0;
+      const eventStartTimeMs = Math.round(eventStartTime * 1000);
+      const recurring = Math.round(60 / bpm * 1000); // Time between pulses in ms
       const animateInTime = (recurring * 0.1) / 1000;
       const animateOutTime = (recurring * 0.3) / 1000;
 
-      if (state.lastPulse === null) {
-
-        state.lastPulse = (eventStartTime * 1000) - (animateInTime * 1000);
-      }
-      else if (currentSongTimeMs - state.lastPulse >= recurring) {
-        if (recurring > 0) {
-          state.lastPulse = currentSongTimeMs;
-        }
+      // Calculate the time since the event started
+      const timeSinceEventStart = currentSongTimeMs - eventStartTimeMs;
+      
+      // Calculate which pulse we should be on based on the event start time
+      const pulseIndex = Math.floor(timeSinceEventStart / recurring);
+      const nextPulseTime = eventStartTimeMs + (pulseIndex * recurring);
+      const timeSinceLastPulse = currentSongTimeMs - nextPulseTime;
+      
+      // If we're past the current pulse cycle, don't render anything
+      if (timeSinceLastPulse >= recurring) {
         return;
       }
 
-      let progress = (currentSongTimeMs - state.lastPulse) / recurring;
+      // Calculate progress within the current pulse cycle
+      let progress = timeSinceLastPulse / recurring;
+      
+      // Apply animation timing
       if (progress < animateInTime) {
         intensity *= progress / animateInTime;
       }
       else if (progress > animateOutTime) {
         intensity *= (1 - progress) / (1 - animateOutTime);
       }
-
-      setState(state);
 
       // Animate using ctx, this function is run every frame.
       return () => {
