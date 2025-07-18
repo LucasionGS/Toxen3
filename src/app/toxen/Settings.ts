@@ -332,6 +332,7 @@ export interface ISettings {
   // Hue settings
   hueEnabled: boolean;
   hueBridgeIp: string;
+  hueBridgeId: string;
   hueUsername: string;
   hueClientkey: string;
   hueEntertainmentAreaId: string;

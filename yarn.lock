@@ -4634,12 +4634,106 @@ node-addon-api@^1.3.0:
   resolved "https://registry.yarnpkg.com/node-addon-api/-/node-addon-api-1.7.2.tgz#3df30b95720b53c24e59948b49532b662444f54d"
   integrity sha512-ibPK3iA+vaY1eEjESkQkM0BbCqFOaZMiXRTtdB0u7b4djtY6JnsjvPdUHVMg6xQt3B8fpTTWHI9A+ADjM9frzg==
 
+node-aead-crypto-android-arm-eabi@3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/node-aead-crypto-android-arm-eabi/-/node-aead-crypto-android-arm-eabi-3.0.1.tgz#c0da7d6ab41a384d8619284dc0af4e1b631d5241"
+  integrity sha512-bIAOQpwVPiAdi558WCOtbRQxjdQaQysLB12zzgb4LxXzNelNfQCx7gl/lBtQtsDd+MXTWW/acURM9X8c0Y627Q==
+
+node-aead-crypto-android-arm64@3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/node-aead-crypto-android-arm64/-/node-aead-crypto-android-arm64-3.0.1.tgz#495cc521bda3048424e69fd1a342100eaac2abb1"
+  integrity sha512-EzKow9IduaOatF1hxoi2aNu+a70q7LtVVs/H04VcUBe93FbSuLRtSSOnEmvwwBProz2FV9Y0WhFrAbM+ruRXbA==
+
+node-aead-crypto-darwin-arm64@3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/node-aead-crypto-darwin-arm64/-/node-aead-crypto-darwin-arm64-3.0.1.tgz#5e37ee9ce0aab29d4e3cb06f173254c54954a13a"
+  integrity sha512-qb5jCE5xfKWJGNwFGhzpcdEZf16RDXOpHu2zckM1rZw4xpfZpSaIzU5J6mBTHzuYfQJrpQSj/sZPuFGIjqEvBA==
+
+node-aead-crypto-darwin-universal@3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/node-aead-crypto-darwin-universal/-/node-aead-crypto-darwin-universal-3.0.1.tgz#ae3bf14f37dfb3828ca723ecbaa9bcea6271d066"
+  integrity sha512-0v44Z90wONd3B9KLPMWDi7p5IZLQUPBY27X9k2R9ZBuIgK00Zkyfd995xgaHeLPN8VLiddg5UmqdOISY88reMQ==
+
+node-aead-crypto-darwin-x64@3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/node-aead-crypto-darwin-x64/-/node-aead-crypto-darwin-x64-3.0.1.tgz#433fd80d72d8aa7df2c378aeeda0ef8d02f5e59f"
+  integrity sha512-Co6T1sb9R0W6uxlDwnLRlmCP2+5ZKYlQYAY5cWMaTC3RApZY2Qz7GlsK3+6hBaGr8iu4BG2Qdvb5gpS9A9ngLQ==
+
+node-aead-crypto-linux-arm-gnueabihf@3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/node-aead-crypto-linux-arm-gnueabihf/-/node-aead-crypto-linux-arm-gnueabihf-3.0.1.tgz#12d89ad0a377448ab1b8b7b4f8dddb52ded811fb"
+  integrity sha512-5sZobc1hqIQyULpaOVXw6Q+UIgMRIX3/CzHrCvvmWdc9LXG7ZZ7jzv5F8uTXBtJMXBVm3JdmD5bcu80uy9hfPg==
+
+node-aead-crypto-linux-arm64-gnu@3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/node-aead-crypto-linux-arm64-gnu/-/node-aead-crypto-linux-arm64-gnu-3.0.1.tgz#42a652281a20b967c0d322946914a84228afae18"
+  integrity sha512-cieHU0schCllZlDj54SKlYYknZSqBB83K44mFrIjfA/QLo1LQ5vgzpL7xZZLYe82HdcHRtVBLn9zfl1rtb3x+w==
+
+node-aead-crypto-linux-arm64-musl@3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/node-aead-crypto-linux-arm64-musl/-/node-aead-crypto-linux-arm64-musl-3.0.1.tgz#17f115506b31da430704eb8ab50415a79996f25a"
+  integrity sha512-NU2gUYA4cueaxXtULB4h+a85UIHLB6oH7lt9qHNSQtWkFesoQSUBStmzukX75zhNBI7tvi1Z+jukUrOPYe2ixQ==
+
+node-aead-crypto-linux-x64-gnu@3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/node-aead-crypto-linux-x64-gnu/-/node-aead-crypto-linux-x64-gnu-3.0.1.tgz#45c2f1cfaaa0929010dc27a5480f99dcb4dc48fb"
+  integrity sha512-KK+JrrtagnpzBsOofLE+kAf5reB5LGllh1Sdxknccg0e9oQEsL5dzTCjof5iMSdKZEBBKGrWxftMl8UxAR56Jg==
+
+node-aead-crypto-linux-x64-musl@3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/node-aead-crypto-linux-x64-musl/-/node-aead-crypto-linux-x64-musl-3.0.1.tgz#16b8afdd1d672d6d6e5046dc2d33005fa62c1803"
+  integrity sha512-CniTRbq1q+qaN2a0MB3PYZZVYVl7rS54MxT9gMaOBEd7KuG5dXry7G/cwwbJ0oR3Agjyt2mTWcW36SjJPudKXw==
+
+node-aead-crypto-win32-arm64-msvc@3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/node-aead-crypto-win32-arm64-msvc/-/node-aead-crypto-win32-arm64-msvc-3.0.1.tgz#2ae245622aabbb530cd43fad1a4afbdd9647ada1"
+  integrity sha512-zDpx5flNM+v9rwN1qwtHudubEqTDtALkL6aCX+KwBG2uccV/PNFsy9imCDyLT86A/7D+U6WPZCpafZgN+w2aBg==
+
+node-aead-crypto-win32-ia32-msvc@3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/node-aead-crypto-win32-ia32-msvc/-/node-aead-crypto-win32-ia32-msvc-3.0.1.tgz#e97b31c079b22de5ff0f26d20d8bab99344c038f"
+  integrity sha512-XD3iIsFG4kWn+XT3PabblNmejS3rNjKAkihCM6R1nPHpGLZFKOPpkummRBi0dWs3s01cV6jx59YG2r1FsZwJ0g==
+
+node-aead-crypto-win32-x64-msvc@3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/node-aead-crypto-win32-x64-msvc/-/node-aead-crypto-win32-x64-msvc-3.0.1.tgz#cbfdaf1371d5b1690167be77cf99823fafee58fc"
+  integrity sha512-I2rehJKYEDXlA2uf3Z/Cnjtg74ClO3cjZhpW/SVKHGfSnxSvLK7BJ3yNAV6x+XpaHBYJMlRvWZqnHqgaHuxWUA==
+
+node-aead-crypto@^3.0.1:
+  version "3.0.1"
+  resolved "https://registry.yarnpkg.com/node-aead-crypto/-/node-aead-crypto-3.0.1.tgz#4ec4beb9632579069a79a66e8e70b3fb37bd1816"
+  integrity sha512-z1PSiyueg0Demr4iLJ5pqoB1NDP9OsBrsSiGGNx3GaQDBOWY2wyVjS4xRCPiWEN/yu3pgb2PklqaksW1Z4L8aw==
+  optionalDependencies:
+    node-aead-crypto-android-arm-eabi "3.0.1"
+    node-aead-crypto-android-arm64 "3.0.1"
+    node-aead-crypto-darwin-arm64 "3.0.1"
+    node-aead-crypto-darwin-universal "3.0.1"
+    node-aead-crypto-darwin-x64 "3.0.1"
+    node-aead-crypto-linux-arm-gnueabihf "3.0.1"
+    node-aead-crypto-linux-arm64-gnu "3.0.1"
+    node-aead-crypto-linux-arm64-musl "3.0.1"
+    node-aead-crypto-linux-x64-gnu "3.0.1"
+    node-aead-crypto-linux-x64-musl "3.0.1"
+    node-aead-crypto-win32-arm64-msvc "3.0.1"
+    node-aead-crypto-win32-ia32-msvc "3.0.1"
+    node-aead-crypto-win32-x64-msvc "3.0.1"
+
 node-api-version@^0.2.0:
   version "0.2.0"
   resolved "https://registry.npmjs.org/node-api-version/-/node-api-version-0.2.0.tgz"
   integrity sha512-fthTTsi8CxaBXMaBAD7ST2uylwvsnYxh2PfaScwpMhos6KlSFajXQPcM4ogNE1q2s3Lbz9GCGqeIHC+C6OZnKg==
   dependencies:
     semver "^7.3.5"
+
+node-dtls-client@^1.1.1:
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/node-dtls-client/-/node-dtls-client-1.1.1.tgz#6558a0bd8027ca5b4bb051d9c6f2b67ffce7e893"
+  integrity sha512-kwQ8j5OW/cWCcLeFbUC8dyXXXMYetfIFC132wK8BzaUVr7izKWVeVrbYhUsl7yLh+qCrhf+bI3+fu2viTIJajA==
+  dependencies:
+    debug "^4.3.4"
+    semver "^7.3.7"
+  optionalDependencies:
+    node-aead-crypto "^3.0.1"
 
 node-fetch@^2.6.1, node-fetch@^2.6.12, node-fetch@^2.6.7:
   version "2.7.0"

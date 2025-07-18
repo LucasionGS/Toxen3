@@ -45,7 +45,7 @@ import EditSong from "./components/Sidepanel/Panels/EditSong/EditSong";
 import InitialData from "./windows/SubtitleCreator/models/InitialData";
 import User from "./toxen/User";
 import { IconLayoutNavbarExpand } from "@tabler/icons-react";
-// import HueManager from "./toxen/philipshue/HueManager";
+import HueManager from "./toxen/philipshue/HueManager";
 import ImportPanel from "./components/Sidepanel/Panels/ImportPanel/ImportPanel";
 // import YTDlpWrap from "yt-dlp-wrap";
 import StoryboardEditor, { StoryboardEditorController } from "./components/StoryboardEditor/StoryboardEditor";
@@ -424,27 +424,25 @@ export class Toxen {
 
     document.body.classList.toggle("advanced", Settings.isAdvanced());
 
-    // Disable hueEnabled while its still broken.
-    // if (Settings.get("hueEnabled")) Settings.set("hueEnabled", false);
-    
-    // if (toxenapi.isDesktop() && Settings.get("hueEnabled") && !HueManager.instance) {
-    //   HueManager.init({
-    //     ip: Settings.get("hueBridgeIp"),
-    //     username: Settings.get("hueUsername"),
-    //     clientkey: Settings.get("hueClientkey"),
-    //   });
+    if (toxenapi.isDesktop() && Settings.get("hueEnabled") && !HueManager.instance) {
+      HueManager.init({
+        ip: Settings.get("hueBridgeIp"),
+        username: Settings.get("hueUsername"),
+        clientkey: Settings.get("hueClientkey"),
+        bridgeId: Settings.get("hueBridgeId"), // Add bridge ID if available
+      });
 
-    //   if (Settings.get("hueEntertainmentAreaId")) {
-    //     HueManager.instance.getEntertainmentArea(
-    //       Settings.get("hueEntertainmentAreaId")
-    //     ).then(area => {
-    //       HueManager.setCurrentArea(area);
-    //     }).catch(err => {
-    //       HueManager.setCurrentArea(null);
-    //       Toxen.error(err);
-    //     });
-    //   }
-    // }
+      if (Settings.get("hueEntertainmentAreaId")) {
+        HueManager.instance.getEntertainmentArea(
+          Settings.get("hueEntertainmentAreaId")
+        ).then(area => {
+          HueManager.setCurrentArea(area);
+        }).catch(err => {
+          HueManager.setCurrentArea(null);
+          Toxen.error(err);
+        });
+      }
+    }
 
     Toxen.discord?.setPresence();
   }

@@ -1,9 +1,9 @@
 import { Checkbox, Tabs, TextInput, NumberInput, Select, Button, ColorInput, RangeSlider, Slider, Text, Alert } from "@mantine/core";
 // import * as remote from "@electron/remote";
-// import type { EntertainmentArea } from "hue-sync";
+import type { HueEntertainmentArea } from "../../../../toxen/philipshue/HueAPI";
 import React, { useEffect } from "react";
 import Converter from "../../../../toxen/Converter";
-// import HueManager from "../../../../toxen/philipshue/HueManager";
+import HueManager from "../../../../toxen/philipshue/HueManager";
 import Settings, { ISettings, VisualizerStyle, visualizerStyleOptions } from "../../../../toxen/Settings";
 import Song from "../../../../toxen/Song";
 import { Toxen } from "../../../../ToxenApp";
@@ -588,7 +588,7 @@ export default function SettingsPanel(props: SettingsPanelProps) {
 
           <br />
           {/* Hue Settings */}
-          {/* <HueSettings /> */}
+          <HueSettings />
         </Tabs.Panel>
       </Tabs>
     </>
@@ -674,96 +674,420 @@ export function VisualizerStyleOptions(props: {
 
 /**
  * Hue settings
- * DISABLED FOR NOW
  */
-// function HueSettings() {
-//   const [areas, setAreas] = React.useState<EntertainmentArea[]>(null);
-//   const [selectedArea, _setSelectedArea] = React.useState<EntertainmentArea>(HueManager.currentArea ?? null);
-//   function setSelectedArea(area: EntertainmentArea) {
-//     _setSelectedArea(area);
-//     HueManager.setCurrentArea(area);
-//     Settings.apply({ hueEntertainmentAreaId: area.id }, true);
-//   }
+function HueSettings() {
+  const [areas, setAreas] = React.useState<HueEntertainmentArea[]>(null);
+  const [selectedArea, _setSelectedArea] = React.useState<HueEntertainmentArea>(HueManager.currentArea ?? null);
+  const [isConnecting, setIsConnecting] = React.useState(false);
+  const [bridges, setBridges] = React.useState<any[]>(null);
+  const [isDiscovering, setIsDiscovering] = React.useState(false);
+  const [isRegistering, setIsRegistering] = React.useState(false);
+  const [registrationAttempt, setRegistrationAttempt] = React.useState(0);
+  
+  function setSelectedArea(area: HueEntertainmentArea) {
+    _setSelectedArea(area);
+    HueManager.setCurrentArea(area);
+    Settings.apply({ hueEntertainmentAreaId: area.id }, true);
+  }
 
-//   function fetchAreas() {
-//     if (HueManager.instance) {
-//       HueManager.instance?.getEntertainmentAreas().then((areas) => {
-//         setAreas(areas);
-//         const selectedArea = areas.find(a => a.id === Settings.get("hueEntertainmentAreaId"));
-//         if (selectedArea) setSelectedArea(selectedArea);
-//       });
-//     }
-//     else {
-//       // Give a popup idk
-//     }
-//   }
+  function fetchAreas() {
+    if (HueManager.instance) {
+      HueManager.instance.getEntertainmentAreas().then((areas) => {
+        setAreas(areas);
+        const selectedArea = areas.find(a => a.id === Settings.get("hueEntertainmentAreaId"));
+        if (selectedArea) setSelectedArea(selectedArea);
+      }).catch(error => {
+        Toxen.error("Failed to fetch entertainment areas: " + error.message);
+      });
+    }
+  }
 
-//   useEffect(() => {
-//     if (HueManager.instance) {
-//       fetchAreas();
-//     }
-//   }, []);
+  async function identifyLights() {
+    if (!HueManager.instance || !selectedArea) {
+      Toxen.error("No entertainment area selected");
+      return;
+    }
 
-//   return (
-//     <>
-//       <h2>Philip Hue Settings</h2>
-//       <Checkbox onClick={(e) => {
-//         Settings.apply({ hueEnabled: e.currentTarget.checked }, true);
-//         if (e.currentTarget.checked) {
-//           HueManager.init({
-//             ip: Settings.get("hueIp"),
-//             username: Settings.get("hueUsername"),
-//             clientkey: Settings.get("hueClientkey")
-//           });
-//           HueManager.start().then(() => Toxen.log("Hue connected", 1000)).catch((error) => Toxen.error(error.message));
-//         } else {
-//           HueManager.dispose();
-//         }
-//       }} defaultChecked={Settings.get("hueEnabled")} name="hueEnabled" label="Enable Hue" />
-//       <br />
-//       <sup>
-//         Enables Hue integration. This will allow you to control your Hue lights with Toxen storyboards.
-//         <code>⚠ Experimental, stability is <b>not</b> guaranteed ⚠</code>
-//       </sup>
+    try {
+      Toxen.log("Identifying lights in entertainment area...", 3000);
       
+      // Start entertainment mode if not already started
+      const wasStarted = HueManager.started;
+      if (!wasStarted) {
+        await HueManager.start();
+      }
 
-//       {/* hueBridgeIp */}
-//       <TextInput onChange={(e) => Settings.apply({ hueBridgeIp: e.currentTarget.value }, true)} defaultValue={Settings.get("hueBridgeIp")} name="hueBridgeIp" label="Hue Bridge IP" />
-//       <br />
-//       <sup>Set the IP address of your Hue bridge.</sup>
+      // Blink sequence: Red -> Green -> Blue -> White -> Off -> Restore
+      const blinkSequence = [
+        [255, 0, 0],    // Red
+        [0, 255, 0],    // Green  
+        [0, 0, 255],    // Blue
+        [255, 255, 255], // White
+        [0, 0, 0],      // Off
+      ];
 
-//       {/* hueUsername */}
-//       <TextInput onChange={(e) => Settings.apply({ hueUsername: e.currentTarget.value }, true)} defaultValue={Settings.get("hueUsername")} name="hueUsername" label="Hue Username" />
-//       <br />
-//       <sup>Set the username of your Hue bridge.</sup>
-
-//       {/* hueClientkey */}
-//       <TextInput onChange={(e) => Settings.apply({ hueClientkey: e.currentTarget.value }, true)} defaultValue={Settings.get("hueClientkey")} name="hueClientkey" label="Hue Client Key" />
-//       <br />
-//       <sup>Set the client key of your Hue bridge.</sup>
-
-//       {/* Light entertainment areas */}
-//       {/* <Carousel slideSize="70%" height={200} slideGap="md">
+      for (let i = 0; i < blinkSequence.length; i++) {
+        const [r, g, b] = blinkSequence[i];
         
-//       </Carousel> */}
-//       <div>
-//         {
-//           areas?.map((area) => (
-//             <Button onClick={() => setSelectedArea(area)} color={selectedArea?.id === area.id ? "green" : "gray"}>
-//               {area.name}
-//             </Button>
-//           ))
-//         }
-//       </div>
-//       <br />
-//       <Button onClick={() => {
-//         fetchAreas();
-//       }} color="green">
-//         Fetch lights
-//       </Button>
-//       <br />
-//       <br />
-//       <sup>Fetches the lights from your Hue bridge. This should be done automatically when Toxen starts.</sup>
-//     </>
-//   );
-// }
+        // Set all lights to the current color
+        HueManager.setLightNodes(
+          HueManager.currentLightNodes.map(() => [r, g, b] as [number, number, number])
+        );
+        HueManager.transition(); // Actually send the data
+        
+        // Wait 500ms between each color change
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      // Restore original state
+      if (!wasStarted) {
+        HueManager.stop();
+      } else {
+        // Reset to neutral state
+        HueManager.setLightNodes(
+          HueManager.currentLightNodes.map(() => [0, 0, 0] as [number, number, number])
+        );
+        HueManager.transition(); // Send the reset
+      }
+
+      Toxen.log("Light identification complete!", 2000);
+    } catch (error) {
+      console.error("Failed to identify lights:", error);
+      Toxen.error("Failed to identify lights: " + error.message);
+    }
+  }
+
+  async function testEntertainmentStreaming() {
+    if (!selectedArea) {
+      Toxen.error("Please select an entertainment area first");
+      return;
+    }
+
+    try {
+      Toxen.log("Starting entertainment streaming test...", 3000);
+      console.log(`Testing entertainment streaming for area: ${selectedArea.name}`);
+      
+      // Use the HueManager's HueAPI instance to test streaming
+      if (HueManager.instance) {
+        // await HueManager.instance.testEntertainmentStreaming(selectedArea, 10000); // 10 second test
+        await HueManager.instance.testEntertainmentActivation(selectedArea);
+        // Toxen.log("Entertainment streaming test started! Check your lights for color changes.", 5000);
+      } else {
+        throw new Error("Hue Manager not available");
+      }
+    } catch (error) {
+      console.error("Failed to test entertainment streaming:", error);
+      Toxen.error("Failed to test entertainment streaming: " + error.message);
+    }
+  }
+
+  async function discoverBridges() {
+    setIsDiscovering(true);
+    try {
+      // Use our custom HueAPI discovery
+      const discoveredBridges = await HueManager.HueAPIStatic.discover();
+      
+      if (discoveredBridges.length > 0) {
+        setBridges(discoveredBridges);
+        Toxen.log(`Found ${discoveredBridges.length} Hue bridge(s)`);
+      } else {
+        setBridges([]);
+        Toxen.error("No Hue bridges found on network");
+      }
+    } catch (error) {
+      Toxen.error("Failed to discover bridges: " + error.message);
+      setBridges([]);
+    } finally {
+      setIsDiscovering(false);
+    }
+  }
+
+  async function registerWithBridge(bridgeIp: string) {
+    setIsRegistering(true);
+    setRegistrationAttempt(0);
+    
+    const maxAttempts = 15; // 30 seconds / 2 seconds per attempt
+    const retryInterval = 2000; // 2 seconds
+    let attempt = 0;
+    
+    try {
+      Toxen.log("Press the button on your Hue bridge within 30 seconds...", 30000);
+      
+      const attemptRegistration = async (): Promise<any> => {
+        attempt++;
+        setRegistrationAttempt(attempt);
+        
+        try {
+          const credentials = await HueManager.HueAPIStatic.register(bridgeIp, "toxen-music-player#desktop");
+          return credentials;
+        } catch (error) {
+          if (attempt >= maxAttempts) {
+            throw new Error(`Registration failed after ${maxAttempts} attempts. Make sure you pressed the button on your Hue bridge.`);
+          }
+          
+          // Wait 2 seconds before next attempt
+          await new Promise(resolve => setTimeout(resolve, retryInterval));
+          return attemptRegistration();
+        }
+      };
+      
+      const credentials = await attemptRegistration();
+      
+      // Apply the credentials to settings
+      Settings.apply({
+        hueBridgeIp: bridgeIp,
+        hueUsername: credentials.username,
+        hueClientkey: credentials.clientkey,
+        hueBridgeId: bridges?.find(b => b.internalipaddress === bridgeIp)?.id || bridgeIp
+      }, true);
+      
+      Toxen.log("Successfully registered with Hue bridge!");
+    } catch (error) {
+      console.log(error);
+      Toxen.error("Failed to register with bridge: " + error);
+    } finally {
+      setIsRegistering(false);
+      setRegistrationAttempt(0);
+    }
+  }
+
+  function connectToHue() {
+    setIsConnecting(true);
+    try {
+      console.log("Initializing HueManager with credentials:", {
+        ip: Settings.get("hueBridgeIp"),
+        username: Settings.get("hueUsername") ? "***" : "missing",
+        clientkey: Settings.get("hueClientkey") ? "***" : "missing",
+        bridgeId: Settings.get("hueBridgeId") || "using IP as fallback"
+      });
+      
+      HueManager.init({
+        ip: Settings.get("hueBridgeIp"),
+        username: Settings.get("hueUsername"),
+        clientkey: Settings.get("hueClientkey"),
+        bridgeId: Settings.get("hueBridgeId")
+      });
+      
+      console.log("HueManager initialized, attempting to start...");
+      
+      HueManager.start().then(() => {
+        console.log("Hue started successfully");
+        Toxen.log("Hue connected successfully!", 2000);
+        fetchAreas();
+      }).catch((error) => {
+        console.error("Error starting Hue:", error);
+        Toxen.error("Failed to start Hue: " + (error.message || error));
+      }).finally(() => {
+        setIsConnecting(false);
+      });
+    } catch (error) {
+      console.error("Error initializing Hue:", error);
+      
+      // Handle the specific DNS lookup error
+      if (error.message && error.message.includes("lookup")) {
+        Toxen.error("DNS lookup error. This might be due to Node.js version compatibility. Try using IP address instead of hostname.");
+      } else {
+        Toxen.error("Failed to initialize Hue: " + (error.message || error));
+      }
+      setIsConnecting(false);
+    }
+  }
+
+  function disconnectFromHue() {
+    HueManager.dispose();
+    setAreas(null);
+    _setSelectedArea(null);
+    Toxen.log("Disconnected from Hue");
+  }
+
+  useEffect(() => {
+    if (HueManager.instance) {
+      fetchAreas();
+    }
+  }, []);
+
+  return (
+    <>
+      <h2>Philips Hue Settings</h2>
+      
+      <Checkbox 
+        onClick={(e) => {
+          Settings.apply({ hueEnabled: e.currentTarget.checked }, true);
+          if (e.currentTarget.checked && Settings.get("hueBridgeIp")) {
+            connectToHue();
+          } else {
+            disconnectFromHue();
+          }
+        }} 
+        defaultChecked={Settings.get("hueEnabled")} 
+        name="hueEnabled" 
+        label="Enable Hue Integration" 
+      />
+      <sup>
+        Enables Philips Hue integration for real-time light synchronization with music and storyboard effects.
+        <br />
+        <code>⚠ Experimental feature - stability may vary ⚠</code>
+      </sup>
+
+      <h3>Bridge Discovery</h3>
+      <Button 
+        onClick={discoverBridges} 
+        loading={isDiscovering}
+        disabled={isDiscovering}
+        color="blue"
+        size="sm"
+      >
+        {isDiscovering ? "Discovering..." : "Discover Bridges"}
+      </Button>
+      <sup>Automatically discover Hue bridges on your network (tries local discovery first, then online discovery).</sup>
+
+      {bridges && bridges.length > 0 && (
+        <>
+          <Text size="sm" fw={500} mt="md">Found Bridges:</Text>
+          {bridges.map((bridge, index) => (
+            <div key={index} style={{ marginTop: '8px', padding: '8px', border: '1px solid #ccc', borderRadius: '4px' }}>
+              <Text size="sm"><strong>IP:</strong> {bridge.internalipaddress}</Text>
+              <Text size="sm"><strong>ID:</strong> {bridge.id}</Text>
+              {bridge.port && <Text size="sm"><strong>Port:</strong> {bridge.port}</Text>}
+              <Button 
+                onClick={() => registerWithBridge(bridge.internalipaddress)}
+                loading={isRegistering}
+                disabled={isRegistering}
+                color="green"
+                size="xs"
+                mt="xs"
+              >
+                {isRegistering ? `Registering... (${registrationAttempt}/15)` : "Register"}
+              </Button>
+            </div>
+          ))}
+        </>
+      )}
+
+      <h3>Bridge Configuration</h3>
+      <TextInput 
+        onChange={(e) => Settings.apply({ hueBridgeIp: e.currentTarget.value }, true)} 
+        defaultValue={Settings.get("hueBridgeIp")} 
+        name="hueBridgeIp" 
+        label="Bridge IP Address" 
+        placeholder="192.168.1.100"
+        error={Settings.get("hueBridgeIp") && !/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/.test(Settings.get("hueBridgeIp")) ? "Please enter a valid IPv4 address" : null}
+      />
+      <sup>
+        The IP address of your Hue bridge on the local network. 
+        <br />
+        <strong>Important:</strong> Use the numeric IP address (e.g., 192.168.1.100), not a hostname, to avoid DNS lookup issues.
+      </sup>
+
+      <TextInput 
+        onChange={(e) => Settings.apply({ hueUsername: e.currentTarget.value }, true)} 
+        defaultValue={Settings.get("hueUsername")} 
+        name="hueUsername" 
+        label="Username" 
+        placeholder="Generated after registration"
+      />
+      <sup>Username credential for accessing the bridge API.</sup>
+
+      <TextInput 
+        onChange={(e) => Settings.apply({ hueClientkey: e.currentTarget.value }, true)} 
+        defaultValue={Settings.get("hueClientkey")} 
+        name="hueClientkey" 
+        label="Client Key" 
+        placeholder="Generated after registration"
+      />
+      <sup>Client key credential for Entertainment API access.</sup>
+
+      {Settings.get("hueBridgeIp") && Settings.get("hueUsername") && Settings.get("hueClientkey") && (
+        <>
+          <Button 
+            onClick={connectToHue}
+            loading={isConnecting}
+            disabled={isConnecting || !!HueManager.instance}
+            color="green"
+            size="sm"
+            mt="md"
+          >
+            {isConnecting ? "Connecting..." : HueManager.instance ? "Connected" : "Connect to Bridge"}
+          </Button>
+          
+          {HueManager.instance && (
+            <Button 
+              onClick={disconnectFromHue}
+              color="red"
+              size="sm"
+              mt="md"
+              ml="sm"
+            >
+              Disconnect
+            </Button>
+          )}
+        </>
+      )}
+
+      {areas && areas.length > 0 && (
+        <>
+          <h3>Entertainment Areas</h3>
+          <Text size="sm" mb="xs">Select an entertainment area for light effects:</Text>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+            {areas.map((area) => (
+              <Button 
+                key={area.id}
+                onClick={() => setSelectedArea(area)} 
+                color={selectedArea?.id === area.id ? "green" : "gray"}
+                variant={selectedArea?.id === area.id ? "filled" : "outline"}
+                size="sm"
+              >
+                {area.name}
+              </Button>
+            ))}
+          </div>
+          <sup>Entertainment areas allow real-time control of multiple lights for immersive effects.</sup>
+        </>
+      )}
+
+      {HueManager.instance && (
+        <>
+          <Button 
+            onClick={fetchAreas}
+            color="blue"
+            variant="light"
+            size="sm"
+            mt="md"
+          >
+            Refresh Areas
+          </Button>
+          
+          {selectedArea && (
+            <Button 
+              onClick={identifyLights}
+              color="orange"
+              variant="light"
+              size="sm"
+              mt="md"
+              ml="sm"
+            >
+              Identify Lights
+            </Button>
+          )}
+        </>
+      )}
+
+      <h3>Entertainment Streaming Test</h3>
+      <Button 
+        onClick={testEntertainmentStreaming}
+        color="violet"
+        size="sm"
+        loading={false}
+        disabled={!selectedArea}
+      >
+        Test Streaming
+      </Button>
+      <sup>
+        Test the entertainment streaming to ensure lights respond correctly.
+        This will change the colors of the lights in the selected entertainment area.
+        <br />
+        <strong>Note:</strong> This is a test function. Use the main controls to start/stop actual streaming.
+      </sup>
+    </>
+  );
+}

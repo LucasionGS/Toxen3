@@ -23,7 +23,7 @@ import StoryboardParser from "./StoryboardParser";
 import User from "./User";
 import { hideNotification, updateNotification } from "@mantine/notifications";
 import PlaylistManager from "../components/PlaylistManager/PlaylistManager";
-// import HueManager from "./philipshue/HueManager";
+import HueManager from "./philipshue/HueManager";
 
 export default class Song implements ISong {
   public uid: string;
@@ -403,12 +403,12 @@ export default class Song implements ISong {
     options ?? (options = {});
     let src = this.mediaFile();
     if (Toxen.musicPlayer.state.src === src) return;
-    // if (HueManager.isEnabled()) {
-    //   HueManager.start().catch((error) => Toxen.error(error.message));
-    // }
-    // else {
-    //   HueManager.stop();
-    // }
+    if (HueManager.isEnabled()) {
+      HueManager.start().catch((error) => Toxen.error(error.message));
+    }
+    else {
+      HueManager.stop();
+    }
     if (Settings.isRemote() && this.isVideo()) Toxen.log("Streaming a video can take some time to load... Using audio files is much faster.", 3000);
     if (this.lastBlobUrl) URL.revokeObjectURL(this.lastBlobUrl);
     let bg = this.backgroundFile();
