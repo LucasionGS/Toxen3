@@ -520,6 +520,23 @@ export default function EditSong(props: EditSongProps) {
         />
         <sup>Enables a glow effect on the visualizer for this song.</sup>
 
+        {/* Visualizer Shuffle */}
+        <Select
+          allowDeselect={false}
+          label="Visualizer Shuffle"
+          name="visualizerShuffle"
+          defaultValue={getValue('visualizerShuffle') ? "enabled" : getValue('visualizerShuffle') === false ? "disabled" : ""}
+          data={[
+            { value: "", label: "<Default>" },
+            { value: "enabled", label: "Enabled" },
+            { value: "disabled", label: "Disabled" }
+          ]}
+          onChange={(v) => {
+            saveSettings('visualizerShuffle', v === "enabled" ? true : v === "disabled" ? false : null);
+          }}
+        />
+        <sup>Enables a shuffle effect on the visualizer for this song.</sup>
+
         {/* Star Rush Effect */}
         <Select
           allowDeselect={false}

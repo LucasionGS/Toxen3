@@ -173,10 +173,8 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
 
     // Shuffle the array to make it look more random.
     if (
-      // Settings.get("visualizerStyle") === VisualizerStyle.CircleWaveform ||
-      (Settings.get("visualizerShuffle") ?? false) &&
-      Settings.get("visualizerStyle") !== VisualizerStyle.PulseWave &&
-      Settings.get("visualizerStyle") !== VisualizerStyle.Waveform
+      Toxen.background.storyboard.getVisualizerShuffle()
+      // (Settings.get("visualizerShuffle") ?? false)
     ) {
       let seed = 1;
       // Seeded pseudo-random number generator.

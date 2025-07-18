@@ -94,6 +94,12 @@ export default class Discord {
       let options: Presence = {
         details: `${song?.isVideo() ? "Watching a video" : "Listening to a song"}`,
         largeImageKey: "toxen",
+        buttons: [
+          {
+            label: "Get Toxen",
+            url: "https://toxen.net"
+          }
+        ],
         largeImageText: remote.app.isPackaged ? "Toxen " + remote.app.getVersion() : "Toxen " + remote.app.getVersion() + " | Developer Mode",
       };
       if (Settings.get("discordPresenceDetailed") && song) {

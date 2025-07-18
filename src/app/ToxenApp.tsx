@@ -55,9 +55,6 @@ import LoginForm from "./components/LoginForm/LoginForm";
 import AudioEffects from "./toxen/AudioEffects";
 import ImageCache from "./toxen/ImageCache";
 
-declare const SUBTITLE_CREATOR_WEBPACK_ENTRY: any;
-// const browser = remote.getCurrentWindow();
-
 //#region Define variables used all over the ToxenApp process.
 /**
  * Handler for events during runtime.

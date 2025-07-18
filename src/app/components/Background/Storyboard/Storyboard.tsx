@@ -57,6 +57,7 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
       visualizerForceRainbowMode: null,
       visualizerStyle: null,
       visualizerIntensity: null,
+      visualizerShuffle: null,
       visualizerNormalize: null,
       visualizerPulseBackground: null,
       visualizerGlow: null,
@@ -119,6 +120,15 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
         (this.state.song && this.getEffectiveSongSettings().visualizerIntensity)
         || Settings.get("visualizerIntensity")
         || 1
+      );
+  }
+
+  public getVisualizerShuffle() {
+    return this.data.visualizerShuffle
+      ?? (
+        (this.state.song && this.getEffectiveSongSettings().visualizerShuffle)
+        || Settings.get("visualizerShuffle")
+        || false
       );
   }
 
@@ -273,6 +283,7 @@ interface StoryboardData {
   visualizerColor: string;
   visualizerForceRainbowMode: boolean;
   visualizerIntensity: number;
+  visualizerShuffle: boolean;
   visualizerNormalize: boolean;
   visualizerStyle: VisualizerStyle;
   visualizerPulseBackground: boolean;

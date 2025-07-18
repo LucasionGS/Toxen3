@@ -39,6 +39,7 @@ export default class Song implements ISong {
   public visualizerStyle: VisualizerStyle;
   public visualizerStyleOptions: ISong["visualizerStyleOptions"];
   public visualizerIntensity: number;
+  public visualizerShuffle: boolean;
   public visualizerNormalize: boolean;
   public visualizerForceRainbowMode: boolean;
   public visualizerGlow: boolean;
@@ -354,6 +355,7 @@ export default class Song implements ISong {
       "visualizerStyle",
       "visualizerStyleOptions",
       "visualizerIntensity",
+      "visualizerShuffle",
       "visualizerNormalize",
       "visualizerForceRainbowMode",
       "visualizerPulseBackground",
@@ -1738,6 +1740,7 @@ export interface ISong {
   visualizerStyle: VisualizerStyle;
   visualizerStyleOptions: ISettings["visualizerStyleOptions"];
   visualizerIntensity: number;
+  visualizerShuffle: boolean;
   visualizerNormalize: boolean;
   visualizerForceRainbowMode: boolean;
   /**

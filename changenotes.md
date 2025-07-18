@@ -1,3 +1,11 @@
+## 2.4.0 - 18-07-2025
+### New Features
+- **Playlist-specific Song-specific settings** - This mouthful allows you to configure settings for each song within a playlist for that specific playlist for all the visual effects.
+  - This has a breaking change, as it changes the way backgrounds are applied for each song per playlist. If you had songs with playlist specific backgrounds, they will need to be reapplied with the new system. All your used backgrounds in this scenario can be found in the .playlistBackgrounds folder in your Toxen library folder.
+- **Visualizer Shuffle** - Randomizes the visualizer bar positioning. This will make them look more chaotic.
+- **Automatic Themes** - An option to automatically generate a theme based on the current visualizer color. This can be set globally or per song. It will override the default theme with one based on the visualizer color, including ones that change in real time.
+
+
 ## 2.3.0 - 02-07-2025
 ### New Features
 - **Enhanced Background Management** - Completely redesigned background selection across the entire application
