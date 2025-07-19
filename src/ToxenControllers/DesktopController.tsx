@@ -26,6 +26,7 @@ import System from "../app/toxen/System";
 import { Checkbox, Menu, RangeSlider, Button, Progress, Group, Stack } from "@mantine/core";
 import { hideNotification, updateNotification } from "@mantine/notifications";
 import Discord from "../app/toxen/desktop/Discord";
+import TaskbarControls from "../app/toxen/desktop/TaskbarControls";
 
 /**
  * DesktopController is a controller for desktop-specific functions. Overwrites the web version of the controller.
@@ -702,4 +703,6 @@ export default class DesktopController extends ToxenController {
       throw new Error('Failed to export theme');
     }
   }
+
+  TaskbarControls = TaskbarControls;
 }

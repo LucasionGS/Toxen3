@@ -1,3 +1,8 @@
+## Upcoming 2.4.1 - TBD
+### New Features
+- **Taskbar Controls** - Added taskbar controls for Windows. Simple allows you to control playback controls from the taskbar.
+
+
 ## 2.4.0 - 18-07-2025
 ### New Features
 - **Playlist-specific Song-specific settings** - This mouthful allows you to configure settings for each song within a playlist for that specific playlist for all the visual effects.

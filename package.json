@@ -1,7 +1,7 @@
 {
   "name": "toxen3",
   "productName": "Toxen",
-  "version": "2.4.0",
+  "version": "2.4.1",
   "description": "Toxen Music Player",
   "main": ".vite/build/main.js",
   "scripts": {

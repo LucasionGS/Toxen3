@@ -959,6 +959,9 @@ export default class ToxenAppRenderer extends React.Component {
           }
   
           Toxen.toggleFullscreen(win.isFullScreen());
+
+          // Initialize taskbar controls
+          toxenapi.TaskbarControls.initialize();
   
           try {
             toxenapi.remote.autoUpdater.on("update-available", () => {

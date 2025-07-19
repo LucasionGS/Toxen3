@@ -102,7 +102,12 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
 
   public play() {
     this.media.play();
-    if (!this.props.useSubtitleEditorMode) Toxen.discord?.setPresence();
+    if (!this.props.useSubtitleEditorMode) {
+      Toxen.discord?.setPresence();
+      if (toxenapi.isDesktop() && toxenapi.TaskbarControls) {
+        toxenapi.TaskbarControls.onPlayStateChanged();
+      }
+    }
   }
 
   public load() {
@@ -111,7 +116,12 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
 
   public pause() {
     this.media.pause();
-    if (!this.props.useSubtitleEditorMode) Toxen.discord?.setPresence();
+    if (!this.props.useSubtitleEditorMode) {
+      Toxen.discord?.setPresence();
+      if (toxenapi.isDesktop() && toxenapi.TaskbarControls) {
+        toxenapi.TaskbarControls.onPlayStateChanged();
+      }
+    }
   }
 
   public toggle() {

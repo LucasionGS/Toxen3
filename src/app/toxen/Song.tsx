@@ -604,6 +604,11 @@ export default class Song implements ISong {
       this.duration = await this.calculateDuration();
       this.saveInfo();
     }
+
+    // Update taskbar controls when a new song plays
+    if (toxenapi.isDesktop() && toxenapi.TaskbarControls) {
+      toxenapi.TaskbarControls.onSongChanged(this);
+    }
   }
 
   public static async convertAllNecessary(songs: Song[]) {
