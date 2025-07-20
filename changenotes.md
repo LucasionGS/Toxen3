@@ -1,6 +1,7 @@
 ## Upcoming 2.4.1 - TBD
 ### New Features
 - **Taskbar Controls** - Added taskbar controls for Windows. Simple allows you to control playback controls from the taskbar.
+- **Floating Title Outline Color** - Added a new setting to change the outline color of the floating title.
 
 
 ## 2.4.0 - 18-07-2025
