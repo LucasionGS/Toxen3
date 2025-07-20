@@ -70,6 +70,7 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
       floatingTitleReactive: null,
       floatingTitleOverrideVisualizer: null,
       floatingTitlePosition: null,
+      floatingTitleOutlineColor: null,
       useFloatingTitleSubtitles: null,
       starRushEffect: null,
       starRushIntensity: null,
@@ -249,6 +250,9 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
   public getFloatingTitlePosition(): ISong["floatingTitlePosition"] {
     return this.data.floatingTitlePosition ?? (this.state.song && this.getEffectiveSongSettings().floatingTitlePosition || "center");
   }
+  public getFloatingTitleOutlineColor() {
+    return this.data.floatingTitleOutlineColor ?? (this.state.song && this.getEffectiveSongSettings().floatingTitleOutlineColor || "white");
+  }
 
   // Star rush effect settings
   public getStarRushEffect() {
@@ -298,6 +302,7 @@ interface StoryboardData {
   floatingTitleReactive: boolean;
   floatingTitleOverrideVisualizer: boolean;
   floatingTitlePosition: ISong["floatingTitlePosition"];
+  floatingTitleOutlineColor: string;
   starRushEffect: boolean;
   starRushIntensity: number;
 }

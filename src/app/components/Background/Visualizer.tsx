@@ -1087,17 +1087,28 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     const underline = Toxen.background.storyboard?.getFloatingTitleUnderline();
     const reactive = Toxen.background.storyboard?.getFloatingTitleReactive();
     const overrideVisualizer = Toxen.background.storyboard?.getFloatingTitleOverrideVisualizer();
+    const outlineColor = Toxen.background.storyboard?.getFloatingTitleOutlineColor() ?? "white";
     const title = Toxen.background.storyboard?.getFloatingTitleText();
     if (enabled && song && title) {
       let shouldOverride = overrideVisualizer;
-      const textWidth = ctx.measureText(title).width;
-      const _fontSize = (48 * (vWidth / 1280) * (usingSubtitles ? 0.5 : 1));
+      const subWithMultiplier = Toxen.isMiniplayer() ? 0.9 : 0.5; // Miniplayer should take up more, as text would be too small.
+      const _fontSize = (48 * (vWidth / 1280) * (usingSubtitles ? (subWithMultiplier * 1.2) : 1));
 
       const fontSize = MathX.clamp(reactive ? _fontSize + (_fontSize - (_fontSize * this.dynamicDim * 2)) : _fontSize, _fontSize, _fontSize * 2);
       // const font = `${fontSize}px Calibri`;
       const font = `${fontSize}px Calibri Light`; // TODO: Make this a setting and customizable font
       const fontColor = this.lastColor ?? '#fff';
       const textHeight = fontSize;
+
+      // Text wrapping for subtitles - wrap at approximately half screen width
+      const maxLineWidth = vWidth * subWithMultiplier; // 50% of screen width
+      const textLines = usingSubtitles ? this.wrapText(ctx, title, maxLineWidth, font) : [title];
+      
+      // Calculate total text block dimensions
+      ctx.font = font;
+      const lineHeight = fontSize * 1.2; // Add some line spacing
+      const totalTextHeight = textLines.length * lineHeight;
+      const maxTextWidth = Math.max(...textLines.map(line => ctx.measureText(line).width));
 
       let textX: number;
       let textY: number;
@@ -1108,114 +1119,105 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
       const position: TextPosition = Toxen.background.storyboard?.getFloatingTitlePosition() ?? "center";
       const isCenterType = style === VisualizerStyle.Center || style === VisualizerStyle.PulseWave || style === VisualizerStyle.Waveform;
       const margin = 16;
+      
+      // Calculate base position for the text block center
+      let baseCenterX: number;
+      let baseCenterY: number;
+      
       switch (position) {
         default: // Also center
-          textX = (vWidth / 2) - (textWidth / 2);
-          textY = (vHeight / 2) + (textHeight / 4); // It works don't touch
-          // boxY = (vHeight / 2) - (textHeight / 2);
-
+          baseCenterX = vWidth / 2;
+          baseCenterY = vHeight / 2;
           shouldOverride = isCenterType;
           break;
 
         case "left":
-          textX = margin;
-          textY = (vHeight / 2) + (textHeight / 4);
-          // boxY = (vHeight / 2) - (textHeight / 2);
-
+          baseCenterX = margin + maxTextWidth / 2;
+          baseCenterY = vHeight / 2;
           shouldOverride = isCenterType || style === VisualizerStyle.Sides;
           break;
 
         case "right":
-          textX = vWidth - textWidth - margin;
-          textY = (vHeight / 2) + (textHeight / 4);
-          // boxY = (vHeight / 2) - (textHeight / 2);
-
+          baseCenterX = vWidth - margin - maxTextWidth / 2;
+          baseCenterY = vHeight / 2;
           shouldOverride = isCenterType || style === VisualizerStyle.Sides;
           break;
 
         case "top":
-          textX = (vWidth / 2) - (textWidth / 2);
-          textY = textHeight;
-          // boxY = 0;
-
+          baseCenterX = vWidth / 2;
+          baseCenterY = margin + totalTextHeight / 2;
           shouldOverride = style === VisualizerStyle.Top || style === VisualizerStyle.TopAndBottom;
           break;
 
         case "bottom":
-          textX = (vWidth / 2) - (textWidth / 2);
-          textY = vHeight - (textHeight / 2);
-          // boxY = vHeight - textHeight;
-
+          baseCenterX = vWidth / 2;
+          baseCenterY = vHeight - margin * 3 - totalTextHeight / 2;
           shouldOverride = style === VisualizerStyle.Bottom || style === VisualizerStyle.TopAndBottom || style === VisualizerStyle.ProgressBar;
           break;
 
         case "top-left":
-          textX = margin;
-          textY = textHeight;
-          // boxY = 0;
-
+          baseCenterX = margin + maxTextWidth / 2;
+          baseCenterY = margin + totalTextHeight / 2;
           shouldOverride = style === VisualizerStyle.Top || style === VisualizerStyle.TopAndBottom || style === VisualizerStyle.Sides;
           break;
 
         case "top-right":
-          textX = vWidth - textWidth - margin;
-          textY = textHeight;
-          // boxY = 0;
-
+          baseCenterX = vWidth - margin - maxTextWidth / 2;
+          baseCenterY = margin + totalTextHeight / 2;
           shouldOverride = style === VisualizerStyle.Top || style === VisualizerStyle.TopAndBottom || style === VisualizerStyle.Sides;
           break;
 
         case "bottom-left":
-          textX = margin;
-          textY = vHeight - (textHeight / 2);
-          // boxY = vHeight - textHeight;
-
+          baseCenterX = margin + maxTextWidth / 2;
+          baseCenterY = vHeight - margin - totalTextHeight / 2;
           shouldOverride = style === VisualizerStyle.Bottom || style === VisualizerStyle.TopAndBottom || style === VisualizerStyle.ProgressBar || style === VisualizerStyle.Sides;
           break;
 
         case "bottom-right":
-          textX = vWidth - textWidth - margin;
-          textY = vHeight - (textHeight / 2);
-          // boxY = vHeight - textHeight;
-
+          baseCenterX = vWidth - margin - maxTextWidth / 2;
+          baseCenterY = vHeight - margin - totalTextHeight / 2;
           shouldOverride = style === VisualizerStyle.Bottom || style === VisualizerStyle.TopAndBottom || style === VisualizerStyle.ProgressBar || style === VisualizerStyle.Sides;
           break;
       }
 
-      // Before drawing, clear the area
+      // Before drawing, clear the area if needed
       if (overrideVisualizer && shouldOverride) {
         ctx.fillStyle = usedDimColor;
-        ctx.clearRect(
-          Math.ceil(textX - 5),
-          0,
-          Math.ceil(textWidth + 10),
-          Math.ceil(vHeight)
-        );
-        ctx.fillRect(
-          Math.ceil(textX - 5),
-          0,
-          Math.ceil(textWidth + 10),
-          Math.ceil(vHeight)
-        );
+        const clearX = baseCenterX - maxTextWidth / 2 - 5;
+        const clearY = baseCenterY - totalTextHeight / 2 - 5;
+        const clearWidth = maxTextWidth + 10;
+        const clearHeight = totalTextHeight + 10;
+        
+        ctx.clearRect(clearX, clearY, clearWidth, clearHeight);
+        ctx.fillRect(clearX, clearY, clearWidth, clearHeight);
       }
 
+      // Draw each line of text
       this.useAlpha(opacity, ctx => {
         ctx.font = font;
-        if (underline) {
-          // Add underline
-          ctx.strokeStyle = fontColor;
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.moveTo(textX, textY + 10);
-          ctx.lineTo(textX + textWidth, textY + 10);
-          ctx.stroke();
-        }
-        // Add text
-        ctx.fillStyle = fontColor;
-        ctx.fillText(title, textX, textY);
-        ctx.lineWidth = 1;
-        ctx.strokeStyle = "white";
-        ctx.strokeText(title, textX, textY);
+        
+        textLines.forEach((line, index) => {
+          const lineWidth = ctx.measureText(line).width;
+          textX = baseCenterX - lineWidth / 2; // Center each line
+          textY = baseCenterY - totalTextHeight / 2 + (index + 1) * lineHeight - lineHeight * 0.3; // Adjust for proper vertical centering
+          
+          if (underline && index === textLines.length - 1) {
+            // Add underline to the last line only
+            ctx.strokeStyle = outlineColor;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(textX, textY + 10);
+            ctx.lineTo(textX + lineWidth, textY + 10);
+            ctx.stroke();
+          }
+          
+          // Add text with customizable outline
+          ctx.fillStyle = fontColor;
+          ctx.fillText(line, textX, textY);
+          ctx.lineWidth = 1;
+          ctx.strokeStyle = outlineColor;
+          ctx.strokeText(line, textX, textY);
+        });
       });
     }
 
@@ -1227,6 +1229,43 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
 
     // Reset storyboard specifics after drawing.
     Toxen.background.storyboard.resetData();
+  }
+
+  /**
+   * Wraps text to fit within a specified width, breaking on words when possible
+   * @param ctx Canvas context for measuring text
+   * @param text Text to wrap
+   * @param maxWidth Maximum width for each line
+   * @param font Font to use for measuring
+   * @returns Array of text lines
+   */
+  private wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, font: string): string[] {
+    const originalFont = ctx.font;
+    ctx.font = font;
+    
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+
+    for (let i = 0; i < words.length; i++) {
+      const word = words[i];
+      const testLine = currentLine + (currentLine ? ' ' : '') + word;
+      const testWidth = ctx.measureText(testLine).width;
+
+      if (testWidth > maxWidth && currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
+    }
+
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+
+    ctx.font = originalFont;
+    return lines.length > 0 ? lines : [text]; // Return original text if wrapping fails
   }
 
   /**

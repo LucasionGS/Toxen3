@@ -4,6 +4,7 @@ import SubtitleParser from '../../toxen/SubtitleParser';
 import MusicPlayer from '../MusicPlayer';
 import "./Subtitles.scss";
 import Song from '../../toxen/Song';
+import { Toxen } from '../../ToxenApp';
 
 interface SubtitlesProps {
   musicPlayer: { current: MusicPlayer }
@@ -85,9 +86,10 @@ export default class Subtitles extends Component<SubtitlesProps, SubtitlesState>
   }
 
   render() {
+    const floatingTitleAsSubtitles = Toxen.background?.storyboard?.getFloatingSubtitles();
     return (
       <div className="subtitle-container">
-        {this.state.currentText ? HTMLReactParser(this.state.currentText) : null}
+        {(!floatingTitleAsSubtitles && this.state.currentText) ? HTMLReactParser(this.state.currentText) : null}
       </div>
     )
   }

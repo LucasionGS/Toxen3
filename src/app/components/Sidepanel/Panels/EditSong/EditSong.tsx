@@ -2,7 +2,7 @@
 import React from "react";
 import Converter from "../../../../toxen/Converter";
 import Settings, { VisualizerStyle } from "../../../../toxen/Settings";
-import Song from "../../../../toxen/Song";
+import Song, { ISong } from "../../../../toxen/Song";
 import Playlist from "../../../../toxen/Playlist";
 import SubtitleParser from "../../../../toxen/SubtitleParser";
 import System from "../../../../toxen/System";
@@ -55,8 +55,11 @@ export default function EditSong(props: EditSongProps) {
     }
   };
 
+  type ValidSettings = Partial<Omit<ISong, "uid" | "files" | "hash" | "duration" | "playlistSettings">>;
+  type ValidSetting = keyof ValidSettings;
+  
   // Get value for inputs
-  const getValue = (key: string): any => {
+  const getValue = (key: ValidSetting | `${ValidSetting}.${string}`): any => {
     const settings = getCurrentSettings();
     if (key.includes('.')) {
       const keys = key.split('.');
@@ -648,6 +651,19 @@ export default function EditSong(props: EditSongProps) {
           }}
         />
         <sup>Enables the floating title to override the visualizer if necessary. Otherwise its just placed on top.</sup>
+
+        <ColorInput
+          label="Floating Title: Outline Color"
+          placeholder="#FFFFFF"
+          defaultValue={getValue('floatingTitleOutlineColor') || "#FFFFFF"}
+          onChange={v => {
+            saveSettings('floatingTitleOutlineColor', v, false);
+          }}
+          onChangeEnd={v => {
+            saveSettings('floatingTitleOutlineColor', v);
+          }}
+        />
+        <sup>Set the outline color for the floating title text.</sup>
       </>
       <hr />
       <h2>Export options</h2>

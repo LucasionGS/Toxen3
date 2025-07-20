@@ -773,6 +773,7 @@ export class Toxen {
   private static _heightBeforeMiniplayer: number;
   private static _xBeforeMiniplayer: number;
   private static _yBeforeMiniplayer: number;
+  private static _maximizedBeforeMiniplayer: boolean;
 
   private static _miniplayerWidth = 300;
   private static _miniplayerHeight = Math.floor(300 / 16 * 9);
@@ -787,6 +788,11 @@ export class Toxen {
 
     if (newMode && w.isFullScreen()) {
       Toxen.toggleFullscreen(false);
+    }
+
+    if (newMode && w.isMaximized()) {
+      this._maximizedBeforeMiniplayer = true;
+      w.unmaximize();
     }
 
     document.body.toggleAttribute("miniplayer", newMode);
@@ -808,7 +814,10 @@ export class Toxen {
       w.setMaximizable(true);
       w.setSize(Toxen._widthBeforeMiniplayer, Toxen._heightBeforeMiniplayer);
       w.setPosition(Toxen._xBeforeMiniplayer, Toxen._yBeforeMiniplayer);
-
+      if (Toxen._maximizedBeforeMiniplayer) {
+        w.maximize();
+        Toxen._maximizedBeforeMiniplayer = false;
+      }
     }
   }
 

@@ -58,6 +58,7 @@ export default class Song implements ISong {
   public floatingTitlePosition: ISong["floatingTitlePosition"];
   public floatingTitleReactive: boolean;
   public floatingTitleOverrideVisualizer: boolean;
+  public floatingTitleOutlineColor: string;
   public useFloatingTitleSubtitles: boolean;
 
   // Star rush effect settings
@@ -369,6 +370,7 @@ export default class Song implements ISong {
       "floatingTitlePosition",
       "floatingTitleReactive",
       "floatingTitleOverrideVisualizer",
+      "floatingTitleOutlineColor",
       "useFloatingTitleSubtitles",
       "starRushEffect",
       "starRushIntensity",
@@ -1775,6 +1777,7 @@ export interface ISong {
   | 'center';
   floatingTitleReactive: boolean;
   floatingTitleOverrideVisualizer: boolean;
+  floatingTitleOutlineColor: string;
   useFloatingTitleSubtitles: boolean;
 
   // Star rush effect settings
