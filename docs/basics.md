@@ -57,6 +57,8 @@ The `Settings` panel is where you can manage your settings. You can change the t
 
 Many visual settings here can be overridden by song settings, so you can have a different visuals for each song if you want.
 
+- Tip: In Background Settings you can add multiple default backgrounds and enable "Shuffle default backgrounds" to rotate them for songs without their own background.
+
 ## About panel
 The `About` panel is where you can find stats and information about Toxen, such as the version, the dependencies, and the credits.
 

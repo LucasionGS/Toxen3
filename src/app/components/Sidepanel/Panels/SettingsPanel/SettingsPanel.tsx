@@ -279,43 +279,196 @@ export default function SettingsPanel(props: SettingsPanelProps) {
             collapsible
           >
             {(function () {
-              const [bg, setBg] = React.useState(Settings.get("defaultBackground"));
-              const callback = async () => {
-                const bg = await Settings.selectFile({
+              const [bgList, setBgList] = React.useState<string[]>(Settings.get("defaultBackgrounds") || []);
+              const [shuffle, setShuffle] = React.useState<boolean>(Settings.get("shuffleDefaultBackgrounds") || false);
+              const dragGhostRef = React.useRef<HTMLDivElement | null>(null);
+
+              const addMultiple = async () => {
+                const selected = await Settings.selectFiles({
                   filters: [
                     { name: "Images", extensions: Toxen.getSupportedImageFiles().map(f => f.replace(".", "")) }
                   ]
                 });
-
-                if (bg) {
-                  Settings.apply({ defaultBackground: bg }, true);
-                  setBg(bg);
+                if (selected?.length) {
+                  const merged = Array.from(new Set([...(bgList || []), ...selected]));
+                  Settings.apply({ defaultBackgrounds: merged }, true);
+                  setBgList(merged);
                 }
               };
+
+              const clearList = () => {
+                Settings.apply({ defaultBackgrounds: [] }, true);
+                setBgList([]);
+              };
+
+              const removeAt = (index: number) => {
+                const next = [...bgList];
+                next.splice(index, 1);
+                Settings.apply({ defaultBackgrounds: next }, true);
+                setBgList(next);
+              };
+
+              const moveItem = (list: string[], from: number, to: number) => {
+                if (from === to || from < 0 || to < 0 || from >= list.length || to >= list.length) return list;
+                const next = list.slice();
+                const [item] = next.splice(from, 1);
+                next.splice(to, 0, item);
+                return next;
+              };
+
               return (
                 <>
-                  <TextInput 
-                    disabled 
-                    onClick={callback} 
-                    value={bg} 
-                    name="defaultBackground" 
-                    label="Default Background" 
+                  <Checkbox
+                    checked={shuffle}
+                    onChange={(e) => {
+                      const v = e.currentTarget.checked;
+                      setShuffle(v);
+                      Settings.apply({ shuffleDefaultBackgrounds: v }, true);
+                    }}
+                    label="Shuffle default backgrounds"
                   />
-                  <Button 
-                    leftSection={<i className="fas fa-folder" />} 
-                    onClick={callback}
-                  >
-                    Change Default Background
-                  </Button>
                   <sup>
-                    Set a default background which will apply for songs without one.
-                    Click the button to open a select prompt.
-                    You can also set a background for a specific song by clicking the song in the song list.
+                    If enabled, Toxen will randomly pick one of the backgrounds below for songs without their own background.
                   </sup>
+
+                  <Button.Group>
+                    <Button leftSection={<i className="fas fa-folder-open" />} onClick={addMultiple}>Add background(s)</Button>
+                    <Button color="red" leftSection={<i className="fas fa-trash" />} onClick={clearList}>Clear list</Button>
+                  </Button.Group>
+                  <div style={{ marginTop: 8 }}>
+                    {bgList?.length ? (
+                      <>
+                        <Text size="sm">{bgList.length} background(s) configured</Text>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+                          {bgList.map((p, i) => (
+                            <div
+                              key={p + i}
+                              style={{
+                                position: 'relative',
+                                width: 120,
+                                height: 80,
+                                borderRadius: 6,
+                                overflow: 'hidden',
+                                background: '#222',
+                                boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                                cursor: 'move',
+                                filter: !shuffle && i > 0 ? 'grayscale(100%)' : 'none',
+                                opacity: !shuffle && i > 0 ? 0.6 : 1
+                              }}
+                              title={p}
+                              draggable
+                              onDragStart={(e) => {
+                                e.dataTransfer.effectAllowed = 'move';
+                                e.dataTransfer.setData('text/plain', String(i));
+                                // Create a draggable preview ghost
+                                try {
+                                  const ghost = document.createElement('div');
+                                  const W = 160, H = 106;
+                                  Object.assign(ghost.style, {
+                                    width: W + 'px',
+                                    height: H + 'px',
+                                    borderRadius: '8px',
+                                    overflow: 'hidden',
+                                    backgroundImage: `url("${p.replace(/\\/g, '/')}")`,
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                                    position: 'fixed',
+                                    top: '-1000px', // keep offscreen
+                                    left: '-1000px',
+                                    pointerEvents: 'none',
+                                    zIndex: '9999'
+                                  } as CSSStyleDeclaration);
+                                  document.body.appendChild(ghost);
+                                  dragGhostRef.current = ghost;
+                                  // Center the cursor on the preview
+                                  if (e.dataTransfer.setDragImage) {
+                                    e.dataTransfer.setDragImage(ghost, W / 2, H / 2);
+                                  }
+                                } catch {}
+                              }}
+                              onDragOver={(e) => {
+                                e.preventDefault();
+                                e.dataTransfer.dropEffect = 'move';
+                              }}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                const from = parseInt(e.dataTransfer.getData('text/plain'), 10);
+                                if (Number.isFinite(from) && from !== i) {
+                                  const next = moveItem(bgList, from, i);
+                                  Settings.apply({ defaultBackgrounds: next }, true);
+                                  setBgList(next);
+                                }
+                                // Clean up drag ghost if present
+                                if (dragGhostRef.current?.parentElement) {
+                                  dragGhostRef.current.parentElement.removeChild(dragGhostRef.current);
+                                }
+                                dragGhostRef.current = null;
+                              }}
+                              onDragEnd={() => {
+                                if (dragGhostRef.current?.parentElement) {
+                                  dragGhostRef.current.parentElement.removeChild(dragGhostRef.current);
+                                }
+                                dragGhostRef.current = null;
+                              }}
+                            >
+                              <img
+                                src={p}
+                                alt={`background-${i}`}
+                                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                              />
+                              <button
+                                onClick={(e) => { e.stopPropagation(); removeAt(i); }}
+                                aria-label="Remove background"
+                                title="Remove"
+                                style={{
+                                  position: 'absolute',
+                                  top: 4,
+                                  right: 4,
+                                  width: 22,
+                                  height: 22,
+                                  borderRadius: 4,
+                                  border: 'none',
+                                  background: 'rgba(0,0,0,0.6)',
+                                  color: '#fff',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}
+                              >
+                                <i className="fas fa-times" />
+                              </button>
+                              {!shuffle && i === 0 && (
+                                <div
+                                  style={{
+                                    position: 'absolute',
+                                    left: 4,
+                                    top: 4,
+                                    padding: '2px 6px',
+                                    borderRadius: 4,
+                                    background: 'rgba(0,0,0,0.55)',
+                                    color: '#fff',
+                                    fontSize: 11,
+                                    lineHeight: 1
+                                  }}
+                                >
+                                  Primary
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <Text size="sm" c="dimmed">No default backgrounds added yet.</Text>
+                    )}
+                  </div>
                 </>
               );
             })()}
 
+            <br />
             <Text>Background Dim</Text>
             <Slider 
               onChange={v => Settings.set("backgroundDim", v)} 

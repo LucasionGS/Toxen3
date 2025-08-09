@@ -107,6 +107,11 @@ export default class Song implements ISong {
   public static getHistory(): readonly Song[] {
     return Song.history;
   }
+
+  public static getHistoryIndex() {
+    return Song.historyIndex;
+  }
+  
   public static historyAdd(song: Song) {
     Song.history.splice(Song.historyIndex + 1);
     if (Song.history.length > 0 && Song.history[Song.history.length - 1] === song) return;
@@ -533,11 +538,12 @@ export default class Song implements ISong {
       }
     }
 
-    await this.applySubtitles();
-    await this.applyStoryboard();
+  await this.applySubtitles();
+  await this.applyStoryboard();
     if (!options.disableHistory) Song.historyAdd(this);
-    Toxen.musicPlayer.setSource(src, true);
-    await Toxen.background.setBackground(bg + "?h=" + this.hash);
+  Toxen.musicPlayer.setSource(src, true);
+  // If song has a background, force it. Otherwise, let Background component resolve defaults/shuffle
+  await Toxen.background.setBackground(bg ? (bg + "?h=" + this.hash) : null);
     Stats.set("songsPlayed", (Stats.get("songsPlayed") ?? 0) + 1);
     
     // Apply playlist-specific settings if playing from a playlist
@@ -602,7 +608,7 @@ export default class Song implements ISong {
     if (Toxen.background.visualizer.isStopped())
     Toxen.background.visualizer.start();
 
-    if (this.duration) {
+    if (!this.duration || isNaN(this.duration)) {
       this.duration = await this.calculateDuration();
       this.saveInfo();
     }

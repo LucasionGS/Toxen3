@@ -11,6 +11,7 @@ import Settings from '../../toxen/Settings';
 import Asyncifier from '../../toxen/Asyncifier';
 import Subtitles from '../Subtitles/Subtitles';
 import AudioEffects from '../../toxen/AudioEffects';
+import Song from '../../toxen/Song';
 
 interface BackgroundProps {
   getRef?: ((ref: Background) => void),
@@ -50,12 +51,31 @@ export default class Background extends Component<BackgroundProps, BackgroundSta
    * Returns the currently in use background image. It will return the default image if no image is set.
    */
   public getBackground(): string {
-    return (
-      (Toxen.playlist && Toxen.playlist.getBackgroundPath())
-      || this.state.image
-      || Settings.get("defaultBackground")
-      || null
-    );
+    // Priority: playlist background -> explicitly set runtime background -> song background via storyboard -> default(s)
+    const playlistBg = (Toxen.playlist && Toxen.playlist.getBackgroundPath());
+    if (playlistBg) return playlistBg;
+
+    if (this.state.image) return this.state.image;
+
+    // If no explicit background, use multi-backgrounds only
+    const shuffle = Settings.get("shuffleDefaultBackgrounds");
+    const list = Settings.get("defaultBackgrounds") || [];
+    if (list.length > 0) {
+      if (shuffle) {
+        // Pick a stable random per current song to avoid flicker between frames
+        const curSong = Toxen.background?.storyboard?.getSong();
+        const seedStr = curSong?.uid || "global";
+        let hash = 0;
+        for (let i = 0; i < seedStr.length; i++) hash = ((hash << 5) - hash) + (seedStr.charCodeAt(i) + Song.getHistoryIndex());
+        const idx = Math.abs(hash) % list.length; 
+        return list[idx];
+      }
+      // Deterministic: first item in list
+      return list[0];
+    }
+
+    // No defaults configured
+    return null;
   }
 
   public musicPlayer: MusicPlayer;

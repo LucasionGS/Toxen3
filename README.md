@@ -16,6 +16,7 @@ No piece of music is alike, nor is the way any given person wants to experience 
 - **Customizable Visualizers**: Choose from a variety of visualizers, each with its own unique style and effects. Customize colors, styles, and more to match your mood or theme.
 - **Support for audio and video**: Play both audio and video files. If it's supported on the web, it is supported in Toxen. This includes formats like MP3, OGG, FLAC, WAV, and MP4.
 - **Customizable Backgrounds**: Set a custom background for each song, or use a global background. Toxen supports many image formats, and animated GIFs as backgrounds.
+- **Shuffled Default Backgrounds**: Configure multiple default background images and let Toxen pick one per song automatically when the song/playlist has no specific background.
 - **Drag and drop support**: Easily add your music files, backgrounds, and more to Toxen by dragging and dropping them into the app.
 - **Audio Effects**: Apply real-time audio effects to your music, including bass boost, echo, reverb, and 3D audio.
 - **Storyboards with built-in editor**: Create and edit storyboards to control visualizers and effects over time. Use the built-in editor to easily manage your storyboards for each song.

@@ -54,6 +54,9 @@ export default class Settings {
       exposePanelIcons: true,
       backgroundDynamicLighting: true,
       backgroundDim: 50,
+  // Backgrounds
+  defaultBackgrounds: [],
+  shuffleDefaultBackgrounds: false,
       discordPresence: true,
       discordPresenceDetailed: true,
       panelDirection: "left",
@@ -92,6 +95,22 @@ export default class Settings {
     toUse = Object.assign(toUse, overrideDefault || {});
 
     await Settings.apply(toUse, false, false);
+
+    // Migration: If legacy single defaultBackground is set, move it into defaultBackgrounds and clear the single.
+    try {
+      const legacySingle = (Settings.get("defaultBackground") as unknown as string) || "";
+      if (legacySingle) {
+        const list = (Settings.get("defaultBackgrounds") as unknown as string[]) || [];
+        if (!list.includes(legacySingle)) list.push(legacySingle);
+        // Clear the single field (set to empty string to avoid type issues) and persist the list.
+        await Settings.apply({ defaultBackgrounds: list, defaultBackground: null } as Partial<ISettings>, false, false);
+        // Persist silently to disk so the migration doesn't repeat.
+        await Settings.save({ suppressNotification: true });
+      }
+    } catch (e) {
+      // Non-fatal: if migration fails, continue with defaults.
+      console.warn("Default background migration skipped:", e);
+    }
     // if (overrideDefault) Settings.apply(overrideDefault);
   }
 
@@ -248,7 +267,7 @@ export default class Settings {
     opts = opts || {};
     const file = await toxenapi.remote.dialog.showOpenDialog({
       ...opts,
-      properties: ["openFile"],
+      properties: ["openFile", "multiSelections"],
     });
 
     if (file && file.filePaths && file.filePaths.length > 0) {
@@ -320,6 +339,8 @@ export interface ISettings {
 
   // Backgrounds
   defaultBackground: string;
+  defaultBackgrounds: string[];
+  shuffleDefaultBackgrounds: boolean;
   backgroundDim: number;
 
   // Advanced settings & UI
