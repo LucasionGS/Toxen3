@@ -4,6 +4,7 @@
 - **Taskbar Controls** - Added taskbar controls for Windows. Simple allows you to control playback controls from the taskbar.
 - **Floating Title Outline Color** - Added a new setting to change the outline color of the floating title.
 - **Multiple Default Backgrounds** - Added support for multiple default backgrounds for songs which don't have their own specific overrides.
+- **Change Notes Modal** - Added a new modal to display the change notes for the current version of Toxen on startup, after an update.
 
 <!-- VERSION: 2.4.0 -->
 ## 2.4.0 - 18-07-2025
