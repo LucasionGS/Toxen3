@@ -1,10 +1,11 @@
+<!-- VERSION: 2.4.1 -->
 ## Upcoming 2.4.1 - TBD
 ### New Features
 - **Taskbar Controls** - Added taskbar controls for Windows. Simple allows you to control playback controls from the taskbar.
 - **Floating Title Outline Color** - Added a new setting to change the outline color of the floating title.
 - **Multiple Default Backgrounds** - Added support for multiple default backgrounds for songs which don't have their own specific overrides.
 
-
+<!-- VERSION: 2.4.0 -->
 ## 2.4.0 - 18-07-2025
 ### New Features
 - **Playlist-specific Song-specific settings** - This mouthful allows you to configure settings for each song within a playlist for that specific playlist for all the visual effects.
@@ -12,7 +13,7 @@
 - **Visualizer Shuffle** - Randomizes the visualizer bar positioning. This will make them look more chaotic.
 - **Automatic Themes** - An option to automatically generate a theme based on the current visualizer color. This can be set globally or per song. It will override the default theme with one based on the visualizer color, including ones that change in real time.
 
-
+<!-- VERSION: 2.3.0 -->
 ## 2.3.0 - 02-07-2025
 ### New Features
 - **Enhanced Background Management** - Completely redesigned background selection across the entire application
@@ -56,7 +57,7 @@
 ### More Support
 - VTT are now a supported subtitle format, allowing you to import and export subtitles in VTT format.
 
-
+<!-- VERSION: 2.2.0 -->
 ## 2.2.0 - 30-06-2025
 ### New Features
 - **Audio Effects Panel** - Real-time audio effects!
@@ -77,6 +78,7 @@
     - As it is AI, mistakes can and likely will happen, so manual editing is still recommended. Like using the fancy subtitle editor ;)
     - Using the AI is entirely optional, and will only work if you have it installed already, and is entirely separate from Toxen.
 
+<!-- VERSION: 2.1.0 -->
 ## 2.1.0 - 28-06-2025
 ### New Features
 - Cursor now hides when the application is idle.
@@ -102,6 +104,7 @@ That basically all noteworthy things... Oh well I guess there is this too:
     - Custom CSS is fully supported (stored within the theme JSON)
     - No external file dependencies - everything works in-memory
 
+<!-- VERSION: 2.0.0 -->
 ## 2.0.0 - 28-06-2025
 ### New Features
 - Major redesign!
@@ -130,32 +133,46 @@ That basically all noteworthy things... Oh well I guess there is this too:
   - **Storyboard support**: Can be controlled dynamically with `starRushEffect`, `starRushIntensity`, and `starRushIntensityTransition` storyboard events
 - Background dim is available on a per-song basis
 
+<!-- VERSION: 1.12.5 -->
 ## 1.12.5 - 11-02-2025
 ## New features
 - Preloading of storyboard image assets
 - Performance settings tab
   - Added setting for enabling/disabling hiding song elements when not in view (On by default, always on for remote server)
 
+<!-- VERSION: 1.12.4 -->
 ## 1.12.4 - 7-02-2025
 ### New features
 - More like a returning feature - The multi-select is back, and you can now select multiple by holding `CTRL` and dragging your mouse across songs.
 ### Why did this take so long to fix
 - Functional icon on desktop again!
+
+<!-- VERSION: 1.12.3 -->
 ## 1.12.3 - 7-02-2025
 ### New features
 - Toxen Stream downloading of missing songs from remote.
+
+<!-- VERSION: 1.12.2 -->
 ## 1.12.2 - 5-02-2025
 ### Hotfix
 - Too many notifications on first time sync
+
+<!-- VERSION: 1.12.1 -->
 ## 1.12.1 - 4-02-2025
 ### Further implementation changes to Toxen Stream
 - More of the same as previously, more stability and better implementation. 
+
+<!-- VERSION: 1.12.0 -->
 ## 1.12.0 - 4-02-2025
 ### Implementation changes to Toxen Stream
 - This is another step towards a stable Toxen Stream. It will soon be for testing for a select few.
+
+<!-- VERSION: 1.11.1 -->
 ## 1.11.1 - 3-12-2024
 ### Hotfix
 - Fixed options not displaying and saving correctly on song-specific visualizer-specific settings.
+
+<!-- VERSION: 1.11.0 -->
 ## 1.11.0 - 3-12-2024
 ### New Features
 - Some visualizers now have furthered customizabilty. Starting with the new `Orb` visualizer, which can now have it's position changed on the screen, and the size adjusted. This can be done per visualizer, both globally and per-song. These visualizer specific settings will be added to more visualizers in the future. The options appear under the `Visualizer Style` selector, depending on which visualizer you have selected.
@@ -165,10 +182,12 @@ That basically all noteworthy things... Oh well I guess there is this too:
 ### Changes
 - Fixed `Sides` visualizer not applying glow.
 
+<!-- VERSION: 1.10.1 -->
 ## 1.10.1 - 1-12-2024
 ### Changes
 - Changed the `Orb` from being static radius to dynamic based on song intensity.
 
+<!-- VERSION: 1.10.0 -->
 ## 1.10.0 - 1-12-2024
 ### New Features
 - `Visualizer Glow` - This adds a glow effect to most of the visualizers. It can be toggled in the settings, per song, and through a storyboard. It's disabled by default. It can be quite performance heavy, especially on higher `Visualizer Size` values. Size `6` and below should work well for most mid-range computers. If you experience lag, try lowering the `Visualizer Size` value.
@@ -184,6 +203,7 @@ That basically all noteworthy things... Oh well I guess there is this too:
 - Fixed certain settings having their default values not being selected visually unless explicitly selected.
 - Rainbow visualizer now also applies to the progress bar and buffer indicator.
 
+<!-- VERSION: 1.9.0 -->
 ## 1.9.0 - 26-11-2024
 While this update doesn't add a lot of new features, it's a big in terms of development.  
 A major part of the codebase has been refactored to work on the web. This is part of a bigger plan to make Toxen available on the web for Toxen Premium users to stream their music from the Toxen server. If you have access to a web browser, be it on your phone, tablet, or computer, you'll be able to access your music library and play your songs from anywhere.
@@ -206,6 +226,7 @@ A Work in progress, but functional version of Toxen on web have been created. Th
 #### Song Synchronization
 The Toxen stream server has been re-created and improved. It will be available for testing soon along with the web version. This will allow you to synchronize your songs to Toxen's server and stream them to your devices, as well as synchronize your songs when changes are made to the library or remote library.
 
+<!-- VERSION: 1.8.0 -->
 ## 1.8.0 - 20-08-2024
 ### Storyboard Editor Update
 The entire storyboard editor has been reworked and improved. It's now more intuitive and easier to use.
@@ -213,6 +234,7 @@ The entire storyboard editor has been reworked and improved. It's now more intui
   - More documentation will be added later.
   - More features will be added and feedback is appreciated.
 
+<!-- VERSION: 1.7.1 -->
 ## 1.7.1 - 19-06-2024
 ### New Features
 - Added a genre field to songs. I am surprised I hadn't already added this. It's a very basic field, but it's there now.
@@ -220,6 +242,7 @@ The entire storyboard editor has been reworked and improved. It's now more intui
 - Changed the song tag input to look nicer. Now using the same design as the other input fields.
 - Changed floating title position selector to be more intuitive with a grid representation of the positions.
 
+<!-- VERSION: 1.7.0 -->
 ## 1.7.0 - 18-06-2024
 ### New Features
 Added better playlists.
@@ -236,13 +259,21 @@ Added better playlists.
 - Updated all dependencies to their latest versions, including now using React 18.
 ### Development process
 - Migrated from webpack to Vite for faster development.
+
+<!-- VERSION: 1.6.1 -->
 ## 1.6.1 - 18-02-2024
 - Added song options for Floating title custom text and toggleable underline, as well as margin for side positions.
+
+<!-- VERSION: 1.6.0 -->
 ## 1.6.0 - 30-09-2023
 - Added new visualizer: `Waveform`!
 - Added Media Downloader to the import tab. It can be used to download media from Youtube or Soundcloud, and import it to the library.
+
+<!-- VERSION: 1.5.1 -->
 ## 1.5.1 - 01-02-2023
 - Added support for `jfif` images.
+
+<!-- VERSION: 1.5.0 -->
 ## 1.5.0 - 12-05-2022
 Storyboard:
 - Added Philips Hue experimental support. This will be extended further with more features and customization.
@@ -250,8 +281,11 @@ Storyboard:
 Song-Specific Background visuals:
 - Added display positions for title of the song on the background. Colors follow visualizer colors. This new feature can be found when editing a song and scrolling down to the **Song-specific visuals** section.
 
+<!-- VERSION: 1.4.2 -->
 ## 1.4.2 - 29-10-2022
 Hotfix: Fixed songs being shuffle even when the setting is disabled, when a songs ends on it's own.
+
+<!-- VERSION: 1.4.1 -->
 ## 1.4.1 - 28-10-2022
 Playlists:
 - Added the ability to change the name of a playlist.
@@ -263,6 +297,8 @@ Storyboards:
 
 Visualizer:
 - Added `Visualizer Size` to the settings. It allows you to change how detailed the visualizer is. The higher the value, the more intense the impact on performance. 6 is the standard and should work well for most, but you can increase or decrease this if you experience lag or if you want to see more detail.
+
+<!-- VERSION: 1.4.0 -->
 ## 1.4.0 - 13-10-2022
 New features
 - First iteration of a storyboard implementation has been released!
@@ -295,18 +331,24 @@ Bug fixes
 - Fixed `Progress bar: Show milliseconds` showing weirdly and pushing other elements when a song is playing.
 - Fixed Toxen crashing when importing the first song in an empty music folder.
 
+<!-- VERSION: 1.3.3 -->
 ## 1.3.3 - 2022-06-17
 - Added alternative Toxen icon.
 - Fixed Appbar title overflowing.
+
+<!-- VERSION: 1.3.2 -->
 ## 1.3.2 - 2022-06-17
 - Fixed Toxen not downloading ffmpeg due to expired URL.
 - Auto retrying up to 3 times if trimming fails.
+
+<!-- VERSION: 1.3.1 -->
 ## 1.3.1 - 2022-06-07
 A couple minor fixes and improvements.
 - Added new shortcuts for opening specific panels. Can be found in the Toxen dropdown in the top right corner under `Toxen`.
 - Fixed up the remaining design changes on the Edit Song panel.
 - Changes on a the Song Edit panel now save automatically when changed, so no need to click Save.
 
+<!-- VERSION: 1.3.0 -->
 ## 1.3.0 - 2022-04-23
 New features
 - Fully implemented song trimming feature. Right-click on a song and select `Trim` to start the quick and easy process.  
@@ -319,6 +361,7 @@ You can always revert it back to the original file in the `Edit song` panel. `ff
 Fixed bugs
 - Fixed volume bar not displaying the correct volume on startup.
 
+<!-- VERSION: 1.2.0 -->
 ## 1.2.0 - 2022-04-18
 Major changes:
 - Massive overhaul of the sidepanel interactive element's design. Moved to using Mantine for the UI for certain elements, of which includes textboxes, dropdowns, buttons, sliders, and checkboxes. (You'll still find old design elements some places, but they will all be updated over time)
@@ -328,6 +371,7 @@ Major changes:
 Minor changes:
 - Fixed background dim being removed when Dynamic Lighting is disabled.
 
+<!-- VERSION: 1.1.1 -->
 ## 1.1.1 - 2022-04-14
 Major changes:
 - If a search is made in the song list, Toxen will only play songs that match the search.
@@ -336,6 +380,7 @@ Major changes:
 Minor changes:
 - Fixed search field not searching after language tag.
 
+<!-- VERSION: 1.1.0 -->
 ## 1.1.0 - 2022-04-14
 From now on, version format will follow the MAJOR.MINOR.PATCH format, instead of incrementing only the last number.
 
@@ -348,6 +393,7 @@ Major changes:
 Minor changes:
 - Fixed `0` background dim not actually being `0%` dimmed.
 
+<!-- VERSION: 1.0.21 -->
 ## 1.0.21 - 2022-04-13
 Major changes:
 - Changed the design of (some) context menus
@@ -361,6 +407,7 @@ Minor changes:
 - Fixed some miscoloring in the base theme.
 - Removed Discord error prompts when failing to connect to the Discord API, as it caused spam when Discord isn't available on the computer.
 
+<!-- VERSION: 1.0.20 -->
 ## 1.0.20 - 2022/2/15
 Major changes:
 - Added tabs to settings
@@ -372,6 +419,7 @@ Minor changes:
   - Toggling this off will disable pausing the application when the mouse is clicked on the background.
 - Created preparations for song trimming.
 
+<!-- VERSION: 1.0.19 -->
 ## 1.0.19 - 2021/11/16
 Major changes:
 - Changed how login works. Login can now be done even when not connected to a specific remote server, and will resolve to Toxen official server. Only users with a premium Toxen account can use a remote library.
@@ -383,6 +431,8 @@ Major changes:
 Minor changes:
 - Moved around some settings in `Edit Song` panel.
 - Fixed the subtitles being selectable with the mouse when active.
+
+<!-- VERSION: 1.0.18 -->
 ## 1.0.18 - 2021/10/19
 Major changes:
 - Fixed a software breaking bug that was preventing Toxen from initializing properly on first run.
@@ -398,6 +448,7 @@ Minor changes:
 - Fixed toxen not being able to load songs from a remote server due to playlists not being supported remotely.
 - Changed rainbow visualizer's rotation speed.
 
+<!-- VERSION: 1.0.17 -->
 ## 1.0.17 - 2021/09/23
 Major changes:
 - Added playlist functionality!
@@ -419,6 +470,7 @@ Minor changes:
 - Fixed certain settings not applying as defaults, if they are not set.
 - Added transparency to the sidepanel when not hovered over.
 
+<!-- VERSION: 1.0.16 -->
 ## 1.0.16
 New stuff:
   - Added a less intrusive auto update prompt.
@@ -472,6 +524,7 @@ If you have a line that begins with an @ symbol, you can escape it with "\".
 \@ like this!
 ```
 
+<!-- VERSION: 1.0.15 -->
 ## 1.0.15
 New stuff:
   - View change notes directly in Toxen from the sidebar under `Change logs`
@@ -487,6 +540,3 @@ New stuff:
 Changed stuff
   - Changed `Stats` panel to `About` panel.
   - Changed `Music Library` change directory to a `Change Directory` button, and allowed the text field directly to change the directory, if they so desire.
-
-## < 1.0.15
-Changes prior to 1.0.15 hasn't been recorded. Changes from 1.0.15 onwards are listed above.
