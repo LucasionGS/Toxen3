@@ -85,6 +85,8 @@ export default class Settings {
       
       // Performance
       enableThumbnailCache: false,
+      // Change notes
+      lastShownChangeNotesVersion: "",
     };
 
     let toUse: Partial<ISettings> = {};
@@ -380,6 +382,10 @@ export interface ISettings {
   audioEchoLevel: number;
   audioBassBoostLevel: number;
   audio3DLevel: number;
+
+  // Meta
+  /** Last app version for which the change notes modal was shown/acknowledged */
+  lastShownChangeNotesVersion: string;
 }
 
 export enum VisualizerStyle {

@@ -13,6 +13,7 @@ import Stats from "./app/toxen/Statistics";
 import User from "./app/toxen/User";
 import { MantineProvider } from "@mantine/core";
 import { ModalsProvider } from "@mantine/modals";
+import { showWhatsNewIfNeeded } from "./app/components/WhatsNewModal";
 
 // console.log("Toxen is running in development mode.");
 // console.log(app);
@@ -245,6 +246,12 @@ Toxen.whenReady().then(async () => {
   }
 
   Toxen.reloadSection(); // Reload the section in case of load time changes
+
+  // Show What's New modal if new version and notes exist
+  const currentVersion = toxenapi.packageJson.version || "";
+  if (currentVersion) {
+    showWhatsNewIfNeeded(currentVersion);
+  }
 });
 
 //#endregion

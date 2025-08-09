@@ -170,8 +170,10 @@ export class Toxen {
     });
   }
 
+  public static readonly changeLogsUrl = "https://raw.githubusercontent.com/LucasionGS/Toxen3/master/changenotes.md";
+  
   public static async getChangeLogs() {
-    return Toxen.changeLogs = Toxen.changeLogs ?? await fetch("https://raw.githubusercontent.com/LucasionGS/Toxen3/master/changenotes.md")
+    return Toxen.changeLogs = Toxen.changeLogs ?? await fetch(Toxen.changeLogsUrl)
       .then(res => res.text())
       .then(text => {
         console.log("Parsing changelog...");
