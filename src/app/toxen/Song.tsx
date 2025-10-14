@@ -541,7 +541,20 @@ export default class Song implements ISong {
   await this.applySubtitles();
   await this.applyStoryboard();
     if (!options.disableHistory) Song.historyAdd(this);
-  Toxen.musicPlayer.setSource(src, true);
+  
+    // Use crossfade if enabled and there's a current song playing
+    const crossfadeEnabled = Settings.get("crossfadeEnabled", false);
+    const crossfadeDuration = Settings.get("crossfadeDuration", 3);
+    const currentSong = Song.getCurrent();
+    
+    if (crossfadeEnabled && currentSong && !Toxen.musicPlayer.media.paused) {
+      // Use crossfade for smooth transition
+      await Toxen.musicPlayer.crossfade(src, crossfadeDuration);
+    } else {
+      // Normal transition without crossfade
+      Toxen.musicPlayer.setSource(src, true);
+    }
+  
   // If song has a background, force it. Otherwise, let Background component resolve defaults/shuffle
   await Toxen.background.setBackground(bg ? (bg + "?h=" + this.hash) : null);
     Stats.set("songsPlayed", (Stats.get("songsPlayed") ?? 0) + 1);

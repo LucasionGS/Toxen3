@@ -83,6 +83,10 @@ export default class Settings {
       audioBassBoostLevel: 0,
       audio3DLevel: 0,
       
+      // Crossfade
+      crossfadeEnabled: false,
+      crossfadeDuration: 3, // 3 seconds default
+      
       // Performance
       enableThumbnailCache: false,
       // Change notes
@@ -382,6 +386,10 @@ export interface ISettings {
   audioEchoLevel: number;
   audioBassBoostLevel: number;
   audio3DLevel: number;
+
+  // Crossfade
+  crossfadeEnabled: boolean;
+  crossfadeDuration: number; // Duration in seconds
 
   // Meta
   /** Last app version for which the change notes modal was shown/acknowledged */

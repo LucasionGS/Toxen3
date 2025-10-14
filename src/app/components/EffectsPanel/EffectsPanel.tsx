@@ -106,6 +106,44 @@ export default class EffectsPanel extends Component<EffectsPanelProps, EffectsPa
               </div>
             </Stack>
           </div>
+
+          <Divider my="md" />
+
+          <div>
+            <Text size="md" fw={600} mb="sm">Crossfade</Text>
+            <Checkbox
+              label="Enable Crossfade"
+              defaultChecked={Settings.get('crossfadeEnabled', false)}
+              onChange={(e) => {
+                Settings.set('crossfadeEnabled', e.currentTarget.checked);
+                Settings.save({ suppressNotification: true });
+                this.forceUpdate();
+              }}
+              mb="md"
+            />
+
+            <div style={{ opacity: Settings.get('crossfadeEnabled', false) ? 1 : 0.5 }}>
+              <Text size="sm" mb={5}>Crossfade Duration</Text>
+              <Slider
+                defaultValue={Settings.get('crossfadeDuration', 3)}
+                onChange={(value) => {
+                  Settings.set('crossfadeDuration', value);
+                  Settings.save({ suppressNotification: true });
+                }}
+                min={0.5}
+                max={10}
+                step={0.5}
+                label={(value) => `${value}s`}
+                disabled={!Settings.get('crossfadeEnabled', false)}
+                marks={[
+                  { value: 0.5, label: '0.5s' },
+                  { value: 3, label: '3s' },
+                  { value: 5, label: '5s' },
+                  { value: 10, label: '10s' }
+                ]}
+              />
+            </div>
+          </div>
         </Stack>
       </div>
     )
