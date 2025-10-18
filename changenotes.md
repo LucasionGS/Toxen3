@@ -1,10 +1,11 @@
 <!-- VERSION: 2.4.2 -->
-## Upcoming: 2.4.2
+## 2.4.2 - 19-10-2025
 ### New Features
 - **Crossfade Between Songs** - Smooth DJ-style transitions between tracks
   - Enable crossfade in the Effects Panel to create seamless transitions between songs
   - Adjustable crossfade duration (0.5-10 seconds) with quick presets for common durations
 
+<!-- VERSION: 2.4.1 -->
 ## 2.4.1 - 09-08-2025
 ### New Features
 - **Taskbar Controls** - Added taskbar controls for Windows. Simple allows you to control playback controls from the taskbar.
