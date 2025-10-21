@@ -95,3 +95,9 @@ out/
 # Web
 buildweb/
 deploy-web.ps1
+
+# Arch build stuff
+*.pkg.tar.zst
+toxen3-*.tar.gz
+/pkg
+/src/Toxen3-*
