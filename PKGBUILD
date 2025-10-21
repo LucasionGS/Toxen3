@@ -1,4 +1,4 @@
-# Maintainer: Lucasion <lucasion@hotmail.com>
+# Maintainer: Lucasion <ion@ionnet.dev>
 # Note: Build with "PKGEXT='.pkg.tar.zst' makepkg" to avoid debug package conflicts
 pkgname=toxen3
 pkgver=2.4.2
