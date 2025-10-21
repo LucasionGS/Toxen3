@@ -101,3 +101,4 @@ deploy-web.ps1
 toxen3-*.tar.gz
 /pkg
 /src/Toxen3-*
+.aur
