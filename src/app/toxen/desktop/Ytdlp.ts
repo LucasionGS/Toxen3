@@ -290,7 +290,7 @@ export default class Ytdlp {
           // Import audio file
           await System.handleImportedFiles([
             {
-              name: videoInfo.filename.includes(" - ") ? filterSpecialChars(videoInfo.filename).replace(/\.[a-zA-Z0-9]+$/, ".mp3") : (filterSpecialChars(videoInfo.uploader) + " - " + filterSpecialChars(videoInfo.title) + ".mp3"),
+              name: filterSpecialChars(videoInfo.uploader) + " - " + filterSpecialChars(videoInfo.title) + ".mp3",
               path: tmpAudioOutput,
             }
           ]);
