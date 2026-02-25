@@ -1,3 +1,49 @@
 .bpm-finder {
-  
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 193, 7, 0.08) 0%,
+    rgba(255, 193, 7, 0.03) 100%
+  );
+  border: 1px solid rgba(255, 193, 7, 0.25);
+  border-radius: 10px;
+
+  .bpm-finder__display {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    justify-content: center;
+
+    .bpm-finder__value {
+      font-size: 32px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', 'Consolas', monospace;
+      color: #ffc107;
+      line-height: 1;
+    }
+
+    .bpm-finder__unit {
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(255, 193, 7, 0.7);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+  }
+
+  .bpm-finder__info {
+    text-align: center;
+
+    kbd {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-family: 'JetBrains Mono', 'Consolas', monospace;
+      font-size: 10px;
+    }
+  }
 }

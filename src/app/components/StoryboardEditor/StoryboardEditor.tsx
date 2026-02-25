@@ -11,6 +11,8 @@ import { VisualizerStyle } from "../../toxen/Settings";
 import { hexToRgbArray, rgbArrayToHex } from "../Form/FormInputFields/FormInputColorPicker";
 import Time from "../../toxen/Time";
 import Converter from "../../toxen/Converter";
+import { storyboardHistory } from "./StoryboardHistory";
+import BPMFinder from "../BPMFinder/BPMFinder";
 
 export interface StoryboardEditorController {
   start: () => void;
@@ -42,6 +44,9 @@ if (!CanvasRenderingContext2D.prototype.roundRect) {
 const mouseDown = { m0: false, m1: false, m2: false };
 const mouseDownFrame = { m0: false, m1: false, m2: false };
 
+// Timeline zoom level (module-level to avoid stale closures in renderer)
+let currentZoom = 1;
+
 const eventMadeAtKey: Record<string, StoryboardParser.SBEvent> = {};
 export default function StoryboardEditor(props: StoryboardEditorProps) {
   const modals = useModals();
@@ -71,7 +76,7 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
   }
 
   const song = Toxen.editingSong;
-  
+
   const mouseEventHandler = React.useCallback((e: MouseEvent) => {
     if (!isStarted) return false;
     // Mouse position is relative to the canvas
@@ -94,7 +99,7 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
     if (btns >= 1) {
       mouseDown.m0 = true;
     } else mouseDown.m0 = false;
-    
+
     // Update cursor based on interaction state
     if (canvasRef.current) {
       if (mouseDown.m2) {
@@ -108,12 +113,69 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
       }
     }
   }, [config, config?.storyboard?.length, isStarted]);
-  
+
   const keydownEventHandler = React.useCallback((e: KeyboardEvent) => {
     if (!isStarted) return false;
-    console.log("Key down", e.key, e.code);
+    // Don't handle shortcuts when typing in inputs
+    const tag = (e.target as HTMLElement).tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
 
     switch (e.code) {
+      // Play/Pause
+      case "Space":
+        e.preventDefault();
+        Toxen.musicPlayer.toggle();
+        break;
+
+      // Delete selected/hovered event
+      case "Delete":
+      case "Backspace":
+        if (selectedEvent.event && config) {
+          const idx = config.storyboard.indexOf(selectedEvent.event);
+          if (idx !== -1) {
+            config.storyboard.splice(idx, 1);
+            selectedEvent.event = null;
+            selectedEvent.edge = null;
+            StoryboardParser.resetCurrentEvents();
+            storyboardHistory.snapshot();
+          }
+        }
+        break;
+
+      // Save (Ctrl+S)
+      case "KeyS":
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+          const saveLocation = song.storyboardFile() || song.dirname("storyboard.tsb");
+          StoryboardParser.save(saveLocation, config, song);
+          Toxen.notify({
+            content: "Storyboard saved",
+            expiresIn: 2000
+          });
+        }
+        break;
+
+      // Undo (Ctrl+Z)
+      case "KeyZ":
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+          if (e.shiftKey) {
+            storyboardHistory.redo();
+          } else {
+            storyboardHistory.undo();
+          }
+        }
+        break;
+
+      // Redo (Ctrl+Y)
+      case "KeyY":
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+          storyboardHistory.redo();
+        }
+        break;
+
+      // Numpad corner pulse events
       case "Numpad9":
       case "Numpad8":
       case "Numpad7":
@@ -173,7 +235,7 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
             case "Numpad1":
               event.data.pos_bottomLeft = true;
               break;
-          
+
             default:
               break;
           }
@@ -188,7 +250,6 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
   }, [config, config?.storyboard?.length, isStarted]);
   const keyupEventHandler = React.useCallback((e: KeyboardEvent) => {
     if (!isStarted) return false;
-    console.log("Key up", e.key, e.code);
     switch (e.code) {
       case "Numpad9":
       case "Numpad8":
@@ -203,6 +264,7 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
           const event = eventMadeAtKey[e.code];
           event.endTime = Toxen.musicPlayer.media.currentTime;
           eventMadeAtKey[e.code] = null;
+          storyboardHistory.snapshot();
         }
         break;
     }
@@ -210,27 +272,29 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
 
   const scrollEventHandler = React.useCallback((e: WheelEvent) => {
     if (!isStarted) return false;
-    if (e.deltaY > 0) {
-      Toxen.musicPlayer.media.currentTime += 0.2;
-    }
-    else {
-      Toxen.musicPlayer.media.currentTime -= 0.2;
+    e.preventDefault();
+    if (e.ctrlKey || e.metaKey) {
+      // Ctrl+Scroll = time scrub
+      const scrubAmount = 0.2 / currentZoom;
+      if (e.deltaY > 0) {
+        Toxen.musicPlayer.media.currentTime += scrubAmount;
+      } else {
+        Toxen.musicPlayer.media.currentTime -= scrubAmount;
+      }
+    } else {
+      // Plain scroll = zoom in/out
+      const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+      currentZoom = Math.max(0.1, Math.min(10, currentZoom * zoomFactor));
     }
   }, [config, config?.storyboard?.length, isStarted]);
-  
+
   const start = React.useCallback(() => {
     if (!Toxen.editingSong) return;
 
     if (!Toxen.editingSong.paths.media.endsWith(".ogg")) {
-      // Toxen.notify({
-      //   content: "Storyboard works optimially with .ogg files. Precise timing may not be accurate with other file types.",
-      //   type: "error",
-      //   expiresIn: 5000
-      // });
-
       function PopupModalConfirmation() {
         const [converting, setConverting] = React.useState(false);
-        
+
         return (
           <div>
             <div>
@@ -264,7 +328,7 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
           </div>
         )
       }
-      
+
       const modalId = modals.openModal({
         title: "Storyboard Warning",
         closeOnClickOutside: false,
@@ -273,8 +337,10 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
         children: <PopupModalConfirmation />
       });
     }
-    
-    
+
+    // Reset zoom on start
+    currentZoom = 1;
+
     const canvas = canvasRef.current;
     if (canvas) {
       const ctx = canvas.getContext("2d");
@@ -285,32 +351,19 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
             setConfig(config);
             _setBpm(config.bpm ?? 120);
             _setBpmOffset(config.bpmOffset ?? 0);
+            // Initialize undo/redo history
+            storyboardHistory.setConfig(config);
             storyboardRenderer(ctx, config, modals, performance.now());
           });
         }
       }
       setIsStarted(true);
-
-      // Add event listeners
-      // canvas.addEventListener("mousemove", mouseEventHandler);
-      // canvas.addEventListener("mousedown", mouseEventHandler);
-      // canvas.addEventListener("mouseup", mouseEventHandler);
-
-      // window.addEventListener("keydown", keydownEventHandler);
-      // window.addEventListener("keyup", keyupEventHandler);
     }
   }, []);
-  
+
   const stop = React.useCallback(() => {
-    const canvas = canvasRef.current;
     shouldBeStopped = true;
     setIsStarted(false);
-    // canvas.removeEventListener("mousemove", mouseEventHandler);
-    // canvas.removeEventListener("mousedown", mouseEventHandler);
-    // canvas.removeEventListener("mouseup", mouseEventHandler);
-
-    // window.removeEventListener("keydown", keydownEventHandler);
-    // window.removeEventListener("keyup", keyupEventHandler);
   }, []);
 
   const controller = React.useMemo<StoryboardEditorController>(() => ({
@@ -324,7 +377,11 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
     canvas.addEventListener("mousemove", mouseEventHandler);
     canvas.addEventListener("mousedown", mouseEventHandler);
     canvas.addEventListener("mouseup", mouseEventHandler);
-    canvas.addEventListener("wheel", scrollEventHandler);
+    canvas.addEventListener("wheel", scrollEventHandler, { passive: false });
+
+    // Prevent browser context menu on canvas
+    const contextHandler = (e: Event) => { e.preventDefault(); };
+    canvas.addEventListener("contextmenu", contextHandler);
 
     window.addEventListener("keydown", keydownEventHandler);
     window.addEventListener("keyup", keyupEventHandler);
@@ -333,19 +390,20 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
       canvas.removeEventListener("mousedown", mouseEventHandler);
       canvas.removeEventListener("mouseup", mouseEventHandler);
       canvas.removeEventListener("wheel", scrollEventHandler);
+      canvas.removeEventListener("contextmenu", contextHandler);
 
       window.removeEventListener("keydown", keydownEventHandler);
       window.removeEventListener("keyup", keyupEventHandler);
     }
   }, [config]);
-  
+
   props.controllerSetter?.(controller);
-  
+
   return (
     <div className="storyboard-editor" style={{ display: isStarted ? "" : "none" }}>
       <div className="storyboard-controls">
         <div className="control-group primary-controls">
-          <Button 
+          <Button
             leftSection={<i className="fas fa-save" />}
             onClick={() => {
               const saveLocation = song.storyboardFile() || song.dirname("storyboard.tsb");
@@ -358,7 +416,7 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
           >
             Save
           </Button>
-          <Button 
+          <Button
             color="red"
             leftSection={<i className="fas fa-stop" />}
             onClick={() => {
@@ -368,7 +426,7 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
           >
             Stop
           </Button>
-          <Button 
+          <Button
             variant="outline"
             leftSection={<i className="fas fa-step-backward" />}
             onClick={() => {
@@ -379,24 +437,24 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
             Goto Start
           </Button>
         </div>
-        
+
         <div className="control-group">
-          <NumberInput 
-            value={bpm} 
-            onChange={(v) => setBpm(+v)} 
+          <NumberInput
+            value={bpm}
+            onChange={(v) => setBpm(+v)}
             label="BPM"
             min={60}
             max={200}
           />
         </div>
-        
+
         <div className="control-group">
-          <NumberInput 
-            value={bpmOffset} 
-            onChange={(v) => setBpmOffset(+v)} 
+          <NumberInput
+            value={bpmOffset}
+            onChange={(v) => setBpmOffset(+v)}
             label="BPM Offset (ms)"
           />
-          <Button 
+          <Button
             size="xs"
             variant="light"
             onClick={() => {
@@ -406,14 +464,26 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
             Set to Current Time
           </Button>
         </div>
-        
+
+        <div className="control-group">
+          <BPMFinder
+            config={config}
+            onBpmChange={(detectedBpm) => {
+              setBpm(detectedBpm);
+            }}
+            onOffsetChange={(offsetMs) => {
+              setBpmOffset(offsetMs);
+            }}
+          />
+        </div>
+
         <div className="control-group timeline-controls">
-          <Slider 
-            value={speed} 
-            onChange={setSpeed} 
-            label="Playback Speed" 
-            min={0.5} 
-            max={2} 
+          <Slider
+            value={speed}
+            onChange={setSpeed}
+            label="Playback Speed"
+            min={0.5}
+            max={2}
             step={0.1}
             marks={[
               { value: 0.5, label: '0.5x' },
@@ -423,9 +493,9 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
             ]}
           />
         </div>
-        
+
         <div className="control-group">
-          <Button 
+          <Button
             variant="outline"
             leftSection={<i className="fas fa-align-center" />}
             onClick={() => {
@@ -441,21 +511,32 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
           >
             Snap to Beat
           </Button>
+          <Button
+            size="xs"
+            variant="subtle"
+            onClick={() => { currentZoom = 1; }}
+          >
+            Reset Zoom
+          </Button>
         </div>
       </div>
-      
+
       <div className="canvas-container">
         <div className="timeline-info">
           <TimelineMarker />
           <div className="time-marker">
-            BPM: {bpm} | Offset: {(bpmOffset/1000).toFixed(3)}s
+            BPM: {bpm} | Offset: {(bpmOffset/1000).toFixed(3)}s | Zoom: {Math.round(currentZoom * 100)}%
           </div>
         </div>
         <canvas ref={canvasRef} width={1920} height={200} />
       </div>
-      
+
       <div className="help-overlay visible">
         <h4>Quick Controls</h4>
+        <div className="shortcut">
+          <span>Spacebar</span>
+          <span className="key">Play/Pause</span>
+        </div>
         <div className="shortcut">
           <span>Left Click + Drag</span>
           <span className="key">Select/Create</span>
@@ -469,12 +550,28 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
           <span className="key">Move Event</span>
         </div>
         <div className="shortcut">
-          <span>Numpad 1-9</span>
-          <span className="key">Corner Events</span>
+          <span>Scroll Wheel</span>
+          <span className="key">Zoom</span>
         </div>
         <div className="shortcut">
-          <span>Mouse Wheel</span>
+          <span>Ctrl + Scroll</span>
           <span className="key">Scrub Time</span>
+        </div>
+        <div className="shortcut">
+          <span>Delete</span>
+          <span className="key">Delete Event</span>
+        </div>
+        <div className="shortcut">
+          <span>Ctrl+S</span>
+          <span className="key">Save</span>
+        </div>
+        <div className="shortcut">
+          <span>Ctrl+Z / Ctrl+Y</span>
+          <span className="key">Undo/Redo</span>
+        </div>
+        <div className="shortcut">
+          <span>Numpad 1-9</span>
+          <span className="key">Corner Events</span>
         </div>
       </div>
     </div>
@@ -498,10 +595,11 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
   const bpmOffset = config.bpmOffset ?? 0;
   const songTime = (Toxen.musicPlayer.media.currentTime) * 1000;
   const duration = Toxen.musicPlayer.media.duration * 1000;
+  const zoom = currentZoom;
 
   const w = ctx.canvas.width, h = ctx.canvas.height;
   const indicatorPos = w * 0.25;
-  
+
   // Enhanced canvas background with subtle gradient and grid
   const bgGradient = ctx.createLinearGradient(0, 0, 0, h);
   bgGradient.addColorStop(0, "rgba(8, 8, 12, 0.1)");
@@ -509,12 +607,12 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
   bgGradient.addColorStop(1, "rgba(8, 8, 12, 0.1)");
   ctx.fillStyle = bgGradient;
   ctx.fillRect(0, 0, w, h);
-  
+
   // Subtle grid pattern for better visual alignment
   ctx.strokeStyle = "rgba(255, 255, 255, 0.02)";
   ctx.lineWidth = 1;
   ctx.setLineDash([1, 3]);
-  
+
   // Vertical grid lines every 100px
   for (let x = 0; x < w; x += 100) {
     ctx.beginPath();
@@ -522,7 +620,7 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
     ctx.lineTo(x, h);
     ctx.stroke();
   }
-  
+
   // Horizontal grid lines every 40px
   for (let y = 0; y < h; y += 40) {
     ctx.beginPath();
@@ -530,43 +628,25 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
     ctx.lineTo(w, y);
     ctx.stroke();
   }
-  
+
   ctx.setLineDash([]); // Reset line dash
-  
+
   // Subtle border with accent color
   ctx.strokeStyle = "rgba(var(--accent-color-rgb, 255, 64, 129), 0.3)";
   ctx.lineWidth = 1;
   ctx.strokeRect(0, 0, w, h);
 
-  // ctx.fillText("BPM: " + bpm, 10, 10);
-  // ctx.fillText("BPM Offset: " + bpmOffset, 10, 20);
-  // ctx.fillText("Time: " + songTime, 10, 30);
-  // ctx.fillText("Duration: " + duration, 10, 40);
-  // ctx.fillText("Mouse: " + currentMousePos.x + ", " + currentMousePos.y, 10, 50);
-  // ctx.fillText("Mouse Click: " + mouseDown.m0 + ", " + mouseDown.m1 + ", " + mouseDown.m2, 10, 60);
-  // // Display selectedEvent
-  // if (selectedEvent.event) {
-  //   ctx.fillStyle = "rgba(0, 0, 255, 0.5)";
-  //   const event = selectedEvent.event;
-  //   const startTime = event.startTime * 1000;
-  //   const endTime = event.endTime * 1000;
 
-  //   ctx.fillText("Selected Event: " + event.component, 10, 70);
-  //   ctx.fillText("Start: " + startTime, 10, 80);
-  //   ctx.fillText("End: " + endTime, 10, 90);
-  // }
-
-  
-  // Display intervals based on BPM with enhanced styling
-  const intervalFull = 60000 / bpm;
+  // Display intervals based on BPM with enhanced styling (zoom-aware)
+  const intervalFull = (60000 / bpm) * zoom;
   const intervalsFull = (w / intervalFull) + 2;
   const intervalQuarter = intervalFull / 4;
   const intervalsQuarter = (w / intervalQuarter) + 2;
-  const offset = (songTime - bpmOffset) % intervalFull;
+  const offset = ((songTime - bpmOffset) % (60000 / bpm)) * zoom;
   const offsetPos = indicatorPos % intervalFull;
-  
+
   const quarterBeatPositions: number[] = [];
-  
+
   // Quarter beat markers (subtle)
   ctx.save();
   for (let i = 1; i < intervalsQuarter; i++) {
@@ -576,13 +656,13 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
       const gradient = ctx.createLinearGradient(pos, 0, pos, h * 0.3);
       gradient.addColorStop(0, "rgba(255, 255, 255, 0.2)");
       gradient.addColorStop(1, "rgba(255, 255, 255, 0.05)");
-      
+
       ctx.fillStyle = gradient;
       ctx.fillRect(pos - 0.5, 0, 1, h * 0.3);
       quarterBeatPositions.push(pos);
     }
   }
-  
+
   // Full beat markers (more prominent)
   for (let i = 1; i < intervalsFull; i++) {
     const pos = offsetPos + i * intervalFull - offset - (intervalFull * 2);
@@ -592,12 +672,12 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
       gradient.addColorStop(0, "rgba(255, 255, 255, 0.5)");
       gradient.addColorStop(0.7, "rgba(255, 255, 255, 0.2)");
       gradient.addColorStop(1, "rgba(255, 255, 255, 0.1)");
-      
+
       ctx.fillStyle = gradient;
       ctx.fillRect(pos - 1, 0, 2, h * 0.4);
-      
+
       // Beat number indicator
-      const beatNumber = Math.floor((songTime - bpmOffset + i * intervalFull) / intervalFull) + 1;
+      const beatNumber = Math.floor((songTime - bpmOffset + i * (60000 / bpm)) / (60000 / bpm)) + 1;
       if (beatNumber > 0) {
         ctx.font = "600 10px 'Segoe UI', system-ui, sans-serif";
         ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
@@ -608,99 +688,72 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
   }
   ctx.restore();
 
-  // Play a sound if the time is on the beat
-  // if (songTime > bpmOffset) {
-  //   if (Math.abs(offset) < 12) {
-  //     if (canPlayClap) {
-  //       const audio = new Audio(soundClap);
-  //       audio.volume = 0.01;
-  //       audio.play();
-  //       canPlayClap = false;
-  //     }
-  //   }
-  //   else {
-  //     // can play again
-  //     canPlayClap = true;
-  //   }
-  // }
-
   // Nearest quarter beat to mouse
   function getNearestBeatFrom(x: number) {
+    if (quarterBeatPositions.length === 0) return x;
     const nearestCachedBeat = quarterBeatPositions.reduce((prev, curr) => {
       return Math.abs(curr - x) < Math.abs(prev - x) ? curr : prev;
     });
 
     return nearestCachedBeat;
-
-    // const nearestCachedBeatToIndicator = quarterBeatPositions.reduce((prev, curr) => {
-    //   return Math.abs(curr - indicatorPos) < Math.abs(prev - indicatorPos) ? curr : prev;
-    // });
-
-    // // return nearestCachedBeatToIndicator;
-
-    // const diff = nearestCachedBeatToIndicator - indicatorPos;
-
-    // const beat = Math.round(Math.floor(x / intervalQuarter) * intervalQuarter + diff + (intervalQuarter / 2));
-    // return beat;
   }
   const nearestMouseBeat = getNearestBeatFrom(currentMousePos.x);
-  
+
   // Enhanced selection area rendering
   if (selectStart && !selectedEvent.event) {
     const end = selectEnd ?? currentMousePos;
     const selectionWidth = end.x - selectStart.x;
     const selectionHeight = end.y - selectStart.y;
-    
+
     if (Math.abs(selectionWidth) > 5) { // Only show if meaningful selection
       ctx.save();
-      
+
       // Selection background with gradient
       const selectionGradient = ctx.createLinearGradient(selectStart.x, selectStart.y, end.x, end.y);
       selectionGradient.addColorStop(0, "rgba(64, 169, 255, 0.2)");
       selectionGradient.addColorStop(1, "rgba(64, 169, 255, 0.1)");
-      
+
       ctx.fillStyle = selectionGradient;
       ctx.fillRect(selectStart.x, selectStart.y, selectionWidth, selectionHeight);
-      
+
       // Selection border with animated dashes
       ctx.strokeStyle = "rgba(64, 169, 255, 0.8)";
       ctx.lineWidth = 2;
       ctx.setLineDash([8, 4]);
       ctx.lineDashOffset = -(Date.now() / 50) % 12; // Animated dash offset
       ctx.strokeRect(selectStart.x, selectStart.y, selectionWidth, selectionHeight);
-      
+
       // Corner indicators
       const cornerSize = 6;
       ctx.fillStyle = "rgba(64, 169, 255, 0.9)";
       ctx.fillRect(selectStart.x - cornerSize/2, selectStart.y - cornerSize/2, cornerSize, cornerSize);
       ctx.fillRect(end.x - cornerSize/2, end.y - cornerSize/2, cornerSize, cornerSize);
-      
+
       ctx.restore();
     }
   }
 
-  // Draw all events on the timeline at the appropriate time
+  // Draw all events on the timeline at the appropriate time (zoom-aware)
+  const viewRange = w / zoom; // visible time range in ms
   const visibleEvents: [StoryboardParser.SBEvent, number, number, number, number][] = [];
   let hPosOffset = 0;
   const visibleStoryboard = config.storyboard.filter((event) => {
     const startTime = event.startTime * 1000;
     const endTime = event.endTime * 1000;
-    return startTime - songTime <= 2000 && endTime - songTime >= -2000;
+    return (startTime - songTime) * zoom <= w && (endTime - songTime) * zoom >= -w;
   });
   const eventH = Math.max(24, h / (visibleStoryboard.length + 1)); // Minimum height for readability
   const eventMargin = 2;
   const cornerRadius = 6;
-  
+
   ctx.save();
   visibleStoryboard.forEach((event, i) => {
     const startTime = event.startTime * 1000;
     const endTime = event.endTime * 1000;
-    if (startTime - songTime > 2000) return;
-    if (endTime - songTime < -2000) return;
-    
-    const xStart = indicatorPos + (startTime - songTime);
+
+    const xStart = indicatorPos + (startTime - songTime) * zoom;
     const yStart = i * eventH + eventMargin;
-    const xEnd = xStart + endTime - startTime;
+    const xEnd = xStart + (endTime - startTime) * zoom;
     const yEnd = yStart + eventH - (eventMargin * 2);
     const width = Math.max(20, xEnd - xStart); // Minimum width for visibility
     const height = eventH - (eventMargin * 2);
@@ -708,7 +761,7 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
     // Determine event color based on component type with more sophisticated mapping
     let primaryColor = [255, 64, 129]; // Default pink/accent color
     let alpha = 0.8;
-    
+
     if (event.component === "visualizerColor") {
       const color = (event.data.color ?? [255, 255, 255]) as [number, number, number];
       primaryColor = color;
@@ -729,7 +782,7 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
     }
 
     // Check if event is hovered
-    const isHovered = currentMousePos.y >= yStart && currentMousePos.y <= yEnd + (eventMargin * 2) && 
+    const isHovered = currentMousePos.y >= yStart && currentMousePos.y <= yEnd + (eventMargin * 2) &&
                      currentMousePos.x >= xStart - eventBorderSelectSize && currentMousePos.x <= xEnd + eventBorderSelectSize;
     const isEdgeHovered = isHovered && (Math.abs(xStart - currentMousePos.x) < eventBorderSelectSize || Math.abs(xEnd - currentMousePos.x) < eventBorderSelectSize);
 
@@ -765,16 +818,16 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
 
     // Border styling
     if (isHovered) {
-      ctx.strokeStyle = isEdgeHovered ? 
+      ctx.strokeStyle = isEdgeHovered ?
         `rgba(64, 169, 255, 0.9)` : // Blue for edge resize
         `rgba(${primaryColor[0]}, ${primaryColor[1]}, ${primaryColor[2]}, 1)`;
       ctx.lineWidth = isEdgeHovered ? 3 : 2;
       ctx.setLineDash([]);
-      
+
       ctx.beginPath();
       ctx.roundRect(xStart, yStart, width, height, cornerRadius);
       ctx.stroke();
-      
+
       // Edge indicators for resizing
       if (isEdgeHovered) {
         ctx.fillStyle = `rgba(64, 169, 255, 0.9)`;
@@ -806,43 +859,43 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
     const componentName = StoryboardParser.components?.[event.component]?.name ?? event.component;
     const maxFontSize = Math.min(height - 6, 14);
     const fontSize = Math.max(10, maxFontSize);
-    
+
     ctx.font = `600 ${fontSize}px 'Segoe UI', system-ui, sans-serif`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    
+
     // Text with better contrast
     const textX = xStart + 8;
     const textY = yStart + height / 2;
-    
+
     // Text shadow for better readability
     ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
     ctx.shadowBlur = 2;
     ctx.shadowOffsetX = 1;
     ctx.shadowOffsetY = 1;
-    
+
     ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
     ctx.fillText(componentName, textX, textY);
-    
+
     // Reset text shadow
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 0;
-    
+
     // Duration indicator for longer events
     if (width > 80) {
-      const duration = (endTime - startTime) / 1000;
-      const durationText = duration >= 1 ? `${duration.toFixed(1)}s` : `${(duration * 1000).toFixed(0)}ms`;
-      
+      const durationSec = (endTime - startTime) / 1000;
+      const durationText = durationSec >= 1 ? `${durationSec.toFixed(1)}s` : `${(durationSec * 1000).toFixed(0)}ms`;
+
       ctx.font = `400 ${Math.max(9, fontSize - 2)}px 'Segoe UI', system-ui, sans-serif`;
       ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
       ctx.textAlign = 'right';
-      
+
       const durationX = xStart + width - 8;
       ctx.fillText(durationText, durationX, textY);
     }
-    
+
     // Type indicator badge for events with sufficient width
     if (width > 120) {
       let categoryText = '';
@@ -853,31 +906,31 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
       else if (event.component?.includes("pulse")) categoryText = 'PULSE';
       else if (event.component?.includes("particle")) categoryText = 'FX';
       else if (event.component?.includes("text")) categoryText = 'TEXT';
-      
+
       if (categoryText) {
         ctx.save();
         const badgeX = xStart + 8;
         const badgeY = yStart + 4;
         const badgeWidth = 32;
         const badgeHeight = 12;
-        
+
         // Badge background
         ctx.fillStyle = `rgba(${primaryColor[0]}, ${primaryColor[1]}, ${primaryColor[2]}, 0.8)`;
         ctx.beginPath();
         ctx.roundRect(badgeX, badgeY, badgeWidth, badgeHeight, 3);
         ctx.fill();
-        
+
         // Badge text
         ctx.font = '700 7px "Segoe UI", system-ui, sans-serif';
         ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(categoryText, badgeX + badgeWidth/2, badgeY + badgeHeight/2);
-        
+
         ctx.restore();
       }
     }
-    
+
     // Reset text alignment
     ctx.textAlign = 'left';
   });
@@ -885,16 +938,16 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
 
   // Enhanced current time indicator
   ctx.save();
-  
+
   // Main indicator line with gradient
   const indicatorGradient = ctx.createLinearGradient(indicatorPos, 0, indicatorPos, h);
   indicatorGradient.addColorStop(0, "rgba(255, 64, 129, 1)"); // Accent color
   indicatorGradient.addColorStop(0.7, "rgba(255, 64, 129, 0.8)");
   indicatorGradient.addColorStop(1, "rgba(255, 64, 129, 0.4)");
-  
+
   ctx.fillStyle = indicatorGradient;
   ctx.fillRect(indicatorPos - 1, 0, 2, h);
-  
+
   // Indicator head (triangle at top)
   ctx.fillStyle = "rgba(255, 64, 129, 1)";
   ctx.beginPath();
@@ -903,20 +956,21 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
   ctx.lineTo(indicatorPos + 6, -12);
   ctx.closePath();
   ctx.fill();
-  
+
   // Subtle glow effect
   ctx.shadowColor = "rgba(255, 64, 129, 0.6)";
   ctx.shadowBlur = 8;
   ctx.fillRect(indicatorPos - 0.5, 0, 1, h);
-  
+
   // Reset shadow
   ctx.shadowColor = 'transparent';
   ctx.shadowBlur = 0;
-  
+
   ctx.restore();
 
+  // Zoom-aware position-to-time conversion
   function positionToTime(x: number) {
-    return Math.round(x + songTime - indicatorPos);
+    return Math.round((x - indicatorPos) / zoom + songTime);
   }
 
   function getHoveredEvent() {
@@ -925,17 +979,15 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
         currentMousePos.x + eventBorderSelectSize < startX || currentMousePos.x - eventBorderSelectSize > endX
         || currentMousePos.y < startY || currentMousePos.y > endY
       ) return false;
-    
+
       return true;
     });
   }
 
-  // ctx.fillText("Mouse Time: " + positionToTime(currentMousePos.x), 10, 100);
-
   function onMouseDown() {
     selectEnd = { x: nearestMouseBeat, y: 100 };
 
-    
+
     if (selectedEvent.event) {
       const newPos = (positionToTime(nearestMouseBeat) / 1000);
       if (selectedEvent.edge === "start" && newPos < selectedEvent.event.endTime) {
@@ -975,6 +1027,7 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
           children: <EditEvent event={event} config={config} close={() => {
             modals.closeModal(modalId);
             StoryboardParser.setStoryboard(config, song);
+            storyboardHistory.snapshot();
           }} />
         });
       }
@@ -987,9 +1040,12 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
       selectStart = { x: nearestMouseBeat, y: 0 };
     }
   }
-  
+
   function onMouseUpFrame() {
-    console.log("Mouse up on frame");
+    // Snapshot undo state if event was resized
+    if (selectedEvent.event) {
+      storyboardHistory.snapshot();
+    }
 
     // Add event
     if (selectStart && selectEnd && Math.abs(selectStart.x - selectEnd.x) > 10 && selectStart.x < selectEnd.x) {
@@ -1002,15 +1058,17 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
       }, {}, null, false);
 
       config.storyboard.push(newEvent);
-      
+      storyboardHistory.snapshot();
+
       const modalId = modals.openModal({
         title: "New Event",
         children: <EditEvent config={config} event={newEvent} close={() => {
           modals.closeModal(modalId);
+          storyboardHistory.snapshot();
         }} />
       });
     }
-    
+
     selectStart = null;
     selectEnd = null;
 
@@ -1021,7 +1079,6 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
   function onRightClickDown() {}
   function onRightClickDownFrame() {
     Toxen.musicPlayer.setPosition(positionToTime(currentMousePos.x) / 1000);
-    // Toxen.musicPlayer.media.currentTime = positionToTime(currentMousePos.x) / 1000;
   }
   function onRightClickUpFrame() {}
 
@@ -1042,15 +1099,16 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
         startMouseOffset: nearestMouseBeat - data[1],
         duration: data[0].endTime - data[0].startTime,
       };
-      console.log("Middle click on event", moveEvent);
     }
     else {
-      console.log("Middle click on event no event");
       moveEvent = null;
     }
   }
-  
+
   function onMiddleClickUpFrame() {
+    if (moveEvent) {
+      storyboardHistory.snapshot();
+    }
     moveEvent = null;
   }
 
@@ -1096,31 +1154,31 @@ function storyboardRenderer(ctx: CanvasRenderingContext2D, config: StoryboardPar
 function TimelineMarker() {
   const [currentTime, setCurrentTime] = React.useState(0);
   const [isPlaying, setIsPlaying] = React.useState(false);
-  
+
   React.useEffect(() => {
     const updateCurrentTime = () => {
       if (Toxen.musicPlayer?.media) {
         const newTime = Toxen.musicPlayer.media.currentTime;
         const newIsPlaying = !Toxen.musicPlayer.media.paused;
-        
+
         setCurrentTime(newTime);
         setIsPlaying(newIsPlaying);
       }
     };
-    
+
     // Update immediately
     updateCurrentTime();
-    
+
     // Set up frequent updates (60fps for smooth timeline updates when playing)
     let interval: NodeJS.Timeout;
     const startInterval = () => {
       interval = setInterval(updateCurrentTime, 16);
     };
-    
+
     // Only update frequently when playing, less frequently when paused
     const updateInterval = () => {
       if (interval) clearInterval(interval);
-      
+
       if (Toxen.musicPlayer?.media && !Toxen.musicPlayer.media.paused) {
         startInterval();
       } else {
@@ -1128,9 +1186,9 @@ function TimelineMarker() {
         interval = setInterval(updateCurrentTime, 100);
       }
     };
-    
+
     updateInterval();
-    
+
     // Listen to play/pause events to adjust update frequency
     const mediaElement = Toxen.musicPlayer?.media;
     if (mediaElement) {
@@ -1139,7 +1197,7 @@ function TimelineMarker() {
       mediaElement.addEventListener('pause', updateInterval);
       mediaElement.addEventListener('seeked', updateCurrentTime);
     }
-    
+
     return () => {
       if (interval) clearInterval(interval);
       if (mediaElement) {
@@ -1150,15 +1208,15 @@ function TimelineMarker() {
       }
     };
   }, []);
-  
-  const formattedTime = currentTime ? 
-    new Time(currentTime * 1000).toTimestamp(Time.FORMATS.STANDARD_WITH_MS) 
+
+  const formattedTime = currentTime ?
+    new Time(currentTime * 1000).toTimestamp(Time.FORMATS.STANDARD_WITH_MS)
     : "00:00.000";
-  
+
   return (
     <div className="time-marker">
       <span className="playback-indicator">
-        {isPlaying ? '▶️' : '⏸️'}
+        {isPlaying ? '\u25B6' : '\u23F8'}
       </span>
       Timeline: {formattedTime}
     </div>
@@ -1222,21 +1280,38 @@ function EventElement(props: { config: StoryboardParser.StoryboardConfig, event:
             setStartTime(e.currentTarget.value);
           }}
         />
-        <Button onClick={() => {
+        <Button size="xs" onClick={() => {
           Toxen.musicPlayer.setPosition(event.startTime);
         }}>Go</Button>
+        <Button size="xs" variant="light" onClick={() => {
+          const current = Toxen.musicPlayer.media.currentTime;
+          event.startTime = current;
+          const ts = new Time(current * 1000).toTimestamp(Time.FORMATS.STANDARD_WITH_MS);
+          setStartTime(ts);
+        }}>Set Start</Button>
       </Group>
-      <TimeInput
-        label="End time"
-        value={endTime}
-        onChange={(e, value, valid) => {
-          if (valid) {
-            const seconds = value.toSeconds();
-            event.endTime = seconds;
-          }
-          setEndTime(e.currentTarget.value);
-        }}
-      />
+      <Group>
+        <TimeInput
+          label="End time"
+          value={endTime}
+          onChange={(e, value, valid) => {
+            if (valid) {
+              const seconds = value.toSeconds();
+              event.endTime = seconds;
+            }
+            setEndTime(e.currentTarget.value);
+          }}
+        />
+        <Button size="xs" onClick={() => {
+          Toxen.musicPlayer.setPosition(event.endTime);
+        }}>Go</Button>
+        <Button size="xs" variant="light" onClick={() => {
+          const current = Toxen.musicPlayer.media.currentTime;
+          event.endTime = current;
+          const ts = new Time(current * 1000).toTimestamp(Time.FORMATS.STANDARD_WITH_MS);
+          setEndTime(ts);
+        }}>Set End</Button>
+      </Group>
       <Select
         allowDeselect={false}
         label="Component"
@@ -1271,12 +1346,14 @@ function EventElement(props: { config: StoryboardParser.StoryboardConfig, event:
             data: Converter.createDeepCopy(event.data),
             once: event.once,
           }, {}, null, false));
+          storyboardHistory.snapshot();
           close();
         }}>+ Duplicate</Button>
 
         <Button variant="outline" color="red" onClick={() => {
           config.storyboard.splice(config.storyboard.indexOf(event), 1);
           StoryboardParser.resetCurrentEvents();
+          storyboardHistory.snapshot();
           close();
         }}>Delete</Button>
       </Group>
@@ -1312,7 +1389,7 @@ function TimeInput(props: TimeInputProps) {
 
 function ComponentButton(props: { event: StoryboardParser.SBEvent, component: StoryboardParser.ComponentArgument }) {
   const song = Toxen.editingSong;
-  
+
   const { component: comp, event } = props;
   const dataId = comp.identifier;
   const dataName = comp.name;
@@ -1433,7 +1510,7 @@ function ComponentButton(props: { event: StoryboardParser.SBEvent, component: St
         <small>{description}</small>
       </>
     );
-    
+
     case "SelectImage": return (
       <>
         <div>

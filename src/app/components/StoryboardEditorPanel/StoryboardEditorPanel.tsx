@@ -1,4 +1,4 @@
-import { Button, Checkbox, Collapse, ColorInput, Group, NumberInput, Select, Slider, TextInput, TextInputProps } from "@mantine/core";
+import { Button, Checkbox, CloseButton, Collapse, ColorInput, Group, NumberInput, Select, Slider, Text, TextInput, TextInputProps } from "@mantine/core";
 import React, { Component, useEffect, useState } from "react"
 import Song from "../../toxen/Song";
 import StoryboardParser from "../../toxen/StoryboardParser";
@@ -6,7 +6,7 @@ import Time from "../../toxen/Time";
 import { Toxen } from "../../ToxenApp";
 import SidepanelSection from "../Sidepanel/SidepanelSection";
 import SidepanelSectionHeader from "../Sidepanel/SidepanelSectionHeader";
-import { IconArrowDownCircle, IconArrowLeftBar, IconArrowRightBar, IconArrowUpCircle, IconPlayerPause, IconPlayerPlay, IconStar } from "@tabler/icons-react";
+import { IconArrowDownCircle, IconArrowLeftBar, IconArrowRightBar, IconArrowUpCircle, IconPlayerPause, IconPlayerPlay, IconSearch, IconStar } from "@tabler/icons-react";
 import { useClipboard, useForceUpdate } from "@mantine/hooks";
 import { hexToRgbArray, rgbArrayToHex } from "../Form/FormInputFields/FormInputColorPicker";
 import Settings, { VisualizerStyle } from "../../toxen/Settings";
@@ -27,7 +27,24 @@ export default function StoryboardEditorPanel() {
   const [config, setConfig] = React.useState<StoryboardParser.StoryboardConfig>();
   const clipboard = useClipboard();
   const [paused, setPaused] = useState(Toxen.musicPlayer.media.paused);
+  const [filterText, setFilterText] = useState("");
   const forceUpdate = useForceUpdate();
+
+  // Spacebar play/pause shortcut
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if (e.code === "Space") {
+        e.preventDefault();
+        setPaused(!Toxen.musicPlayer.paused);
+        Toxen.musicPlayer.toggle();
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, []);
+
   if (!song) {
     return (<div>No song</div>)
   }
@@ -39,6 +56,14 @@ export default function StoryboardEditorPanel() {
     });
     return (<div>No config</div>);
   }
+
+  const filteredEvents = config.storyboard
+    .sort((a, b) => a.startTime - b.startTime)
+    .filter(event => {
+      if (!filterText) return true;
+      const name = StoryboardParser.components[event.component]?.name ?? event.component ?? "";
+      return name.toLowerCase().includes(filterText.toLowerCase());
+    });
 
   return (
     <>
@@ -83,7 +108,19 @@ export default function StoryboardEditorPanel() {
             }}>Copy current time</Button>
           </div>
           <div>
-            <BPMFinder />
+            <BPMFinder
+              config={config}
+              onBpmChange={(bpm) => {
+                config.bpm = bpm;
+                forceUpdate();
+                Toxen.log(`BPM set to ${bpm}`, 2000);
+              }}
+              onOffsetChange={(offsetMs) => {
+                config.bpmOffset = offsetMs;
+                forceUpdate();
+                Toxen.log(`BPM offset set to ${(offsetMs / 1000).toFixed(3)}s`, 2000);
+              }}
+            />
           </div>
         </Group>
 
@@ -94,7 +131,7 @@ export default function StoryboardEditorPanel() {
           }}>
             <IconArrowLeftBar />
           </Button>
-          <Button title="Play/Pause" color="blue" onClick={() => {
+          <Button title="Play/Pause (Spacebar)" color="blue" onClick={() => {
             setPaused(!Toxen.musicPlayer.paused);
             Toxen.musicPlayer.toggle();
           }}>
@@ -126,12 +163,27 @@ export default function StoryboardEditorPanel() {
           />
         </Group>
       </SidepanelSectionHeader>
-      {/* <h1>Storyboard editor coming soon!</h1>
-      <p>Click the <code>Exit editor</code> to get back to your songs.</p>
-      <p>Nothing can be done in here yet. This is just a placeholder.</p> */}
+
+      {/* Event search/filter */}
+      <TextInput
+        placeholder="Filter events by component..."
+        leftSection={<IconSearch size={14} />}
+        value={filterText}
+        onChange={(e) => setFilterText(e.currentTarget.value)}
+        rightSection={filterText && (
+          <CloseButton size="sm" onClick={() => setFilterText("")} />
+        )}
+        style={{ margin: "8px 0" }}
+      />
+      <Text size="xs" c="dimmed" style={{ marginBottom: 8 }}>
+        {filterText
+          ? `${filteredEvents.length} of ${config.storyboard.length} events`
+          : `${config.storyboard.length} event${config.storyboard.length !== 1 ? "s" : ""}`
+        }
+      </Text>
 
       {
-        config.storyboard.sort((a, b) => a.startTime - b.startTime).map((event, i) => {
+        filteredEvents.map((event, i) => {
           return (
             <EventElement
               key={event._key}
@@ -177,7 +229,7 @@ function EventElement(props: { config: StoryboardParser.StoryboardConfig, event:
   const isNew = Toxen.musicPlayer.media.currentTime === event.startTime;
 
   return (
-    <div>
+    <div className={`sbevent-item ${opened ? "sbevent-item--expanded" : ""}`}>
       <span
         onClick={() => setOpened(!opened)}
         style={{
@@ -196,80 +248,98 @@ function EventElement(props: { config: StoryboardParser.StoryboardConfig, event:
           Time.fromTimestamp(startTime, () => null)?.toTimestamp(Time.FORMATS.STANDARD_WITH_MS) ?? "INVALID"
         } - {
             Time.fromTimestamp(endTime, () => null)?.toTimestamp(Time.FORMATS.STANDARD_WITH_MS) ?? "INVALID"
-          }</code>] {StoryboardParser.components[component].name}
+          }</code>] {StoryboardParser.components[component]?.name ?? component}
       </span>
       <Collapse in={opened}>
-        <Group>
-          <TimeInput
-            label="Start time"
-            value={startTime}
-            onChange={(e, value, valid) => {
-              if (valid) {
-                const seconds = value.toSeconds();
-                event.startTime = seconds;
+        <div className="sbevent-content">
+          <Group>
+            <TimeInput
+              label="Start time"
+              value={startTime}
+              onChange={(e, value, valid) => {
+                if (valid) {
+                  const seconds = value.toSeconds();
+                  event.startTime = seconds;
+                }
+                setStartTime(e.currentTarget.value);
+              }}
+            />
+            <Button size="xs" onClick={() => {
+              Toxen.musicPlayer.setPosition(event.startTime);
+            }}>Go</Button>
+            <Button size="xs" variant="light" onClick={() => {
+              const current = Toxen.musicPlayer.media.currentTime;
+              event.startTime = current;
+              const ts = new Time(current * 1000).toTimestamp(Time.FORMATS.STANDARD_WITH_MS);
+              setStartTime(ts);
+            }}>Set Start</Button>
+          </Group>
+          <Group>
+            <TimeInput
+              label="End time"
+              value={endTime}
+              onChange={(e, value, valid) => {
+                if (valid) {
+                  const seconds = value.toSeconds();
+                  event.endTime = seconds;
+                }
+                setEndTime(e.currentTarget.value);
+              }}
+            />
+            <Button size="xs" onClick={() => {
+              Toxen.musicPlayer.setPosition(event.endTime);
+            }}>Go</Button>
+            <Button size="xs" variant="light" onClick={() => {
+              const current = Toxen.musicPlayer.media.currentTime;
+              event.endTime = current;
+              const ts = new Time(current * 1000).toTimestamp(Time.FORMATS.STANDARD_WITH_MS);
+              setEndTime(ts);
+            }}>Set End</Button>
+          </Group>
+          <Select
+            allowDeselect={false}
+            label="Component"
+            data={Object.keys(StoryboardParser.components).map((key) => {
+              return {
+                label: StoryboardParser.components[key].name,
+                value: key,
               }
-              setStartTime(e.currentTarget.value);
+            })}
+            value={component}
+            onChange={(value) => {
+              setComponent(event.component = value);
             }}
           />
-          <Button onClick={() => {
-            Toxen.musicPlayer.setPosition(event.startTime);
-          }}>Go</Button>
-        </Group>
-        <TimeInput
-          label="End time"
-          value={endTime}
-          onChange={(e, value, valid) => {
-            if (valid) {
-              const seconds = value.toSeconds();
-              event.endTime = seconds;
-            }
-            setEndTime(e.currentTarget.value);
-          }}
-        />
-        <Select
-          allowDeselect={false}
-          label="Component"
-          data={Object.keys(StoryboardParser.components).map((key) => {
-            return {
-              label: StoryboardParser.components[key].name,
-              value: key,
-            }
-          })}
-          value={component}
-          onChange={(value) => {
-            setComponent(event.component = value);
-          }}
-        />
 
-        <div>
-          {/* Data */}
-          <h3>Properties</h3>
-          {
-            StoryboardParser.components[component]?.arguments.map(c => <ComponentButton key={c.identifier} event={event} component={c} />) ?? (
-              <p>Select component to see properties</p>
-            )
-          }
+          <div>
+            {/* Data */}
+            <h3>Properties</h3>
+            {
+              StoryboardParser.components[component]?.arguments.map(c => <ComponentButton key={c.identifier} event={event} component={c} />) ?? (
+                <p>Select component to see properties</p>
+              )
+            }
+          </div>
+          <br />
+          <Group justify="apart">
+            <Button color="blue" onClick={() => {
+              config.storyboard.push(StoryboardParser.SBEvent.fromConfig({
+                start: event.startTime,
+                end: event.endTime,
+                component: event.component,
+                data: Object.create(event.data),
+                once: event.once,
+              }, {}, null, false));
+              updateParent();
+            }}>+ Duplicate</Button>
+
+            <Button variant="outline" color="red" onClick={() => {
+              config.storyboard.splice(config.storyboard.indexOf(event), 1);
+              StoryboardParser.resetCurrentEvents();
+              updateParent?.();
+            }}>Delete</Button>
+          </Group>
         </div>
-        <br />
-        <Group justify="apart">
-          <Button color="blue" onClick={() => {
-            config.storyboard.push(StoryboardParser.SBEvent.fromConfig({
-              start: event.startTime,
-              end: event.endTime,
-              component: event.component,
-              data: Object.create(event.data),
-              once: event.once,
-            }, {}, null, false));
-            updateParent();
-          }}>+ Duplicate</Button>
-
-          <Button variant="outline" color="red" onClick={() => {
-            config.storyboard.splice(config.storyboard.indexOf(event), 1);
-            StoryboardParser.resetCurrentEvents();
-            updateParent?.();
-          }}>Delete</Button>
-        </Group>
-        <hr />
       </Collapse>
     </div>
   )
@@ -303,7 +373,7 @@ function TimeInput(props: TimeInputProps) {
 
 function ComponentButton(props: { event: StoryboardParser.SBEvent, component: StoryboardParser.ComponentArgument }) {
   const song = Toxen.editingSong;
-  
+
   const { component: comp, event } = props;
   const dataId = comp.identifier;
   const dataName = comp.name;
@@ -401,7 +471,7 @@ function ComponentButton(props: { event: StoryboardParser.SBEvent, component: St
         />
       </div>
     );
-    
+
     case "SelectImage": return (
       <div>
         <SelectAsync
