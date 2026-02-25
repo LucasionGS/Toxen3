@@ -519,13 +519,31 @@ export default class Song implements ISong {
 
     if (!Settings.isRemote() && toxenapi.isDesktop()) {
       // Check if needs conversion
-      const convertable = Toxen.getSupportedConvertableAudioFiles();
-      if (convertable.includes(toxenapi.path.extname(src).toLowerCase())) {
+      const convertableAudio = Toxen.getSupportedConvertableAudioFiles();
+      if (convertableAudio.includes(toxenapi.path.extname(src).toLowerCase())) {
         const id = Toxen.notify({
           title: "Converting " + this.getDisplayName() + " to MP3",
           content: `0% complete`,
         });
         toxenapi.ffmpeg.convertToMp3(this, (progress) => { // Purposely don't await, let it run in the background
+          updateNotification({
+            id,
+            message: <div>
+              {Math.round(progress.percent)}% complete
+              <br />
+              {progress.timemark}
+            </div>,
+          });
+        });
+      }
+
+      const convertableVideo = Toxen.getSupportedConvertableVideoFiles();
+      if (convertableVideo.includes(toxenapi.path.extname(src).toLowerCase())) {
+        const id = Toxen.notify({
+          title: "Converting " + this.getDisplayName() + " to MP4",
+          content: `0% complete`,
+        });
+        toxenapi.ffmpeg.convertToMp4(this, (progress) => { // Purposely don't await, let it run in the background
           updateNotification({
             id,
             message: <div>
@@ -1176,15 +1194,18 @@ export default class Song implements ISong {
     }
   }
 
+  public static currentSong: Song;
+  
   public setCurrent(): void;
   public setCurrent(force: boolean): void;
   public setCurrent(force?: boolean) {
     const mode = force ?? true;
-    if (!this._isPlaying && mode) {
+    if (!this.isPlaying() && mode) {
       let cur = Song.getCurrent();
       if (cur) cur.setCurrent(false);
     }
-    this._isPlaying = mode;
+    // this.isPlaying() = mode;
+    Song.currentSong = this;
     if (this.currentElement) {
       this.currentElement.setState({ playing: mode });
       // Reset progress bar when song stops playing
@@ -1203,12 +1224,15 @@ export default class Song implements ISong {
   }
 
   public static getCurrent() {
-    let songs = (Toxen.getAllSongs() || []);
-    return songs.find(s => s.isPlaying());
+    console.time("getCurrentSong");
+    const result = Song.currentSong ?? null;
+    console.timeEnd("getCurrentSong")
+    return result;
+    // return Song.currentSong ?? null;
   }
 
   public isPlaying() {
-    return this._isPlaying;
+    return this?.uid === Song.currentSong?.uid;
   }
 
   private _isPlaying = false;

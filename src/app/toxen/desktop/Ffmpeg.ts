@@ -154,6 +154,10 @@ export default class Ffmpeg {
     return this.convertToFile("mp3", song, onProgress);
   }
 
+  public convertToMp4(song: Song, onProgress?: (progress: FfmpegProgressEvent) => void): Promise<boolean> {
+    return this.convertToFile("mp4", song, onProgress);
+  }
+
   public convertToOgg(song: Song, onProgress?: (progress: FfmpegProgressEvent) => void): Promise<boolean> {
     return this.convertToFile("ogg", song, onProgress);
   }

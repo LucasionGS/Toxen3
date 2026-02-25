@@ -315,9 +315,18 @@ export class Toxen {
     ];
   }
 
+  public static getSupportedConvertableVideoFiles() {
+    return [
+      ".mov"
+    ];
+  }
+
   public static getSupportedVideoFiles() {
     return [
-      ".mp4"
+      ".mp4",
+
+      // To be converted
+      ...Toxen.getSupportedConvertableVideoFiles()
     ];
   }
 
