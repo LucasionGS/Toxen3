@@ -1,3 +1,14 @@
+<!-- VERSION: 2.4.3 -->
+## 2.4.3 - 26-02-2026
+### New Features
+- **Export Song Package** - Added the ability to export songs as Toxen Song Packages (.txz)
+  - This allows you to easily share songs with all their associated settings and assets
+  - Accessible from the Edit Song panel
+- **Import Song Package** - Added support for importing .txz song packages through the media importer
+  - Can be imported via drag-and-drop or through the Import panel's file dialog
+  - Extracts all song files and settings to create a new song in the library
+- **Storyboard editor improvements** - More keybinds and QoL improvements.
+
 <!-- VERSION: 2.4.2 -->
 ## 2.4.2 - 19-10-2025
 ### New Features
