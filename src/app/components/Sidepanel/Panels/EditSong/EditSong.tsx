@@ -762,6 +762,43 @@ export default function EditSong(props: EditSongProps) {
           ).popup();
         }
       }}><i className="fas fa-file-export"></i>&nbsp;Export Subtitle File</Button>
+
+      <br />
+
+      <Button onClick={async () => {
+        if (!toxenapi.isDesktop()) {
+          return toxenapi.throwDesktopOnly();
+        }
+        const song = Toxen.editingSong;
+        if (!song) return;
+
+        try {
+          Toxen.log("Packaging song...", 2000);
+          const tmpPath = await toxenapi.exportSongPackage(song);
+          const defaultName = song.getDisplayName() + ".txz";
+
+          const result = await toxenapi.remote.dialog.showSaveDialog(toxenapi.remote.getCurrentWindow(), {
+            title: "Export Song Package",
+            buttonLabel: "Export",
+            defaultPath: defaultName,
+            filters: [
+              { name: "Toxen Song Package", extensions: ["txz"] },
+              { name: "All Files", extensions: ["*"] }
+            ]
+          });
+
+          if (!result.canceled && result.filePath) {
+            await toxenapi.fs.promises.copyFile(tmpPath, result.filePath);
+            Toxen.log("Exported " + result.filePath, 3000);
+          }
+
+          // Clean up temp file
+          await toxenapi.fs.promises.unlink(tmpPath).catch(() => {});
+        } catch (error) {
+          console.error("Failed to export song package:", error);
+          Toxen.error("Failed to export song package: " + error.message);
+        }
+      }}><i className="fas fa-file-archive"></i>&nbsp;Export Song Package (.txz)</Button>
     </div>
   )
 }

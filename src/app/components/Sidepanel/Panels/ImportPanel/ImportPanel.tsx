@@ -32,8 +32,8 @@ export default function ImportPanel() {
               ],
               filters: [
                 {
-                  name: "Media files",
-                  extensions: Toxen.getSupportedMediaFiles().map(ext => ext.replace(".", ""))
+                  name: "Media & Song Packages",
+                  extensions: [...Toxen.getSupportedMediaFiles().map(ext => ext.replace(".", "")), "txz"]
                 },
               ],
             });

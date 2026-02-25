@@ -15,6 +15,7 @@ import type Theme from "../app/toxen/Theme";
 import Ytdlp from "../app/toxen/desktop/Ytdlp";
 import Ffmpeg from "../app/toxen/desktop/Ffmpeg";
 import yazl from "yazl";
+import yauzl from "yauzl";
 import Song, { type SongDiff } from "../app/toxen/Song"; // can i import? I forgor 💀
 import type { Toxen } from "../app/ToxenApp";
 import type User from "../app/toxen/User";
@@ -705,4 +706,158 @@ export default class DesktopController extends ToxenController {
   }
 
   TaskbarControls = TaskbarControls;
+
+  public async exportSongPackage(song: Song): Promise<string> {
+    const zip = new yazl.ZipFile();
+    const tmpPath = Path.resolve(os.tmpdir(), "toxen-export-" + Math.random().toString().substring(2) + ".txz");
+    const stream = fs.createWriteStream(tmpPath);
+
+    const addFiles = async (dir: string, startingDir: string = dir) => {
+      const files = await fsp.readdir(dir);
+      for (const file of files) {
+        const filePath = Path.resolve(dir, file);
+        const stat = await fsp.stat(filePath);
+        const relativePath = Path.relative(startingDir, filePath);
+        if (stat.isDirectory()) {
+          zip.addEmptyDirectory(relativePath);
+          await addFiles(filePath, startingDir);
+        } else {
+          try {
+            zip.addReadStream(fs.createReadStream(filePath), relativePath);
+          } catch (error) {
+            console.error("Failed to add file to txz:", filePath, error);
+          }
+        }
+      }
+    };
+
+    await addFiles(song.dirnameLocal());
+
+    zip.outputStream.pipe(stream);
+    zip.end();
+
+    await new Promise<void>((resolve, reject) => {
+      stream.on("finish", resolve);
+      stream.on("error", reject);
+    });
+
+    return tmpPath;
+  }
+
+  public async importTxzPackage(filePath: string, libDir: string): Promise<ISong> {
+    return new Promise<ISong>((resolve, reject) => {
+      yauzl.open(filePath, { lazyEntries: true }, (err, zipfile) => {
+        if (err) return reject(err);
+
+        const fileEntries: Array<{ fileName: string; chunks: Buffer[] }> = [];
+
+        zipfile.readEntry();
+        zipfile.on("entry", (entry) => {
+          if (/\/$/.test(entry.fileName)) {
+            // Directory entry - skip, we'll create dirs as needed
+            zipfile.readEntry();
+          } else {
+            const fileEntry: { fileName: string; chunks: Buffer[] } = {
+              fileName: entry.fileName,
+              chunks: [],
+            };
+            zipfile.openReadStream(entry, (err, readStream) => {
+              if (err) return reject(err);
+              readStream.on("data", (chunk: Buffer) => fileEntry.chunks.push(chunk));
+              readStream.on("end", () => {
+                fileEntries.push(fileEntry);
+                zipfile.readEntry();
+              });
+              readStream.on("error", reject);
+            });
+          }
+        });
+
+        zipfile.on("end", async () => {
+          try {
+            // Look for info.json to get song metadata
+            const infoEntry = fileEntries.find(e => Path.basename(e.fileName) === "info.json");
+            let info: ISong | null = null;
+            if (infoEntry) {
+              info = JSON.parse(Buffer.concat(infoEntry.chunks).toString("utf8"));
+            }
+
+            // Determine folder name for the imported song
+            let folderName: string;
+            if (info?.artist && info?.title) {
+              folderName = `${info.artist} - ${info.title}`;
+            } else if (info?.title) {
+              folderName = info.title;
+            } else {
+              folderName = Path.basename(filePath, ".txz");
+            }
+            // Sanitize folder name
+            folderName = folderName.replace(/[^a-zA-Z0-9\(\)\[\]\{\}\.\-\_\s]/g, "_");
+
+            let targetDir = Path.resolve(libDir, folderName);
+            let increment = 0;
+            while (await fsp.stat(targetDir).then(() => true).catch(() => false)) {
+              targetDir = Path.resolve(libDir, folderName + ` (${++increment})`);
+            }
+
+            await fsp.mkdir(targetDir, { recursive: true });
+
+            // Extract all files
+            for (const entry of fileEntries) {
+              const outPath = Path.resolve(targetDir, entry.fileName);
+              const outDir = Path.dirname(outPath);
+              await fsp.mkdir(outDir, { recursive: true });
+              await fsp.writeFile(outPath, Buffer.concat(entry.chunks));
+            }
+
+            // Generate a new UID for the imported song to avoid collisions
+            const newUid = Song.generateUID();
+
+            if (info) {
+              info.uid = newUid;
+              info.paths.dirname = Path.basename(targetDir);
+              // Reset file tracking so sync doesn't get confused
+              info.files = {};
+              info.hash = Song.randomFileHash();
+            } else {
+              // No info.json in the archive - build a minimal one
+              const supported = [".mp3", ".flac", ".ogg", ".wav", ".wma", ".mp4", ".mov"];
+              let mediaFile: string | null = null;
+              for (const entry of fileEntries) {
+                const ext = Path.extname(entry.fileName).toLowerCase();
+                if (supported.includes(ext)) {
+                  mediaFile = Path.basename(entry.fileName);
+                  break;
+                }
+              }
+              info = {
+                uid: newUid,
+                paths: {
+                  dirname: Path.basename(targetDir),
+                  media: mediaFile,
+                  background: null,
+                  subtitles: null,
+                  storyboard: null,
+                },
+                hash: Song.randomFileHash(),
+                files: {},
+              } as ISong;
+            }
+
+            // Write the updated info.json
+            await fsp.writeFile(
+              Path.resolve(targetDir, "info.json"),
+              JSON.stringify(info, null, 2)
+            );
+
+            resolve(info);
+          } catch (error) {
+            reject(error);
+          }
+        });
+
+        zipfile.on("error", reject);
+      });
+    });
+  }
 }

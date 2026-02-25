@@ -7,7 +7,7 @@ import type Theme from "../app/toxen/Theme";
 import type Song from "../app/toxen/Song";
 import type { Toxen } from "../app/ToxenApp";
 import type User from "../app/toxen/User";
-import type { SongDiff } from "../app/toxen/Song";
+import type { SongDiff, ISong } from "../app/toxen/Song";
 import { showNotification } from "@mantine/notifications";
 
 /**
@@ -179,10 +179,26 @@ export default class ToxenController {
 
   /**
    * Export one or more songs into a zip file.
-   * @param songs 
+   * @param songs
    */
   public async exportLocalSongs(...songs: Song[]) {
     this.throwDesktopOnly("exportLocalSongs");
+  }
+
+  /**
+   * Export a single song as a .txz package (zip archive with all song files).
+   * Returns the path to the temporary .txz file.
+   */
+  public async exportSongPackage(song: Song): Promise<string> {
+    this.throwDesktopOnly("exportSongPackage");
+  }
+
+  /**
+   * Import a .txz song package. Extracts the archive into the library directory
+   * and returns the ISong metadata of the newly imported song.
+   */
+  public async importTxzPackage(filePath: string, libDir: string): Promise<ISong> {
+    this.throwDesktopOnly("importTxzPackage");
   }
 
   public async syncSong($toxen: typeof Toxen, user: User, song: Song, diff: SongDiff, { silenceValidated }: { silenceValidated?: boolean; }): Promise<void> {
