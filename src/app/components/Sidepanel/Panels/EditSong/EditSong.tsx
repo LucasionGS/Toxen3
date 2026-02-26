@@ -765,9 +765,9 @@ export default function EditSong(props: EditSongProps) {
 
       <br />
 
-      <Button onClick={async () => {
-        if (!toxenapi.isDesktop()) {
-          return toxenapi.throwDesktopOnly();
+      <Button disabled={(!toxenapi.isDesktop() || Settings.isRemote())} onClick={async () => {
+        if (!toxenapi.isDesktop() || Settings.isRemote()) {
+          return Toxen.error("Song package export is only available on the desktop version when not using remote libraries.");
         }
         const song = Toxen.editingSong;
         if (!song) return;
