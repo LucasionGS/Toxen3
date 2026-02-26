@@ -1,5 +1,5 @@
 # Toxen - Music player for *your* experience
-[![Build](https://github.com/LucasionGS/Toxen3/actions/workflows/build.yml/badge.svg)](https://github.com/LucasionGS/Toxen3/actions/workflows/build.yml)
+[![Release](https://github.com/LucasionGS/Toxen3/actions/workflows/build.yml/badge.svg?branch=release)](https://github.com/LucasionGS/Toxen3/actions/workflows/build.yml)
 
 Have you ever found yourself searching for YouTube videos that display a cool visualizer for your favorite song, only to feel slightly wrong, or not quite to your personal taste? Or maybe you wanted to listen to your favorite song, but it hasn't been created for that one song you love!
 
