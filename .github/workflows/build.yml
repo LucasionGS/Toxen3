@@ -40,19 +40,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Setup SSH for AUR
-        env:
-          AUR_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-        run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "$AUR_KEY" | tr -d '\r' > ~/.ssh/aur
-          chmod 600 ~/.ssh/aur
-          ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
-          cat > ~/.ssh/config << 'EOF'
-          Host aur.archlinux.org
-            IdentityFile ~/.ssh/aur
-            User aur
-          EOF
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+      - name: Add AUR to known hosts
+        run: ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
       - name: Configure git
         run: |
           git config --global user.name "Lucasion"
