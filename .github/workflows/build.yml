@@ -45,10 +45,6 @@ jobs:
           ssh-private-key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
       - name: Add AUR to known hosts
         run: ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
-      - name: Debug SSH
-        run: |
-          ssh-add -l
-          ssh -vT aur@aur.archlinux.org || true
       - name: Configure git
         run: |
           git config --global user.name "Lucasion"
@@ -56,6 +52,8 @@ jobs:
       - name: Install pacman tools
         run: sudo apt-get update && sudo apt-get install -y pacman-package-manager
       - name: Push to AUR
+        env:
+          GIT_SSH_COMMAND: "ssh -o HostKeyAlgorithms=ssh-ed25519"
         run: |
           rm -rf .aur
           mkdir -p .aur
