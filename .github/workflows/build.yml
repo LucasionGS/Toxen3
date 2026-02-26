@@ -45,6 +45,10 @@ jobs:
           ssh-private-key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
       - name: Add AUR to known hosts
         run: ssh-keyscan aur.archlinux.org >> ~/.ssh/known_hosts
+      - name: Debug SSH
+        run: |
+          ssh-add -l
+          ssh -vT aur@aur.archlinux.org || true
       - name: Configure git
         run: |
           git config --global user.name "Lucasion"
