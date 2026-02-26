@@ -1,11 +1,12 @@
 import React, { Component } from 'react'
 import { ColorInput, TextInput, Textarea, Button, Group, Text, Divider, Card, Badge, Alert } from '@mantine/core'
-import { IconPalette, IconCode, IconDeviceFloppy, IconPlayerPlay, IconInfoCircle, IconX, IconArrowLeft } from '@tabler/icons-react'
+import { IconPalette, IconCode, IconDeviceFloppy, IconPlayerPlay, IconInfoCircle, IconX, IconArrowLeft, IconPhoto } from '@tabler/icons-react'
 import Theme, { ThemeStyleTemplate } from '../../toxen/Theme'
 import { Toxen } from '../../ToxenApp'
 import Expandable from '../Expandable/Expandable'
 import SidepanelSectionHeader from '../Sidepanel/SidepanelSectionHeader'
 import SidepanelSectionGroup from '../Sidepanel/SidepanelSectionGroup'
+import BackgroundFileSelector from '../BackgroundFileSelector/BackgroundFileSelector'
 
 interface State {
   customCSS: string;
@@ -18,28 +19,37 @@ interface Props {
 
 }
 
+/**
+ * Clone a theme, preserving all fields including images.
+ */
+function cloneTheme(theme: Theme, overrides?: Partial<{ name: string; displayName: string; description: string; styles: any; customCSS: string; backgroundImage: string; sidepanelImage: string }>): Theme {
+  return Theme.create({
+    name: overrides?.name ?? theme.name,
+    displayName: overrides?.displayName ?? theme.displayName,
+    description: overrides?.description ?? theme.description,
+    styles: overrides?.styles ?? { ...theme.styles },
+    customCSS: overrides?.customCSS ?? theme.customCSS,
+    backgroundImage: overrides?.backgroundImage !== undefined ? overrides.backgroundImage : theme.backgroundImage,
+    sidepanelImage: overrides?.sidepanelImage !== undefined ? overrides.sidepanelImage : theme.sidepanelImage,
+  });
+}
+
 export default class ThemeEditorPanel extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
-    
+
     // Check if we're editing an existing theme or need to create a new one
     const existingTheme = Toxen.theme;
-    const canEditExisting = existingTheme && 
-                           existingTheme.name !== "" && 
-                           existingTheme.name !== "Default" && 
+    const canEditExisting = existingTheme &&
+                           existingTheme.name !== "" &&
+                           existingTheme.name !== "Default" &&
                            existingTheme.name !== "Toxen Default" &&
                            !existingTheme.name.startsWith("Custom Theme");
-    
+
     let workingTheme: Theme;
     if (canEditExisting && existingTheme) {
       // Clone the existing theme for editing
-      workingTheme = Theme.create({
-        name: existingTheme.name,
-        displayName: existingTheme.displayName,
-        description: existingTheme.description,
-        styles: { ...existingTheme.styles },
-        customCSS: existingTheme.customCSS
-      });
+      workingTheme = cloneTheme(existingTheme);
     } else {
       // Create a new theme based on current defaults
       workingTheme = Theme.createDefaultTheme();
@@ -47,17 +57,11 @@ export default class ThemeEditorPanel extends Component<Props, State> {
       workingTheme.displayName = `My Custom Theme`;
       workingTheme.description = "A custom theme created in the theme editor";
     }
-    
+
     this.state = {
       customCSS: workingTheme.customCSS || '',
       currentTheme: workingTheme,
-      originalTheme: existingTheme ? Theme.create({
-        name: existingTheme.name,
-        displayName: existingTheme.displayName,
-        description: existingTheme.description,
-        styles: { ...existingTheme.styles },
-        customCSS: existingTheme.customCSS
-      }) : null,
+      originalTheme: existingTheme ? cloneTheme(existingTheme) : null,
       isEditingExisting: canEditExisting
     };
   }
@@ -91,16 +95,10 @@ export default class ThemeEditorPanel extends Component<Props, State> {
       };
     }
 
-    // Create a new theme object to trigger re-render
-    const updatedTheme = Theme.create({
-      name: workingTheme.name,
-      displayName: workingTheme.displayName,
-      description: workingTheme.description,
+    const updatedTheme = cloneTheme(workingTheme, {
       styles: { ...workingTheme.styles },
-      customCSS: workingTheme.customCSS
     });
 
-    // Update state and apply theme for preview
     this.setState({ currentTheme: updatedTheme }, () => {
       Toxen.setTheme(updatedTheme);
     });
@@ -121,27 +119,27 @@ export default class ThemeEditorPanel extends Component<Props, State> {
   private getCurrentValue = (styleKey: string): any => {
     const currentStyle = this.state.currentTheme?.styles?.[styleKey];
     const template = this.getStyleTemplate(styleKey);
-    
+
     if (currentStyle?.value) {
       return template?.type === 'color' ? this.rgbToHex(currentStyle.value as [number, number, number]) : currentStyle.value;
     }
-    
+
     if (template?.defaultValue) {
       return template.type === 'color' ? this.rgbToHex(template.defaultValue as [number, number, number]) : template.defaultValue;
     }
-    
+
     return template?.type === 'color' ? '#000000' : '';
   }
 
-  private saveTheme = () => {
+  private saveTheme = async () => {
     const workingTheme = this.state.currentTheme;
     if (workingTheme) {
       workingTheme.customCSS = this.state.customCSS;
-      
+
       // Set as the active theme and save
       Toxen.setTheme(workingTheme);
-      workingTheme.save();
-      
+      await workingTheme.save();
+
       // Add to themes list if it's a new theme
       if (!this.state.isEditingExisting) {
         const existingIndex = Toxen.themes.findIndex(t => t.name === workingTheme.name);
@@ -153,24 +151,24 @@ export default class ThemeEditorPanel extends Component<Props, State> {
       }
     }
     Toxen.setMode("Player");
+
+    Toxen.loadThemes();
   }
 
   private resetToDefaults = () => {
     const workingTheme = this.state.currentTheme;
     if (workingTheme) {
-      // Reset to default theme values but keep name and description
       const defaultTheme = Theme.createDefaultTheme();
-      const resetTheme = Theme.create({
-        name: workingTheme.name,
-        displayName: workingTheme.displayName,
-        description: workingTheme.description,
+      const resetTheme = cloneTheme(workingTheme, {
         styles: { ...defaultTheme.styles },
-        customCSS: ''
+        customCSS: '',
+        backgroundImage: undefined,
+        sidepanelImage: undefined,
       });
-      
-      this.setState({ 
-        customCSS: '', 
-        currentTheme: resetTheme 
+
+      this.setState({
+        customCSS: '',
+        currentTheme: resetTheme
       }, () => {
         Toxen.setTheme(resetTheme);
       });
@@ -179,7 +177,7 @@ export default class ThemeEditorPanel extends Component<Props, State> {
 
   private loadPresetTheme = (presetType: 'default' | 'blue' | 'purple') => {
     let presetTheme: Theme;
-    
+
     switch (presetType) {
       case 'blue':
         presetTheme = Theme.createDarkBlueTheme();
@@ -191,18 +189,14 @@ export default class ThemeEditorPanel extends Component<Props, State> {
         presetTheme = Theme.createDefaultTheme();
         break;
     }
-    
-    // Copy current name and description if editing existing theme
+
     if (this.state.currentTheme) {
-      const updatedTheme = Theme.create({
-        name: this.state.currentTheme.name,
-        displayName: this.state.currentTheme.displayName,
-        description: this.state.currentTheme.description,
+      const updatedTheme = cloneTheme(this.state.currentTheme, {
         styles: { ...presetTheme.styles },
-        customCSS: presetTheme.customCSS || ''
+        customCSS: presetTheme.customCSS || '',
       });
-      
-      this.setState({ 
+
+      this.setState({
         currentTheme: updatedTheme,
         customCSS: updatedTheme.customCSS || ''
       }, () => {
@@ -214,12 +208,9 @@ export default class ThemeEditorPanel extends Component<Props, State> {
   private updateThemeName = (name: string) => {
     const workingTheme = this.state.currentTheme;
     if (workingTheme) {
-      const updatedTheme = Theme.create({
+      const updatedTheme = cloneTheme(workingTheme, {
         name: name,
         displayName: name,
-        description: workingTheme.description,
-        styles: { ...workingTheme.styles },
-        customCSS: workingTheme.customCSS
       });
       this.setState({ currentTheme: updatedTheme });
     }
@@ -228,36 +219,27 @@ export default class ThemeEditorPanel extends Component<Props, State> {
   private updateThemeDescription = (description: string) => {
     const workingTheme = this.state.currentTheme;
     if (workingTheme) {
-      const updatedTheme = Theme.create({
-        name: workingTheme.name,
-        displayName: workingTheme.displayName,
-        description: description,
-        styles: { ...workingTheme.styles },
-        customCSS: workingTheme.customCSS
-      });
+      const updatedTheme = cloneTheme(workingTheme, { description });
       this.setState({ currentTheme: updatedTheme });
     }
   }
 
   private cancelChanges = () => {
-    // Revert to the original theme if it exists, otherwise go back to default
     const originalTheme = this.state.originalTheme;
     if (originalTheme) {
       Toxen.setTheme(originalTheme);
     } else {
-      // If no original theme, load the default theme
       const defaultTheme = Theme.createDefaultTheme();
       Toxen.setTheme(defaultTheme);
     }
-    
-    // Go back to player mode
+
     Toxen.setMode("Player");
   }
 
   render() {
     const workingTheme = this.state.currentTheme;
     if (!workingTheme) return <div>Loading...</div>;
-    
+
     return (
       <div>
         <SidepanelSectionHeader>
@@ -269,8 +251,8 @@ export default class ThemeEditorPanel extends Component<Props, State> {
             )}
           </div>
           <Group gap="sm">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               color="gray"
               leftSection={<IconArrowLeft size={16} />}
@@ -278,8 +260,8 @@ export default class ThemeEditorPanel extends Component<Props, State> {
             >
               Cancel
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={() => {
                 // Create a brand new theme
@@ -288,8 +270,8 @@ export default class ThemeEditorPanel extends Component<Props, State> {
                 newTheme.name = `Custom Theme ${timestamp}`;
                 newTheme.displayName = `My Custom Theme`;
                 newTheme.description = "A new custom theme";
-                
-                this.setState({ 
+
+                this.setState({
                   currentTheme: newTheme,
                   customCSS: '',
                   isEditingExisting: false
@@ -300,14 +282,14 @@ export default class ThemeEditorPanel extends Component<Props, State> {
             >
               New Theme
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={this.resetToDefaults}
             >
               Reset to Defaults
             </Button>
-            <Button 
+            <Button
               leftSection={<IconDeviceFloppy size={16} />}
               onClick={this.saveTheme}
             >
@@ -316,21 +298,21 @@ export default class ThemeEditorPanel extends Component<Props, State> {
           </Group>
         </SidepanelSectionHeader>
 
-        <Alert 
-          icon={<IconInfoCircle size={16} />} 
-          title={this.state.isEditingExisting ? "Editing Existing Theme" : "Creating New Theme"} 
+        <Alert
+          icon={<IconInfoCircle size={16} />}
+          title={this.state.isEditingExisting ? "Editing Existing Theme" : "Creating New Theme"}
           color={this.state.isEditingExisting ? "yellow" : "green"}
           style={{ marginBottom: 24 }}
         >
-          {this.state.isEditingExisting 
-            ? <span>You're editing an existing theme. Changes are applied immediately for preview. <br/>Use 'Cancel' to discard changes or 'Save' to keep them.</span> 
+          {this.state.isEditingExisting
+            ? <span>You're editing an existing theme. Changes are applied immediately for preview. <br/>Use 'Cancel' to discard changes or 'Save' to keep them.</span>
             : <span>You're creating a new custom theme. Changes are applied immediately for preview. <br/>Use 'Cancel' to discard and return to the previous theme, or 'Save' to create the theme.</span>
           }
         </Alert>
 
         {/* Theme Metadata Section */}
         <SidepanelSectionGroup>
-          <Expandable 
+          <Expandable
             title={
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <IconCode size={16} />
@@ -352,12 +334,8 @@ export default class ThemeEditorPanel extends Component<Props, State> {
                 onChange={(event) => {
                   const workingTheme = this.state.currentTheme;
                   if (workingTheme) {
-                    const updatedTheme = Theme.create({
-                      name: workingTheme.name,
+                    const updatedTheme = cloneTheme(workingTheme, {
                       displayName: event.target.value,
-                      description: workingTheme.description,
-                      styles: { ...workingTheme.styles },
-                      customCSS: workingTheme.customCSS
                     });
                     this.setState({ currentTheme: updatedTheme });
                   }
@@ -373,26 +351,26 @@ export default class ThemeEditorPanel extends Component<Props, State> {
                 maxRows={4}
                 autosize
               />
-              
+
               <div>
                 <Text size="sm" fw={600} style={{ marginBottom: 8 }}>Load Preset Colors</Text>
                 <Group gap="sm">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => this.loadPresetTheme('default')}
                   >
                     Default Green
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => this.loadPresetTheme('blue')}
                   >
                     Dark Blue
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     size="sm"
                     onClick={() => this.loadPresetTheme('purple')}
                   >
@@ -407,9 +385,96 @@ export default class ThemeEditorPanel extends Component<Props, State> {
           </Expandable>
         </SidepanelSectionGroup>
 
+        {/* Theme Images Section */}
+        <SidepanelSectionGroup>
+          <Expandable
+            title={
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <IconPhoto size={16} />
+                Theme Images
+              </div>
+            }
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <BackgroundFileSelector
+                label="Theme Background Image"
+                description="Default background for this theme. Shown when no song, playlist, or user default background is active."
+                defaultValue={workingTheme.backgroundImage || null}
+                getSourceDir={() => toxenapi.joinPath(toxenapi.themeFolderPath, this.state.currentTheme?.name || "")}
+                onCopyFile={async (sourceFile, fileName) => {
+                  const themeName = this.state.currentTheme?.name;
+                  if (!themeName) return false;
+                  try {
+                    const savedFilename = await toxenapi.saveThemeImage(themeName, "background", sourceFile);
+                    const updatedTheme = cloneTheme(this.state.currentTheme, { backgroundImage: savedFilename });
+                    this.setState({ currentTheme: updatedTheme }, () => {
+                      Toxen.setTheme(updatedTheme);
+                    });
+                    return true;
+                  } catch { return false; }
+                }}
+                onDelete={async (fileName) => {
+                  const themeName = this.state.currentTheme?.name;
+                  if (!themeName) return false;
+                  try {
+                    await toxenapi.removeThemeImage(themeName, fileName);
+                    const updatedTheme = cloneTheme(this.state.currentTheme, { backgroundImage: null });
+                    this.setState({ currentTheme: updatedTheme }, () => {
+                      Toxen.setTheme(updatedTheme);
+                    });
+                    return true;
+                  } catch { return false; }
+                }}
+                onChange={(value) => {
+                  const updatedTheme = cloneTheme(this.state.currentTheme, { backgroundImage: value || null });
+                  this.setState({ currentTheme: updatedTheme }, () => {
+                    Toxen.setTheme(updatedTheme);
+                  });
+                }}
+              />
+              <BackgroundFileSelector
+                label="Theme Sidepanel Background"
+                description="Default sidepanel background for this theme. Overridden by the user's sidepanel background setting."
+                defaultValue={workingTheme.sidepanelImage || null}
+                getSourceDir={() => toxenapi.joinPath(toxenapi.themeFolderPath, this.state.currentTheme?.name || "")}
+                onCopyFile={async (sourceFile, fileName) => {
+                  const themeName = this.state.currentTheme?.name;
+                  if (!themeName) return false;
+                  try {
+                    const savedFilename = await toxenapi.saveThemeImage(themeName, "sidepanel", sourceFile);
+                    const updatedTheme = cloneTheme(this.state.currentTheme, { sidepanelImage: savedFilename });
+                    this.setState({ currentTheme: updatedTheme }, () => {
+                      Toxen.setTheme(updatedTheme);
+                    });
+                    return true;
+                  } catch { return false; }
+                }}
+                onDelete={async (fileName) => {
+                  const themeName = this.state.currentTheme?.name;
+                  if (!themeName) return false;
+                  try {
+                    await toxenapi.removeThemeImage(themeName, fileName);
+                    const updatedTheme = cloneTheme(this.state.currentTheme, { sidepanelImage: null });
+                    this.setState({ currentTheme: updatedTheme }, () => {
+                      Toxen.setTheme(updatedTheme);
+                    });
+                    return true;
+                  } catch { return false; }
+                }}
+                onChange={(value) => {
+                  const updatedTheme = cloneTheme(this.state.currentTheme, { sidepanelImage: value || null });
+                  this.setState({ currentTheme: updatedTheme }, () => {
+                    Toxen.setTheme(updatedTheme);
+                  });
+                }}
+              />
+            </div>
+          </Expandable>
+        </SidepanelSectionGroup>
+
         {Object.entries(ThemeStyleTemplate).map(([sectionName, section]) => (
           <SidepanelSectionGroup key={sectionName}>
-            <Expandable 
+            <Expandable
               title={
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <Badge variant="light" size="sm">{Object.keys(section).length}</Badge>
@@ -420,13 +485,13 @@ export default class ThemeEditorPanel extends Component<Props, State> {
             >
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {Object.entries(section).map(([styleKey, style]) => (
-                  <Card 
-                    key={styleKey} 
-                    padding="md" 
+                  <Card
+                    key={styleKey}
+                    padding="md"
                     radius="md"
-                    style={{ 
-                      background: 'var(--surface-bg)', 
-                      border: '1px solid var(--border-secondary)' 
+                    style={{
+                      background: 'var(--surface-bg)',
+                      border: '1px solid var(--border-secondary)'
                     }}
                   >
                     <div style={{ marginBottom: 12 }}>
@@ -444,7 +509,7 @@ export default class ThemeEditorPanel extends Component<Props, State> {
                         </Badge>
                       )}
                     </div>
-                    
+
                     {style.type === 'color' ? (
                       <ColorInput
                         value={this.getCurrentValue(styleKey)}
@@ -453,7 +518,7 @@ export default class ThemeEditorPanel extends Component<Props, State> {
                         swatches={[
                           // Green variants (default theme)
                           '#b6ffba', '#4ade80', '#22c55e', '#16a34a',
-                          // Blue variants  
+                          // Blue variants
                           '#3b82f6', '#2563eb', '#1d4ed8', '#60a5fa',
                           // Purple variants
                           '#8b5cf6', '#7c3aed', '#6d28d9', '#a855f7',
@@ -498,17 +563,11 @@ export default class ThemeEditorPanel extends Component<Props, State> {
               onChange={(event) => {
                 const newCSS = event.target.value;
                 const workingTheme = this.state.currentTheme;
-                
+
                 this.setState({ customCSS: newCSS });
-                
+
                 if (workingTheme) {
-                  const updatedTheme = Theme.create({
-                    name: workingTheme.name,
-                    displayName: workingTheme.displayName,
-                    description: workingTheme.description,
-                    styles: { ...workingTheme.styles },
-                    customCSS: newCSS
-                  });
+                  const updatedTheme = cloneTheme(workingTheme, { customCSS: newCSS });
                   this.setState({ currentTheme: updatedTheme }, () => {
                     Toxen.setTheme(updatedTheme);
                   });
@@ -524,10 +583,10 @@ export default class ThemeEditorPanel extends Component<Props, State> {
         </SidepanelSectionGroup>
 
         <Divider style={{ margin: '32px 0' }} />
-        
+
         <Group justify="center" gap="md">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             color="gray"
             leftSection={<IconX size={18} />}
             onClick={this.cancelChanges}
@@ -535,14 +594,14 @@ export default class ThemeEditorPanel extends Component<Props, State> {
           >
             Cancel & Exit
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={this.resetToDefaults}
             size="lg"
           >
             Reset All
           </Button>
-          <Button 
+          <Button
             leftSection={<IconDeviceFloppy size={18} />}
             onClick={this.saveTheme}
             size="lg"

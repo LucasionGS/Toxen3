@@ -1,3 +1,8 @@
+<!-- VERSION: 2.5.0 -->
+## 2.5.0 - 26-02-2026
+### New Features
+- **Changes to theme structure** - Themes can now have a background image and a side panel image. These can be set in the theme editor, and will be applied when the theme is applied. Themes are not folder formatted and are auto converted.
+
 <!-- VERSION: 2.4.3 -->
 ## 2.4.3 - 26-02-2026
 ### New Features

@@ -74,7 +74,10 @@ export default class Background extends Component<BackgroundProps, BackgroundSta
       return list[0];
     }
 
-    // No defaults configured
+    // No defaults configured -- try theme background
+    const themeBgUrl = Toxen.theme?.getBackgroundImageUrl?.();
+    if (themeBgUrl) return themeBgUrl;
+
     return null;
   }
 

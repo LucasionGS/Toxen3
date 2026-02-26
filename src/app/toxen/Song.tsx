@@ -1224,11 +1224,11 @@ export default class Song implements ISong {
   }
 
   public static getCurrent() {
-    console.time("getCurrentSong");
-    const result = Song.currentSong ?? null;
-    console.timeEnd("getCurrentSong")
-    return result;
-    // return Song.currentSong ?? null;
+    // console.time("getCurrentSong");
+    // const result = Song.currentSong ?? null;
+    // console.timeEnd("getCurrentSong")
+    // return result;
+    return Song.currentSong ?? null;
   }
 
   public isPlaying() {

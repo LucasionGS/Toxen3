@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Toxen is a highly customizable music player (v2.4.3) built with **Electron 30 + React 18 + TypeScript**. It targets both **desktop (Electron)** and **web** platforms with platform-specific controllers abstracted through `ToxenController`.
+Toxen is a highly customizable music player built with **Electron 30 + React 18 + TypeScript**. It targets both **desktop (Electron)** and **web** platforms with platform-specific controllers abstracted through `ToxenController`.
 
 - **Repository**: `LucasionGS/Toxen3` on GitHub
 - **License**: MIT

@@ -17,6 +17,8 @@ export default class Theme implements ITheme {
   description: string;
   styles: ThemeStyle = {};
   customCSS: string;
+  backgroundImage: string;
+  sidepanelImage: string;
 
   public static create(themeData: ITheme) {
     const theme = new Theme();
@@ -25,8 +27,38 @@ export default class Theme implements ITheme {
     theme.description = themeData.description;
     theme.styles = themeData.styles;
     theme.customCSS = themeData.customCSS;
+    theme.backgroundImage = themeData.backgroundImage;
+    theme.sidepanelImage = themeData.sidepanelImage;
 
     return theme;
+  }
+
+  /**
+   * Returns a URL for the theme's background image, or null if none set.
+   * On desktop folder themes, resolves to a file path.
+   * On web or for data URL images, returns the data URL directly.
+   */
+  public getBackgroundImageUrl(): string | null {
+    if (!this.backgroundImage) return null;
+    if (this.backgroundImage.startsWith("data:")) return this.backgroundImage;
+    if (toxenapi.isDesktop() && toxenapi.themeFolderPath) {
+      return toxenapi.joinPath(toxenapi.themeFolderPath, this.name, this.backgroundImage);
+    }
+    return null;
+  }
+
+  /**
+   * Returns a URL for the theme's sidepanel image, or null if none set.
+   * On desktop folder themes, resolves to a file path.
+   * On web or for data URL images, returns the data URL directly.
+   */
+  public getSidepanelImageUrl(): string | null {
+    if (!this.sidepanelImage) return null;
+    if (this.sidepanelImage.startsWith("data:")) return this.sidepanelImage;
+    if (toxenapi.isDesktop() && toxenapi.themeFolderPath) {
+      return toxenapi.joinPath(toxenapi.themeFolderPath, this.name, this.sidepanelImage);
+    }
+    return null;
   }
 
   public static parseToCSS(theme: Theme) {
@@ -158,6 +190,8 @@ interface ITheme {
   description: string;
   styles: ThemeStyle;
   customCSS?: string;
+  backgroundImage?: string;
+  sidepanelImage?: string;
 }
 
 type ThemeStyle = { [key: string]: IThemeStyleItem<ThemeStyleItemType> };

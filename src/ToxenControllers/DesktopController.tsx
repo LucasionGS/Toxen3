@@ -130,23 +130,85 @@ export default class DesktopController extends ToxenController {
   public readonly themeFolderPath = CrossPlatform.getToxenDataPath("themes");
   
   public async saveTheme(theme: Theme): Promise<void> {
-    const data = JSON.stringify(theme, null, 2);
-    return fsp.writeFile(`${this.themeFolderPath}/${theme.name}.theme.json`, data);
+    const themeDir = Path.resolve(this.themeFolderPath, theme.name);
+    const isFolderTheme = (
+      (theme.backgroundImage && !theme.backgroundImage.startsWith("data:"))
+      || (theme.sidepanelImage && !theme.sidepanelImage.startsWith("data:"))
+      || fs.existsSync(themeDir) && fs.statSync(themeDir).isDirectory()
+    );
+
+    if (isFolderTheme) {
+      await fsp.mkdir(themeDir, { recursive: true });
+      const data = JSON.stringify(theme, null, 2);
+      await fsp.writeFile(Path.resolve(themeDir, "theme.json"), data);
+      // Remove old single-file theme if it exists
+      const oldFile = Path.resolve(this.themeFolderPath, `${theme.name}.theme.json`);
+      if (fs.existsSync(oldFile)) {
+        await fsp.unlink(oldFile);
+      }
+    } else {
+      const data = JSON.stringify(theme, null, 2);
+      await fsp.writeFile(Path.resolve(this.themeFolderPath, `${theme.name}.theme.json`), data);
+    }
   }
   
   public async loadThemes($toxen: typeof Toxen, $theme: typeof Theme): Promise<Theme[]> {
-    const themes: Theme[] = await fsp.readdir(this.themeFolderPath).then(async (files) => {
-      const themeFiles = files.filter((file) => file.endsWith(".theme.json"));
-      const themePromises = themeFiles.map((file) => {
-        return fsp.readFile(`${this.themeFolderPath}/${file}`, "utf8").then((data) => {
-          try {
-            return $theme.create(JSON.parse(data));
-          } catch (error) {
-            $toxen.error(`Failed to load theme ${file}: ${error.message}`);
-            return null; // Skip invalid themes
-          }
-        });
-      });
+    const themes: Theme[] = await fsp.readdir(this.themeFolderPath, { withFileTypes: true }).then(async (entries) => {
+      const themePromises: Promise<Theme | null>[] = [];
+
+      for (const entry of entries) {
+        if (entry.isFile() && entry.name.endsWith(".theme.json")) {
+          // Auto-convert single-file theme to folder structure
+          themePromises.push(
+            (async () => {
+              try {
+                const filePath = Path.resolve(this.themeFolderPath, entry.name);
+                const data = await fsp.readFile(filePath, "utf8");
+                const themeData = JSON.parse(data);
+                const themeName = entry.name.replace(/\.theme\.json$/, "");
+                const themeDir = Path.resolve(this.themeFolderPath, themeName);
+
+                // Create folder and write theme.json
+                await fsp.mkdir(themeDir, { recursive: true });
+                await fsp.writeFile(Path.resolve(themeDir, "theme.json"), data);
+
+                // Migrate .theme.css -> custom.css if it exists
+                const cssFile = Path.resolve(this.themeFolderPath, `${themeName}.theme.css`);
+                if (fs.existsSync(cssFile)) {
+                  await fsp.rename(cssFile, Path.resolve(themeDir, "custom.css"));
+                }
+
+                // Remove the old single-file
+                await fsp.unlink(filePath);
+
+                const theme = $theme.create(themeData);
+                theme.name = themeName;
+                return theme;
+              } catch (error) {
+                $toxen.error(`Failed to load/convert theme ${entry.name}: ${error.message}`);
+                return null;
+              }
+            })()
+          );
+        } else if (entry.isDirectory()) {
+          // Folder-based theme: look for theme.json inside
+          const themeJsonPath = Path.resolve(this.themeFolderPath, entry.name, "theme.json");
+          themePromises.push(
+            fsp.readFile(themeJsonPath, "utf8").then((data) => {
+              try {
+                const theme = $theme.create(JSON.parse(data));
+                // Ensure theme name matches folder name
+                theme.name = entry.name;
+                return theme;
+              } catch (error) {
+                $toxen.error(`Failed to load theme ${entry.name}: ${error.message}`);
+                return null;
+              }
+            }).catch(() => null) // No theme.json in directory, skip
+          );
+        }
+      }
+
       return (await Promise.all(themePromises)).filter(theme => theme !== null);
     }).catch(async (): Promise<Theme[]> => {
       await fsp.mkdir(this.themeFolderPath, { recursive: true });
@@ -158,20 +220,120 @@ export default class DesktopController extends ToxenController {
 
   /**
    * Loads and applies the external CSS file to `Theme.customCSS`, if it exists.
+   * Checks both single-file format ({name}.theme.css) and folder format ({name}/custom.css).
    */
   public loadThemeExternalCSS(theme: Theme) {
-    const cssPath = `${this.themeFolderPath}/${theme.name}.theme.css`;
-    
-    if (fs.existsSync(cssPath)) {
+    // Check single-file format: {name}.theme.css
+    const singleFileCssPath = Path.resolve(this.themeFolderPath, `${theme.name}.theme.css`);
+    // Check folder format: {name}/custom.css
+    const folderCssPath = Path.resolve(this.themeFolderPath, theme.name, "custom.css");
+
+    let cssPath: string | null = null;
+    if (fs.existsSync(singleFileCssPath)) {
+      cssPath = singleFileCssPath;
+    } else if (fs.existsSync(folderCssPath)) {
+      cssPath = folderCssPath;
+    }
+
+    if (cssPath) {
       const css = fs.readFileSync(cssPath, "utf8");
-      // If there's existing customCSS from JSON, append the external CSS
       if (theme.customCSS && theme.customCSS.trim()) {
         theme.customCSS += "\n\n/* External CSS */\n" + css;
       } else {
         theme.customCSS = css;
       }
     }
-    // Don't overwrite existing customCSS if no external file exists
+  }
+
+  /**
+   * Copy an image file into a theme's folder, returning the filename for theme.json.
+   */
+  public async saveThemeImage(themeName: string, imageType: "background" | "sidepanel", sourcePath: string): Promise<string> {
+    const themeDir = Path.resolve(this.themeFolderPath, themeName);
+    await fsp.mkdir(themeDir, { recursive: true });
+
+    const ext = Path.extname(sourcePath);
+    const targetFilename = imageType === "background" ? `background${ext}` : `sidepanel${ext}`;
+    const targetPath = Path.resolve(themeDir, targetFilename);
+
+    await fsp.copyFile(sourcePath, targetPath);
+    return targetFilename;
+  }
+
+  /**
+   * Remove a theme image file from the theme's folder.
+   */
+  public async removeThemeImage(themeName: string, imageFilename: string): Promise<void> {
+    const filePath = Path.resolve(this.themeFolderPath, themeName, imageFilename);
+    if (fs.existsSync(filePath)) {
+      await fsp.unlink(filePath);
+    }
+  }
+
+  /**
+   * Import a .theme.zip archive, extracting it into the themes folder.
+   */
+  public async importThemeArchive(zipPath: string, $theme: typeof Theme): Promise<Theme> {
+    return new Promise<Theme>((resolve, reject) => {
+      yauzl.open(zipPath, { lazyEntries: true }, (err, zipfile) => {
+        if (err) return reject(err);
+
+        const fileEntries: Array<{ fileName: string; chunks: Buffer[] }> = [];
+
+        zipfile.readEntry();
+        zipfile.on("entry", (entry) => {
+          if (/\/$/.test(entry.fileName)) {
+            zipfile.readEntry();
+          } else {
+            const fileEntry: { fileName: string; chunks: Buffer[] } = {
+              fileName: entry.fileName,
+              chunks: [],
+            };
+            zipfile.openReadStream(entry, (err, readStream) => {
+              if (err) return reject(err);
+              readStream.on("data", (chunk: Buffer) => fileEntry.chunks.push(chunk));
+              readStream.on("end", () => {
+                fileEntries.push(fileEntry);
+                zipfile.readEntry();
+              });
+              readStream.on("error", reject);
+            });
+          }
+        });
+
+        zipfile.on("end", async () => {
+          try {
+            const themeJsonEntry = fileEntries.find(e => Path.basename(e.fileName) === "theme.json");
+            if (!themeJsonEntry) {
+              throw new Error("No theme.json found in archive");
+            }
+
+            const themeData = JSON.parse(Buffer.concat(themeJsonEntry.chunks).toString("utf8"));
+            if (!themeData.name || !themeData.styles) {
+              throw new Error("Invalid theme.json: missing name or styles");
+            }
+
+            const themeName = themeData.name.replace(/[^a-zA-Z0-9\(\)\[\]\{\}\.\-\_\s]/g, "_");
+            const themeDir = Path.resolve(this.themeFolderPath, themeName);
+            await fsp.mkdir(themeDir, { recursive: true });
+
+            for (const entry of fileEntries) {
+              const outPath = Path.resolve(themeDir, entry.fileName);
+              const outDir = Path.dirname(outPath);
+              await fsp.mkdir(outDir, { recursive: true });
+              await fsp.writeFile(outPath, Buffer.concat(entry.chunks));
+            }
+
+            themeData.name = themeName;
+            resolve($theme.create(themeData));
+          } catch (error) {
+            reject(error);
+          }
+        });
+
+        zipfile.on("error", reject);
+      });
+    });
   }
 
   public getYtdlp() {
@@ -666,38 +828,94 @@ export default class DesktopController extends ToxenController {
   }
 
   /**
-   * Export a theme as a .theme.json file
+   * Export a theme as a .theme.json file or .theme.zip archive (if it contains images).
    * Desktop version: Opens file save dialog and saves to chosen location
    */
   public async exportTheme(theme: Theme): Promise<void> {
-    // Desktop version: open file dialog and save theme to chosen location
     try {
-      // Create the theme data object
-      const themeData = {
-        name: theme.name,
-        displayName: theme.displayName,
-        description: theme.description,
-        styles: theme.styles,
-        customCSS: theme.customCSS || ""
-      };
+      const hasImages = !!(theme.backgroundImage || theme.sidepanelImage);
 
-      // Convert to JSON string with formatting
-      const jsonString = JSON.stringify(themeData, null, 2);
+      if (hasImages) {
+        // Export as zip archive containing theme.json + image files
+        const result = await this.remote.dialog.showSaveDialog({
+          title: 'Export Theme',
+          defaultPath: `${theme.name}.theme.zip`,
+          filters: [
+            { name: 'Theme Archive', extensions: ['theme.zip'] },
+            { name: 'All Files', extensions: ['*'] }
+          ]
+        });
 
-      // Show save dialog
-      const result = await this.remote.dialog.showSaveDialog({
-        title: 'Export Theme',
-        defaultPath: `${theme.name}.theme.json`,
-        filters: [
-          { name: 'Theme Files', extensions: ['theme.json'] },
-          { name: 'JSON Files', extensions: ['json'] },
-          { name: 'All Files', extensions: ['*'] }
-        ]
-      });
+        if (!result.canceled && result.filePath) {
+          const zip = new yazl.ZipFile();
+          const stream = fs.createWriteStream(result.filePath);
 
-      if (!result.canceled && result.filePath) {
-        // Write theme to selected file
-        await fsp.writeFile(result.filePath, jsonString, 'utf8');
+          // Add theme.json
+          const themeData = {
+            name: theme.name,
+            displayName: theme.displayName,
+            description: theme.description,
+            styles: theme.styles,
+            customCSS: theme.customCSS || "",
+            backgroundImage: theme.backgroundImage,
+            sidepanelImage: theme.sidepanelImage,
+          };
+          zip.addBuffer(Buffer.from(JSON.stringify(themeData, null, 2)), "theme.json");
+
+          // Add image files from the theme folder
+          const themeDir = Path.resolve(this.themeFolderPath, theme.name);
+          if (theme.backgroundImage && !theme.backgroundImage.startsWith("data:")) {
+            const bgPath = Path.resolve(themeDir, theme.backgroundImage);
+            if (fs.existsSync(bgPath)) {
+              zip.addReadStream(fs.createReadStream(bgPath), theme.backgroundImage);
+            }
+          }
+          if (theme.sidepanelImage && !theme.sidepanelImage.startsWith("data:")) {
+            const spPath = Path.resolve(themeDir, theme.sidepanelImage);
+            if (fs.existsSync(spPath)) {
+              zip.addReadStream(fs.createReadStream(spPath), theme.sidepanelImage);
+            }
+          }
+
+          // Add custom.css if it exists in the folder
+          const customCssPath = Path.resolve(themeDir, "custom.css");
+          if (fs.existsSync(customCssPath)) {
+            zip.addReadStream(fs.createReadStream(customCssPath), "custom.css");
+          }
+
+          zip.outputStream.pipe(stream);
+          zip.end();
+
+          await new Promise<void>((resolve, reject) => {
+            stream.on("finish", resolve);
+            stream.on("error", reject);
+          });
+        }
+      } else {
+        // Export as single .theme.json file
+        const themeData = {
+          name: theme.name,
+          displayName: theme.displayName,
+          description: theme.description,
+          styles: theme.styles,
+          customCSS: theme.customCSS || "",
+        };
+
+        const jsonString = JSON.stringify(themeData, null, 2);
+
+        const result = await this.remote.dialog.showSaveDialog({
+          title: 'Export Theme',
+          defaultPath: `${theme.name}.theme.json`,
+          filters: [
+            { name: 'Theme Files', extensions: ['theme.json'] },
+            { name: 'JSON Files', extensions: ['json'] },
+            { name: 'All Files', extensions: ['*'] }
+          ]
+        });
+
+        if (!result.canceled && result.filePath) {
+          await fsp.writeFile(result.filePath, jsonString, 'utf8');
+        }
       }
     } catch (error) {
       console.error('Failed to export theme:', error);

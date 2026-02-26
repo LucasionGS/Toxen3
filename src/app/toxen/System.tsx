@@ -314,6 +314,49 @@ export default class System {
             );
           }
         }
+        // Theme archive files
+        else if (file.name.endsWith('.theme.zip')) {
+          if (!toxenapi.isDesktop()) {
+            if (verbose) Toxen.error("Importing .theme.zip archives is only available on the desktop version.");
+            continue;
+          }
+
+          Toxen.loadingScreen.setContent(
+            <Content>
+              Importing theme archive {file.name}...
+            </Content>
+          );
+
+          try {
+            const theme = await toxenapi.importThemeArchive(file.path, Theme);
+
+            const existingIndex = Toxen.themes.findIndex(t => t.name === theme.name);
+            if (existingIndex === -1) {
+              Toxen.themes.push(theme);
+            } else {
+              Toxen.themes[existingIndex] = theme;
+            }
+
+            Toxen.setTheme(theme);
+
+            if (verbose) {
+              Toxen.log(`Theme "${theme.displayName || theme.name}" imported and applied successfully.`, 3000);
+            }
+
+            Toxen.loadingScreen.setContent(
+              <Content>
+                Imported theme {theme.displayName || theme.name}
+              </Content>
+            );
+          } catch (error) {
+            Toxen.error(`Failed to import theme archive ${file.name}: ${error.message}`);
+            Toxen.loadingScreen.setContent(
+              <Content>
+                Failed to import {file.name}
+              </Content>
+            );
+          }
+        }
         // Toxen song package (.txz)
         else if (file.name.endsWith(".txz")) {
           if (!toxenapi.isDesktop()) {

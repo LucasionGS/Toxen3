@@ -125,6 +125,8 @@ export default class ToxenController {
     }
   }
 
+  public readonly themeFolderPath: string = "";
+
   public async saveTheme(theme: Theme): Promise<void> {
     // Web version: save themes to localStorage
     try {
@@ -178,6 +180,27 @@ export default class ToxenController {
   }
 
   /**
+   * Save a theme image. Web version converts to data URL via FileReader.
+   */
+  public async saveThemeImage(themeName: string, imageType: "background" | "sidepanel", sourcePath: string): Promise<string> {
+    this.throwDesktopOnly("saveThemeImage");
+  }
+
+  /**
+   * Remove a theme image. Web version: no-op (images are data URLs in the JSON).
+   */
+  public async removeThemeImage(themeName: string, imageFilename: string): Promise<void> {
+    // Web: images are data URLs stored in the theme JSON, no file to remove
+  }
+
+  /**
+   * Import a .theme.zip archive. Not supported on web.
+   */
+  public async importThemeArchive(zipPath: string, $theme: typeof Theme): Promise<Theme> {
+    this.throwDesktopOnly("importThemeArchive");
+  }
+
+  /**
    * Export one or more songs into a zip file.
    * @param songs
    */
@@ -221,13 +244,15 @@ export default class ToxenController {
    */
   public async exportTheme(theme: Theme): Promise<void> {
     try {
-      // Create the theme data object
+      // Create the theme data object (includes data URL images on web)
       const themeData = {
         name: theme.name,
         displayName: theme.displayName,
         description: theme.description,
         styles: theme.styles,
-        customCSS: theme.customCSS || ""
+        customCSS: theme.customCSS || "",
+        backgroundImage: theme.backgroundImage,
+        sidepanelImage: theme.sidepanelImage,
       };
 
       // Convert to JSON string with formatting

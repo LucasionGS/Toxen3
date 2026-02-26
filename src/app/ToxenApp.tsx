@@ -463,6 +463,8 @@ export class Toxen {
   public static setTheme(theme: Theme) {
     Toxen.theme = theme;
     Toxen.themeContainer.setTheme(theme);
+    Toxen.background?.forceUpdate();
+    Toxen.sidePanel?.forceUpdate();
     Settings.set("theme", theme?.name ?? null);
     Settings.save({
       suppressNotification: true,
