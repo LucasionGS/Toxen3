@@ -1247,6 +1247,310 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           }
           break;
         }
+        case VisualizerStyle.DNA: {
+          const vsOptions = {
+            x: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.DNA, "x") ?? 50,
+            size: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.DNA, "size") ?? 0,
+          }
+
+          const maxHeight = getMaxHeight(0.20);
+          const unitH = maxHeight / dataSize;
+          const rSizeX = vWidth / 2;
+          const centerX = typeof vsOptions.x === "number" && vsOptions.x > -0.1 ? (vWidth / 100 * vsOptions.x) : rSizeX;
+
+          // Helix amplitude - how wide the strands spread
+          const baseAmplitude = vsOptions.size > 0 ? vsOptions.size : (vWidth * 0.12);
+          const amplitude = baseAmplitude + (baseAmplitude * dynLight * 0.3);
+          const scrollSpeed = time * 0.0005;
+          const yStep = vHeight / len;
+          const turns = 4; // Number of full helix rotations
+
+          const isRainbow = Toxen.background.storyboard.getVisualizerRainbow();
+          const isGlow = Toxen.background.storyboard.getVisualizerGlow();
+
+          ctx.globalAlpha = opacity;
+
+          if (!isRainbow) {
+            if (isGlow) setBarShadowBlur(maxHeight * 0.3);
+
+            // Draw rungs (connecting bars between strands)
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 0; i < len; i++) {
+              const data = dataArray[i];
+              const barIntensity = data / dataSize;
+              const y = i * yStep;
+              const phase = (i / len) * Math.PI * turns + scrollSpeed;
+              const sinPhase = Math.sin(phase);
+              const cosPhase = Math.cos(phase);
+
+              // Only draw rungs visible from the "front" (depth effect)
+              if (barIntensity > 0.08) {
+                const x1 = centerX + sinPhase * amplitude;
+                const x2 = centerX - sinPhase * amplitude;
+                ctx.moveTo(x1, y);
+                ctx.lineTo(x2, y);
+              }
+            }
+            ctx.stroke();
+
+            // Draw strand 1 (smooth curve)
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            for (let i = 0; i < len; i++) {
+              const y = i * yStep;
+              const phase = (i / len) * Math.PI * turns + scrollSpeed;
+              const data = dataArray[i];
+              const wobble = (data / dataSize) * amplitude * 0.15;
+              const x = centerX + Math.sin(phase) * (amplitude + wobble);
+              if (i === 0) ctx.moveTo(x, y);
+              else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+
+            // Draw strand 2
+            ctx.beginPath();
+            for (let i = 0; i < len; i++) {
+              const y = i * yStep;
+              const phase = (i / len) * Math.PI * turns + scrollSpeed;
+              const data = dataArray[i];
+              const wobble = (data / dataSize) * amplitude * 0.15;
+              const x = centerX + Math.sin(phase + Math.PI) * (amplitude + wobble);
+              if (i === 0) ctx.moveTo(x, y);
+              else ctx.lineTo(x, y);
+            }
+            ctx.stroke();
+          } else {
+            const oldShadow = ctx.shadowBlur;
+            ctx.shadowBlur = 0;
+
+            // Rungs with rainbow
+            ctx.lineWidth = 2;
+            for (let i = 0; i < len; i++) {
+              const data = dataArray[i];
+              const barIntensity = data / dataSize;
+              const y = i * yStep;
+              const phase = (i / len) * Math.PI * turns + scrollSpeed;
+
+              if (barIntensity > 0.08) {
+                const x1 = centerX + Math.sin(phase) * amplitude;
+                const x2 = centerX - Math.sin(phase) * amplitude;
+                this.setRainbowIfEnabled(ctx, x1, y, Math.abs(x2 - x1), 2, i);
+                ctx.beginPath();
+                ctx.moveTo(x1, y);
+                ctx.lineTo(x2, y);
+                ctx.stroke();
+              }
+            }
+
+            // Strands with rainbow (draw as segments)
+            ctx.lineWidth = 3;
+            for (let i = 1; i < len; i++) {
+              const y0 = (i - 1) * yStep;
+              const y1 = i * yStep;
+              const phase0 = ((i - 1) / len) * Math.PI * turns + scrollSpeed;
+              const phase1 = (i / len) * Math.PI * turns + scrollSpeed;
+              const x0 = centerX + Math.sin(phase0) * amplitude;
+              const x1 = centerX + Math.sin(phase1) * amplitude;
+
+              this.setRainbowIfEnabled(ctx, x1, y1, 3, 3, i);
+              ctx.beginPath();
+              ctx.moveTo(x0, y0);
+              ctx.lineTo(x1, y1);
+              ctx.stroke();
+
+              // Second strand
+              const mx0 = centerX + Math.sin(phase0 + Math.PI) * amplitude;
+              const mx1 = centerX + Math.sin(phase1 + Math.PI) * amplitude;
+              ctx.beginPath();
+              ctx.moveTo(mx0, y0);
+              ctx.lineTo(mx1, y1);
+              ctx.stroke();
+            }
+
+            ctx.shadowBlur = oldShadow;
+          }
+
+          ctx.globalAlpha = 1;
+          break;
+        }
+        case VisualizerStyle.Rings: {
+          const vsOptions = {
+            x: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Rings, "x") ?? 50,
+            y: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Rings, "y") ?? 50,
+            size: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Rings, "size") ?? 0,
+          }
+
+          const rSizeX = vWidth / 2;
+          const rSizeY = vHeight / 2;
+          let centerX = typeof vsOptions.x === "number" && vsOptions.x > -0.1 ? (vWidth / 100 * vsOptions.x) : rSizeX;
+          let centerY = typeof vsOptions.y === "number" && vsOptions.y > -0.1 ? (vHeight / 100 * vsOptions.y) : rSizeY;
+
+          if (pulseEnabled) {
+            centerX = rSizeX + ((centerX - rSizeX) * (1 + (dynLight / 4)));
+            centerY = rSizeY + ((centerY - rSizeY) * (1 + (dynLight / 4)));
+          }
+
+          const maxRadius = vsOptions.size > 0 ? vsOptions.size : (Math.min(rSizeX, rSizeY) * 0.85);
+          const numRings = Math.min(len, 24);
+          const radiusStep = maxRadius / numRings;
+          const rotation = time * 0.0003;
+
+          const isGlow = Toxen.background.storyboard.getVisualizerGlow();
+          const isRainbow = Toxen.background.storyboard.getVisualizerRainbow();
+
+          for (let i = 0; i < numRings; i++) {
+            // Map ring to frequency band (group bins for smoother response)
+            const binStart = Math.floor((i / numRings) * len);
+            const binEnd = Math.floor(((i + 1) / numRings) * len);
+            let sum = 0;
+            for (let b = binStart; b < binEnd; b++) sum += dataArray[b];
+            const avg = sum / (binEnd - binStart);
+            const amplitude = avg / dataSize;
+
+            const baseRadius = (i + 1) * radiusStep;
+            const pulseAmount = amplitude * radiusStep * 1.5;
+            const ringRadius = baseRadius + pulseAmount + (baseRadius * dynLight * 0.1);
+
+            if (isRainbow) {
+              const hue = ((i / numRings) * 360 + time * 0.05) % 360;
+              ctx.strokeStyle = `hsl(${hue}, 80%, 55%)`;
+            }
+
+            if (isGlow) {
+              ctx.shadowBlur = amplitude * 20;
+            }
+
+            ctx.globalAlpha = opacity * (0.25 + amplitude * 0.75);
+            ctx.lineWidth = 1.5 + amplitude * 4;
+
+            ctx.beginPath();
+            // Slightly deform each ring based on audio for organic feel
+            const segments = 64;
+            for (let s = 0; s <= segments; s++) {
+              const angle = (s / segments) * Math.PI * 2 + rotation * (i % 2 === 0 ? 1 : -1);
+              // Subtle per-segment deformation from neighboring frequency data
+              const deformIdx = Math.floor((s / segments) * (binEnd - binStart)) + binStart;
+              const deform = deformIdx < len ? (dataArray[deformIdx] / dataSize) * radiusStep * 0.3 : 0;
+              const r = ringRadius + deform;
+              const x = centerX + Math.cos(angle) * r;
+              const y = centerY + Math.sin(angle) * r;
+              if (s === 0) ctx.moveTo(x, y);
+              else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.stroke();
+          }
+
+          ctx.globalAlpha = 1;
+          break;
+        }
+        case VisualizerStyle.Spiral: {
+          const vsOptions = {
+            x: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Spiral, "x") ?? 50,
+            y: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Spiral, "y") ?? 50,
+            size: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Spiral, "size") ?? 0,
+            rotationSpeed: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Spiral, "rotationSpeed") ?? 0.4,
+            rotationDirection: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Spiral, "rotationDirection") ?? "clockwise",
+          }
+
+          const maxHeight = getMaxHeight(0.20);
+          const unitH = maxHeight / dataSize;
+          const rSizeX = vWidth / 2;
+          const rSizeY = vHeight / 2;
+          let centerX = typeof vsOptions.x === "number" && vsOptions.x > -0.1 ? (vWidth / 100 * vsOptions.x) : rSizeX;
+          let centerY = typeof vsOptions.y === "number" && vsOptions.y > -0.1 ? (vHeight / 100 * vsOptions.y) : rSizeY;
+
+          if (pulseEnabled) {
+            centerX = rSizeX + ((centerX - rSizeX) * (1 + (dynLight / 4)));
+            centerY = rSizeY + ((centerY - rSizeY) * (1 + (dynLight / 4)));
+          }
+
+          const baseMaxRadius = vsOptions.size > 0 ? vsOptions.size : (Math.min(rSizeX, rSizeY) * 0.75);
+          const maxRadius = baseMaxRadius + (baseMaxRadius * dynLight * 0.15);
+          const directionMultiplier = vsOptions.rotationDirection === "counter-clockwise" ? -1 : 1;
+          const rotation = time * (vsOptions.rotationSpeed / 1000) * directionMultiplier;
+          const numArms = 2;
+          const turns = 3;
+
+          const isRainbow = Toxen.background.storyboard.getVisualizerRainbow();
+          const isGlow = Toxen.background.storyboard.getVisualizerGlow();
+
+          ctx.lineWidth = 3;
+          ctx.globalAlpha = opacity;
+
+          // Draw each spiral arm
+          for (let arm = 0; arm < numArms; arm++) {
+            const armOffset = (arm / numArms) * Math.PI * 2;
+
+            if (!isRainbow) {
+              if (isGlow) setBarShadowBlur(maxHeight * 0.3);
+
+              // Batched frequency bars along the spiral
+              ctx.beginPath();
+              for (let i = 0; i < len; i++) {
+                const data = dataArray[i];
+                const barHeight = Math.max(1, data * unitH) * 0.5;
+
+                const t = i / len;
+                const angle = t * turns * Math.PI * 2 + rotation + armOffset;
+                const radius = t * maxRadius * 0.85 + maxRadius * 0.08;
+
+                const cosA = Math.cos(angle);
+                const sinA = Math.sin(angle);
+
+                ctx.moveTo(centerX + cosA * radius, centerY + sinA * radius);
+                ctx.lineTo(centerX + cosA * (radius + barHeight), centerY + sinA * (radius + barHeight));
+              }
+              ctx.stroke();
+
+              // Draw spiral backbone (subtle)
+              const oldAlpha = ctx.globalAlpha;
+              ctx.globalAlpha = opacity * 0.35;
+              ctx.lineWidth = 1.5;
+              ctx.beginPath();
+              const backboneSteps = 200;
+              for (let i = 0; i <= backboneSteps; i++) {
+                const t = i / backboneSteps;
+                const angle = t * turns * Math.PI * 2 + rotation + armOffset;
+                const radius = t * maxRadius * 0.85 + maxRadius * 0.08;
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+              }
+              ctx.stroke();
+              ctx.globalAlpha = oldAlpha;
+              ctx.lineWidth = 3;
+            } else {
+              const oldShadow = ctx.shadowBlur;
+              ctx.shadowBlur = 0;
+
+              for (let i = 0; i < len; i++) {
+                const data = dataArray[i];
+                const barHeight = Math.max(1, data * unitH) * 0.5;
+
+                const t = i / len;
+                const angle = t * turns * Math.PI * 2 + rotation + armOffset;
+                const radius = t * maxRadius * 0.85 + maxRadius * 0.08;
+
+                const cosA = Math.cos(angle);
+                const sinA = Math.sin(angle);
+
+                this.setRainbowIfEnabled(ctx, centerX + cosA * radius, centerY + sinA * radius, barHeight, barHeight, i);
+                ctx.beginPath();
+                ctx.moveTo(centerX + cosA * radius, centerY + sinA * radius);
+                ctx.lineTo(centerX + cosA * (radius + barHeight), centerY + sinA * (radius + barHeight));
+                ctx.stroke();
+              }
+
+              ctx.shadowBlur = oldShadow;
+            }
+          }
+
+          ctx.globalAlpha = 1;
+          break;
+        }
       }
     }
 

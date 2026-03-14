@@ -16,6 +16,9 @@ export default class Converter {
   }
 
   public static camelCaseToSpacing(text: string) {
+    if (text.split("").every(c => c === c.toUpperCase())) {
+      return text;
+    }
     let reg = /(?<=[\w])([A-Z][a-z]*)/g;
     return text.replace(reg, (_, g1: string) => {
       return " " + g1.toLowerCase();

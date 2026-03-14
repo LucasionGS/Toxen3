@@ -413,11 +413,15 @@ export enum VisualizerStyle {
   Orb = "orb",
   WaveformCircle = "waveformcircle",
   Heart = "heart",
+  DNA = "dna",
+  Rings = "rings",
+  Spiral = "spiral",
 };
 
 export type VisualizerStyleOptionsTypes =
   | "range"
   | "boolean"
+  | "select"
 
 export interface VisualizerStyleOption {
   name: string;
@@ -428,6 +432,8 @@ export interface VisualizerStyleOption {
   min?: number;
   max?: number;
   step?: number;
+
+  options?: { label: string; value: string }[];
 };
   
 export const visualizerStyleOptions: Partial<Record<VisualizerStyle, VisualizerStyleOption[]>> = {
@@ -546,6 +552,103 @@ export const visualizerStyleOptions: Partial<Record<VisualizerStyle, VisualizerS
       key: "opaque",
       type: "boolean",
       defaultValue: "",
+    }
+  ],
+  [VisualizerStyle.DNA]: [
+    {
+      name: "X Position",
+      key: "x",
+      type: "range",
+      defaultValue: -0.1,
+      min: -0.1,
+      max: 100,
+      step: 0.1,
+    },
+    {
+      name: "Width",
+      key: "size",
+      type: "range",
+      defaultValue: 0,
+      min: 0,
+      max: 500,
+      step: 1,
+    }
+  ],
+  [VisualizerStyle.Rings]: [
+    {
+      name: "X Position",
+      key: "x",
+      type: "range",
+      defaultValue: -0.1,
+      min: -0.1,
+      max: 100,
+      step: 0.1,
+    },
+    {
+      name: "Y Position",
+      key: "y",
+      type: "range",
+      defaultValue: -0.1,
+      min: -0.1,
+      max: 100,
+      step: 0.1,
+    },
+    {
+      name: "Size",
+      key: "size",
+      type: "range",
+      defaultValue: 0,
+      min: 0,
+      max: 1000,
+      step: 0.1,
+    }
+  ],
+  [VisualizerStyle.Spiral]: [
+    {
+      name: "X Position",
+      key: "x",
+      type: "range",
+      defaultValue: -0.1,
+      min: -0.1,
+      max: 100,
+      step: 0.1,
+    },
+    {
+      name: "Y Position",
+      key: "y",
+      type: "range",
+      defaultValue: -0.1,
+      min: -0.1,
+      max: 100,
+      step: 0.1,
+    },
+    {
+      name: "Size",
+      key: "size",
+      type: "range",
+      defaultValue: 0,
+      min: 0,
+      max: 1000,
+      step: 0.1,
+    },
+    {
+      name: "Rotation Speed",
+      key: "rotationSpeed",
+      type: "range",
+      defaultValue: 0.4,
+      min: 0,
+      max: 5,
+      step: 0.01,
+    },
+    {
+      name: "Rotation Direction",
+      key: "rotationDirection",
+      type: "select",
+      defaultValue: "clockwise",
+      options: [
+        { label: "Clockwise", value: "clockwise" },
+        { label: "Counter-Clockwise", value: "counter-clockwise" },
+      ],
     }
   ],
 }

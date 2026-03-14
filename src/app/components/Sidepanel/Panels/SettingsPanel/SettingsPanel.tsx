@@ -836,6 +836,22 @@ export function VisualizerStyleOptions(props: {
           ]}
         />
       );
+
+      case "select":
+        return (
+        <Select key={option.key}
+          allowDeselect={false}
+          onChange={(value) => {
+            options[option.key] = value;
+            allOptions[style] = options;
+            onSaveEnd(allOptions);
+          }}
+          defaultValue={options[option.key] ?? option.defaultValue}
+          name={option.key}
+          label={option.name}
+          data={option.options}
+        />
+      );
     }
   });
 }
