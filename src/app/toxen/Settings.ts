@@ -412,6 +412,7 @@ export enum VisualizerStyle {
   Waveform = "waveform",
   Orb = "orb",
   WaveformCircle = "waveformcircle",
+  Heart = "heart",
 };
 
 export type VisualizerStyleOptionsTypes =
@@ -510,6 +511,41 @@ export const visualizerStyleOptions: Partial<Record<VisualizerStyle, VisualizerS
       min: 1,
       max: 10,
       step: 0.5,
+    }
+  ],
+  [VisualizerStyle.Heart]: [
+    {
+      name: "X Position",
+      key: "x",
+      type: "range",
+      defaultValue: -0.1,
+      min: -0.1,
+      max: 100,
+      step: 0.1,
+    },
+    {
+      name: "Y Position",
+      key: "y",
+      type: "range",
+      defaultValue: -0.1,
+      min: -0.1,
+      max: 100,
+      step: 0.1,
+    },
+    {
+      name: "Size",
+      key: "size",
+      type: "range",
+      defaultValue: 0,
+      min: 0,
+      max: 1000,
+      step: 0.1,
+    },
+    {
+      name: "Opaque",
+      key: "opaque",
+      type: "boolean",
+      defaultValue: "",
     }
   ],
 }

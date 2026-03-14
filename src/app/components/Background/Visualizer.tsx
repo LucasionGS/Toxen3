@@ -35,6 +35,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
   constructor(props: VisualizerProps) {
     super(props);
     this.state = {};
+    this.boundLoop = this.loop.bind(this);
   }
 
   private lastColor: string = "";
@@ -48,12 +49,13 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
   // Star rush particle system
   private starRushParticles: StarRushParticle[] = [];
   private lastParticleSpawn = 0;
-  
+  private boundLoop: (time: number) => void;
+
   public getDynamicDim() {
     return this.dynamicDim;
   }
   private loop(time: number) {
-    if (!this.stopped) requestAnimationFrame(this.loop.bind(this));
+    if (!this.stopped) requestAnimationFrame(this.boundLoop);
     if (!this.ctx) return;
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     if (!Toxen.musicPlayer || !Toxen.musicPlayer.media) return console.log("Player or media missing");
@@ -140,8 +142,14 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
 
     // Normalize the data
     if (Toxen.background.storyboard.getVisualizerNormalize()) {
-      const max = Math.max(...dataArray) / 100;
-      dataArray = dataArray.map(v => Math.round(v / max) * 2);
+      let maxVal = 0;
+      for (let i = 0; i < dataArray.length; i++) {
+        if (dataArray[i] > maxVal) maxVal = dataArray[i];
+      }
+      const max = maxVal / 100 || 1;
+      for (let i = 0; i < dataArray.length; i++) {
+        dataArray[i] = Math.round(dataArray[i] / max) * 2;
+      }
     }
     // else if (!Toxen.background.storyboard.getVisualizerNormalize()) { // Placeholder for future settings
     //   const len = dataArray.length;
@@ -184,7 +192,9 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
       }
       for (let i = dataArray.length - 1; i > 0; i--) {
         const j = Math.floor(random() * (i + 1));
-        [dataArray[i], dataArray[j]] = [dataArray[j], dataArray[i]];
+        const tmp = dataArray[i];
+        dataArray[i] = dataArray[j];
+        dataArray[j] = tmp;
       }
     }
 
@@ -842,58 +852,77 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           const rotation = Math.PI / 2 + ((time / 20000) * Math.PI);
 
           let highest = 0;
-          
-          for (let i = 0; i < len; i++) {
-            const data = dataArray[i];
-            const barHeight = Math.max(1, data * unitH);
-            if (barHeight > highest) highest = barHeight;
 
-            const angle = i * unitAngle + rotation;
-            let mirroredAngle = (-i - 1) * unitAngle + rotation;
+          ctx.lineWidth = 3;
+          ctx.globalAlpha = opacity;
 
-            const [x1, y1] = [
-              centerX + Math.cos(angle) * radius,
-              centerY + Math.sin(angle) * radius
-            ];
-            const [x2, y2] = [
-              centerX + Math.cos(angle) * (radius + barHeight),
-              centerY + Math.sin(angle) * (radius + barHeight)
-            ];
+          const isRainbow = Toxen.background.storyboard.getVisualizerRainbow();
+          const isGlow = Toxen.background.storyboard.getVisualizerGlow();
 
-            const [mx1, my1] = [
-              centerX + Math.cos(mirroredAngle) * radius,
-              centerY + Math.sin(mirroredAngle) * radius
-            ];
-            const [mx2, my2] = [
-              centerX + Math.cos(mirroredAngle) * (radius + barHeight),
-              centerY + Math.sin(mirroredAngle) * (radius + barHeight)
-            ];
-
-            // If rainbow:
-            this.setRainbowIfEnabled(ctx, x1, y1, barHeight, barHeight, i);
-
-            // Draw the bar for the original angle
-            ctx.save();
+          // Batch all bars into a single path when not using rainbow
+          // This is critical for glow performance: shadow blur is applied once per stroke() call
+          if (!isRainbow) {
+            if (isGlow) {
+              // Use average-based shadow for the entire batch
+              setBarShadowBlur(maxHeight * 0.4);
+            }
             ctx.beginPath();
-            ctx.lineWidth = 3;
-            this.useAlpha(opacity, ctx => {
+            for (let i = 0; i < len; i++) {
+              const data = dataArray[i];
+              const barHeight = Math.max(1, data * unitH);
+              if (barHeight > highest) highest = barHeight;
+
+              const angle = i * unitAngle + rotation;
+              const mirroredAngle = (-i - 1) * unitAngle + rotation;
+
+              const cosA = Math.cos(angle);
+              const sinA = Math.sin(angle);
+              const cosM = Math.cos(mirroredAngle);
+              const sinM = Math.sin(mirroredAngle);
+
+              ctx.moveTo(centerX + cosA * radius, centerY + sinA * radius);
+              ctx.lineTo(centerX + cosA * (radius + barHeight), centerY + sinA * (radius + barHeight));
+
+              ctx.moveTo(centerX + cosM * radius, centerY + sinM * radius);
+              ctx.lineTo(centerX + cosM * (radius + barHeight), centerY + sinM * (radius + barHeight));
+            }
+            ctx.stroke();
+          } else {
+            // Rainbow mode: need per-bar strokes for different colors
+            const oldShadow = ctx.shadowBlur;
+            ctx.shadowBlur = 0; // Disable shadow for per-bar strokes
+            for (let i = 0; i < len; i++) {
+              const data = dataArray[i];
+              const barHeight = Math.max(1, data * unitH);
+              if (barHeight > highest) highest = barHeight;
+
+              const angle = i * unitAngle + rotation;
+              const mirroredAngle = (-i - 1) * unitAngle + rotation;
+
+              const cosA = Math.cos(angle);
+              const sinA = Math.sin(angle);
+              const cosM = Math.cos(mirroredAngle);
+              const sinM = Math.sin(mirroredAngle);
+
+              const x1 = centerX + cosA * radius;
+              const y1 = centerY + sinA * radius;
+
+              this.setRainbowIfEnabled(ctx, x1, y1, barHeight, barHeight, i);
+
+              ctx.beginPath();
               ctx.moveTo(x1, y1);
-              ctx.lineTo(x2, y2);
-            });
-            ctx.stroke();
-            ctx.restore();
+              ctx.lineTo(centerX + cosA * (radius + barHeight), centerY + sinA * (radius + barHeight));
+              ctx.stroke();
 
-            // Draw the bar for the mirrored angle
-            ctx.save();
-            ctx.beginPath();
-            ctx.lineWidth = 3;
-            this.useAlpha(opacity, ctx => {
-              ctx.moveTo(mx1, my1);
-              ctx.lineTo(mx2, my2);
-            });
-            ctx.stroke();
-            ctx.restore();
+              ctx.beginPath();
+              ctx.moveTo(centerX + cosM * radius, centerY + sinM * radius);
+              ctx.lineTo(centerX + cosM * (radius + barHeight), centerY + sinM * (radius + barHeight));
+              ctx.stroke();
+            }
+            ctx.shadowBlur = oldShadow;
           }
+
+          ctx.globalAlpha = 1;
 
           if (vsOptions.opaque) {
             // Apply a radial glow to the orb based on heighest
@@ -1070,6 +1099,152 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
             
             ctx.restore();
           });
+          break;
+        }
+        case VisualizerStyle.Heart: {
+          const vsOptions = {
+            x: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Heart, "x") ?? 50,
+            y: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Heart, "y") ?? 50,
+            size: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Heart, "size") ?? 0,
+            opaque: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Heart, "opaque") ?? false,
+          }
+
+          const maxHeight = getMaxHeight(0.25);
+          const unitH = maxHeight / dataSize;
+          const rSizeX = vWidth / 2;
+          const rSizeY = vHeight / 2;
+          let centerX = typeof vsOptions.x === "number" && vsOptions.x > -0.1 ? (vWidth / 100 * vsOptions.x) : rSizeX;
+          let centerY = typeof vsOptions.y === "number" && vsOptions.y > -0.1 ? (vHeight / 100 * vsOptions.y) : rSizeY;
+
+          // Heart parametric equations:
+          // x(t) = 16 * sin³(t)
+          // y(t) = -(13cos(t) - 5cos(2t) - 2cos(3t) - cos(4t))  (negated for canvas coords)
+          const heartX = (t: number) => 16 * Math.pow(Math.sin(t), 3);
+          const heartY = (t: number) => -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+          const heartYOffset = 6; // Center the heart vertically (canvas y ranges from -5 to 17)
+
+          // Scale factor - pulsates with audio like a beating heart
+          const baseScale = vsOptions.size > 0 ? (vsOptions.size / 16) : (Math.min(rSizeX, rSizeY) * 0.035);
+          const scale = baseScale + (baseScale * (dynLight / 3));
+
+          if (pulseEnabled) {
+            centerX = rSizeX + ((centerX - rSizeX) * (1 + (dynLight / 4)));
+            centerY = rSizeY + ((centerY - rSizeY) * (1 + (dynLight / 4)));
+          }
+
+          let highest = 0;
+
+          // Distribute bars over the right half of the heart (t: 0 to PI), mirror to left half
+          ctx.lineWidth = 3;
+          ctx.globalAlpha = opacity;
+
+          const isRainbow = Toxen.background.storyboard.getVisualizerRainbow();
+          const isGlow = Toxen.background.storyboard.getVisualizerGlow();
+
+          // Precompute all bar data for both batched and per-bar paths
+          if (!isRainbow) {
+            if (isGlow) {
+              setBarShadowBlur(maxHeight * 0.4);
+            }
+            ctx.beginPath();
+            for (let i = 0; i < len; i++) {
+              const data = dataArray[i];
+              const barHeight = Math.max(1, data * unitH);
+              if (barHeight > highest) highest = barHeight;
+
+              const t = (i / len) * Math.PI;
+              const hx = heartX(t) * scale;
+              const hy = (heartY(t) - heartYOffset) * scale;
+
+              const dx = (heartX(t + 0.01) - heartX(t - 0.01)) * scale;
+              const dy = ((heartY(t + 0.01)) - (heartY(t - 0.01))) * scale;
+              const tangentLen = Math.sqrt(dx * dx + dy * dy);
+
+              let nx: number, ny: number;
+              if (tangentLen > 0.001) {
+                nx = dy / tangentLen;
+                ny = -dx / tangentLen;
+                if (nx * hx + ny * hy < 0) { nx = -nx; ny = -ny; }
+              } else {
+                const radLen = Math.sqrt(hx * hx + hy * hy) || 1;
+                nx = hx / radLen;
+                ny = hy / radLen;
+              }
+
+              // Right side bar
+              ctx.moveTo(centerX + hx, centerY + hy);
+              ctx.lineTo(centerX + hx + nx * barHeight, centerY + hy + ny * barHeight);
+
+              // Mirrored bar (left side)
+              ctx.moveTo(centerX - hx, centerY + hy);
+              ctx.lineTo(centerX - hx - nx * barHeight, centerY + hy + ny * barHeight);
+            }
+            ctx.stroke();
+          } else {
+            // Rainbow mode: need per-bar strokes for different colors
+            const oldShadow = ctx.shadowBlur;
+            ctx.shadowBlur = 0;
+            for (let i = 0; i < len; i++) {
+              const data = dataArray[i];
+              const barHeight = Math.max(1, data * unitH);
+              if (barHeight > highest) highest = barHeight;
+
+              const t = (i / len) * Math.PI;
+              const hx = heartX(t) * scale;
+              const hy = (heartY(t) - heartYOffset) * scale;
+
+              const dx = (heartX(t + 0.01) - heartX(t - 0.01)) * scale;
+              const dy = ((heartY(t + 0.01)) - (heartY(t - 0.01))) * scale;
+              const tangentLen = Math.sqrt(dx * dx + dy * dy);
+
+              let nx: number, ny: number;
+              if (tangentLen > 0.001) {
+                nx = dy / tangentLen;
+                ny = -dx / tangentLen;
+                if (nx * hx + ny * hy < 0) { nx = -nx; ny = -ny; }
+              } else {
+                const radLen = Math.sqrt(hx * hx + hy * hy) || 1;
+                nx = hx / radLen;
+                ny = hy / radLen;
+              }
+
+              const x1 = centerX + hx;
+              const y1 = centerY + hy;
+              this.setRainbowIfEnabled(ctx, x1, y1, barHeight, barHeight, i);
+
+              ctx.beginPath();
+              ctx.moveTo(x1, y1);
+              ctx.lineTo(centerX + hx + nx * barHeight, centerY + hy + ny * barHeight);
+              ctx.stroke();
+
+              ctx.beginPath();
+              ctx.moveTo(centerX - hx, centerY + hy);
+              ctx.lineTo(centerX - hx - nx * barHeight, centerY + hy + ny * barHeight);
+              ctx.stroke();
+            }
+            ctx.shadowBlur = oldShadow;
+          }
+
+          ctx.globalAlpha = 1;
+
+          if (vsOptions.opaque) {
+            // Fill the heart shape
+            ctx.save();
+            setBarShadowBlur(highest);
+            ctx.beginPath();
+            const steps = 200;
+            for (let i = 0; i <= steps; i++) {
+              const t = (i / steps) * (2 * Math.PI);
+              const px = centerX + heartX(t) * scale;
+              const py = centerY + (heartY(t) - heartYOffset) * scale;
+              if (i === 0) ctx.moveTo(px, py);
+              else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.fillStyle = storedColor;
+            ctx.fill();
+            ctx.restore();
+          }
           break;
         }
       }
@@ -1556,13 +1731,19 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
 
 
   public static readonly DEFAULT_FFTSIZE = 1024;
+  private frequencyBuffer: Uint8Array<ArrayBuffer> | null = null;
   private getFrequencyData(fftSize?: number) {
-    if (fftSize && this.audioData.fftSize != fftSize) this.audioData.fftSize = fftSize;
+    if (fftSize && this.audioData.fftSize != fftSize) {
+      this.audioData.fftSize = fftSize;
+      this.frequencyBuffer = null; // Invalidate buffer on size change
+    }
     const bufferLength = this.audioData.frequencyBinCount;
-    const amplitudeArray = new Uint8Array(bufferLength);
-    this.audioData.getByteFrequencyData(amplitudeArray);
+    if (!this.frequencyBuffer || this.frequencyBuffer.length !== bufferLength) {
+      this.frequencyBuffer = new Uint8Array(bufferLength);
+    }
+    this.audioData.getByteFrequencyData(this.frequencyBuffer);
 
-    return amplitudeArray;
+    return this.frequencyBuffer;
   }
 
   private audioData: AnalyserNode;
