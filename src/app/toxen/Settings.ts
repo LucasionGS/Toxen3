@@ -416,6 +416,7 @@ export enum VisualizerStyle {
   DNA = "dna",
   Rings = "rings",
   Spiral = "spiral",
+  Clock = "clock",
 };
 
 export type VisualizerStyleOptionsTypes =
@@ -649,6 +650,35 @@ export const visualizerStyleOptions: Partial<Record<VisualizerStyle, VisualizerS
         { label: "Clockwise", value: "clockwise" },
         { label: "Counter-Clockwise", value: "counter-clockwise" },
       ],
+    }
+  ],
+  [VisualizerStyle.Clock]: [
+    {
+      name: "X Position",
+      key: "x",
+      type: "range",
+      defaultValue: -0.1,
+      min: -0.1,
+      max: 100,
+      step: 0.1,
+    },
+    {
+      name: "Y Position",
+      key: "y",
+      type: "range",
+      defaultValue: -0.1,
+      min: -0.1,
+      max: 100,
+      step: 0.1,
+    },
+    {
+      name: "Size",
+      key: "size",
+      type: "range",
+      defaultValue: 0,
+      min: 0,
+      max: 1000,
+      step: 0.1,
     }
   ],
 }
