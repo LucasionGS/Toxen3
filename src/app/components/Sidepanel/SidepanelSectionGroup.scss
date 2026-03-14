@@ -60,6 +60,11 @@
         font-size: 12px;
         transition: all 0.3s ease;
       }
+
+      // Hide the h3 bar when an icon is present
+      .header-icon + h3::before {
+        display: none;
+      }
     }
 
     h3 {
