@@ -1731,6 +1731,224 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           ctx.globalAlpha = 1;
           break;
         }
+
+        case VisualizerStyle.Jellyfish: {
+          const vsOptions = {
+            x: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Jellyfish, "x") ?? 50,
+            y: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Jellyfish, "y") ?? 50,
+            size: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Jellyfish, "size") ?? 0,
+            swimming: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Jellyfish, "swimming") ?? false,
+          }
+
+          const maxHeight = getMaxHeight(0.15);
+          const unitH = maxHeight / dataSize;
+          const rSizeX = vWidth / 2;
+          const rSizeY = vHeight / 2;
+          let centerX = typeof vsOptions.x === "number" && vsOptions.x > -0.1 ? (vWidth / 100 * vsOptions.x) : rSizeX;
+          let centerY = typeof vsOptions.y === "number" && vsOptions.y > -0.1 ? (vHeight / 100 * vsOptions.y) : rSizeY;
+
+          const baseSize = vsOptions.size > 0 ? vsOptions.size : (Math.min(rSizeX, rSizeY) * 0.5);
+
+          // Swimming: DVD-screensaver style smooth drift with facing direction
+          let swimAngle = 0;
+          if (vsOptions.swimming) {
+            const t = time * 0.00008;
+            // Padding so the jellyfish stays fully visible on screen
+            const pad = baseSize * 1.8;
+            const rangeX = (vWidth - pad * 2) / 2;
+            const rangeY = (vHeight - pad * 2) / 2;
+            // Layered sine waves for smooth, screen-covering path
+            const freqX1 = 0.7, freqX2 = 1.83;
+            const freqY1 = 0.53, freqY2 = 1.37;
+            centerX = rSizeX + Math.sin(t * freqX1) * rangeX * 0.65 + Math.sin(t * freqX2) * rangeX * 0.35;
+            centerY = rSizeY + Math.sin(t * freqY1) * rangeY * 0.6 + Math.sin(t * freqY2) * rangeY * 0.4;
+
+            // Analytical velocity (derivative of position) for facing direction
+            const vx = Math.cos(t * freqX1) * freqX1 * rangeX * 0.65 + Math.cos(t * freqX2) * freqX2 * rangeX * 0.35;
+            const vy = Math.cos(t * freqY1) * freqY1 * rangeY * 0.6 + Math.cos(t * freqY2) * freqY2 * rangeY * 0.4;
+            // Jellyfish natural orientation is bell-up (pointing -Y), so offset by PI/2
+            swimAngle = Math.atan2(vy, vx) + Math.PI / 2;
+          }
+
+          if (pulseEnabled) {
+            centerX = rSizeX + ((centerX - rSizeX) * (1 + (dynLight / 4)));
+            centerY = rSizeY + ((centerY - rSizeY) * (1 + (dynLight / 4)));
+          }
+
+          const bellWidth = baseSize;
+          const bellHeight = baseSize * 0.65;
+
+          // Bell contracts/pulses with the music
+          const pulseScale = 1 + dynLight * 0.12;
+          const bw = bellWidth * pulseScale;
+          const bh = bellHeight * pulseScale;
+
+          const isRainbow = Toxen.background.storyboard.getVisualizerRainbow();
+          const isGlow = Toxen.background.storyboard.getVisualizerGlow();
+
+          ctx.globalAlpha = opacity;
+          ctx.lineCap = "round";
+
+          // Apply rotation for swimming direction
+          if (vsOptions.swimming && swimAngle !== 0) {
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate(swimAngle);
+            ctx.translate(-centerX, -centerY);
+          }
+
+          // --- Bell (dome) ---
+          // Draw the bell as a smooth dome with frequency-reactive bumps
+          const bellSegments = Math.min(len, 128);
+
+          if (isGlow) setBarShadowBlur(maxHeight * 0.25);
+
+          // Semi-transparent bell fill
+          const oldAlpha = ctx.globalAlpha;
+          ctx.globalAlpha = opacity * 0.12;
+          ctx.beginPath();
+          ctx.moveTo(centerX - bw, centerY);
+          for (let i = 0; i <= bellSegments; i++) {
+            const t = i / bellSegments; // 0 to 1, left to right
+            const angle = t * Math.PI; // 0 to PI (left to right across the dome)
+            const baseX = centerX - bw * Math.cos(angle);
+            const baseY = centerY - bh * Math.sin(angle);
+
+            // Add frequency reactivity to the dome surface
+            const dataIdx = Math.min(Math.floor(t * len), len - 1);
+            const bump = (dataArray[dataIdx] * unitH) * 0.2;
+            const nx = 0;
+            const ny = -Math.sin(angle);
+            const fx = baseX + nx * bump;
+            const fy = baseY + ny * bump;
+
+            if (i === 0) ctx.moveTo(fx, fy);
+            else ctx.lineTo(fx, fy);
+          }
+          // Close bottom
+          ctx.lineTo(centerX + bw, centerY);
+          ctx.closePath();
+          ctx.fill();
+          ctx.globalAlpha = oldAlpha;
+
+          // Bell outline with frequency bumps
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          for (let i = 0; i <= bellSegments; i++) {
+            const t = i / bellSegments;
+            const angle = t * Math.PI;
+            const baseX = centerX - bw * Math.cos(angle);
+            const baseY = centerY - bh * Math.sin(angle);
+
+            const dataIdx = Math.min(Math.floor(t * len), len - 1);
+            const bump = (dataArray[dataIdx] * unitH) * 0.25;
+            const ny = -Math.sin(angle);
+            const fx = baseX;
+            const fy = baseY + ny * bump;
+
+            if (i === 0) ctx.moveTo(fx, fy);
+            else ctx.lineTo(fx, fy);
+          }
+          ctx.stroke();
+
+          // Inner bell ridges (subtle lines inside the dome)
+          ctx.globalAlpha = opacity * 0.2;
+          ctx.lineWidth = 1;
+          for (let r = 0; r < 3; r++) {
+            const ridgeScale = 0.4 + r * 0.2;
+            ctx.beginPath();
+            for (let i = 0; i <= bellSegments; i++) {
+              const t = i / bellSegments;
+              const angle = t * Math.PI;
+              const rx = centerX - bw * ridgeScale * Math.cos(angle);
+              const ry = centerY - bh * ridgeScale * Math.sin(angle);
+              const dataIdx = Math.min(Math.floor(t * len), len - 1);
+              const bump = (dataArray[dataIdx] * unitH) * 0.1 * ridgeScale;
+              const ny = -Math.sin(angle);
+              if (i === 0) ctx.moveTo(rx, ry + ny * bump);
+              else ctx.lineTo(rx, ry + ny * bump);
+            }
+            ctx.stroke();
+          }
+          ctx.globalAlpha = oldAlpha;
+
+          // --- Tentacles ---
+          const numTentacles = 9;
+          const tentacleMaxLen = baseSize * 1.6;
+          const tentacleSegments = 30;
+          const tentacleSpread = bw * 1.6;
+
+          ctx.lineWidth = 2;
+
+          for (let t = 0; t < numTentacles; t++) {
+            const tNorm = t / (numTentacles - 1); // 0 to 1
+            const anchorX = centerX + (tNorm - 0.5) * tentacleSpread;
+            const anchorY = centerY + bh * 0.05; // Just below the bell rim
+
+            // Each tentacle uses a portion of the frequency data
+            const dataStart = Math.floor((t / numTentacles) * len);
+            const dataEnd = Math.floor(((t + 1) / numTentacles) * len);
+
+            // Tentacle length varies by position (center ones are longer)
+            const centerFactor = 1 - Math.abs(tNorm - 0.5) * 1.2;
+            const tLen = tentacleMaxLen * (0.5 + centerFactor * 0.5);
+
+            // Average frequency for this tentacle's band
+            let avgFreq = 0;
+            for (let i = dataStart; i < dataEnd; i++) {
+              avgFreq += dataArray[i];
+            }
+            avgFreq /= Math.max(1, dataEnd - dataStart);
+            const freqIntensity = avgFreq / dataSize;
+
+            if (isRainbow) {
+              this.setRainbowIfEnabled(ctx, anchorX, anchorY, tLen, tLen, t * (len / numTentacles));
+            }
+
+            ctx.globalAlpha = opacity * (0.5 + centerFactor * 0.3);
+            ctx.beginPath();
+            ctx.moveTo(anchorX, anchorY);
+
+            for (let s = 1; s <= tentacleSegments; s++) {
+              const sNorm = s / tentacleSegments; // 0 to 1 along tentacle
+              const segY = anchorY + sNorm * tLen;
+
+              // Sinusoidal wave along the tentacle, reactive to audio
+              const waveFreq = 2.5 + t * 0.3;
+              const waveAmp = (10 + freqIntensity * 40) * sNorm;
+              const phaseOffset = t * 0.7 + time * 0.002;
+              const waveX = Math.sin(sNorm * Math.PI * waveFreq + phaseOffset) * waveAmp;
+
+              ctx.lineTo(anchorX + waveX, segY);
+            }
+            ctx.stroke();
+          }
+          ctx.globalAlpha = oldAlpha;
+
+          // --- Small dot details on bell rim ---
+          ctx.globalAlpha = opacity * 0.6;
+          const dotCount = 16;
+          for (let i = 0; i < dotCount; i++) {
+            const t = (i + 0.5) / dotCount;
+            const angle = t * Math.PI;
+            const dx = centerX - bw * Math.cos(angle);
+            const dy = centerY - bh * 0.08 * Math.sin(angle);
+            const dataIdx = Math.min(Math.floor(t * len), len - 1);
+            const dotSize = 1.5 + (dataArray[dataIdx] / dataSize) * 3;
+            ctx.beginPath();
+            ctx.arc(dx, dy, dotSize, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // Restore rotation transform
+          if (vsOptions.swimming && swimAngle !== 0) {
+            ctx.restore();
+          }
+
+          ctx.globalAlpha = 1;
+          ctx.lineCap = "butt";
+          break;
+        }
       }
     }
 

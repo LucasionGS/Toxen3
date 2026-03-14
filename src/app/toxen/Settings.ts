@@ -417,6 +417,7 @@ export enum VisualizerStyle {
   Rings = "rings",
   Spiral = "spiral",
   Clock = "clock",
+  Jellyfish = "jellyfish",
 };
 
 export type VisualizerStyleOptionsTypes =
@@ -681,7 +682,42 @@ export const visualizerStyleOptions: Partial<Record<VisualizerStyle, VisualizerS
       step: 0.1,
     }
   ],
-}
+  [VisualizerStyle.Jellyfish]: [
+    {
+      name: "X Position",
+      key: "x",
+      type: "range",
+      defaultValue: -0.1,
+      min: -0.1,
+      max: 100,
+      step: 0.1,
+    },
+    {
+      name: "Y Position",
+      key: "y",
+      type: "range",
+      defaultValue: -0.1,
+      min: -0.1,
+      max: 100,
+      step: 0.1,
+    },
+    {
+      name: "Size",
+      key: "size",
+      type: "range",
+      defaultValue: 0,
+      min: 0,
+      max: 1000,
+      step: 0.1,
+    },
+    {
+      name: "Swimming",
+      key: "swimming",
+      type: "boolean",
+      defaultValue: false,
+    }
+  ],
+};
 
 /**
  * A map of the `VisualizerStyle` to the `VisualizerStyleOption`.  
