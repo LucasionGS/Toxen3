@@ -52,6 +52,7 @@ import StoryboardEditor, { StoryboardEditorController } from "./components/Story
 import SubtitleEditor from "./components/SubtitleEditor/SubtitleEditor";
 import { modals } from "@mantine/modals";
 import LoginForm from "./components/LoginForm/LoginForm";
+import ExtensionManager from "./toxen/extensions/ExtensionManager";
 import AudioEffects from "./toxen/AudioEffects";
 import ImageCache from "./toxen/ImageCache";
 
@@ -1014,6 +1015,12 @@ export default class ToxenAppRenderer extends React.Component {
           } catch (error) {
             Toxen.error("Error trying to listen to auto updater.", 5000);
           }
+        }
+
+        // Load extensions (desktop only)
+        if (toxenapi.isDesktop()) {
+          await ExtensionManager.discover();
+          await ExtensionManager.loadAll();
         }
 
         await Toxen.loadThemes(); // Loads themes

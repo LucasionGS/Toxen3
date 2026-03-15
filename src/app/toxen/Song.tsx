@@ -36,7 +36,7 @@ export default class Song implements ISong {
   public tags: string[];
   public paths: ISongPaths;
   public visualizerColor: string;
-  public visualizerStyle: VisualizerStyle;
+  public visualizerStyle: VisualizerStyle | string;
   public visualizerStyleOptions: ISong["visualizerStyleOptions"];
   public visualizerIntensity: number;
   public visualizerShuffle: boolean;
@@ -1787,7 +1787,7 @@ export interface ISong {
   source: string;
   tags: string[];
   visualizerColor: string;
-  visualizerStyle: VisualizerStyle;
+  visualizerStyle: VisualizerStyle | string;
   visualizerStyleOptions: ISettings["visualizerStyleOptions"];
   visualizerIntensity: number;
   visualizerShuffle: boolean;

@@ -2,6 +2,7 @@
 import React from "react";
 import Converter from "../../../../toxen/Converter";
 import Settings, { VisualizerStyle } from "../../../../toxen/Settings";
+import ExtensionManager from "../../../../toxen/extensions/ExtensionManager";
 import Song, { ISong } from "../../../../toxen/Song";
 import Playlist from "../../../../toxen/Playlist";
 import SubtitleParser from "../../../../toxen/SubtitleParser";
@@ -503,6 +504,11 @@ export default function EditSong(props: EditSongProps) {
                 }
               }
               return objs;
+            })(),
+            ...(() => {
+              const extEntries = ExtensionManager.getVisualizerDropdownEntries();
+              if (extEntries.length === 0) return [];
+              return [{ group: "Extensions", items: extEntries }];
             })()
           ]}
           onChange={(v) => {

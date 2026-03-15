@@ -1,5 +1,6 @@
 import React, { Component } from 'react'
 import Settings, { VisualizerStyle, visualizerStyleOptions, visualizerStyleOptionsMap } from '../../../toxen/Settings';
+import ExtensionManager from '../../../toxen/extensions/ExtensionManager';
 import Song, { ISong } from '../../../toxen/Song';
 import { Toxen } from '../../../ToxenApp';
 import Visualizer from '../Visualizer';
@@ -104,10 +105,19 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
   }
 
   // Visualizer options
-  public getVisualizerOption(vs: VisualizerStyle, key: string) {
+  public getVisualizerOption(vs: VisualizerStyle | string, key: string) {
     const global = Settings.get("visualizerStyleOptions", {})[vs];
     const song = this.getEffectiveSongSettings()?.visualizerStyleOptions?.[vs];
-    const defaultValue = visualizerStyleOptionsMap?.[vs]?.[key]["defaultValue"];
+
+    // Look up default value: built-in first, then extension
+    let defaultValue: any;
+    const builtInOption = visualizerStyleOptionsMap?.[vs]?.[key];
+    if (builtInOption) {
+      defaultValue = builtInOption.defaultValue;
+    } else {
+      const extOptions = ExtensionManager.getVisualizerOptions(vs);
+      defaultValue = extOptions?.find(o => o.key === key)?.defaultValue;
+    }
 
     if (song && song[key] !== undefined && song[key] !== defaultValue) return song[key];
     if (global && global[key] !== undefined && global[key] !== defaultValue) return global[key];
@@ -289,7 +299,7 @@ interface StoryboardData {
   visualizerIntensity: number;
   visualizerShuffle: boolean;
   visualizerNormalize: boolean;
-  visualizerStyle: VisualizerStyle;
+  visualizerStyle: VisualizerStyle | string;
   visualizerPulseBackground: boolean;
   visualizerGlow: boolean;
   backgroundDim: number;

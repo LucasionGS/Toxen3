@@ -5,6 +5,7 @@ import React, { useEffect } from "react";
 import Converter from "../../../../toxen/Converter";
 // import HueManager from "../../../../toxen/philipshue/HueManager";
 import Settings, { ISettings, VisualizerStyle, visualizerStyleOptions } from "../../../../toxen/Settings";
+import ExtensionManager from "../../../../toxen/extensions/ExtensionManager";
 import Song from "../../../../toxen/Song";
 import { Toxen } from "../../../../ToxenApp";
 import TButton from "../../../Button/Button";
@@ -51,6 +52,11 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           <Tabs.Tab value="Advanced">
             Advanced
           </Tabs.Tab>
+          {toxenapi.isDesktop() && (
+            <Tabs.Tab value="Extensions">
+              Extensions
+            </Tabs.Tab>
+          )}
         </Tabs.List>
         <Tabs.Panel value="General">
           <h2>General</h2>
@@ -511,6 +517,41 @@ export default function SettingsPanel(props: SettingsPanelProps) {
             icon={<i className="fas fa-wave-square" />}
             collapsible
           >
+            <Select
+              allowDeselect={false}
+              onChange={(value) => {
+                Settings.apply({ visualizerStyle: value as VisualizerStyle }, true);
+                forceUpdate();
+              }}
+              defaultValue={Settings.get("visualizerStyle")}
+              name="visualizerStyle"
+              label="Visualizer Style"
+              data={[
+                {
+                  value: "",
+                  label: "<Default>"
+                },
+                ...Object.keys(VisualizerStyle).map(key => ({
+                  value: (VisualizerStyle as any)[key],
+                  label: Converter.camelCaseToSpacing(key)
+                })),
+                ...(() => {
+                  const extEntries = ExtensionManager.getVisualizerDropdownEntries();
+                  if (extEntries.length === 0) return [];
+                  return [{ group: "Extensions", items: extEntries }];
+                })()
+              ]}
+            />
+            <sup>Select which style for the visualizer to use.</sup>
+
+            {/* Specific VS settings */}
+            <VisualizerStyleOptions
+              style={Settings.get("visualizerStyle")}
+              allOptions={Settings.get("visualizerStyleOptions")}
+              onSave={(allOptions) => Settings.apply({ visualizerStyleOptions: allOptions })}
+              onSaveEnd={(allOptions) => Settings.apply({ visualizerStyleOptions: allOptions }, true)}
+            />
+            
             <Text>Visualizer Intensity</Text>
             <Slider 
               onChange={v => Settings.set("visualizerIntensity", v / 100)} 
@@ -613,37 +654,6 @@ export default function SettingsPanel(props: SettingsPanelProps) {
               Higher values create more particles and faster movement.
             </sup>
           </SidepanelSectionGroup>
-
-
-          <Select
-            allowDeselect={false}
-            onChange={(value) => {
-              Settings.apply({ visualizerStyle: value as VisualizerStyle }, true);
-              forceUpdate();
-            }}
-            defaultValue={Settings.get("visualizerStyle")}
-            name="visualizerStyle"
-            label="Visualizer Style"
-            data={[
-              {
-                value: "",
-                label: "<Default>"
-              },
-              ...Object.keys(VisualizerStyle).map(key => ({
-                value: (VisualizerStyle as any)[key],
-                label: Converter.camelCaseToSpacing(key)
-              }))
-            ]}
-          />
-          <sup>Select which style for the visualizer to use.</sup>
-
-          {/* Specific VS settings */}
-          <VisualizerStyleOptions
-            style={Settings.get("visualizerStyle")}
-            allOptions={Settings.get("visualizerStyleOptions")}
-            onSave={(allOptions) => Settings.apply({ visualizerStyleOptions: allOptions })}
-            onSaveEnd={(allOptions) => Settings.apply({ visualizerStyleOptions: allOptions }, true)}
-          />
           
         </Tabs.Panel>
 
@@ -758,20 +768,67 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           {/* Hue Settings */}
           {/* <HueSettings /> */}
         </Tabs.Panel>
+
+        {toxenapi.isDesktop() && (
+          <Tabs.Panel value="Extensions">
+            <h2>Extensions</h2>
+            <sup>Manage installed extensions. Extensions add new functionality like custom visualizers.</sup>
+            <br /><br />
+            {(() => {
+              const extensions = Array.from(ExtensionManager.extensions.values());
+              if (extensions.length === 0) {
+                return <Text>No extensions installed.</Text>;
+              }
+              return extensions.map(ext => (
+                <div key={ext.manifest.id} style={{ marginBottom: 12, padding: 8, border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4 }}>
+                  <Text fw={600}>{ext.manifest.name} <span style={{ opacity: 0.5, fontSize: "0.85em" }}>v{ext.manifest.version}</span></Text>
+                  {ext.manifest.description && <Text size="sm" style={{ opacity: 0.7 }}>{ext.manifest.description}</Text>}
+                  <Select
+                    allowDeselect={false}
+                    label="Status"
+                    defaultValue={ext.enabled ? "enabled" : "disabled"}
+                    data={[
+                      { value: "enabled", label: "Enabled" },
+                      { value: "disabled", label: "Disabled" },
+                    ]}
+                    onChange={async (value) => {
+                      if (value === "enabled") {
+                        await ExtensionManager.enable(ext.manifest.id);
+                      } else {
+                        await ExtensionManager.disable(ext.manifest.id);
+                      }
+                      forceUpdate();
+                    }}
+                    style={{ marginTop: 4 }}
+                  />
+                </div>
+              ));
+            })()}
+            <br />
+            <Button variant="subtle" onClick={() => {
+              toxenapi.remote.shell.openPath(ExtensionManager.getExtensionsDir());
+            }}>
+              Open Extensions Folder
+            </Button>
+          </Tabs.Panel>
+        )}
       </Tabs>
     </>
   )
 }
 
 export function VisualizerStyleOptions(props: {
-  style: VisualizerStyle,
+  style: VisualizerStyle | string,
   allOptions: ISettings["visualizerStyleOptions"],
   onSave: (allOptions: ISettings["visualizerStyleOptions"]) => void,
   onSaveEnd?: (allOptions: ISettings["visualizerStyleOptions"]) => void
 }) {
   const { style, allOptions = {}, onSave, onSaveEnd = onSave } = props;
-  
-  return visualizerStyleOptions[style]?.map((option) => {
+
+  // Get options from built-in styles or extension styles
+  const styleOptions = visualizerStyleOptions[style] ?? ExtensionManager.getVisualizerOptions(style as string) ?? [];
+
+  return styleOptions.map((option) => {
     const options = allOptions[style] ?? {};
     switch (option.type) {
       default:

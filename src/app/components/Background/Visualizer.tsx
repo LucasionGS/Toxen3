@@ -10,6 +10,7 @@ import StoryboardParser from '../../toxen/StoryboardParser';
 import MathX from '../../toxen/MathX';
 import { ISong } from '../../toxen/Song';
 import { ThemeStyleTemplate } from '../../toxen/Theme';
+import ExtensionManager from '../../toxen/extensions/ExtensionManager';
 
 const imgSize = 256;
 const toxenLogo = new Image(imgSize, imgSize);
@@ -246,6 +247,35 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     }
     
     if (style !== VisualizerStyle.None) {
+      // Check if style is an extension visualizer
+      const extRenderer = ExtensionManager.isExtensionStyle(style as string)
+        ? ExtensionManager.getVisualizerRenderer(style as string)
+        : undefined;
+
+      if (extRenderer) {
+        const isRainbow = Toxen.background.storyboard.getVisualizerRainbow();
+        const isGlow = Toxen.background.storyboard.getVisualizerGlow();
+        const renderCtx = {
+          ctx, dataArray, len, dataSize,
+          vWidth, vHeight, vLeft, vTop,
+          time, dynLight, opacity,
+          pulseEnabled,
+          storedColor,
+          isRainbow,
+          isGlow,
+          intensityMultiplier,
+          getMaxHeight, getMaxWidth, setBarShadowBlur,
+          setRainbowIfEnabled: (x: number, y: number, w: number, h: number, i: number) =>
+            this.setRainbowIfEnabled(ctx, x, y, w, h, i),
+          getOption: (key: string) =>
+            Toxen.background.storyboard.getVisualizerOption(style as string, key),
+        };
+        try {
+          extRenderer(renderCtx);
+        } catch (e) {
+          console.error(`[Extensions] Visualizer render error (${style}):`, e);
+        }
+      } else {
       let useLogo = false;
       switch (style) {
         default:
@@ -1753,10 +1783,11 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           let swimAngle = 0;
           if (vsOptions.swimming) {
             const t = time * 0.00008;
-            // Padding so the jellyfish stays fully visible on screen
-            const pad = baseSize * 1.8;
-            const rangeX = (vWidth - pad * 2) / 2;
-            const rangeY = (vHeight - pad * 2) / 2;
+            // Padding accounts for full jellyfish extent: bell + tentacles
+            const padX = baseSize * 1.3; // bell width + tentacle spread margin
+            const padY = baseSize * 1.6 + baseSize * 0.65; // tentacle length + bell height
+            const rangeX = Math.max(0, (vWidth - padX * 2) / 2);
+            const rangeY = Math.max(0, (vHeight - padY * 2) / 2);
             // Layered sine waves for smooth, screen-covering path
             const freqX1 = 0.7, freqX2 = 1.83;
             const freqY1 = 0.53, freqY2 = 1.37;
@@ -1950,7 +1981,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           break;
         }
       }
-    }
+    }} // end else (built-in switch)
 
     ctx.shadowBlur = oldShadowBlur;
     ctx.shadowColor = oldShadowColor;

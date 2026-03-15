@@ -328,8 +328,8 @@ export interface ISettings {
   // Visuals
   theme: string;
   visualizerColor: string;
-  visualizerStyle: VisualizerStyle;
-  visualizerStyleOptions: Partial<Record<VisualizerStyle, Record<string, any>>>;
+  visualizerStyle: VisualizerStyle | string;
+  visualizerStyleOptions: Partial<Record<string, Record<string, any>>>;
   visualizerIntensity: number;
   visualizerNormalize: boolean;
   /**
@@ -394,6 +394,9 @@ export interface ISettings {
   // Meta
   /** Last app version for which the change notes modal was shown/acknowledged */
   lastShownChangeNotesVersion: string;
+
+  // Extensions
+  enabledExtensions: Record<string, boolean>;
 }
 
 export enum VisualizerStyle {
@@ -438,7 +441,7 @@ export interface VisualizerStyleOption {
   options?: { label: string; value: string }[];
 };
   
-export const visualizerStyleOptions: Partial<Record<VisualizerStyle, VisualizerStyleOption[]>> = {
+export const visualizerStyleOptions: Partial<Record<string, VisualizerStyleOption[]>> = {
   [VisualizerStyle.Orb]: [
     {
       name: "X Position",
@@ -723,7 +726,7 @@ export const visualizerStyleOptions: Partial<Record<VisualizerStyle, VisualizerS
  * A map of the `VisualizerStyle` to the `VisualizerStyleOption`.  
  * This is used to quickly get the options for a specific `VisualizerStyle` when order is not important.
  */
-export const visualizerStyleOptionsMap: Partial<Record<VisualizerStyle, Record<string, VisualizerStyleOption>>> = {};
+export const visualizerStyleOptionsMap: Partial<Record<string, Record<string, VisualizerStyleOption>>> = {};
 for (const key in visualizerStyleOptions) {
   if (Object.prototype.hasOwnProperty.call(visualizerStyleOptions, key)) {
     const options = visualizerStyleOptions[key as VisualizerStyle];
