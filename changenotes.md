@@ -1,3 +1,18 @@
+<!-- VERSION: 2.6.0 -->
+## 2.6.0 - 15-03-2026
+### New Features
+- **New Visualizers** - Added several new visualizer styles:
+  - **Heart** - A parametric heart shape that reacts to audio
+  - **DNA** - A double helix that pulses with the music
+  - **Rings** - Concentric rings that expand and react to frequencies
+  - **Spiral** - A rotating spiral with configurable speed and direction
+  - **Clock** - An analog clock showing the real time, with frequency bars around the rim
+  - **Jellyfish** - A jellyfish with a reactive bell dome and flowing tentacles. Has a "Swimming" option that makes it drift across the screen like a DVD screensaver
+- **Extension System** - Toxen now supports extensions, allowing custom functionality to be added through JavaScript
+  - Extensions can register custom visualizers with their own settings
+  - Manage extensions in `Settings > Extensions` with enable/disable toggles
+  - Extensions live in the `.toxenData3/extensions/` folder
+
 <!-- VERSION: 2.5.0 -->
 ## 2.5.0 - 26-02-2026
 ### New Features
