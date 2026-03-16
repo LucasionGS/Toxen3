@@ -1260,11 +1260,6 @@ export default class ToxenAppRenderer extends React.Component {
             <EffectsPanel />
           </SidepanelSection>
 
-          {/* Friends Panel */}
-          <SidepanelSection key="friends" id="friends" title="Friends" icon={<i className="fas fa-user-friends"></i>} disabled={!User.getCurrentUser()}>
-            <FriendsPanel />
-          </SidepanelSection>
-
           {/* Import Panel */}
           <SidepanelSection key="importSong" id="importSong" title="Import" icon={<i className="fas fa-file-import"></i>} disabled={!toxenapi.isDesktop()}>
             <ImportPanel />
@@ -1273,6 +1268,11 @@ export default class ToxenAppRenderer extends React.Component {
           {/* Keep settings tab at the bottom */}
           <SidepanelSection key="settings" id="settings" title="Settings" icon={<i className="fas fa-cog"></i>} separator>
             <SettingsPanel />
+          </SidepanelSection>
+
+          {/* Friends Panel */}
+          <SidepanelSection key="friends" id="friends" title="Friends" icon={<i className="fas fa-user-friends"></i>} disabled={!User.getCurrentUser()}>
+            <FriendsPanel />
           </SidepanelSection>
 
           {/* About Panel */}
