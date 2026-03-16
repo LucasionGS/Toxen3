@@ -3,6 +3,7 @@ import { Select, Group, Avatar, Text, Loader, Box, ActionIcon, Menu, Button, Sta
 import { IconPhoto, IconX, IconFolderOpen, IconDots, IconTrash } from '@tabler/icons-react';
 import { useModals } from '@mantine/modals';
 import { Toxen } from '../../ToxenApp';
+import User from '../../toxen/User';
 import './BackgroundFileSelector.scss';
 
 interface BackgroundFileSelectorProps {
@@ -148,9 +149,14 @@ export default function BackgroundFileSelector({
       ];
 
       for (const file of files) {
-        const imagePath = toxenapi.isDesktop() 
-          ? `file://${toxenapi.path.resolve(workingDir, file).replace(/\\/g, "/")}`
-          : null;
+        let imagePath: string | null;
+        if (workingDir.startsWith("http://") || workingDir.startsWith("https://")) {
+          imagePath = User.appendAuth(`${workingDir}/${file}`);
+        } else if (toxenapi.isDesktop()) {
+          imagePath = `file://${toxenapi.path.resolve(workingDir, file).replace(/\\/g, "/")}`;
+        } else {
+          imagePath = null;
+        }
         
         backgroundFiles.push({
           value: file,

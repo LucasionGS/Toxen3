@@ -299,14 +299,17 @@ export class Toxen {
   }
 
   public static async filterSupportedFiles(path: string, supported: string[]) {
-    return (
-      Settings.isRemote() ? await Toxen.fetch(path).then(res => res.json()) as { name: string }[]
-        : await System.recursive(path)
-    )
+    const raw = Settings.isRemote()
+      ? await Toxen.fetch(path).then(res => res.json()) as (string | { name: string })[]
+      : await System.recursive(path);
+
+    return raw
       .filter(f => {
-        let ext = toxenapi.getFileExtension(f.name);
+        const name = typeof f === "string" ? f : f.name;
+        if (!name) return false;
+        let ext = toxenapi.getFileExtension(name);
         return supported.includes(ext);
-      }).map(f => f.name);
+      }).map(f => typeof f === "string" ? f : f.name);
   }
 
   public static getSupportedConvertableAudioFiles() {
