@@ -1677,6 +1677,8 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           ctx.lineWidth = 2.5;
           const fontSize = Math.max(12, clockRadius * 0.14);
           ctx.font = `bold ${fontSize}px sans-serif`;
+          const storedTextAlign = ctx.textAlign;
+          const storedBaseline = ctx.textBaseline;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           for (let i = 0; i < 12; i++) {
@@ -1698,6 +1700,9 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
             ctx.fillText(num.toString(), centerX + cosA * numRadius, centerY + sinA * numRadius);
           }
 
+          ctx.textAlign = storedTextAlign;
+          ctx.textBaseline = storedBaseline;
+          
           // Minute ticks
           ctx.lineWidth = 1;
           ctx.globalAlpha = opacity * 0.4;
