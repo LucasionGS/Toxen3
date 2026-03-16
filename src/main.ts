@@ -39,6 +39,8 @@ if (!gotTheLock) {
   });
 }
 
+const isDevServer = process.argv.includes('--dev');
+
 const createWindow = (): void => {
   const loadingWindow = new BrowserWindow({
     width: 200,
@@ -60,6 +62,7 @@ const createWindow = (): void => {
       nodeIntegration: true,
       contextIsolation: false,
       webSecurity: false,
+      additionalArguments: isDevServer ? ['--dev'] : [],
     },
     autoHideMenuBar: true,
     frame: false,

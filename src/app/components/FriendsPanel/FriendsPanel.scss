@@ -1,0 +1,108 @@
+.friends-panel {
+  padding: 12px;
+
+  h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-color-secondary, #aaa);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin: 16px 0 8px;
+
+    &:first-child {
+      margin-top: 0;
+    }
+  }
+
+  .friend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    transition: background 0.15s;
+    cursor: default;
+
+    &:hover {
+      background: rgba(255,255,255,0.06);
+    }
+
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--primary-color, #5b8af5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.9rem;
+      color: white;
+      flex-shrink: 0;
+      position: relative;
+
+      .status-dot {
+        position: absolute;
+        bottom: 1px;
+        right: 1px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        border: 2px solid var(--bg-color, #1a1a2e);
+
+        &.online {
+          background: #3ba55c;
+        }
+        &.offline {
+          background: #72767d;
+        }
+      }
+    }
+
+    .friend-info {
+      flex: 1;
+      min-width: 0;
+
+      .friend-name {
+        font-weight: 500;
+        font-size: 0.9rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .friend-activity {
+        font-size: 0.75rem;
+        color: var(--text-color-secondary, #aaa);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+
+        .playing-icon {
+          display: inline-block;
+          margin-right: 4px;
+          color: #3ba55c;
+        }
+      }
+    }
+
+    .friend-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+  }
+
+  .empty-state {
+    text-align: center;
+    color: var(--text-color-secondary, #888);
+    font-size: 0.85rem;
+    padding: 16px 8px;
+  }
+
+  .add-friend-form {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+  }
+}

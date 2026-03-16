@@ -55,6 +55,8 @@ import LoginForm from "./components/LoginForm/LoginForm";
 import ExtensionManager from "./toxen/extensions/ExtensionManager";
 import AudioEffects from "./toxen/AudioEffects";
 import ImageCache from "./toxen/ImageCache";
+import FriendsPanel from "./components/FriendsPanel/FriendsPanel";
+import { friendSocket } from "./toxen/FriendSocket";
 
 //#region Define variables used all over the ToxenApp process.
 /**
@@ -1075,6 +1077,11 @@ export default class ToxenAppRenderer extends React.Component {
           Toxen.discord?.setPresence();
         });
 
+        // Connect real-time friends socket if user is logged in
+        if (User.getCurrentUser()) {
+          friendSocket.connect();
+        }
+
         if (toxenapi.isDesktop()) {
           const ytdlp = toxenapi.getYtdlp();
           if (ytdlp.isYtdlpInstalled()) {
@@ -1251,6 +1258,11 @@ export default class ToxenAppRenderer extends React.Component {
           {/* Playlist Management Panel */}
           <SidepanelSection key="effects" id="effects" title="Effects" icon={<i className="fa-solid fa-wand-magic-sparkles"></i>}>
             <EffectsPanel />
+          </SidepanelSection>
+
+          {/* Friends Panel */}
+          <SidepanelSection key="friends" id="friends" title="Friends" icon={<i className="fas fa-user-friends"></i>} disabled={!User.getCurrentUser()}>
+            <FriendsPanel />
           </SidepanelSection>
 
           {/* Import Panel */}

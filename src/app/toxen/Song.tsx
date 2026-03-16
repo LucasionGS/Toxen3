@@ -23,6 +23,7 @@ import StoryboardParser from "./StoryboardParser";
 import User from "./User";
 import { hideNotification, updateNotification } from "@mantine/notifications";
 import PlaylistManager from "../components/PlaylistManager/PlaylistManager";
+import { friendSocket } from "./FriendSocket";
 // import HueManager from "./philipshue/HueManager";
 
 export default class Song implements ISong {
@@ -604,6 +605,14 @@ export default class Song implements ISong {
       }
       
       Toxen.discord?.setPresence(this);
+      // Broadcast now-playing to friends via WebSocket
+      friendSocket.sendNowPlaying({
+        title: this.title,
+        artist: this.artist,
+        album: this.album,
+        uid: this.uid,
+        duration: this.duration,
+      });
       navigator.mediaSession.metadata = new MediaMetadata({
         title: this.title ?? "Unknown Title",
         artist: this.artist ?? "Unknown Artist",

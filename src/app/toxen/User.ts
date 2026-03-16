@@ -1,5 +1,7 @@
 import { Toxen } from "../ToxenApp";
 import Settings from "./Settings";
+import type { IFriendship } from "./FriendSocket";
+import { friendSocket } from "./FriendSocket";
 
 export default class User {
   constructor() { }
@@ -113,6 +115,7 @@ export default class User {
   public static logout() {
     Toxen.setAppBarUser(null);
     window.localStorage.removeItem("user");
+    friendSocket.disconnect();
     Toxen.fetch(Settings.getServer() + "/logout");
   }
 
@@ -159,6 +162,57 @@ export default class User {
   premium_expire: Date;
   storage_used: number;
   storage_quota: number;
+
+  // ---- Friend API ----
+
+  public static async getFriends(): Promise<{ friends: IFriendship[]; pending: IFriendship[] }> {
+    const res = await Toxen.fetch(Settings.getServer() + "/friends");
+    if (!res.ok) throw new Error("Failed to fetch friends");
+    return res.json();
+  }
+
+  public static async sendFriendRequest(email: string): Promise<IFriendship> {
+    const res = await Toxen.fetch(Settings.getServer() + "/friends/request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body?.error ?? "Failed to send friend request");
+    return body;
+  }
+
+  public static async acceptFriendRequest(friendshipId: number): Promise<IFriendship> {
+    const res = await Toxen.fetch(
+      `${Settings.getServer()}/friends/${friendshipId}/accept`,
+      { method: "PUT" }
+    );
+    const body = await res.json();
+    if (!res.ok) throw new Error(body?.error ?? "Failed to accept request");
+    return body;
+  }
+
+  public static async declineFriendRequest(friendshipId: number): Promise<void> {
+    const res = await Toxen.fetch(
+      `${Settings.getServer()}/friends/${friendshipId}/decline`,
+      { method: "PUT" }
+    );
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body?.error ?? "Failed to decline request");
+    }
+  }
+
+  public static async removeFriend(friendUserId: number): Promise<void> {
+    const res = await Toxen.fetch(
+      `${Settings.getServer()}/friends/${friendUserId}`,
+      { method: "DELETE" }
+    );
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body?.error ?? "Failed to remove friend");
+    }
+  }
 }
 
 setInterval(() => {

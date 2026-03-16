@@ -121,9 +121,10 @@ export default class Settings {
   }
 
   private static officalStreamServer = "https://stream.toxen.net/api";
+  private static devServer = (typeof process !== "undefined" && process?.argv?.includes("--dev")) ? "http://localhost:3000/api" : null;
 
   public static getServer() {
-    return (Settings.get("remoteServer") || Settings.officalStreamServer).replace(/\/+$/, ""); // Remove trailing slashes.
+    return (Settings.get("remoteServer") || Settings.devServer || Settings.officalStreamServer).replace(/\/+$/, ""); // Remove trailing slashes.
   }
 
   /**

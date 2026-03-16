@@ -3,6 +3,7 @@ import React from "react";
 import Settings from "../../toxen/Settings";
 import User from "../../toxen/User";
 import { Toxen } from "../../ToxenApp";
+import { friendSocket } from "../../toxen/FriendSocket";
 
 let attemptedInitialLogin = false;
 export default function LoginForm(props: { onSuccessfulLogin?: () => void }) {
@@ -31,6 +32,8 @@ export default function LoginForm(props: { onSuccessfulLogin?: () => void }) {
         setLoggedIn(true);
         Toxen.sidePanel.reloadSection();
         if (Settings.isRemote()) Toxen.loadSongs();
+        // Connect real-time friends socket after login
+        friendSocket.connect();
 
         if (notify) {
           Toxen.notify({
