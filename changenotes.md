@@ -1,3 +1,8 @@
+<!-- VERSION: 2.6.1 -->
+## 2.6.1 - 16-03-2026
+### Changes
+- Primarily changes to the Toxen Stream server, reimplementation of the entire backend for Stream. Toxen Stream is now more stable and playlists sync correctly. Nothing major for the average user, but a necessary update nonetheless.
+
 <!-- VERSION: 2.6.0 -->
 ## 2.6.0 - 15-03-2026
 ### New Features
