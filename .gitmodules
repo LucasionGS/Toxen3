@@ -1,3 +1,3 @@
 [submodule "server"]
 	path = server
-	url = git@github.com:LucasionGS/toxen-stream-service.git
+	url = ssh://git@github.com/LucasionGS/toxen-stream-service.git
