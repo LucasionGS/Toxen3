@@ -22,6 +22,7 @@ import ScreenPositionSelector from "../../../ScreenPositionSelector/ScreenPositi
 import { VisualizerStyleOptions } from "../SettingsPanel/SettingsPanel";
 import { useForceUpdate } from "@mantine/hooks";
 import { hideNotification, updateNotification } from "@mantine/notifications";
+import { FALSE } from "sass";
 
 interface EditSongProps { }
 
@@ -457,7 +458,7 @@ export default function EditSong(props: EditSongProps) {
         <Slider
           defaultValue={getValue('backgroundDim') ?? -1}
           onChange={(v) => {
-            saveSettings('backgroundDim', v === -1 ? null : v);
+            saveSettings('backgroundDim', v === -1 ? null : v, false);
           }}
           onChangeEnd={(v) => {
             saveSettings('backgroundDim', v === -1 ? null : v);

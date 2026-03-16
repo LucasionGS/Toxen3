@@ -300,7 +300,7 @@ namespace StoryboardParser {
           component.arguments.forEach(arg => {
             const value = event.data[arg.identifier];
             if (arg.type === "SelectImage" && typeof value === "string") {
-              const src = `${song.dirname(value)}?h=${song.hash}`;
+              const src = User.appendAuth(`${song.dirname(value)}?h=${song.hash}`);
               if (isLoading[src]) return;
               const img = new Image();
               img.src = src;

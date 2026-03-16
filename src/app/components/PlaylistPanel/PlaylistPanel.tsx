@@ -144,13 +144,13 @@ export default class PlaylistPanel extends Component<PlaylistPanelProps, Playlis
             </Group>
             
             {!Settings.isRemote() && Settings.getUser()?.premium && (
-              <Button 
-                variant="light" 
+              <Button
+                variant="light"
                 color="blue"
                 leftSection={<IconUpload size={16} />}
-                onClick={() => Playlist.syncToRemote()}
+                onClick={() => Playlist.syncPlaylists()}
               >
-                Sync to Remote
+                Sync Playlists
               </Button>
             )}
           </Stack>
@@ -179,7 +179,40 @@ function PlaylistItem(props: PlaylistItemProps) {
   };
 
   async function deletePlaylist(force = false) {
-    if (toxenapi.isDesktop()) {
+    if (Settings.isRemote()) {
+      // Remote: delete backgrounds from server, then save updated playlist list
+      if (playlist?.songBackground) {
+        const imageNames = Object.values(playlist.songBackground);
+        for (const imageName of imageNames) {
+          try {
+            await Toxen.fetch(`${Settings.getUser().getPlaylistsPath()}/${imageName}`, { method: "DELETE" });
+          } catch (error) {
+            console.warn("Failed to delete remote background:", error);
+          }
+        }
+      }
+      if (playlist?.background) {
+        try {
+          await Toxen.fetch(`${Settings.getUser().getPlaylistsPath()}/${playlist.background}`, { method: "DELETE" });
+        } catch (error) {
+          console.warn("Failed to delete remote background:", error);
+        }
+      }
+
+      if (currentPlaylist === playlist) {
+        Toxen.playlist = null;
+      }
+      Toxen.playlists = Toxen.playlists.filter(p => p.name !== playlist.name);
+      await Playlist.save();
+      Toxen.log(
+        <>
+          Removed playlist: <code>{playlist.name}</code>
+        </>,
+        3000
+      );
+      playlistPanel.update();
+    }
+    else if (toxenapi.isDesktop()) {
       if (playlist?.songBackground) {
         const imageNames = Object.values(playlist.songBackground);
         for (const imageName of imageNames) {
@@ -191,7 +224,7 @@ function PlaylistItem(props: PlaylistItemProps) {
           }
         }
       }
-      
+
       if (playlist?.background) {
         const imagePath = toxenapi.joinPath(Playlist.getPlaylistBackgroundsDir(), playlist.background);
         try {
@@ -200,12 +233,12 @@ function PlaylistItem(props: PlaylistItemProps) {
           Toxen.error(error.message, 3000);
         }
       }
-      
+
       if (currentPlaylist === playlist) {
         Toxen.playlist = null;
       }
       Toxen.playlists = Toxen.playlists.filter(p => p.name !== playlist.name);
-  
+
       Playlist.save();
       Toxen.log(
         <>
@@ -213,11 +246,8 @@ function PlaylistItem(props: PlaylistItemProps) {
         </>,
         3000
       );
-  
+
       playlistPanel.update();
-    }
-    else {
-      toxenapi.throwDesktopOnly("deletePlaylist");
     }
   }
 
@@ -225,8 +255,53 @@ function PlaylistItem(props: PlaylistItemProps) {
     const [previewImage, setPreviewImage] = useState<string | null>(playlist?.getBackgroundPath(true, true));
     const [applyBackground, setApplyBackground] = useState(playlist?.applyBackground ?? false);
 
-    const handleImageUpload = () => {
-      if (toxenapi.isDesktop()) {
+    const handleImageUpload = async () => {
+      if (Settings.isRemote()) {
+        // Remote mode: use browser file input
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/jpeg,image/png,image/gif,image/bmp,image/webp";
+        input.onchange = async () => {
+          const file = input.files?.[0];
+          if (!file) return;
+
+          const ext = file.name.substring(file.name.lastIndexOf("."));
+          const randomizedName = System.randomString(16) + ext;
+
+          try {
+            const arrayBuffer = await file.arrayBuffer();
+            const res = await Toxen.fetch(`${Settings.getUser().getPlaylistsPath()}/${randomizedName}`, {
+              method: "PUT",
+              body: new Uint8Array(arrayBuffer),
+              headers: { "Content-Type": "application/octet-stream" }
+            });
+
+            if (!res.ok) {
+              const err = await res.json().catch(() => ({ error: res.statusText }));
+              throw new Error(err.error);
+            }
+
+            // Delete old background if exists
+            if (playlist.background) {
+              await Toxen.fetch(`${Settings.getUser().getPlaylistsPath()}/${playlist.background}`, { method: "DELETE" }).catch(() => {});
+            }
+
+            playlist.background = randomizedName;
+            // Clear cached path so it re-resolves
+            (playlist as any)._cachedBackgroundName = null;
+            (playlist as any)._cachedBackgroundPath = null;
+            const newPath = playlist.getBackgroundPath(true, true);
+            setPreviewImage(newPath);
+
+            playlist.touch();
+            await Playlist.save();
+            update();
+          } catch (error) {
+            Toxen.error(`Failed to upload background: ${error.message}`, 3000);
+          }
+        };
+        input.click();
+      } else if (toxenapi.isDesktop()) {
         let paths = toxenapi.remote.dialog.showOpenDialogSync(toxenapi.remote.getCurrentWindow(), {
           properties: ["openFile"],
           filters: [{
@@ -256,29 +331,45 @@ function PlaylistItem(props: PlaylistItemProps) {
         playlist.background = randomizedName;
         const newPath = playlist.getBackgroundPath(true, true);
         setPreviewImage(newPath);
-        
+
+        playlist.touch();
         Playlist.save();
         update();
       }
     };
 
-    const removeBackground = () => {
-      if (playlist.background && toxenapi.isDesktop()) {
-        try {
-          toxenapi.fs.unlinkSync(toxenapi.path.join(Playlist.getPlaylistBackgroundsDir(), playlist.background));
-        } catch (error) {
-          console.warn('Failed to delete background file:', error);
+    const removeBackground = async () => {
+      if (Settings.isRemote()) {
+        if (playlist.background) {
+          await Toxen.fetch(`${Settings.getUser().getPlaylistsPath()}/${playlist.background}`, { method: "DELETE" }).catch(() => {});
         }
+        playlist.background = null;
+        (playlist as any)._cachedBackgroundName = null;
+        (playlist as any)._cachedBackgroundPath = null;
+        setPreviewImage(null);
+        playlist.touch();
+        await Playlist.save();
+        update();
+      } else if (toxenapi.isDesktop()) {
+        if (playlist.background) {
+          try {
+            toxenapi.fs.unlinkSync(toxenapi.path.join(Playlist.getPlaylistBackgroundsDir(), playlist.background));
+          } catch (error) {
+            console.warn('Failed to delete background file:', error);
+          }
+        }
+        playlist.background = null;
+        setPreviewImage(null);
+        playlist.touch();
+        Playlist.save();
+        update();
       }
-      playlist.background = null;
-      setPreviewImage(null);
-      Playlist.save();
-      update();
     };
 
     const handleApplyToggle = (checked: boolean) => {
       playlist.applyBackground = checked;
       setApplyBackground(checked);
+      playlist.touch();
       Playlist.save();
       update();
     };
@@ -360,6 +451,7 @@ function PlaylistItem(props: PlaylistItemProps) {
 
       playlist.name = playlistName.trim();
       setPlaylistName(playlist.name);
+      playlist.touch();
       Playlist.save();
       playlistPanel.update();
       onClose();

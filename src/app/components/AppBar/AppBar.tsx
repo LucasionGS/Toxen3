@@ -162,7 +162,7 @@ function UserManage() {
           user ? (
             <div>
               <h2>{user.name}</h2>
-              <p><b>Premium Status</b>: {user.premium ? <>Expires <code>{user.premium_expire.toDateString()}</code></> : "No premium"}</p>
+              <p><b>Premium Status</b>: {user.premium ? <>Expires <code>{user.premium_expire?.toDateString() ?? "Never"}</code></> : "No premium"}</p>
               <p>{usedQuota}</p>
               <Button.Group>
                 <Button

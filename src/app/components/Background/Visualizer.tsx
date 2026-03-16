@@ -11,6 +11,7 @@ import MathX from '../../toxen/MathX';
 import { ISong } from '../../toxen/Song';
 import { ThemeStyleTemplate } from '../../toxen/Theme';
 import ExtensionManager from '../../toxen/extensions/ExtensionManager';
+import User from '../../toxen/User';
 
 const imgSize = 256;
 const toxenLogo = new Image(imgSize, imgSize);
@@ -104,7 +105,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
       this.lastBackground = backgroundFile;
       if (backgroundFile) {
         const img = new Image();
-        const fullFile = `${Toxen.background.storyboard.getBackground(true)}?h=${song.hash}`;
+        const fullFile = User.appendAuth(`${Toxen.background.storyboard.getBackground(true)}?h=${song.hash}`);
         img.src = fullFile;
         img.onload = () => {
           if (this.lastBackground === backgroundFile) Toxen.background.setBackground(img.src);

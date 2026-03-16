@@ -165,9 +165,20 @@ export class Toxen {
    * Used for fetching URLs and supports tx:// and txs:// URLs. (Gets converted to http(s)://)
    */
   public static fetch(input: string, init?: RequestInit) {
+    const authHeaders: Record<string, string> = {};
+    try {
+      const userData = JSON.parse(window.localStorage.getItem("user") || "null");
+      if (userData?.token) {
+        authHeaders["Authorization"] = `Bearer ${userData.token}`;
+      }
+    } catch { /* ignore */ }
     return fetch(Toxen.txToHttp(input), {
       credentials: "include",
       ...init,
+      headers: {
+        ...authHeaders,
+        ...(init?.headers instanceof Headers ? Object.fromEntries(init.headers) : init?.headers || {}),
+      },
     });
   }
 

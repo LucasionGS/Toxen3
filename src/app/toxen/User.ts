@@ -16,6 +16,21 @@ export default class User {
     return Settings.getServer() + "/playlist";
   }
 
+  /**
+   * Append the user's auth token as a query parameter to a URL.
+   * Used for URLs loaded directly by the browser (e.g. `<audio src>`, `<img src>`)
+   * where custom headers can't be set.
+   */
+  public static appendAuth(url: string): string {
+    if (!url) return url;
+    const user = User.getCurrentUser();
+    if (!user?.token) return url;
+    // Avoid appending if already present
+    if (url.includes("token=")) return url;
+    const separator = url.includes("?") ? "&" : "?";
+    return `${url}${separator}token=${user.token}`;
+  }
+
   // public static async login(token: string): Promise<User>;
   // public static async login(email: string, password: string): Promise<User>;
   public static async login(email: string, password: string) {
@@ -42,9 +57,33 @@ export default class User {
         throw new Error("Could not reach Toxen server");
       }
 
-      if (password) Toxen.error(`Failed to login as ${email}`, 3000);
-      else Toxen.error(`Failed to login. Token invalid`, 3000);
-      return null;
+      const errorBody = await response.json().catch((): null => null);
+      throw new Error(errorBody?.error || `Failed to login as ${email}`);
+    });
+  }
+
+  public static async register(name: string, email: string, password: string) {
+    const serverUrl = Settings.getServer();
+
+    return await Toxen.fetch(serverUrl + "/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ name, email, password })
+    }).then(async response => {
+      if (response.ok) {
+        let user = User.create(await response.json() as IUser);
+        User.setCurrentUser(user);
+        return user;
+      }
+
+      if (response.status === 0 || response.status === 502 || response.status === 503) {
+        throw new Error("Could not reach Toxen server");
+      }
+
+      const errorBody = await response.json().catch((): null => null);
+      throw new Error(errorBody?.error || "Registration failed");
     });
   }
 

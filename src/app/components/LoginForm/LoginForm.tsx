@@ -1,17 +1,28 @@
-import { Alert, Button, TextInput } from "@mantine/core";
+import { Alert, Anchor, Button, TextInput } from "@mantine/core";
 import React from "react";
 import Settings from "../../toxen/Settings";
 import User from "../../toxen/User";
 import { Toxen } from "../../ToxenApp";
-import Form from "../Form/Form";
-import FormInput from "../Form/FormInputFields/FormInput";
 
 let attemptedInitialLogin = false;
 export default function LoginForm(props: { onSuccessfulLogin?: () => void }) {
   const { onSuccessfulLogin } = props;
-  async function handleLogin(loginPromise: Promise<User>, notify = true) {
+
+  const [mode, setMode] = React.useState<"login" | "register">("login");
+  const [loggedIn, setLoggedIn] = React.useState(false);
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState<string>(null);
+  const user = Settings.getUser();
+
+  const [name, setName] = React.useState("");
+  const [email, setEmail] = React.useState(user?.email || "");
+  const [password, setPassword] = React.useState("");
+  const [confirmPassword, setConfirmPassword] = React.useState("");
+
+  async function handleAuthResult(authPromise: Promise<User>, notify = true) {
     setLoading(true);
-    return loginPromise.then(loggedInUser => {
+    setError(null);
+    return authPromise.then(loggedInUser => {
       if (loggedInUser) {
         if (onSuccessfulLogin) onSuccessfulLogin();
         User.setCurrentUser(loggedInUser);
@@ -23,39 +34,46 @@ export default function LoginForm(props: { onSuccessfulLogin?: () => void }) {
 
         if (notify) {
           Toxen.notify({
-            title: "Log in successful",
+            title: mode === "register" ? "Registration successful" : "Log in successful",
             content: `Welcome, ${loggedInUser.name}!`,
             expiresIn: 2500,
             type: "normal",
           });
         }
-          
       }
       else {
         setLoading(false);
         setLoggedIn(false);
-        Toxen.error("Login failed", 5000);
-        setError("Login failed");
+        setError(mode === "register" ? "Registration failed" : "Login failed");
       }
     }).catch(e => {
-      Toxen.error("Unable to reach Toxen server", 5000);
-      setError("Unable to reach Toxen server");
       setLoading(false);
+      setError(e.message || "Unable to reach Toxen server");
     });
   }
 
-  const [loggedIn, setLoggedIn] = React.useState(false);
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string>(null);
-  const user = Settings.getUser();
   if (!attemptedInitialLogin && user) {
     attemptedInitialLogin = true;
-    handleLogin(User.refreshUser(), false);
+    handleAuthResult(User.refreshUser(), false);
   }
 
-  const [email, setEmail] = React.useState(user?.email || "");
-  const [password, setPassword] = React.useState("");
-  
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (mode === "register") {
+      if (!name.trim()) {
+        setError("Display name is required.");
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError("Passwords do not match.");
+        return;
+      }
+      handleAuthResult(User.register(name.trim(), email, password));
+    } else {
+      handleAuthResult(User.login(email, password));
+    }
+  }
+
   return (
     user ? (
       <Button onClick={async () => {
@@ -67,23 +85,37 @@ export default function LoginForm(props: { onSuccessfulLogin?: () => void }) {
       }} color="yellow">Log out</Button>
     ) : (
       <>
-        <h2>Toxen login</h2>
+        <h2>{mode === "register" ? "Create account" : "Toxen login"}</h2>
         <sub>
-          Log in to your Toxen account to access your songs and settings.
-          <br />
-          <b>Note</b> - Toxen Stream is not open for registration. Only select users have access.
+          {mode === "register"
+            ? "Create a new Toxen Stream account."
+            : "Log in to your Toxen account to access your songs and settings."
+          }
         </sub>
         <Alert color="red" title="Error" hidden={!error}>{error}</Alert>
-        <form onSubmit={e => {
-          e.preventDefault();
-          handleLogin(User.login(email as string, password as string));
-        }}>
+        <form onSubmit={handleSubmit}>
+          {mode === "register" && (
+            <TextInput label="Display name" value={name} onChange={(e) => setName(e.target.value)} />
+          )}
           <TextInput label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           <TextInput label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          <Button loading={loading} type="submit">
-            {loading ? "Logging in..." : "Login"}
+          {mode === "register" && (
+            <TextInput label="Confirm password" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+          )}
+          <Button loading={loading} type="submit" mt="sm">
+            {loading
+              ? (mode === "register" ? "Creating account..." : "Logging in...")
+              : (mode === "register" ? "Create account" : "Login")
+            }
           </Button>
         </form>
+        <sub style={{ marginTop: 8, display: "block" }}>
+          {mode === "login" ? (
+            <>Don't have an account? <Anchor component="button" type="button" size="xs" onClick={() => { setMode("register"); setError(null); }}>Create one</Anchor></>
+          ) : (
+            <>Already have an account? <Anchor component="button" type="button" size="xs" onClick={() => { setMode("login"); setError(null); }}>Log in</Anchor></>
+          )}
+        </sub>
       </>
     )
   )

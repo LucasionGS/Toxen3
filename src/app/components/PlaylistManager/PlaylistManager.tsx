@@ -4,6 +4,7 @@ import { IconPlus, IconSearch } from "@tabler/icons-react";
 import { Toxen } from "../../ToxenApp";
 import Playlist from "../../toxen/Playlist";
 import Song from "../../toxen/Song";
+import Settings from "../../toxen/Settings";
 import "./PlaylistManager.scss";
 
 interface PlaylistManagerProps {
@@ -140,7 +141,9 @@ export default class PlaylistManager extends Component<PlaylistManagerProps, Pla
                         <div 
                           className="playlist-manager-item-background"
                           style={{
-                            backgroundImage: `url("file://${backgroundPath}")`,
+                            backgroundImage: Settings.isRemote()
+                              ? `url("${backgroundPath}")`
+                              : `url("file://${backgroundPath}")`,
                           }}
                         />
                       )}

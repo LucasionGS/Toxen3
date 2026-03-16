@@ -4,6 +4,7 @@ import "./SongElement.scss";
 import RenderIfVisible from "react-render-if-visible";
 import { useModals } from '@mantine/modals';
 import Settings from '../../toxen/Settings';
+import User from '../../toxen/User';
 import { Toxen } from '../../ToxenApp';
 import ImageCache from '../../toxen/ImageCache';
 
@@ -42,7 +43,7 @@ function SongElementDiv(props: { songElement: SongElement }) {
       setIsLoadingThumbnail(true);
       
       try {
-        const bgFile = `${song.backgroundFile()}?h=${song.hash}`;
+        const bgFile = User.appendAuth(`${song.backgroundFile()}?h=${song.hash}`);
         const imageCache = ImageCache.getInstance();
         
         // Get thumbnail with appropriate size for song list items
@@ -92,7 +93,7 @@ function SongElementDiv(props: { songElement: SongElement }) {
         ? 'linear-gradient(90deg, rgba(255,255,255,0.1) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%), linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0.6))'
         : undefined)
     : (song.backgroundFile() 
-        ? `linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0)) 0% 0% / cover, url("${song.backgroundFile().replace(/\\/g, "/")}?h=${song.hash}")`
+        ? `linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0)) 0% 0% / cover, url("${User.appendAuth(`${song.backgroundFile().replace(/\\/g, "/")}?h=${song.hash}`)}")`
         : undefined);
 
   return (

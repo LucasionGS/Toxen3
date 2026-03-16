@@ -8,6 +8,7 @@ import Visualizer from './Visualizer';
 //@ts-expect-error 
 import ToxenMax from "../../../icons/skull_max.png";
 import Settings from '../../toxen/Settings';
+import User from '../../toxen/User';
 import Asyncifier from '../../toxen/Asyncifier';
 import Subtitles from '../Subtitles/Subtitles';
 import AudioEffects from '../../toxen/AudioEffects';
@@ -42,6 +43,10 @@ export default class Background extends Component<BackgroundProps, BackgroundSta
   // }
 
   public setBackground(source: string) {
+    // Append auth token for remote URLs so the browser can load them
+    if (source && Settings.isRemote()) {
+      source = User.appendAuth(source);
+    }
     return this.setStateAsync({
       image: source
     })

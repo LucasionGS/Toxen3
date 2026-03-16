@@ -693,7 +693,7 @@ export default function SettingsPanel(props: SettingsPanelProps) {
               <h2>Premium status</h2>
               {user.premium ? (
                 <>
-                  <p>Expires <code>{user.premium_expire.toDateString()}</code></p>
+                  <p>Expires <code>{user.premium_expire?.toDateString() ?? "Never"}</code></p>
                   <p>Remote Library Quota: <b>{usedQuota}</b></p>
                   {
                     toxenapi.isDesktop() && (

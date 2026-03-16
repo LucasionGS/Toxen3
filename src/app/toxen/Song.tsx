@@ -506,6 +506,7 @@ export default class Song implements ISong {
 
     options ?? (options = {});
     let src = this.mediaFile();
+    if (Settings.isRemote()) src = User.appendAuth(src);
     if (Toxen.musicPlayer.state.src === src) return;
     // if (HueManager.isEnabled()) {
     //   HueManager.start().catch((error) => Toxen.error(error.message));
@@ -1727,8 +1728,9 @@ export default class Song implements ISong {
   }
 
   public async calculateDuration(): Promise<number> {
-    const mediaFile = this.mediaFile();
+    let mediaFile = this.mediaFile();
     if (!mediaFile) throw new Error("No media file found for song: " + this.getDisplayName());
+    if (Settings.isRemote()) mediaFile = User.appendAuth(mediaFile);
     const audio = new Audio(mediaFile);
     return await Song.calculateDurationFrom(audio);
   }
