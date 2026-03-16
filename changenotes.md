@@ -1,3 +1,8 @@
+<!-- VERSION: 2.6.2 -->
+## 2.6.2 - 16-03-2026
+### Hotfix
+- Fixed floating title being misaligned on some occasion.
+
 <!-- VERSION: 2.6.1 -->
 ## 2.6.1 - 16-03-2026
 ### Changes
