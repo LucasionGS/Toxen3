@@ -55,7 +55,7 @@ import LoginForm from "./components/LoginForm/LoginForm";
 import ExtensionManager from "./toxen/extensions/ExtensionManager";
 import AudioEffects from "./toxen/AudioEffects";
 import ImageCache from "./toxen/ImageCache";
-import FriendsPanel from "./components/FriendsPanel/FriendsPanel";
+import FriendsPanel, { FriendsIconBadge } from "./components/FriendsPanel/FriendsPanel";
 import { friendSocket } from "./toxen/FriendSocket";
 
 //#region Define variables used all over the ToxenApp process.
@@ -1270,10 +1270,12 @@ export default class ToxenAppRenderer extends React.Component {
             <SettingsPanel />
           </SidepanelSection>
 
-          {/* Friends Panel */}
-          <SidepanelSection key="friends" id="friends" title="Friends" icon={<i className="fas fa-user-friends"></i>} disabled={!User.getCurrentUser()}>
-            <FriendsPanel />
-          </SidepanelSection>
+          {/* Friends Panel - only visible when logged in */}
+          {User.getCurrentUser() && (
+            <SidepanelSection key="friends" id="friends" title="Friends" icon={<FriendsIconBadge />}>
+              <FriendsPanel />
+            </SidepanelSection>
+          )}
 
           {/* About Panel */}
           <SidepanelSection key="stats" id="stats" title="About" icon={<i className="fas fa-info-circle"></i>}

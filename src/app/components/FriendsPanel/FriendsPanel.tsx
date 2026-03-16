@@ -1,4 +1,54 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { friendSocket, IFriendship, FriendPresence } from "../../toxen/FriendSocket";
+
+
+/** Badge shown on the Friends sidebar icon with the count of online friends. */
+export function FriendsIconBadge() {
+  const [onlineCount, setOnlineCount] = useState(() =>
+    friendSocket.getAllPresences().filter((p) => p.status === "online").length
+  );
+
+  useEffect(() => {
+    const update = () => {
+      setOnlineCount(
+        friendSocket.getAllPresences().filter((x) => x.status === "online").length
+      );
+    };
+    const offPresence = friendSocket.on("friend_presence", update);
+    const offPresences = friendSocket.on("friends_presence", update);
+    return () => {
+      offPresence();
+      offPresences();
+    };
+  }, []);
+
+  return (
+    <span style={{ position: "relative", display: "inline-flex" }}>
+      <i className="fas fa-user-friends" />
+      {onlineCount > 0 && (
+        <span style={{
+          position: "absolute",
+          top: "-6px",
+          right: "-8px",
+          background: "var(--accent-color, #5b8af5)",
+          color: "#fff",
+          borderRadius: "50%",
+          minWidth: "16px",
+          height: "16px",
+          fontSize: "10px",
+          fontWeight: 700,
+          lineHeight: "16px",
+          textAlign: "center",
+          padding: "0 3px",
+          boxSizing: "border-box",
+          pointerEvents: "none",
+        }}>
+          {onlineCount > 99 ? "99+" : onlineCount}
+        </span>
+      )}
+    </span>
+  );
+}
 import {
   ActionIcon,
   Button,
@@ -16,7 +66,6 @@ import {
   IconX,
 } from "@tabler/icons-react";
 import User from "../../toxen/User";
-import { friendSocket, IFriendship, FriendPresence } from "../../toxen/FriendSocket";
 import { Toxen } from "../../ToxenApp";
 import "./FriendsPanel.scss";
 
@@ -52,7 +101,7 @@ export default function FriendsPanel() {
     refresh();
 
     // Setup real-time handlers
-    friendSocket.on("friends_presence", (list) => {
+    const offFriendsPresence = friendSocket.on("friends_presence", (list) => {
       setPresences((prev) => {
         const next = new Map(prev);
         for (const p of list) next.set(p.userId, p);
@@ -60,11 +109,11 @@ export default function FriendsPanel() {
       });
     });
 
-    friendSocket.on("friend_presence", (p) => {
+    const offFriendPresence = friendSocket.on("friend_presence", (p) => {
       setPresences((prev) => new Map(prev).set(p.userId, p));
     });
 
-    friendSocket.on("friend_request", (fs) => {
+    const offFriendRequest = friendSocket.on("friend_request", (fs) => {
       setPending((prev) => {
         if (prev.some((x) => x.id === fs.id)) return prev;
         return [...prev, fs];
@@ -72,7 +121,7 @@ export default function FriendsPanel() {
       Toxen.log(`Friend request from ${fs.requester.name}`);
     });
 
-    friendSocket.on("friend_accepted", (fs) => {
+    const offFriendAccepted = friendSocket.on("friend_accepted", (fs) => {
       setFriends((prev) => {
         if (prev.some((x) => x.id === fs.id)) return prev;
         return [...prev, fs];
@@ -81,10 +130,10 @@ export default function FriendsPanel() {
     });
 
     return () => {
-      friendSocket.off("friends_presence");
-      friendSocket.off("friend_presence");
-      friendSocket.off("friend_request");
-      friendSocket.off("friend_accepted");
+      offFriendsPresence();
+      offFriendPresence();
+      offFriendRequest();
+      offFriendAccepted();
     };
   }, [refresh]);
 

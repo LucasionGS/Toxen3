@@ -110,6 +110,7 @@ export default class User {
     
     Toxen.setAppBarUser(user);
     window.localStorage.setItem("user", JSON.stringify(user));
+    Toxen.appRenderer?.forceUpdate();
   }
   
   public static logout() {
@@ -117,6 +118,7 @@ export default class User {
     window.localStorage.removeItem("user");
     friendSocket.disconnect();
     Toxen.fetch(Settings.getServer() + "/logout");
+    Toxen.appRenderer?.forceUpdate();
   }
 
   public static async refreshUser() {

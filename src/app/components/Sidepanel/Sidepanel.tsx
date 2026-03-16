@@ -163,7 +163,8 @@ export default class Sidepanel extends React.Component<Props, State> {
       }
     }
 
-    let Sec = this.sections.find(sec => sec?.props?.id == this.state.sectionId);
+    const sections = (Array.isArray(this.props.children) ? this.props.children : [this.props.children]).filter(Boolean) as unknown as typeof this.sections;
+    let Sec = sections.find(sec => sec?.props?.id == this.state.sectionId);
     const userSidepanelBg = Settings.get("sidepanelBackground");
     const themeSidepanelBg = Toxen.theme?.getSidepanelImageUrl?.();
     const sidepanelBackground = userSidepanelBg || themeSidepanelBg || null;
@@ -196,7 +197,7 @@ export default class Sidepanel extends React.Component<Props, State> {
               )
             }
           </div>
-          {this.sections.map(s => (s.props.icon || s.props.title) && (
+          {sections.map(s => (s.props.icon || s.props.title) && (
             <div className={s.props.advancedOnly ? "advanced-only" : ""} key={String(s.props.id)}>
               {s.props.separator === true ? (<hr style={{ 
                 border: 'none', 

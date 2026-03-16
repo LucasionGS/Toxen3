@@ -39,7 +39,16 @@ type SocketEventMap = {
 class FriendSocket {
   private socket: Socket | null = null;
   private _presences = new Map<number, FriendPresence>();
-  private _handlers: Partial<SocketEventMap> = {};
+  private _listeners = new Map<keyof SocketEventMap, Map<symbol, Function>>();
+
+  private _emit<E extends keyof SocketEventMap>(event: E, ...args: Parameters<SocketEventMap[E]>) {
+    const bucket = this._listeners.get(event);
+    if (bucket) {
+      for (const fn of bucket.values()) {
+        (fn as any)(...args);
+      }
+    }
+  }
 
   /** Connect to the realtime socket server using the current user's token. */
   public connect() {
@@ -76,20 +85,20 @@ class FriendSocket {
       for (const p of presences) {
         this._presences.set(p.userId, p);
       }
-      this._handlers.friends_presence?.(presences);
+      this._emit("friends_presence", presences);
     });
 
     this.socket.on("friend_presence", (presence: FriendPresence) => {
       this._presences.set(presence.userId, presence);
-      this._handlers.friend_presence?.(presence);
+      this._emit("friend_presence", presence);
     });
 
     this.socket.on("friend_request", (friendship: IFriendship) => {
-      this._handlers.friend_request?.(friendship);
+      this._emit("friend_request", friendship);
     });
 
     this.socket.on("friend_accepted", (friendship: IFriendship) => {
-      this._handlers.friend_accepted?.(friendship);
+      this._emit("friend_accepted", friendship);
     });
 
     this.socket.on("disconnect", () => {
@@ -101,6 +110,7 @@ class FriendSocket {
     this.socket?.disconnect();
     this.socket = null;
     this._presences.clear();
+    this._listeners.clear();
   }
 
   public isConnected() {
@@ -121,12 +131,20 @@ class FriendSocket {
     return Array.from(this._presences.values());
   }
 
-  public on<E extends keyof SocketEventMap>(event: E, handler: SocketEventMap[E]) {
-    this._handlers[event] = handler as any;
+  /**
+   * Subscribe to a socket event. Returns an unsubscribe function.
+   */
+  public on<E extends keyof SocketEventMap>(event: E, handler: SocketEventMap[E]): () => void {
+    if (!this._listeners.has(event)) {
+      this._listeners.set(event, new Map());
+    }
+    const key = Symbol();
+    this._listeners.get(event)!.set(key, handler as Function);
+    return () => this._listeners.get(event)?.delete(key);
   }
 
   public off(event: keyof SocketEventMap) {
-    delete this._handlers[event];
+    this._listeners.delete(event);
   }
 }
 
