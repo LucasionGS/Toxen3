@@ -67,6 +67,21 @@ body[fullscreen] .appBar, body[miniplayer] .appBar {
   display: none;
 }
 
+@if ToxenIsWeb() {
+  @media screen and ((max-width: 768px)) { // Mobile view
+    .appBar {
+      -webkit-app-region: none;
+      height: var(--appbar-height);
+
+      .appBarTitle {
+        * {
+          font-size: 0.95em !important;
+        }
+      }
+    }
+  }
+}
+
 .window-draggable {
   user-select: none;
   -webkit-user-select: none;

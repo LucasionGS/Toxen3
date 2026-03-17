@@ -235,25 +235,59 @@
 }
 
 // Responsive adjustments
-@media (max-width: 768px) {
-  .song-element {
-    width: 85%;
-    
-    &.selected {
-      width: 88%;
+@if ToxenIsWeb() {
+  @media (max-width: 768px) {
+    .song-element {
+      width: 100%;
+      min-height: 52px;
+      border-radius: 10px;
+      border-top-right-radius: 10px;
+      border-bottom-right-radius: 10px;
+
+      &.selected {
+        width: 100% !important;
+        transform: none !important;
+        border-radius: 12px !important;
+      }
+
+      &.playing:not(.selected) {
+        width: 100%;
+        transform: none;
+        border-radius: 12px;
+      }
+
+      &:hover {
+        width: 100%;
+        transform: none;
+        border-top-right-radius: 10px;
+        border-bottom-right-radius: 10px;
+      }
+
+      .song-title {
+        font-size: 14px;
+        padding: 14px 16px;
+      }
     }
-    
-    &.playing {
-      width: 92%;
+
+    // Disable proximity effects on mobile (no hover)
+    .song-element-permadiv:has(+ .song-element-permadiv + .song-element-permadiv .song-element:hover) .song-element,
+    .song-element-permadiv:has(+ .song-element-permadiv .song-element:hover) .song-element,
+    .song-element-permadiv:has(.song-element:hover) + .song-element-permadiv .song-element,
+    .song-element-permadiv:has(.song-element:hover) + .song-element-permadiv + .song-element-permadiv .song-element {
+      width: 100%;
+      transform: none;
+      border-radius: 10px;
     }
-    
-    &:hover {
-      width: 95%;
-    }
-    
-    .song-title {
-      font-size: 13px;
-      padding: 10px 12px;
+
+    .song-element-container {
+      .song-element-context-menu-button {
+        display: initial;
+        opacity: 0.7;
+      }
+
+      &:hover .song-element .song-title {
+        padding-left: 16px;
+      }
     }
   }
 }
