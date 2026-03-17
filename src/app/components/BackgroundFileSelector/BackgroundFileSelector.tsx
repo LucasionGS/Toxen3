@@ -93,11 +93,6 @@ export default function BackgroundFileSelector({
       }
     } else {
       // Default delete behavior with modal confirmation
-      if (!toxenapi.isDesktop()) {
-        Toxen.error('File deletion is only available in desktop version', 3000);
-        return;
-      }
-      
       modals.openConfirmModal({
         title: 'Delete background image',
         children: (
@@ -106,22 +101,28 @@ export default function BackgroundFileSelector({
               Are you sure you want to delete <Text span fw={500}>"{fileName}"</Text>?
             </Text>
             <Text size="sm" c="dimmed">
-              This action cannot be undone. The image file will be permanently removed from your song directory.
+              This action cannot be undone. The image file will be permanently removed.
             </Text>
           </Stack>
         ),
         labels: { confirm: 'Delete image', cancel: 'Cancel' },
         confirmProps: { color: 'red', leftSection: <IconTrash size={16} /> },
         onConfirm: async () => {
-          if (!toxenapi.isDesktop()) {
-            Toxen.error('File operations are only available in desktop version', 3000);
-            return;
-          }
-          
           try {
             const workingDir = getWorkingDir();
-            const filePath = toxenapi.joinPath(workingDir, fileName);
-            toxenapi.fs.unlinkSync(filePath);
+            if (toxenapi.isDesktop() && !workingDir.startsWith('http://') && !workingDir.startsWith('https://')) {
+              // Local desktop delete
+              const filePath = toxenapi.joinPath(workingDir, fileName);
+              toxenapi.fs.unlinkSync(filePath);
+            } else {
+              // Remote delete
+              const deleteUrl = `${workingDir}/${fileName}`;
+              const res = await Toxen.fetch(deleteUrl, { method: 'DELETE' });
+              if (!res.ok) {
+                const err = await res.json().catch(() => ({ error: 'Delete failed' }));
+                throw new Error(err.error || 'Failed to delete background image');
+              }
+            }
             Toxen.log(`Background image deleted: ${fileName}`, 3000);
             
             await reloadFileList();
@@ -151,7 +152,7 @@ export default function BackgroundFileSelector({
       for (const file of files) {
         let imagePath: string | null;
         if (workingDir.startsWith("http://") || workingDir.startsWith("https://")) {
-          imagePath = User.appendAuth(`${workingDir}/${file}`);
+          imagePath = User.appendAuth(`${workingDir}/${file}`) + `?h=${Math.random()}`; // Append random query to prevent caching
         } else if (toxenapi.isDesktop()) {
           imagePath = `file://${toxenapi.path.resolve(workingDir, file).replace(/\\/g, "/")}`;
         } else {
@@ -236,7 +237,51 @@ export default function BackgroundFileSelector({
           Toxen.error(`Failed to select background image: ${error.message}`, 5000);
         }
       } else {
-        Toxen.error('File browsing is only available in desktop version', 3000);
+        // Web/remote: use HTML file input
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.onchange = async () => {
+          const file = input.files?.[0];
+          if (!file) return;
+
+          try {
+            const fileName = file.name;
+            let copySuccess = false;
+
+            if (onCopyFile) {
+              // For custom copy logic, pass the File object URL as source
+              const objectUrl = URL.createObjectURL(file);
+              copySuccess = await onCopyFile(objectUrl, fileName);
+              URL.revokeObjectURL(objectUrl);
+            } else {
+              // Upload to remote server
+              const workingDir = getWorkingDir();
+              const uploadUrl = `${workingDir}/${fileName}`;
+              const res = await Toxen.fetch(uploadUrl, {
+                method: 'PUT',
+                body: file,
+              });
+
+              if (!res.ok) {
+                const err = await res.json().catch(() => ({ error: 'Upload failed' }));
+                throw new Error(err.error || 'Failed to upload background image');
+              }
+
+              Toxen.log(`Background image uploaded: ${fileName}`, 3000);
+              copySuccess = true;
+            }
+
+            if (copySuccess) {
+              await reloadFileList();
+              setCurrentValue(fileName);
+              onChange?.(fileName);
+            }
+          } catch (error) {
+            Toxen.error(`Failed to upload background image: ${error.message}`, 5000);
+          }
+        };
+        input.click();
       }
       return;
     }
