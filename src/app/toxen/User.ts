@@ -154,6 +154,7 @@ export default class User {
     user.premium_expire = (info.premium_expire ? new Date(info.premium_expire) : null);
     user.storage_used = info.storage_used;
     user.storage_quota = info.storage_quota;
+    user.roles = info.roles || [];
 
     return user;
   }
@@ -168,6 +169,15 @@ export default class User {
   premium_expire: Date;
   storage_used: number;
   storage_quota: number;
+  roles: string[];
+
+  public hasRole(role: string): boolean {
+    return this.roles?.includes(role) ?? false;
+  }
+
+  public isAdmin(): boolean {
+    return this.hasRole("admin");
+  }
 
   // ---- Friend API ----
 
@@ -237,4 +247,5 @@ interface IUser {
   premium_expire: string;
   storage_used: number;
   storage_quota: number;
+  roles: string[];
 }

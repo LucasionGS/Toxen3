@@ -8,6 +8,7 @@ export interface ExtensionManifest {
   name: string;
   version: string;
   author: string;
+  authorId?: number;
   description: string;
   main?: string;
   visualizers?: ExtensionVisualizerManifest[];

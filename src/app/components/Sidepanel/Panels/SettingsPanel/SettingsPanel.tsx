@@ -6,6 +6,7 @@ import Converter from "../../../../toxen/Converter";
 // import HueManager from "../../../../toxen/philipshue/HueManager";
 import Settings, { ISettings, VisualizerStyle, visualizerStyleOptions } from "../../../../toxen/Settings";
 import ExtensionManager from "../../../../toxen/extensions/ExtensionManager";
+import ExtensionStorePanel from "../../../ExtensionPanel/ExtensionStorePanel";
 import Song from "../../../../toxen/Song";
 import { Toxen } from "../../../../ToxenApp";
 import TButton from "../../../Button/Button";
@@ -896,6 +897,8 @@ export default function SettingsPanel(props: SettingsPanelProps) {
             }}>
               Open Extensions Folder
             </Button>
+            <br /><br />
+            {toxenapi.isDesktop() && <ExtensionStorePanel />}
           </Tabs.Panel>
         )}
       </Tabs>
