@@ -58,6 +58,11 @@ export interface ExtensionExports {
 // ─── Extension Class ─────────────────────────────────────────────────
 
 export class Extension {
+  /**
+   * API version that extensions must target. Incremented when large additions or breaking changes are made to the API.
+   */
+  public static apiVersion = 1;
+  
   public manifest: ExtensionManifest;
   public dirPath: string;
   public enabled: boolean;
@@ -93,7 +98,7 @@ export class Extension {
     }
 
     const api: ToxenExtensionAPI = {
-      apiVersion: 1,
+      apiVersion: Extension.apiVersion,
       registerVisualizer: (localId, renderFn) => {
         const fullId = `ext:${this.manifest.id}:${localId}`;
         ExtensionManager.visualizerRenderers.set(fullId, renderFn);
