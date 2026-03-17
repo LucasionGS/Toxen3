@@ -1,3 +1,20 @@
+<!-- VERSION: 2.6.4 -->
+## 2.6.4 - 17-03-2026
+### New Features
+- **Toxen Stream: Background Management** - You can now add and delete backgrounds from individual songs on web.
+- **Toxen Stream: Default Backgrounds** - Added support for default backgrounds on the Toxen Stream server. Just like on local, you can use default backgrounds now.
+- **Import of storyboard (TSB) files** - You can now import storyboard files through drag and drop now, both on desktop and web.
+- **Import of Song package (TSZ) files on web** - Import full song packages through drag and drop on web. This includes all song files and settings.
+
+## 2.6.3 - 16-03-2026
+### New Features
+- **Friends List** - Added a friends list to the Toxen Stream server, allowing you to add friends and see when they're online. You can also see what song they're currently playing. This is currently in a very early stage and will be expanded upon in the future.
+  - Add friends by their email address in the new `Friends` tab in the settings
+  - See your friends list and their online status in the `Friends` tab
+  - View what song your friends are currently playing, if they're online and playing a song
+
+
+
 <!-- VERSION: 2.6.2 -->
 ## 2.6.2 - 16-03-2026
 ### Hotfix
