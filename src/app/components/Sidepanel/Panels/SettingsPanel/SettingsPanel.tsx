@@ -24,6 +24,7 @@ interface SettingsPanelProps { }
 
 export default function SettingsPanel(props: SettingsPanelProps) {
   const forceUpdate = useForceUpdate();
+  const [selectedTheme, setSelectedTheme] = React.useState(Toxen.theme?.name ?? "");
   const user = User.getCurrentUser();
   return (
     <>
@@ -215,6 +216,7 @@ export default function SettingsPanel(props: SettingsPanelProps) {
               allowDeselect={false}
               onChange={(value) => {
                 Toxen.setThemeByName(value as string);
+                setSelectedTheme(value as string);
               }}
               defaultValue={Toxen.theme?.name ?? ""}
               name="theme"
@@ -256,6 +258,7 @@ export default function SettingsPanel(props: SettingsPanelProps) {
               <Button 
                 leftSection={<i className="fas fa-paint-brush" />} 
                 onClick={() => Toxen.setMode("ThemeEditor")}
+                disabled={ExtensionManager.isExtensionStyle(selectedTheme)}
               >
                 Edit Theme
               </Button>

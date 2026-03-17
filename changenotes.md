@@ -1,3 +1,9 @@
+<!-- VERSION: 2.7.1 -->
+## 2.7.1 - 17-03-2026
+### New Features
+- Added support for themes from extensions. If an extension provides themes, they will now be available in the theme selector just like regular themes.
+
+
 <!-- VERSION: 2.7.0 -->
 ## 2.7.0 - 17-03-2026
 ### New Features

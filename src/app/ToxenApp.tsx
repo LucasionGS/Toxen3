@@ -761,8 +761,10 @@ export class Toxen {
 
   public static async loadThemes() {
     Toxen.themes = await Theme.load();
-    let theme = Toxen.themes.find(t => t.name === Settings.get("theme"));
-    if (!Toxen.theme) {
+    const themeName = Settings.get("theme");
+    let theme = Toxen.themes.find(t => t.name === themeName);
+    if (!theme && themeName) theme = ExtensionManager.getTheme(themeName);
+    if (!theme) {
       Settings.set("theme", null);
     }
     Toxen.setTheme(theme ?? null);
