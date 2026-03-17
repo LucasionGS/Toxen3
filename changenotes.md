@@ -1,3 +1,19 @@
+<!-- VERSION: 2.7.0 -->
+## 2.7.0 - 17-03-2026
+### New Features
+- **Extension Store** - Browse, install, and update extensions directly from within Toxen
+  - Discover community-made extensions in the new Extension Store, found in `Settings > Extensions`
+  - Install and update extensions with a single click
+  - Submit your own extensions for review and share them with others
+- **Visualizer Center Image** - The **Orb**, **Waveform Circle**, and **Clock** visualizers now support a center image
+  - Select any image from the song folder to display in the center of the visualizer
+  - The image is circularly cropped and pulses with the music
+  - Configure per-song in the Edit Song panel under the visualizer style options
+
+### Bug Fixes
+- Fixed uploading background images to songs on Toxen Stream from the desktop app failing with a file copy error
+- Fixed the image picker in visualizer settings showing files from the currently playing song instead of the song being edited
+
 <!-- VERSION: 2.6.4 -->
 ## 2.6.4 - 17-03-2026
 ### New Features
