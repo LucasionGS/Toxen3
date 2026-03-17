@@ -428,6 +428,7 @@ export type VisualizerStyleOptionsTypes =
   | "range"
   | "boolean"
   | "select"
+  | "songImage"
 
 export interface VisualizerStyleOption {
   name: string;
@@ -476,6 +477,12 @@ export const visualizerStyleOptions: Partial<Record<string, VisualizerStyleOptio
       key: "opaque",
       type: "boolean",
       defaultValue: "",
+    },
+    {
+      name: "Center Image",
+      key: "orbImage",
+      type: "songImage",
+      defaultValue: "",
     }
   ],
   [VisualizerStyle.WaveformCircle]: [
@@ -523,6 +530,12 @@ export const visualizerStyleOptions: Partial<Record<string, VisualizerStyleOptio
       min: 1,
       max: 10,
       step: 0.5,
+    },
+    {
+      name: "Center Image",
+      key: "centerImage",
+      type: "songImage",
+      defaultValue: "",
     }
   ],
   [VisualizerStyle.Heart]: [
@@ -684,6 +697,12 @@ export const visualizerStyleOptions: Partial<Record<string, VisualizerStyleOptio
       min: 0,
       max: 1000,
       step: 0.1,
+    },
+    {
+      name: "Center Image",
+      key: "centerImage",
+      type: "songImage",
+      defaultValue: "",
     }
   ],
   [VisualizerStyle.Jellyfish]: [

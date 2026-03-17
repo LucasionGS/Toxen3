@@ -17,6 +17,17 @@ const imgSize = 256;
 const toxenLogo = new Image(imgSize, imgSize);
 toxenLogo.src = txnLogo;
 
+// Center image cache for circular visualizers (Orb, WaveformCircle)
+const circleImageCache: Map<string, { src: string; img: HTMLImageElement }> = new Map();
+function getCachedCircleImage(key: string, imgSrc: string): HTMLImageElement {
+  const cached = circleImageCache.get(key);
+  if (cached && cached.src === imgSrc) return cached.img;
+  const img = new Image();
+  img.src = imgSrc;
+  circleImageCache.set(key, { src: imgSrc, img });
+  return img;
+}
+
 interface VisualizerProps { }
 
 interface VisualizerState { }
@@ -858,6 +869,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
             y: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Orb, "y") ?? 50,
             size: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Orb, "size") ?? 0,
             opaque: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Orb, "opaque") ?? false,
+            orbImage: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Orb, "orbImage") as string ?? "",
           }
           // console.log(vsOptions);
           
@@ -966,6 +978,26 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
             ctx.fill();
             ctx.restore();
           }
+
+          // Draw center image if configured
+          if (vsOptions.orbImage && song) {
+            const imgSrc = User.appendAuth(`${song.dirname()}/${vsOptions.orbImage}`);
+            const orbImg = getCachedCircleImage("orb", imgSrc);
+            if (orbImg.complete && orbImg.naturalWidth > 0) {
+              ctx.save();
+              setBarShadowBlur(highest);
+              ctx.beginPath();
+              ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+              ctx.clip();
+              const d = radius * 2;
+              // Center-crop: pick the largest centered square from the source image
+              const srcSize = Math.min(orbImg.naturalWidth, orbImg.naturalHeight);
+              const sx = (orbImg.naturalWidth - srcSize) / 2;
+              const sy = (orbImg.naturalHeight - srcSize) / 2;
+              ctx.drawImage(orbImg, sx, sy, srcSize, srcSize, centerX - radius, centerY - radius, d, d);
+              ctx.restore();
+            }
+          }
           break;
         }
         case VisualizerStyle.WaveformCircle: {
@@ -976,6 +1008,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
             size: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.WaveformCircle, "size") ?? 0,
             smoothing: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.WaveformCircle, "smoothing") ?? 0.7,
             thickness: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.WaveformCircle, "thickness") ?? 3,
+            centerImage: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.WaveformCircle, "centerImage") as string ?? "",
           }
           
           const maxHeight = getMaxHeight(0.4); // Slightly higher amplitude than regular waveform
@@ -1130,6 +1163,24 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
             
             ctx.restore();
           });
+
+          // Draw center image if configured
+          if (vsOptions.centerImage && song) {
+            const imgSrc = User.appendAuth(`${song.dirname()}/${vsOptions.centerImage}`);
+            const wcImg = getCachedCircleImage("waveformcircle", imgSrc);
+            if (wcImg.complete && wcImg.naturalWidth > 0) {
+              ctx.save();
+              ctx.beginPath();
+              ctx.arc(centerX, centerY, baseRadius, 0, Math.PI * 2);
+              ctx.clip();
+              const d = baseRadius * 2;
+              const srcSize = Math.min(wcImg.naturalWidth, wcImg.naturalHeight);
+              const sx = (wcImg.naturalWidth - srcSize) / 2;
+              const sy = (wcImg.naturalHeight - srcSize) / 2;
+              ctx.drawImage(wcImg, sx, sy, srcSize, srcSize, centerX - baseRadius, centerY - baseRadius, d, d);
+              ctx.restore();
+            }
+          }
           break;
         }
         case VisualizerStyle.Heart: {
@@ -1588,6 +1639,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
             x: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Clock, "x") ?? 50,
             y: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Clock, "y") ?? 50,
             size: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Clock, "size") ?? 0,
+            centerImage: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Clock, "centerImage") as string ?? "",
           }
 
           const maxHeight = getMaxHeight(0.15);
@@ -1659,10 +1711,29 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           // --- Draw clock face circle ---
           ctx.shadowBlur = 0;
           const oldAlpha = ctx.globalAlpha;
-          ctx.globalAlpha = opacity * 0.15;
-          ctx.beginPath();
-          ctx.arc(centerX, centerY, clockRadius, 0, Math.PI * 2);
-          ctx.fill();
+
+          // Draw center image if configured (behind clock elements)
+          if (vsOptions.centerImage && song) {
+            const imgSrc = User.appendAuth(`${song.dirname()}/${vsOptions.centerImage}`);
+            const clockImg = getCachedCircleImage("clock", imgSrc);
+            if (clockImg.complete && clockImg.naturalWidth > 0) {
+              ctx.save();
+              ctx.beginPath();
+              ctx.arc(centerX, centerY, clockRadius, 0, Math.PI * 2);
+              ctx.clip();
+              const d = clockRadius * 2;
+              const srcSize = Math.min(clockImg.naturalWidth, clockImg.naturalHeight);
+              const sx = (clockImg.naturalWidth - srcSize) / 2;
+              const sy = (clockImg.naturalHeight - srcSize) / 2;
+              ctx.drawImage(clockImg, sx, sy, srcSize, srcSize, centerX - clockRadius, centerY - clockRadius, d, d);
+              ctx.restore();
+            }
+          } else {
+            ctx.globalAlpha = opacity * 0.15;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, clockRadius, 0, Math.PI * 2);
+            ctx.fill();
+          }
           ctx.globalAlpha = oldAlpha;
 
           // Clock rim

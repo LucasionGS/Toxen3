@@ -7,6 +7,7 @@ import Converter from "../../../../toxen/Converter";
 import Settings, { ISettings, VisualizerStyle, visualizerStyleOptions } from "../../../../toxen/Settings";
 import ExtensionManager from "../../../../toxen/extensions/ExtensionManager";
 import ExtensionStorePanel from "../../../ExtensionPanel/ExtensionStorePanel";
+import BackgroundFileSelector from "../../../BackgroundFileSelector/BackgroundFileSelector";
 import Song from "../../../../toxen/Song";
 import { Toxen } from "../../../../ToxenApp";
 import TButton from "../../../Button/Button";
@@ -910,9 +911,10 @@ export function VisualizerStyleOptions(props: {
   style: VisualizerStyle | string,
   allOptions: ISettings["visualizerStyleOptions"],
   onSave: (allOptions: ISettings["visualizerStyleOptions"]) => void,
-  onSaveEnd?: (allOptions: ISettings["visualizerStyleOptions"]) => void
+  onSaveEnd?: (allOptions: ISettings["visualizerStyleOptions"]) => void,
+  song?: Song,
 }) {
-  const { style, allOptions = {}, onSave, onSaveEnd = onSave } = props;
+  const { style, allOptions = {}, onSave, onSaveEnd = onSave, song } = props;
 
   // Get options from built-in styles or extension styles
   const styleOptions = visualizerStyleOptions[style] ?? ExtensionManager.getVisualizerOptions(style as string) ?? [];
@@ -998,6 +1000,23 @@ export function VisualizerStyleOptions(props: {
           data={option.options}
         />
       );
+
+      case "songImage": {
+        const sourceSong = song ?? Song.getCurrent();
+        return (
+          <BackgroundFileSelector
+            key={option.key}
+            label={option.name}
+            defaultValue={options[option.key] ?? option.defaultValue}
+            getSourceDir={() => sourceSong?.dirname()}
+            onChange={(value) => {
+              options[option.key] = value ?? "";
+              allOptions[style] = options;
+              onSaveEnd(allOptions);
+            }}
+          />
+        );
+      }
     }
   });
 }

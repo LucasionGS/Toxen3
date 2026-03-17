@@ -5,6 +5,7 @@ import { useModals } from '@mantine/modals';
 import { Toxen } from '../../ToxenApp';
 import User from '../../toxen/User';
 import './BackgroundFileSelector.scss';
+import Settings from '../../toxen/Settings';
 
 interface BackgroundFileSelectorProps {
   label?: string;
@@ -200,27 +201,49 @@ export default function BackgroundFileSelector({
             if (onCopyFile) {
               copySuccess = await onCopyFile(selectedFile, fileName);
             } else {
-              // Default copy logic - ensure desktop mode
-              if (!toxenapi.isDesktop()) {
-                Toxen.error('File operations are only available in desktop version', 3000);
-                return;
-              }
-              
               const workingDir = getWorkingDir();
-              const targetPath = toxenapi.joinPath(workingDir, fileName);
+              // const isRemoteDir = workingDir.startsWith('http://') || workingDir.startsWith('https://');
 
-              // Copy file to working directory if it's not already there
-              if (selectedFile !== targetPath) {
+              if (Settings.isRemote()) {
+                // Desktop + remote: read local file and upload to server
                 try {
-                  toxenapi.fs.copyFileSync(selectedFile, targetPath);
-                  Toxen.log(`Background image copied: ${fileName}`, 3000);
+                  const fileBuffer = toxenapi.fs.readFileSync(selectedFile);
+                  const uploadUrl = `${workingDir}/${fileName}`;
+                  const res = await Toxen.fetch(uploadUrl, {
+                    method: 'PUT',
+                    body: new Blob([fileBuffer]),
+                  });
+                  if (!res.ok) {
+                    const err = await res.json().catch(() => ({ error: 'Upload failed' }));
+                    throw new Error(err.error || 'Failed to upload background image');
+                  }
+                  Toxen.log(`Background image uploaded: ${fileName}`, 3000);
                   copySuccess = true;
                 } catch (error) {
-                  Toxen.error(`Failed to copy background image: ${error.message}`, 5000);
+                  Toxen.error(`Failed to upload background image: ${error.message}`, 5000);
                   return;
                 }
               } else {
-                copySuccess = true;
+                // Local desktop copy
+                if (!toxenapi.isDesktop()) {
+                  Toxen.error('File operations are only available in desktop version', 3000);
+                  return;
+                }
+                
+                const targetPath = toxenapi.joinPath(workingDir, fileName);
+
+                if (selectedFile !== targetPath) {
+                  try {
+                    toxenapi.fs.copyFileSync(selectedFile, targetPath);
+                    Toxen.log(`Background image copied: ${fileName}`, 3000);
+                    copySuccess = true;
+                  } catch (error) {
+                    Toxen.error(`Failed to copy background image: ${error.message}`, 5000);
+                    return;
+                  }
+                } else {
+                  copySuccess = true;
+                }
               }
             }
 

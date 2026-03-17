@@ -528,6 +528,7 @@ export default function EditSong(props: EditSongProps) {
             saveSettings('visualizerStyleOptions', allOptions);
             forceUpdate();
           }}
+          song={Toxen.editingSong}
         />
 
         {/* Visualizer Glow */}
