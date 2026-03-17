@@ -41,6 +41,7 @@ export default class System {
       let sMedia = Toxen.getSupportedMediaFiles();
       let sImage = Toxen.getSupportedImageFiles();
       let sSubtitle = Toxen.getSupportedSubtitleFiles();
+      let sStoryboard = Toxen.getSupportedStoryboardFiles();
 
       const Content = (props: { children?: React.ReactNode }) => (
         <>
@@ -248,6 +249,51 @@ export default class System {
               song.applySubtitles();
             }
             reader.readAsDataURL(file);
+          }
+
+          break;
+        }
+        // Storyboard files
+        else if (sStoryboard.some(ext => file.name.endsWith(ext))) {
+          if (mediaPack) {
+            if (verbose) Toxen.warn("Unable to mix media and storyboard files. Skipping storyboard file.");
+            continue;
+          }
+
+          let song = Song.getCurrent();
+          if (!song) break;
+          let sbName = file.name;
+
+          if (toxenapi.isLocal(Settings)) {
+            let dest = song.dirname(sbName);
+            await toxenapi.fs.promises.copyFile(file.path, dest).then(async () => {
+              song.paths.storyboard = toxenapi.getBasename(dest);
+              song.setFile(sbName, "u");
+              await song.saveInfo();
+              await song.applyStoryboard();
+            })
+              .catch((reason) => {
+                Toxen.error("Unable to change storyboard");
+                Toxen.error(reason);
+              });
+          }
+          else if (file instanceof File) {
+            song.paths.storyboard = sbName;
+
+            let filetime = Date.now();
+            song.setFile(sbName, "u", filetime);
+            await Toxen.fetch(`${song.storyboardFile()}`, {
+              method: "PUT",
+              body: file
+            }).then(() => {
+              Toxen.log("Uploaded storyboard file", 3000);
+            }).catch((reason) => {
+              Toxen.error("Unable to upload storyboard file");
+              Toxen.error(reason);
+            });
+
+            await song.saveInfo();
+            await song.applyStoryboard();
           }
 
           break;
