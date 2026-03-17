@@ -405,11 +405,6 @@ export default class System {
         }
         // Toxen song package (.txz)
         else if (file.name.endsWith(".txz")) {
-          if (!toxenapi.isDesktop()) {
-            if (verbose) Toxen.error("Importing .txz packages is only available on the desktop version.");
-            continue;
-          }
-
           mediaPack = true;
           Toxen.loadingScreen.setContent(
             <Content>
@@ -418,19 +413,68 @@ export default class System {
           );
 
           try {
-            const libDir = Settings.get("libraryDirectory");
-            const info = await toxenapi.importTxzPackage(file.path, libDir);
-            const song = Song.create(info);
-            Toxen.songList.push(song);
+            if (toxenapi.isDesktop() && !Settings.isRemote()) {
+              // Desktop local import
+              const libDir = Settings.get("libraryDirectory");
+              const info = await toxenapi.importTxzPackage(file.path, libDir);
+              const song = Song.create(info);
+              Toxen.songList.push(song);
 
-            Toxen.loadingScreen.setContent(
-              <Content>
-                Imported {song.getDisplayName()}
-              </Content>
-            );
+              Toxen.loadingScreen.setContent(
+                <Content>
+                  Imported {song.getDisplayName()}
+                </Content>
+              );
 
-            if (verbose) {
-              Toxen.log(`Imported song package: ${song.getDisplayName()}`, 3000);
+              if (verbose) {
+                Toxen.log(`Imported song package: ${song.getDisplayName()}`, 3000);
+              }
+            } else {
+              // Web / remote import: upload .txz to server
+              const user = Settings.getUser();
+              if (!user) {
+                Toxen.error("Not logged in. Cannot import song package.");
+                continue;
+              }
+
+              const uid = Song.generateUID();
+              const formData = new FormData();
+
+              let fileBlob: Blob;
+              if (file instanceof File) {
+                fileBlob = file;
+              } else if (toxenapi.isDesktop() && file.path) {
+                const buf = await toxenapi.fs.promises.readFile(file.path);
+                fileBlob = new Blob([new Uint8Array(buf)]);
+              } else {
+                throw new Error("Unable to read .txz file");
+              }
+
+              formData.append("file", fileBlob, file.name);
+
+              const res = await Toxen.fetch(`${user.getCollectionPath()}/import/${uid}`, {
+                method: "POST",
+                body: formData,
+              });
+
+              if (!res.ok) {
+                const err = await res.json().catch(() => ({ error: "Upload failed" }));
+                throw new Error(err.error || "Failed to import song package");
+              }
+
+              const info = await res.json();
+              const song = Song.create(info);
+              Toxen.songList.push(song);
+
+              Toxen.loadingScreen.setContent(
+                <Content>
+                  Imported {song.getDisplayName()}
+                </Content>
+              );
+
+              if (verbose) {
+                Toxen.log(`Imported song package: ${song.getDisplayName()}`, 3000);
+              }
             }
           } catch (error) {
             console.error("Failed to import .txz package:", error);
