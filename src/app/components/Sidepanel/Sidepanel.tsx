@@ -229,7 +229,6 @@ export default class Sidepanel extends React.Component<Props, State> {
                 }
                 this.setSectionId(s.props.id);
                 if (!this.state.show) this.show(true);
-                else if (this.state.exposeIcons && !this.state.show) this.show(true);
               }}>
                 {s.props.icon}
                 {s.props.title && this.state.show && (

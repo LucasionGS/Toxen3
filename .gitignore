@@ -102,3 +102,4 @@ toxen3-*.tar.gz
 /pkg
 /src/Toxen3-*
 .aur
+package-lock.json
