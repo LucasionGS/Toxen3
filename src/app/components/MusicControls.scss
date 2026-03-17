@@ -101,7 +101,7 @@ body[miniplayer].inactive .toxen-music-controls {
       padding: 6px;
 
       .toxen-music-controls-buttons {
-        .ctrl-btn * {
+        .ctrl-btn *:not([hidden]) {
           margin: 4px 10px;
           font-size: 28px;
           min-width: 44px;
