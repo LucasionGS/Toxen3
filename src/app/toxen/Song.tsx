@@ -1313,35 +1313,43 @@ export default class Song implements ISong {
   }
 
   public async delete(force?: boolean) {
-    if (Settings.isRemote()) {
-      Toxen.notify({
-        title: "Delete not implemented",
-        content: "This feature is not yet implemented for remote users.",
-        expiresIn: 5000,
-        type: "error"
-      });
-      return;
+    // Play the next song if this is the current song
+    const cur = Song.getCurrent();
+    if (cur && cur.uid === this.uid) {
+      await Toxen.musicPlayer.playNext();
     }
-    else {
-      if (toxenapi.isDesktop()) {
-        // Play the next song if this is the current song
-        let cur = Song.getCurrent();
-        if (cur && cur.uid === this.uid) {
-          await Toxen.musicPlayer.playNext();
+
+    // Delete from remote if user is logged in
+    const user = Settings.getUser();
+    if (user) {
+      try {
+        const res = await Toxen.fetch(`${user.getCollectionPath()}/${this.uid}`, {
+          method: "DELETE",
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: "Delete failed" }));
+          console.error("Remote delete failed:", err.error);
         }
-        try {
-          await toxenapi.fs.promises.rm(this.dirname(), { recursive: true });
-        } catch (error) {
-          try {
-            await toxenapi.fs.promises.rm(this.dirname(), { recursive: true, }); // Try again
-          } catch (error) {
-            Toxen.error("Failed to delete song: " + this.dirname());
-          }
-        }
-        Toxen.songList = Toxen.songList.filter(s => s !== this);
-        Toxen.songPanel.update();
+      } catch (error) {
+        console.error("Failed to delete song from remote:", error);
       }
     }
+
+    // Delete from local disk if on desktop and not remote-only
+    if (toxenapi.isDesktop() && !Settings.isRemote()) {
+      try {
+        await toxenapi.fs.promises.rm(this.dirname(), { recursive: true });
+      } catch (error) {
+        try {
+          await toxenapi.fs.promises.rm(this.dirname(), { recursive: true }); // Try again
+        } catch (error) {
+          Toxen.error("Failed to delete song: " + this.dirname());
+        }
+      }
+    }
+
+    Toxen.songList = Toxen.songList.filter(s => s !== this);
+    Toxen.songPanel.update();
   }
 
   public async saveInfo(opts?: {
