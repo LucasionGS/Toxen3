@@ -887,7 +887,29 @@ export class Toxen {
     
     console.log("Syncing songs...", songData);
     
-    // return;
+    // Detect server-only songs (new remote songs not yet on this client)
+    const localUids = new Set((songs ?? Toxen.songList).map(s => s.uid));
+    const serverOnlyUids = Object.keys(songData.result).filter(uid => !localUids.has(uid));
+
+    // Fetch metadata for server-only songs and create local Song objects
+    if (serverOnlyUids.length > 0) {
+      const user = Settings.getUser();
+      if (user) {
+        for (const uid of serverOnlyUids) {
+          try {
+            const res = await Toxen.fetch(`${user.getCollectionPath()}/${uid}/info.json`);
+            if (res.ok) {
+              const metadata = await res.json();
+              const newSong = Song.create(metadata);
+              Toxen.songList.push(newSong);
+            }
+          } catch (err) {
+            console.error(`Failed to fetch metadata for server-only song ${uid}:`, err);
+          }
+        }
+      }
+    }
+
     const currentQueue = [...(songs ?? Toxen.songList)];
     const total = currentQueue.length;
     // 5 songs at a time
@@ -909,6 +931,8 @@ export class Toxen {
         if (untilFinished <= 0) {
           Toxen.log("✅ Synced all songs.", 2500);
           browser.setProgressBar(-1);
+          Song.sortSongs(Toxen.songList);
+          Toxen.songPanel?.update();
         }
         
       }).catch(err => {

@@ -444,6 +444,50 @@ export default class DesktopController extends ToxenController {
 
   public async syncSong($toxen: typeof Toxen, user: User, song: Song, diff: SongDiff, { silenceValidated }: { silenceValidated?: boolean; }): Promise<void> {
     song.setProgressBar(0.10);
+
+    if (diff.download === "*") {
+      // Download entire song from remote (new server-only song)
+      const localDir = song.dirnameLocal();
+      song.setProgressBar(0.20);
+
+      // Fetch file listing from server
+      const fileList: string[] = await $toxen.fetch(`${user.getCollectionPath()}/${song.uid}`)
+        .then(res => res.ok ? res.json() : []);
+
+      if (fileList.length === 0) {
+        $toxen.error(`No files found on server for ${song.getDisplayName()}`);
+        song.setProgressBar(0);
+        return;
+      }
+
+      // Ensure local directory exists
+      await fsp.mkdir(localDir, { recursive: true });
+
+      let downloaded = 0;
+      for (const fileName of fileList) {
+        const filePath = Path.resolve(localDir, fileName);
+        await fsp.mkdir(Path.dirname(filePath), { recursive: true });
+
+        const res = await $toxen.fetch(`${user.getCollectionPath()}/${song.uid}/${fileName}`);
+        if (res.ok) {
+          await fsp.writeFile(filePath, (await res.blob()).stream());
+          console.log("Downloaded file:", fileName);
+        } else {
+          console.error("Failed to download file:", fileName);
+        }
+        downloaded++;
+        song.setProgressBar(0.20 + (downloaded / fileList.length) * 0.75);
+      }
+
+      // Reload song info from the downloaded info.json
+      await song.reload();
+      song.completeProgressBar();
+
+      if (!silenceValidated) {
+        $toxen.log(`Downloaded new track: ${song.getDisplayName()}`, 1500);
+      }
+      return;
+    }
     
     if (diff.upload === "*") {
       // Sync from disk to remote (Using archiver to zip the folder in memory)

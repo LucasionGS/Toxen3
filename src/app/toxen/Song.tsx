@@ -1420,24 +1420,17 @@ export default class Song implements ISong {
   }
 
   public static async importSong(file: File | ToxenFile): Promise<Result<Song>> {
-    if (Settings.isRemote()) {
-      Toxen.notify({
-        title: "Import not implemented",
-        content: "This feature is not yet implemented for remote users.",
-        expiresIn: 5000,
-        type: "error"
-      });
-    }
-    
-    if (!toxenapi.isDesktop()) {
-      toxenapi.throwDesktopOnly("Unable to import songs on web version.");
+    const ext = toxenapi.getFileExtension(file.name);
+    const supported = Toxen.getSupportedMediaFiles();
+    if (!supported.some(s => ext === s)) return new Failure(file.name + " isn't a valid file");
+
+    if (Settings.isRemote() || !toxenapi.isDesktop()) {
+      // Web / remote import: upload file to server
+      return Song.importSongRemote(file);
     }
 
     const ensureValidName = (path: string) => path.replace(/[^:\\\/a-z0-9\(\)\[\]\{\}\.\-\_\s]/gi, "_");
     return Promise.resolve().then(async () => {
-      let supported = Toxen.getSupportedMediaFiles();
-      if (!supported.some(s => toxenapi.path.extname(file.name) === s)) return new Failure(file.name + " isn't a valid file");
-
       let libDir = Settings.get("libraryDirectory");
       let nameNoExt = Converter.trimChar(toxenapi.path.basename(file.name, toxenapi.path.extname(file.name)), ".");
       let newFolder = toxenapi.path.resolve(libDir, nameNoExt);
@@ -1460,6 +1453,59 @@ export default class Song implements ISong {
 
       return new Success(s);
     });
+  }
+
+  /**
+   * Import a song via remote upload to the server.
+   */
+  private static async importSongRemote(file: File | ToxenFile): Promise<Result<Song>> {
+    const user = Settings.getUser();
+    if (!user) return new Failure("Not logged in");
+
+    const uid = Song.generateUID();
+    const fileName = file.name;
+    const nameNoExt = fileName.substring(0, fileName.lastIndexOf(".")) || fileName;
+
+    // Determine the file body to upload
+    let body: BodyInit;
+    if (file instanceof File) {
+      body = file;
+    } else {
+      // ToxenFile with a path (desktop calling remote import) — read it
+      if (!toxenapi.isDesktop()) return new Failure("Cannot read file path on web");
+      const buf = await toxenapi.fs.promises.readFile(file.path);
+      body = new Uint8Array(buf);
+    }
+
+    // Upload the media file
+    const uploadRes = await Toxen.fetch(`${user.getCollectionPath()}/${uid}/${fileName}`, {
+      method: "PUT",
+      body,
+    });
+
+    if (!uploadRes.ok) {
+      const err = await uploadRes.json().catch(() => ({ error: "Upload failed" }));
+      return new Failure(err.error || "Upload failed");
+    }
+
+    // Build a song object and save its metadata
+    const song = Song.create({
+      uid,
+      title: nameNoExt,
+      paths: {
+        dirname: uid,
+        media: fileName,
+        background: "",
+        subtitles: "",
+        storyboard: "",
+      },
+    });
+
+    song.setFile(fileName, "u");
+    song.setFile("info.json", "u");
+    await song.saveInfo();
+
+    return new Success(song);
   }
 
   /**

@@ -9,14 +9,8 @@ import ExternalUrl from '../../../ExternalUrl/ExternalUrl';
 import './ImportPanel.scss';
 
 export default function ImportPanel() {
-  if (Settings.isRemote()) {
-    return (
-      <div>
-        <Alert color="red">Importing music is only available locally.</Alert>
-      </div>
-    );
-  }
-  
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
   return (
     <div className="import-panel">
       <h1>Import music</h1>
@@ -24,7 +18,7 @@ export default function ImportPanel() {
         leftSection={<IconMusic size={16} />}
         variant="light"
         onClick={() => {
-          if (toxenapi.isDesktop()) {
+          if (toxenapi.isDesktop() && !Settings.isRemote()) {
             let paths = toxenapi.remote.dialog.showOpenDialogSync(toxenapi.remote.getCurrentWindow(), {
               properties: [
                 "multiSelections",
@@ -50,10 +44,25 @@ export default function ImportPanel() {
             });
           }
           else {
-            toxenapi.throwDesktopOnly("Import local files not yet implemented");
+            // Web / remote: use HTML file picker
+            fileInputRef.current?.click();
           }
         }}
       >Import Files</Button>
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept={Toxen.getSupportedMediaFiles().join(",")}
+        style={{ display: "none" }}
+        onChange={(e) => {
+          const fileList = e.target.files;
+          if (!fileList || fileList.length === 0) return;
+          System.handleImportedFiles(fileList);
+          // Reset so the same files can be selected again
+          e.target.value = "";
+        }}
+      />
       
       <Divider my="md" />
       
