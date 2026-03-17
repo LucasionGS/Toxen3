@@ -127,14 +127,19 @@
 }
 
 // Responsive design
-@media (max-width: 768px) {
-  .playlist-selection-list {
-    max-height: 300px;
-  }
-  
-  .playlist-selection-item {
-    &:hover {
-      transform: none;
+@if ToxenIsWeb() {
+  @media (max-width: 768px) {
+    .playlist-selection-list {
+      max-height: 50vh;
+    }
+    
+    .playlist-selection-item {
+      min-height: 48px;
+      padding: 12px 16px;
+
+      &:hover {
+        transform: none;
+      }
     }
   }
 }

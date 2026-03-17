@@ -30,3 +30,20 @@
     }
   }
 }
+
+@if ToxenIsWeb() {
+  @media screen and ((max-width: 768px)) { // Mobile view
+    .toxen-progress-bar-container {
+      .toxen-progress-bar {
+        width: 95%;
+        height: 1.5em;
+        border-radius: 8px;
+        // Touch-friendly: always show expanded size
+        &:hover {
+          height: 1.5em;
+          border: 1px solid;
+        }
+      }
+    }
+  }
+}

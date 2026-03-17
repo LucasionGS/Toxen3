@@ -369,24 +369,26 @@
 }
 
 // Responsive design
-@media (max-width: 768px) {
-  .video-card {
-    .video-thumbnail-container {
-      height: 100px;
+@if ToxenIsWeb() {
+  @media (max-width: 768px) {
+    .video-card {
+      .video-thumbnail-container {
+        height: 100px;
+        
+        .video-overlay {
+          padding: 8px;
+        }
+      }
       
-      .video-overlay {
-        padding: 8px;
+      &:hover {
+        transform: none;
       }
     }
     
-    &:hover {
-      transform: none;
-    }
-  }
-  
-  .import-panel {
-    .media-downloader-modal .video-results {
-      max-height: 400px;
+    .import-panel {
+      .media-downloader-modal .video-results {
+        max-height: 60vh;
+      }
     }
   }
 }

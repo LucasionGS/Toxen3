@@ -10,7 +10,7 @@
 @if ToxenIsWeb() {
   @media screen and ((max-width: 768px)) { // Mobile view
     .audio-visualizer {
-      height: calc(50% - var(--appbar-height));
+      height: calc(100vh - var(--appbar-height) - var(--mobile-tab-bar-height));
       bottom: initial;
       top: var(--appbar-height);
     }

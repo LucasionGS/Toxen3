@@ -28,3 +28,22 @@ body[miniplayer] .subtitle-container {
     font-size: 16px !important;
   }
 }
+
+@if ToxenIsWeb() {
+  @media screen and ((max-width: 768px)) { // Mobile view
+    .subtitle-container {
+      bottom: calc(var(--mobile-tab-bar-height) + 25%);
+      max-width: 90vw;
+
+      &, * {
+        font-size: 18px;
+      }
+    }
+
+    body.inactive {
+      .subtitle-container {
+        bottom: calc(var(--mobile-tab-bar-height) + 10%);
+      }
+    }
+  }
+}

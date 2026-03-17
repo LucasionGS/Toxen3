@@ -94,12 +94,29 @@ body[miniplayer].inactive .toxen-music-controls {
 @if ToxenIsWeb() {
   @media screen and ((max-width: 768px)) { // Mobile view
     .toxen-music-controls {
-      width: 95%;
-      bottom: calc(50% + 2.5vh) !important;
+      width: 92%;
+      bottom: calc(var(--mobile-tab-bar-height) + 8px) !important;
+      left: 50vw;
+      transform: translateX(-50%);
+      padding: 6px;
+
+      .toxen-music-controls-buttons {
+        .ctrl-btn *:not([hidden]) {
+          margin: 4px 10px;
+          font-size: 28px;
+          min-width: 44px;
+          min-height: 44px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+        }
+      }
 
       .toxen-music-controls-time {
+        font-size: 14px;
+
         .toxen-music-controls-volume {
-          width: 95%;
+          width: 50%;
         }
       }
     }

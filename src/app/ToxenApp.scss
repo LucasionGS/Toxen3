@@ -87,7 +87,7 @@ body[miniplayer] .miniplayer-overlay {
   @media screen and ((max-width: 768px)) { // Mobile view
     .content-container {
       width: 100vw;
-      height: calc(50vh - var(--appbar-height));
+      height: calc(100vh - var(--appbar-height) - var(--mobile-tab-bar-height));
     }
   }
 }

@@ -105,9 +105,23 @@
 @if ToxenIsWeb() {
   @media screen and ((max-width: 768px)) { // Mobile view
     .sidepanel-section-header {
-      padding: 8px 16px;
+      padding: 12px 16px;
+      transform: translate(-16px, -16px);
+      width: calc(100% + 32px);
+      border-radius: 0;
+
       h1 {
-        font-size: 24px;
+        font-size: 22px;
+        margin-bottom: 8px;
+      }
+
+      .mantine-Button-root {
+        min-height: 44px;
+        font-size: 14px;
+
+        &:hover {
+          transform: none;
+        }
       }
     }
   }

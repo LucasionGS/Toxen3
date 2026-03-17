@@ -221,8 +221,14 @@ export default class Sidepanel extends React.Component<Props, State> {
                   Toxen.sidePanel.show(true);
                   return;
                 }
+                // On mobile web, tapping the active tab toggles the panel closed
+                const isMobileWeb = !toxenapi.isDesktop() && window.innerWidth <= 768;
+                if (isMobileWeb && this.state.sectionId === s.props.id && this.state.show) {
+                  this.show(false);
+                  return;
+                }
                 this.setSectionId(s.props.id);
-                if (this.state.exposeIcons && !this.state.show) this.show(true);
+                if (!this.state.show) this.show(true);
               }}>
                 {s.props.icon}
                 {s.props.title && this.state.show && (
