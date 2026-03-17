@@ -490,6 +490,7 @@ export class Toxen {
 
   public static setThemeByName(name: string) {
     let theme = Toxen.themes.find(t => t.name === name);
+    if (!theme && name) theme = ExtensionManager.getTheme(name);
     if (!theme && name) Toxen.error(`Theme ${name} not found.`);
     Toxen.setTheme(theme || null);
   }

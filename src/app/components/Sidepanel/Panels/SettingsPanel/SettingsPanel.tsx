@@ -227,7 +227,12 @@ export default function SettingsPanel(props: SettingsPanelProps) {
                 ...Toxen.themes.map(t => ({
                   value: t.name,
                   label: t.getDisplayName()
-                }))
+                })),
+                ...(() => {
+                  const extEntries = ExtensionManager.getThemeDropdownEntries();
+                  if (extEntries.length === 0) return [];
+                  return [{ group: "Extensions", items: extEntries }];
+                })()
               ]}
             />
             <sup>Select the theme you want to use.</sup>

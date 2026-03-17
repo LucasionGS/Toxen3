@@ -1,5 +1,6 @@
 import Settings, { VisualizerStyleOption } from "../Settings";
 import CrossPlatform from "../desktop/CrossPlatform";
+import Theme from "../Theme";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -12,6 +13,15 @@ export interface ExtensionManifest {
   description: string;
   main?: string;
   visualizers?: ExtensionVisualizerManifest[];
+  themes?: ExtensionThemeManifest[];
+}
+
+export interface ExtensionThemeManifest {
+  name: string;
+  displayName?: string;
+  description?: string;
+  styles: Record<string, { value: any }>;
+  customCSS?: string;
 }
 
 export interface ExtensionVisualizerManifest {
@@ -155,6 +165,7 @@ export default class ExtensionManager {
   public static visualizerRenderers: Map<string, VisualizerRendererFn> = new Map();
   public static visualizerOptions: Map<string, VisualizerStyleOption[]> = new Map();
   public static visualizerNames: Map<string, string> = new Map();
+  public static extensionThemes: Map<string, Theme> = new Map();
 
   public static getExtensionsDir(): string {
     return CrossPlatform.getToxenDataPath("extensions");
@@ -216,6 +227,11 @@ export default class ExtensionManager {
       const enabled = enabledMap[manifest.id] ?? true; // New extensions enabled by default
       const ext = new Extension(manifest, extPath, enabled);
       this.extensions.set(manifest.id, ext);
+
+      // Register themes from manifest (themes are data-driven, don't need JS)
+      if (enabled) {
+        this.registerThemesFromManifest(manifest);
+      }
     }
 
     console.log(`[Extensions] Discovered ${this.extensions.size} extension(s).`);
@@ -301,6 +317,7 @@ export default class ExtensionManager {
 
     ext.enabled = true;
     await ext.load();
+    this.registerThemesFromManifest(ext.manifest);
 
     const enabledMap = Settings.get("enabledExtensions") ?? {};
     enabledMap[id] = true;
@@ -317,6 +334,7 @@ export default class ExtensionManager {
 
     ext.enabled = false;
     ext.unload();
+    this.unregisterThemesFromManifest(ext.manifest);
 
     const enabledMap = Settings.get("enabledExtensions") ?? {};
     enabledMap[id] = false;
@@ -354,5 +372,47 @@ export default class ExtensionManager {
    */
   public static isExtensionStyle(styleId: string): boolean {
     return typeof styleId === "string" && styleId.startsWith("ext:");
+  }
+
+  // ─── Theme Helpers ─────────────────────────────────────────────────
+
+  private static registerThemesFromManifest(manifest: ExtensionManifest): void {
+    if (!manifest.themes) return;
+    for (const themeDef of manifest.themes) {
+      const fullId = `ext:${manifest.id}:${themeDef.name}`;
+      const theme = Theme.create({
+        name: fullId,
+        displayName: themeDef.displayName || themeDef.name,
+        description: themeDef.description || "",
+        styles: themeDef.styles as any,
+        customCSS: themeDef.customCSS,
+      });
+      this.extensionThemes.set(fullId, theme);
+    }
+  }
+
+  private static unregisterThemesFromManifest(manifest: ExtensionManifest): void {
+    if (!manifest.themes) return;
+    for (const themeDef of manifest.themes) {
+      this.extensionThemes.delete(`ext:${manifest.id}:${themeDef.name}`);
+    }
+  }
+
+  /**
+   * Get dropdown entries for all registered extension themes.
+   */
+  public static getThemeDropdownEntries(): { value: string; label: string }[] {
+    const entries: { value: string; label: string }[] = [];
+    for (const [fullId, theme] of this.extensionThemes) {
+      entries.push({ value: fullId, label: theme.getDisplayName() });
+    }
+    return entries;
+  }
+
+  /**
+   * Get an extension theme by its full ID.
+   */
+  public static getTheme(themeId: string): Theme | undefined {
+    return this.extensionThemes.get(themeId);
   }
 }
