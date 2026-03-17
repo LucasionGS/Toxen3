@@ -91,7 +91,7 @@ export default function SettingsPanel(props: SettingsPanelProps) {
                 <Button
                   leftSection={<i className="fas fa-folder" />}
                   onClick={() => {
-                    // e.preventDefault();
+                    if (!toxenapi.isDesktop()) return;
                     let value = toxenapi.remote.dialog.showOpenDialogSync(toxenapi.remote.getCurrentWindow(), {
                       properties: [
                         'openDirectory'
@@ -288,26 +288,111 @@ export default function SettingsPanel(props: SettingsPanelProps) {
               const [bgList, setBgList] = React.useState<string[]>(Settings.get("defaultBackgrounds") || []);
               const [shuffle, setShuffle] = React.useState<boolean>(Settings.get("shuffleDefaultBackgrounds") || false);
               const dragGhostRef = React.useRef<HTMLDivElement | null>(null);
+              const isRemote = Settings.isRemote();
+              const user = Settings.getUser();
+
+              // On remote, load the list from the server on first render
+              React.useEffect(() => {
+                if (!isRemote || !user) return;
+                (async () => {
+                  try {
+                    const res = await Toxen.fetch(user.getBackgroundsPath());
+                    if (res.ok) {
+                      const files: string[] = await res.json();
+                      const urls = files.map(f => `${user.getBackgroundsPath()}/${f}`);
+                      setBgList(urls);
+                      Settings.apply({ defaultBackgrounds: urls }, true);
+                    }
+                  } catch {}
+                })();
+              }, []);
+
+              // Get the display-ready image URL (with auth for remote)
+              const getImageUrl = (p: string) => {
+                if (isRemote || p.startsWith("http://") || p.startsWith("https://")) {
+                  return User.appendAuth(p);
+                }
+                return p;
+              };
+
+              // Extract filename from a remote URL
+              const getFilenameFromUrl = (url: string) => {
+                const parts = url.split("/");
+                return parts[parts.length - 1];
+              };
 
               const addMultiple = async () => {
-                const selected = await Settings.selectFiles({
-                  filters: [
-                    { name: "Images", extensions: Toxen.getSupportedImageFiles().map(f => f.replace(".", "")) }
-                  ]
-                });
-                if (selected?.length) {
-                  const merged = Array.from(new Set([...(bgList || []), ...selected]));
-                  Settings.apply({ defaultBackgrounds: merged }, true);
-                  setBgList(merged);
+                if (toxenapi.isDesktop() && !isRemote) {
+                  // Desktop local: Electron file dialog
+                  const selected = await Settings.selectFiles({
+                    filters: [
+                      { name: "Images", extensions: Toxen.getSupportedImageFiles().map(f => f.replace(".", "")) }
+                    ]
+                  });
+                  if (selected?.length) {
+                    const merged = Array.from(new Set([...(bgList || []), ...selected]));
+                    Settings.apply({ defaultBackgrounds: merged }, true);
+                    setBgList(merged);
+                  }
+                } else {
+                  // Web / remote: HTML file input + upload
+                  if (!user) { Toxen.error("Not logged in."); return; }
+                  const input = document.createElement("input");
+                  input.type = "file";
+                  input.accept = "image/*";
+                  input.multiple = true;
+                  input.onchange = async () => {
+                    const files = input.files;
+                    if (!files?.length) return;
+                    const newUrls: string[] = [];
+                    for (const file of Array.from(files)) {
+                      try {
+                        const res = await Toxen.fetch(`${user.getBackgroundsPath()}/${file.name}`, {
+                          method: "PUT",
+                          body: await file.arrayBuffer().then(b => b),
+                          headers: { "Content-Type": "application/octet-stream" },
+                        });
+                        if (res.ok) {
+                          newUrls.push(`${user.getBackgroundsPath()}/${file.name}`);
+                        } else {
+                          Toxen.error(`Failed to upload ${file.name}`);
+                        }
+                      } catch (err) {
+                        Toxen.error(`Failed to upload ${file.name}: ${err.message}`);
+                      }
+                    }
+                    if (newUrls.length) {
+                      const merged = Array.from(new Set([...(bgList || []), ...newUrls]));
+                      Settings.apply({ defaultBackgrounds: merged }, true);
+                      setBgList(merged);
+                      Toxen.log(`Uploaded ${newUrls.length} background(s)`, 3000);
+                    }
+                  };
+                  input.click();
                 }
               };
 
-              const clearList = () => {
+              const clearList = async () => {
+                // On remote, delete all files from server
+                if (isRemote && user) {
+                  for (const p of bgList) {
+                    try {
+                      await Toxen.fetch(p, { method: "DELETE" });
+                    } catch {}
+                  }
+                }
                 Settings.apply({ defaultBackgrounds: [] }, true);
                 setBgList([]);
               };
 
-              const removeAt = (index: number) => {
+              const removeAt = async (index: number) => {
+                const removed = bgList[index];
+                // On remote, delete from server
+                if (isRemote && user && removed) {
+                  try {
+                    await Toxen.fetch(removed, { method: "DELETE" });
+                  } catch {}
+                }
                 const next = [...bgList];
                 next.splice(index, 1);
                 Settings.apply({ defaultBackgrounds: next }, true);
@@ -375,7 +460,7 @@ export default function SettingsPanel(props: SettingsPanelProps) {
                                     height: H + 'px',
                                     borderRadius: '8px',
                                     overflow: 'hidden',
-                                    backgroundImage: `url("${p.replace(/\\/g, '/')}")`,
+                                    backgroundImage: `url("${getImageUrl(p).replace(/\\/g, '/')}")`,
                                     backgroundSize: 'cover',
                                     backgroundPosition: 'center',
                                     boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
@@ -419,7 +504,7 @@ export default function SettingsPanel(props: SettingsPanelProps) {
                               }}
                             >
                               <img
-                                src={p}
+                                src={getImageUrl(p)}
                                 alt={`background-${i}`}
                                 style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                               />
@@ -806,6 +891,7 @@ export default function SettingsPanel(props: SettingsPanelProps) {
             })()}
             <br />
             <Button variant="subtle" onClick={() => {
+              if (!toxenapi.isDesktop()) return;
               toxenapi.remote.shell.openPath(ExtensionManager.getExtensionsDir());
             }}>
               Open Extensions Folder

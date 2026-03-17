@@ -18,6 +18,10 @@ export default class User {
     return Settings.getServer() + "/playlist";
   }
 
+  public getBackgroundsPath() {
+    return Settings.getServer() + "/backgrounds";
+  }
+
   /**
    * Append the user's auth token as a query parameter to a URL.
    * Used for URLs loaded directly by the browser (e.g. `<audio src>`, `<img src>`)

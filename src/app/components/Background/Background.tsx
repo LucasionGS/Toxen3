@@ -66,6 +66,7 @@ export default class Background extends Component<BackgroundProps, BackgroundSta
     const shuffle = Settings.get("shuffleDefaultBackgrounds");
     const list = Settings.get("defaultBackgrounds") || [];
     if (list.length > 0) {
+      let bg: string;
       if (shuffle) {
         // Pick a stable random per current song to avoid flicker between frames
         const curSong = Toxen.background?.storyboard?.getSong();
@@ -73,10 +74,16 @@ export default class Background extends Component<BackgroundProps, BackgroundSta
         let hash = 0;
         for (let i = 0; i < seedStr.length; i++) hash = ((hash << 5) - hash) + (seedStr.charCodeAt(i) + Song.getHistoryIndex());
         const idx = Math.abs(hash) % list.length; 
-        return list[idx];
+        bg = list[idx];
+      } else {
+        // Deterministic: first item in list
+        bg = list[0];
       }
-      // Deterministic: first item in list
-      return list[0];
+      // Append auth for remote/web URLs
+      if (bg && Settings.isRemote()) {
+        bg = User.appendAuth(bg);
+      }
+      return bg;
     }
 
     // No defaults configured -- try theme background
