@@ -6,6 +6,8 @@ import { Toxen } from "../../ToxenApp";
 import Settings from "../../toxen/Settings";
 import User from "../../toxen/User";
 import ExtensionManager, { Extension } from "../../toxen/extensions/ExtensionManager";
+//@ts-expect-error
+import toxshop from "../../../assets/toxshop200.gif";
 
 interface StoreExtension {
   id: number;
@@ -601,6 +603,14 @@ export default function ExtensionStorePanel() {
           </Tabs.Panel>
         )}
       </Tabs>
+      {
+        Math.random() < 0.01 && (
+          <img style={{
+            marginBottom: -32,
+            marginLeft: -40,
+          }} src={toxshop} alt="Toxshop" />
+        )
+      }
     </div>
   );
 }
