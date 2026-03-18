@@ -1,3 +1,8 @@
+<!-- VERSION: 2.7.2 -->
+## 2.7.2 - 18-03-2026
+### New Features
+- Added Fluid Orb visualizer style
+
 <!-- VERSION: 2.7.1 -->
 ## 2.7.1 - 17-03-2026
 ### New Features
