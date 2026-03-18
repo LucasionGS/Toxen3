@@ -422,6 +422,7 @@ export enum VisualizerStyle {
   Spiral = "spiral",
   Clock = "clock",
   Jellyfish = "jellyfish",
+  FluidOrb = "fluidorb",
 };
 
 export type VisualizerStyleOptionsTypes =
@@ -470,6 +471,56 @@ export const visualizerStyleOptions: Partial<Record<string, VisualizerStyleOptio
       defaultValue: 0,
       min: 0,
       max: 1000,
+      step: 0.1,
+    },
+    {
+      name: "Opaque",
+      key: "opaque",
+      type: "boolean",
+      defaultValue: "",
+    },
+    {
+      name: "Center Image",
+      key: "orbImage",
+      type: "songImage",
+      defaultValue: "",
+    }
+  ],
+  [VisualizerStyle.FluidOrb]: [
+    {
+      name: "X Position",
+      key: "x",
+      type: "range",
+      defaultValue: -0.1,
+      min: -0.1,
+      max: 100,
+      step: 0.1,
+    },
+    {
+      name: "Y Position",
+      key: "y",
+      type: "range",
+      defaultValue: -0.1,
+      min: -0.1,
+      max: 100,
+      step: 0.1,
+    },
+    {
+      name: "Size",
+      key: "size",
+      type: "range",
+      defaultValue: 0,
+      min: 0,
+      max: 1000,
+      step: 0.1,
+    },
+    {
+      name: "Rotation Speed",
+      key: "speed",
+      type: "range",
+      defaultValue: 1,
+      min: 0,
+      max: 5,
       step: 0.1,
     },
     {

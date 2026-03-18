@@ -523,7 +523,7 @@ export default function EditSong(props: EditSongProps) {
         <VisualizerStyleOptions
           style={getValue('visualizerStyle')}
           allOptions={getValue('visualizerStyleOptions')}
-          onSave={(allOptions) => saveSettings('visualizerStyleOptions', allOptions)}
+          onSave={(allOptions) => saveSettings('visualizerStyleOptions', allOptions, false)}
           onSaveEnd={(allOptions) => {
             saveSettings('visualizerStyleOptions', allOptions);
             forceUpdate();

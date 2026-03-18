@@ -1000,6 +1000,213 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
           }
           break;
         }
+        case VisualizerStyle.FluidOrb: {
+          const vsOptions = {
+            x: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.FluidOrb, "x") ?? 50,
+            y: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.FluidOrb, "y") ?? 50,
+            size: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.FluidOrb, "size") ?? 0,
+            speed: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.FluidOrb, "speed") ?? 1,
+            opaque: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.FluidOrb, "opaque") ?? false,
+            orbImage: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.FluidOrb, "orbImage") as string ?? "",
+          }
+
+          const maxHeight = getMaxHeight(0.3);
+          const unitAngle = (2 * Math.PI) / len;
+          const unitH = maxHeight / dataSize;
+          const rSizeX = vWidth / 2;
+          const rSizeY = vHeight / 2;
+          let centerX = typeof vsOptions.x === "number" && vsOptions.x > -0.1 ? (vWidth / 100 * vsOptions.x) : rSizeX;
+          let centerY = typeof vsOptions.y === "number" && vsOptions.y > -0.1 ? (vHeight / 100 * vsOptions.y) : rSizeY;
+          const radius = (vsOptions.size > 0 ? (
+            vsOptions.size + (vsOptions.size * (dynLight / 4))
+          ) : (
+            (Math.min(rSizeX, rSizeY) * 0.45) + (Math.min(rSizeX, rSizeY) * 0.2) * dynLight
+          ));
+
+          if (pulseEnabled) {
+            centerX = rSizeX + ((centerX - rSizeX) * (1 + (dynLight / 4)));
+            centerY = rSizeY + ((centerY - rSizeY) * (1 + (dynLight / 4)));
+          }
+
+          const rotation = Math.PI / 2 + Math.PI + ((time / 20000) * Math.PI * vsOptions.speed);
+          let highest = 0;
+          ctx.globalAlpha = opacity;
+
+          const isRainbow = Toxen.background.storyboard.getVisualizerRainbow();
+          const isGlow = Toxen.background.storyboard.getVisualizerGlow();
+
+          // Build smoothed bar heights using multiple passes of circular moving average
+          const rawHeights: number[] = [];
+          for (let i = 0; i < len; i++) {
+            const data = dataArray[i];
+            rawHeights.push(Math.max(1, data * unitH));
+          }
+          // 3 passes of weighted circular moving average with window of 5 neighbors each side
+          let smoothed = rawHeights;
+          for (let pass = 0; pass < 3; pass++) {
+            const next = new Array(len);
+            const w = 5;
+            for (let i = 0; i < len; i++) {
+              let sum = 0;
+              let weight = 0;
+              for (let j = -w; j <= w; j++) {
+                const idx = (i + j + len) % len;
+                const wt = 1 - Math.abs(j) / (w + 1); // Triangle weighting
+                sum += smoothed[idx] * wt;
+                weight += wt;
+              }
+              next[i] = sum / weight;
+            }
+            smoothed = next;
+          }
+
+          // Build points from smoothed heights
+          const points: { x: number; y: number; h: number }[] = [];
+          for (let i = 0; i < len; i++) {
+            const barHeight = smoothed[i];
+            if (barHeight > highest) highest = barHeight;
+            const angle = i * unitAngle + rotation;
+            const r = radius + barHeight;
+            points.push({
+              x: centerX + Math.cos(angle) * r,
+              y: centerY + Math.sin(angle) * r,
+              h: barHeight,
+            });
+          }
+          // Mirror: build mirrored points from same smoothed data
+          const mirrorPoints: { x: number; y: number; h: number }[] = [];
+          for (let i = 0; i < len; i++) {
+            const barHeight = smoothed[i];
+            const mirroredAngle = (-i - 1) * unitAngle + rotation;
+            const r = radius + barHeight;
+            mirrorPoints.push({
+              x: centerX + Math.cos(mirroredAngle) * r,
+              y: centerY + Math.sin(mirroredAngle) * r,
+              h: barHeight,
+            });
+          }
+
+          // Helper: draw a smooth closed curve through an array of points using cubic bezier
+          const drawSmoothCurve = (pts: { x: number; y: number }[]) => {
+            if (pts.length < 2) return;
+            ctx.beginPath();
+            appendSmoothCurve(pts);
+          };
+
+          // Appends a closed smooth curve as a subpath without calling beginPath
+          const appendSmoothCurve = (pts: { x: number; y: number }[]) => {
+            if (pts.length < 2) return;
+            const n = pts.length;
+            ctx.moveTo(
+              (pts[n - 1].x + pts[0].x) / 2,
+              (pts[n - 1].y + pts[0].y) / 2
+            );
+            for (let i = 0; i < n; i++) {
+              const curr = pts[i];
+              const next = pts[(i + 1) % n];
+              const midX = (curr.x + next.x) / 2;
+              const midY = (curr.y + next.y) / 2;
+              ctx.quadraticCurveTo(curr.x, curr.y, midX, midY);
+            }
+            ctx.closePath();
+          };
+
+          if (!isRainbow) {
+            ctx.lineWidth = 3;
+            if (isGlow) setBarShadowBlur(maxHeight * 0.5);
+            // Outer curve
+            drawSmoothCurve(points);
+            ctx.strokeStyle = storedColor;
+            ctx.stroke();
+            // Fill with translucent version
+            ctx.fillStyle = storedColor.replace("rgb(", "rgba(").replace(")", ", 0.12)");
+            ctx.fill();
+            // Mirror curve
+            drawSmoothCurve(mirrorPoints);
+            ctx.stroke();
+            ctx.fill();
+          } else {
+            // Rainbow: draw segments with color gradients
+            ctx.lineWidth = 3;
+            const oldShadow = ctx.shadowBlur;
+            ctx.shadowBlur = 0;
+            const n = points.length;
+            for (let i = 0; i < n; i++) {
+              const curr = points[i];
+              const next = points[(i + 1) % n];
+              const midX = (curr.x + next.x) / 2;
+              const midY = (curr.y + next.y) / 2;
+              this.setRainbowIfEnabled(ctx, curr.x, curr.y, curr.h, curr.h, i);
+              ctx.beginPath();
+              if (i === 0) {
+                const prev = points[n - 1];
+                ctx.moveTo((prev.x + curr.x) / 2, (prev.y + curr.y) / 2);
+              } else {
+                const prev = points[i - 1];
+                ctx.moveTo((prev.x + curr.x) / 2, (prev.y + curr.y) / 2);
+              }
+              ctx.quadraticCurveTo(curr.x, curr.y, midX, midY);
+              ctx.stroke();
+            }
+            // Mirror
+            for (let i = 0; i < mirrorPoints.length; i++) {
+              const curr = mirrorPoints[i];
+              const next = mirrorPoints[(i + 1) % mirrorPoints.length];
+              const midX = (curr.x + next.x) / 2;
+              const midY = (curr.y + next.y) / 2;
+              this.setRainbowIfEnabled(ctx, curr.x, curr.y, curr.h, curr.h, i);
+              ctx.beginPath();
+              if (i === 0) {
+                const prev = mirrorPoints[mirrorPoints.length - 1];
+                ctx.moveTo((prev.x + curr.x) / 2, (prev.y + curr.y) / 2);
+              } else {
+                const prev = mirrorPoints[i - 1];
+                ctx.moveTo((prev.x + curr.x) / 2, (prev.y + curr.y) / 2);
+              }
+              ctx.quadraticCurveTo(curr.x, curr.y, midX, midY);
+              ctx.stroke();
+            }
+            ctx.shadowBlur = oldShadow;
+          }
+
+          ctx.globalAlpha = 1;
+
+          // Solid fill if opaque — clip to the curve shape
+          if (vsOptions.opaque) {
+            ctx.save();
+            setBarShadowBlur(highest);
+            drawSmoothCurve(points);
+            ctx.fillStyle = storedColor;
+            ctx.fill();
+            drawSmoothCurve(mirrorPoints);
+            ctx.fill();
+            ctx.restore();
+          }
+
+          // Draw center image clipped to the dynamic curve shape
+          if (vsOptions.orbImage && song) {
+            const imgSrc = User.appendAuth(`${song.dirname()}/${vsOptions.orbImage}`);
+            const orbImg = getCachedCircleImage("fluidorb", imgSrc);
+            if (orbImg.complete && orbImg.naturalWidth > 0) {
+              ctx.save();
+              setBarShadowBlur(highest);
+              // Combine both curves into a single path for clipping
+              // Reverse mirrorPoints so both curves wind the same direction
+              ctx.beginPath();
+              appendSmoothCurve(points);
+              appendSmoothCurve(mirrorPoints.slice().reverse());
+              ctx.clip();
+              const extent = radius + highest;
+              const d = extent * 2;
+              const srcSize = Math.min(orbImg.naturalWidth, orbImg.naturalHeight);
+              const sx = (orbImg.naturalWidth - srcSize) / 2;
+              const sy = (orbImg.naturalHeight - srcSize) / 2;
+              ctx.drawImage(orbImg, sx, sy, srcSize, srcSize, centerX - extent, centerY - extent, d, d);
+              ctx.restore();
+            }
+          }
+          break;
+        }
         case VisualizerStyle.WaveformCircle: {
           // Combines Orb's circular distribution with Waveform's smooth rendering
           const vsOptions = {
