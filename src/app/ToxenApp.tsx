@@ -57,6 +57,7 @@ import AudioEffects from "./toxen/AudioEffects";
 import ImageCache from "./toxen/ImageCache";
 import FriendsPanel, { FriendsIconBadge } from "./components/FriendsPanel/FriendsPanel";
 import { friendSocket } from "./toxen/FriendSocket";
+import SubscriptionPanel from "./components/Sidepanel/Panels/SubscriptionPanel/SubscriptionPanel";
 
 //#region Define variables used all over the ToxenApp process.
 /**
@@ -1301,6 +1302,13 @@ export default class ToxenAppRenderer extends React.Component {
           {User.getCurrentUser() && (
             <SidepanelSection key="friends" id="friends" title="Friends" icon={<FriendsIconBadge />}>
               <FriendsPanel />
+            </SidepanelSection>
+          )}
+
+          {/* Subscription Panel - only visible when logged in */}
+          {User.getCurrentUser() && (
+            <SidepanelSection key="subscription" id="subscription" title="Subscription" icon={<i className="fas fa-credit-card" />}>
+              <SubscriptionPanel />
             </SidepanelSection>
           )}
 

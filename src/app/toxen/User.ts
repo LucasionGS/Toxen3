@@ -151,6 +151,7 @@ export default class User {
     user.email = info.email;
     user.token = info.token;
     user.premium = info.premium;
+    user.premium_tier = info.premium_tier ?? null;
     user.premium_expire = (info.premium_expire ? new Date(info.premium_expire) : null);
     user.storage_used = info.storage_used;
     user.storage_quota = info.storage_quota;
@@ -166,6 +167,7 @@ export default class User {
   email: string;
   token: string;
   premium: boolean;
+  premium_tier: string | null;
   premium_expire: Date;
   storage_used: number;
   storage_quota: number;
@@ -244,6 +246,7 @@ interface IUser {
   email: string;
   token: string;
   premium: boolean;
+  premium_tier: string | null;
   premium_expire: string;
   storage_used: number;
   storage_quota: number;
