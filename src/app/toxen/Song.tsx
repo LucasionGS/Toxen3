@@ -1192,6 +1192,7 @@ export default class Song implements ISong {
               User.getCurrentUser()?.premium && Settings.isRemote() && toxenapi.isDesktop() && (
                 <Button onClick={async () => {
                   close();
+                  if (!toxenapi.isDesktop()) throw toxenapi.throwDesktopOnly();
                   // Create the song on local with the info, then sync it
 
                   // Check if sone already exists locally
@@ -1259,6 +1260,7 @@ export default class Song implements ISong {
                 {toxenapi.isDesktop() && (
                   <Button onClick={() => {
                     close();
+                    if (!toxenapi.isDesktop()) throw toxenapi.throwDesktopOnly();
                     toxenapi.remote.shell.openPath(this.dirname());
                   }}>
                     Open in file explorer
@@ -1416,6 +1418,7 @@ export default class Song implements ISong {
 
       let fileNumDone = 0;
       await Promise.all(fileData.map(async (file) => {
+        if (!toxenapi.isDesktop()) throw toxenapi.throwDesktopOnly();
         const filePath = file.name;
         const fullPath = toxenapi.path.resolve(localDir, filePath);
         const dir = toxenapi.path.dirname(fullPath);
@@ -1468,7 +1471,7 @@ export default class Song implements ISong {
     function DownloadedSongs() {
       const [done, _setDone] = React.useState(0);
       setDone = _setDone;
-      return `Downloaded song ${done} / ${count}`;
+      return <>`Downloaded song ${done} / ${count}`</>;
     }
 
     let setDone: (done: number) => void;
@@ -1760,6 +1763,7 @@ export default class Song implements ISong {
 
     const ensureValidName = (path: string) => path.replace(/[^:\\\/a-z0-9\(\)\[\]\{\}\.\-\_\s]/gi, "_");
     return Promise.resolve().then(async () => {
+      if (!toxenapi.isDesktop()) throw toxenapi.throwDesktopOnly();
       let libDir = Settings.get("libraryDirectory");
       let nameNoExt = Converter.trimChar(toxenapi.path.basename(file.name, toxenapi.path.extname(file.name)), ".");
       let newFolder = toxenapi.path.resolve(libDir, nameNoExt);
@@ -2026,11 +2030,15 @@ export default class Song implements ISong {
       const [showMilliseconds, setShowMilliseconds] = useState(false);
       const [progress, setProgress] = useState(0);
       const modals = useModals();
-      const browser = useMemo(() => toxenapi.remote.getCurrentWindow(), []);
+      const browser = useMemo(() => {
+        if (!toxenapi.isDesktop()) throw toxenapi.throwDesktopOnly();
+        return toxenapi.remote.getCurrentWindow();
+      }, []);
 
       let attempts = 0;
 
       const startTrim = async () => {
+        if (!toxenapi.isDesktop()) throw toxenapi.throwDesktopOnly();
         attempts++;
         setLoading(true);
         const result = await toxenapi.ffmpeg.installFFmpeg();
