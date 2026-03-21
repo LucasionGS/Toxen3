@@ -14,6 +14,7 @@ import { IStatistics } from "../app/toxen/Statistics";
 import type Theme from "../app/toxen/Theme";
 import Ytdlp from "../app/toxen/desktop/Ytdlp";
 import Ffmpeg from "../app/toxen/desktop/Ffmpeg";
+import ffmpegPath from "ffmpeg-static";
 import yazl from "yazl";
 import yauzl from "yauzl";
 import Song, { type SongDiff } from "../app/toxen/Song"; // can i import? I forgor 💀
@@ -345,7 +346,8 @@ export default class DesktopController extends ToxenController {
    * Get the Ffmpeg instance. Cached after first call.
    */
   public get ffmpeg() {
-    return this._ffmpeg ??= new Ffmpeg(CrossPlatform.getToxenDataPath(os.platform() === "win32" ? "ffmpeg.exe" : "ffmpeg"));
+    // return this._ffmpeg ??= new Ffmpeg(CrossPlatform.getToxenDataPath(os.platform() === "win32" ? "ffmpeg.exe" : "ffmpeg"));
+    return this._ffmpeg ??= new Ffmpeg(ffmpegPath);
   }
 
   public async exportLocalSongs(...songs: Song[]) {

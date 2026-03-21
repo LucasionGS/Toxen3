@@ -27,7 +27,7 @@ export default class Ffmpeg {
     linux: "",
     openbsd: "",
     sunos: "",
-    win32: "https://dl.toxen.net/tools/ffmpeg.zip",
+    win32: "",
     cygwin: "",
     netbsd: "",
     haiku: "",
