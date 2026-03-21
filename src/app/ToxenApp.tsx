@@ -314,36 +314,76 @@ export class Toxen {
       }).map(f => typeof f === "string" ? f : f.name);
   }
 
+  /** @deprecated Use {@link getTranscodeAudioFiles} instead. */
   public static getSupportedConvertableAudioFiles() {
+    return Toxen.getTranscodeAudioFiles();
+  }
+
+  /** Audio formats natively playable in Chromium/Electron — no FFmpeg required. */
+  public static getWebNativeAudioFiles() {
+    return [".mp3", ".flac", ".ogg", ".wav", ".aac", ".m4a", ".opus", ".webm"];
+  }
+
+  /**
+   * Audio formats that need real-time FFmpeg transcoding on desktop.
+   * These are included in library scans but piped through the transcode server during playback.
+   */
+  public static getTranscodeAudioFiles() {
     return [
-      ".wma",
+      ".wma",           // Windows Media Audio
+      ".aiff", ".aif",  // Apple Audio Interchange
+      ".ape",           // Monkey's Audio
+      ".mka",           // Matroska Audio
+      ".wv",            // WavPack
+      ".tta",           // True Audio
+      ".ac3",           // Dolby AC-3
+      ".dts",           // DTS Audio
+      ".mpc",           // Musepack
+      ".amr",           // Adaptive Multi-Rate
+      ".gsm",           // GSM Audio
+      ".ra",            // RealAudio
+      ".au",            // Sun/NeXT Audio
+      ".snd",           // NeXT Sound
     ];
   }
 
   public static getSupportedAudioFiles() {
     return [
-      ".mp3",
-      ".flac",
-      ".ogg",
-      ".wav",
-
-      // To be converted
-      ...Toxen.getSupportedConvertableAudioFiles(),
+      ...Toxen.getWebNativeAudioFiles(),
+      ...Toxen.getTranscodeAudioFiles(),
     ];
   }
 
+  /** @deprecated Use {@link getTranscodeVideoFiles} instead. */
   public static getSupportedConvertableVideoFiles() {
+    return Toxen.getTranscodeVideoFiles();
+  }
+
+  /** Video formats natively playable in Chromium/Electron — no FFmpeg required. */
+  public static getWebNativeVideoFiles() {
+    return [".mp4", ".webm"];
+  }
+
+  /**
+   * Video formats that need real-time FFmpeg transcoding on desktop.
+   */
+  public static getTranscodeVideoFiles() {
     return [
-      ".mov"
+      ".mov",           // QuickTime
+      ".mkv",           // Matroska Video
+      ".avi",           // Audio Video Interleave
+      ".wmv",           // Windows Media Video
+      ".flv",           // Flash Video
+      ".ts",            // MPEG Transport Stream
+      ".m2ts", ".mts",  // Blu-ray / AVCHD
+      ".vob",           // DVD Video
     ];
   }
 
   public static getSupportedVideoFiles() {
     return [
-      ".mp4",
-
-      // To be converted
-      ...Toxen.getSupportedConvertableVideoFiles()
+      ...Toxen.getWebNativeVideoFiles(),
+      ...Toxen.getTranscodeVideoFiles(),
     ];
   }
 

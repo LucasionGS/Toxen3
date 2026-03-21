@@ -344,10 +344,17 @@ export default class DesktopController extends ToxenController {
   private _ffmpeg: Ffmpeg;
   /**
    * Get the Ffmpeg instance. Cached after first call.
+   * Derives the ffprobe path from the ffmpeg-static binary path so that
+   * fluent-ffmpeg's ffprobe API works when the full FFmpeg suite is present.
    */
   public get ffmpeg() {
-    // return this._ffmpeg ??= new Ffmpeg(CrossPlatform.getToxenDataPath(os.platform() === "win32" ? "ffmpeg.exe" : "ffmpeg"));
-    return this._ffmpeg ??= new Ffmpeg(ffmpegPath);
+    if (!this._ffmpeg) {
+      // ffmpeg-static bundles ffmpeg (and often ffprobe) in the same directory.
+      // Derive the sibling ffprobe path; the Ffmpeg constructor ignores it if absent.
+      const ffprobePath = ffmpegPath.replace(/ffmpeg(\.exe)?$/, "ffprobe$1");
+      this._ffmpeg = new Ffmpeg(ffmpegPath, ffprobePath);
+    }
+    return this._ffmpeg;
   }
 
   public async exportLocalSongs(...songs: Song[]) {

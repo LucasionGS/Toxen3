@@ -8,11 +8,92 @@ import yauzl from "yauzl";
 import Song from "../Song";
 
 export default class Ffmpeg {
-  constructor(ffmepgPath: string) {
-    this.ffmpegPath = ffmepgPath;
+  constructor(ffmpegPath: string, ffprobePath?: string) {
+    this.ffmpegPath = ffmpegPath;
+    if (ffprobePath) {
+      ffmpeg.setFfprobePath(ffprobePath);
+    }
   }
 
   private ffmpegPath: string;
+
+  // ---------------------------------------------------------------------------
+  // Web-native format lists
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Audio extensions that Chromium/Electron can play natively without FFmpeg.
+   * All other audio extensions will be transcoded in real-time.
+   */
+  public static readonly WEB_NATIVE_AUDIO = new Set([
+    ".mp3", ".wav", ".ogg", ".flac", ".aac", ".m4a", ".opus", ".webm",
+  ]);
+
+  /**
+   * Video extensions that Chromium/Electron can play natively without FFmpeg.
+   * All other video extensions will be transcoded in real-time.
+   */
+  public static readonly WEB_NATIVE_VIDEO = new Set([
+    ".mp4", ".webm",
+  ]);
+
+  /**
+   * Returns `true` for any file extension that is NOT natively playable in
+   * the browser and therefore requires real-time FFmpeg transcoding.
+   */
+  public static needsTranscoding(ext: string): boolean {
+    const lower = ext.startsWith(".") ? ext.toLowerCase() : "." + ext.toLowerCase();
+    return !Ffmpeg.WEB_NATIVE_AUDIO.has(lower) && !Ffmpeg.WEB_NATIVE_VIDEO.has(lower);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Blob-URL transcoding
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Transcodes an unsupported audio/video file to WAV (lossless PCM) using
+   * FFmpeg and returns a Blob URL that the audio element can play directly.
+   *
+   * The entire output is collected in memory before the URL is returned, so
+   * seeking works natively.  For typical audio files this finishes in well
+   * under a second because FFmpeg is only demuxing and reformatting, not
+   * re-encoding.
+   *
+   * The caller is responsible for calling `URL.revokeObjectURL()` on the
+   * returned URL when it is no longer needed.
+   *
+   * @param onProgress  Optional callback — called with 0–100 percent as
+   *                    FFmpeg processes the file.
+   */
+  public transcodeToBlob(
+    filePath: string,
+    onProgress?: (percent: number) => void,
+  ): Promise<string> {
+    return new Promise<string>((resolve, reject) => {
+      const chunks: Buffer[] = [];
+
+      const command = ffmpeg(filePath)
+        .noVideo()
+        .audioCodec("pcm_s16le")
+        .audioChannels(2)
+        .audioFrequency(44100)
+        .format("wav")
+        .on("progress", (p) => {
+          if (onProgress) onProgress(Math.min(Math.max(p.percent ?? 0, 0), 100));
+        })
+        .on("error", reject);
+
+      const stream = command.pipe();
+      stream.on("data", (chunk: Buffer) => chunks.push(chunk));
+      stream.on("end", () => {
+        const blob = new Blob([Buffer.concat(chunks)], { type: "audio/wav" });
+        resolve(URL.createObjectURL(blob));
+      });
+      stream.on("error", reject);
+    });
+  }
+
+  // ---------------------------------------------------------------------------
 
   public isFFmpegInstalled(): boolean {
     return fs.existsSync(this.ffmpegPath);

@@ -520,41 +520,36 @@ export default class Song implements ISong {
     let bg = this.backgroundFile();
 
     if (!Settings.isRemote() && toxenapi.isDesktop()) {
-      // Check if needs conversion
-      const convertableAudio = Toxen.getSupportedConvertableAudioFiles();
-      if (convertableAudio.includes(toxenapi.path.extname(src).toLowerCase())) {
-        const id = Toxen.notify({
-          title: "Converting " + this.getDisplayName() + " to MP3",
-          content: `0% complete`,
+      // For formats not natively supported by Chromium, transcode to a Blob URL
+      // in memory using FFmpeg before handing the source to the audio element.
+      // Seeking works natively since the full data is in memory.
+      const ext = toxenapi.path.extname(src).toLowerCase();
+      const isNativeAudio = Toxen.getWebNativeAudioFiles().includes(ext);
+      const isNativeVideo = Toxen.getWebNativeVideoFiles().includes(ext);
+      if (!isNativeAudio && !isNativeVideo) {
+        const notifId = Toxen.notify({
+          title: "Transcoding " + this.getDisplayName(),
+          content: "0% complete",
         });
-        toxenapi.ffmpeg.convertToMp3(this, (progress) => { // Purposely don't await, let it run in the background
-          updateNotification({
-            id,
-            message: <div>
-              {Math.round(progress.percent)}% complete
-              <br />
-              {progress.timemark}
-            </div>,
+        try {
+          const blobUrl = await toxenapi.ffmpeg.transcodeToBlob(src, (percent) => {
+            updateNotification({
+              id: notifId,
+              message: `${Math.round(percent)}% complete`,
+              autoClose: false,
+            });
           });
-        });
-      }
-
-      const convertableVideo = Toxen.getSupportedConvertableVideoFiles();
-      if (convertableVideo.includes(toxenapi.path.extname(src).toLowerCase())) {
-        const id = Toxen.notify({
-          title: "Converting " + this.getDisplayName() + " to MP4",
-          content: `0% complete`,
-        });
-        toxenapi.ffmpeg.convertToMp4(this, (progress) => { // Purposely don't await, let it run in the background
-          updateNotification({
-            id,
-            message: <div>
-              {Math.round(progress.percent)}% complete
-              <br />
-              {progress.timemark}
-            </div>,
-          });
-        });
+          updateNotification({ id: notifId, message: "Done", autoClose: 500 });
+          // Revoke previous blob URL and store the new one for cleanup on next song
+          if (this.lastBlobUrl) URL.revokeObjectURL(this.lastBlobUrl);
+          this.lastBlobUrl = blobUrl;
+          src = blobUrl;
+        } catch (err) {
+          updateNotification({ id: notifId, message: "Transcoding failed", autoClose: 3000 });
+          console.error(err);
+          Toxen.error("Could not transcode: " + this.getDisplayName());
+          return;
+        }
       }
     }
 
