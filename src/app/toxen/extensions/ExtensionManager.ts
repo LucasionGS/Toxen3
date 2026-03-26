@@ -72,6 +72,32 @@ export interface ExtensionExports {
 
 // ─── Extension Class ─────────────────────────────────────────────────
 
+/**
+ * Shared helper that builds a ToxenExtensionAPI for a given extension ID + manifest.
+ * Used by both the desktop `Extension` and web `WebExtension` classes to avoid duplication.
+ */
+function buildExtensionAPI(
+  extensionId: string,
+  manifest: ExtensionManifest,
+  apiVersion: number
+): ToxenExtensionAPI {
+  return {
+    apiVersion,
+    registerVisualizer: (localId, renderFn) => {
+      const fullId = `ext:${extensionId}:${localId}`;
+      ExtensionManager.visualizerRenderers.set(fullId, renderFn);
+
+      const vizManifest = manifest.visualizers?.find(v => v.id === localId);
+      if (vizManifest?.options) {
+        ExtensionManager.visualizerOptions.set(fullId, vizManifest.options);
+      }
+      if (vizManifest?.name) {
+        ExtensionManager.visualizerNames.set(fullId, vizManifest.name);
+      }
+    },
+  };
+}
+
 export class Extension {
   /**
    * API version that extensions must target. Incremented when large additions or breaking changes are made to the API.
@@ -112,22 +138,7 @@ export class Extension {
       return;
     }
 
-    const api: ToxenExtensionAPI = {
-      apiVersion: Extension.apiVersion,
-      registerVisualizer: (localId, renderFn) => {
-        const fullId = `ext:${this.manifest.id}:${localId}`;
-        ExtensionManager.visualizerRenderers.set(fullId, renderFn);
-
-        // Register options from manifest
-        const vizManifest = this.manifest.visualizers?.find(v => v.id === localId);
-        if (vizManifest?.options) {
-          ExtensionManager.visualizerOptions.set(fullId, vizManifest.options);
-        }
-        if (vizManifest?.name) {
-          ExtensionManager.visualizerNames.set(fullId, vizManifest.name);
-        }
-      },
-    };
+    const api = buildExtensionAPI(this.manifest.id, this.manifest, Extension.apiVersion);
 
     try {
       this.exports.activate(api);
@@ -229,21 +240,7 @@ export class WebExtension {
       return;
     }
 
-    const api: ToxenExtensionAPI = {
-      apiVersion: WebExtension.apiVersion,
-      registerVisualizer: (localId, renderFn) => {
-        const fullId = `ext:${this.manifest.id}:${localId}`;
-        ExtensionManager.visualizerRenderers.set(fullId, renderFn);
-
-        const vizManifest = this.manifest.visualizers?.find(v => v.id === localId);
-        if (vizManifest?.options) {
-          ExtensionManager.visualizerOptions.set(fullId, vizManifest.options);
-        }
-        if (vizManifest?.name) {
-          ExtensionManager.visualizerNames.set(fullId, vizManifest.name);
-        }
-      },
-    };
+    const api = buildExtensionAPI(this.manifest.id, this.manifest, WebExtension.apiVersion);
 
     try {
       this.exports.activate(api);
@@ -471,7 +468,8 @@ export default class ExtensionManager {
     try {
       const stored = localStorage.getItem(this.WEB_EXTENSIONS_STORAGE_KEY);
       return stored ? JSON.parse(stored) : [];
-    } catch {
+    } catch (e) {
+      console.error("[Extensions] Failed to parse stored web extensions from localStorage:", e);
       return [];
     }
   }

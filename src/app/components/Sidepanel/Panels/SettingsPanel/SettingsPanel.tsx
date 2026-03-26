@@ -900,6 +900,7 @@ export default function SettingsPanel(props: SettingsPanelProps) {
               })()}
               <br />
               <Button variant="subtle" onClick={() => {
+                if (!toxenapi.isDesktop()) return;
                 toxenapi.remote.shell.openPath(ExtensionManager.getExtensionsDir());
               }}>
                 Open Extensions Folder

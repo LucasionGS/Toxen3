@@ -195,6 +195,12 @@ function BrowseTab() {
         }
         const manifest: ExtensionManifest = await manifestRes.json();
 
+        // Basic validation to ensure the manifest has required fields
+        if (!manifest || typeof manifest.id !== "string" || typeof manifest.name !== "string" || typeof manifest.version !== "string") {
+          Toxen.error("Extension manifest is invalid or missing required fields.");
+          return;
+        }
+
         await ExtensionManager.installWebExtension(ext.id, manifest);
       }
 
