@@ -12,6 +12,8 @@ export interface ExtensionManifest {
   authorId?: number;
   description: string;
   main?: string;
+  /** Whether this extension is compatible with the Toxen web client. Web-compatible extensions must not use Node.js or Electron APIs. */
+  webCompatible?: boolean;
   visualizers?: ExtensionVisualizerManifest[];
   themes?: ExtensionThemeManifest[];
 }
@@ -22,6 +24,8 @@ export interface ExtensionThemeManifest {
   description?: string;
   styles: Record<string, { value: any }>;
   customCSS?: string;
+  /** Whether this theme entry is compatible with the Toxen web client. Defaults to the parent extension's webCompatible flag. */
+  webCompatible?: boolean;
 }
 
 export interface ExtensionVisualizerManifest {
@@ -158,14 +162,133 @@ export class Extension {
   }
 }
 
+// ─── Web Extension ───────────────────────────────────────────────────
+
+/** Persisted data for a web extension stored in localStorage. */
+export interface WebExtensionData {
+  storeId: number;
+  manifest: ExtensionManifest;
+  enabled: boolean;
+}
+
+/**
+ * A web-compatible extension loaded directly from the server CDN.
+ * Extension code is fetched as text and evaluated in a sandboxed CommonJS-like context.
+ * Node.js / Electron APIs must NOT be used by web extensions.
+ */
+export class WebExtension {
+  public static apiVersion = Extension.apiVersion;
+
+  public manifest: ExtensionManifest;
+  public storeId: number;
+  public enabled: boolean;
+  public loaded: boolean = false;
+  private exports: ExtensionExports | null = null;
+
+  constructor(manifest: ExtensionManifest, storeId: number, enabled: boolean) {
+    this.manifest = manifest;
+    this.storeId = storeId;
+    this.enabled = enabled;
+  }
+
+  public async load(): Promise<void> {
+    if (this.loaded) return;
+
+    const entryFile = this.manifest.main ?? "index.js";
+    const url = `${Settings.getServer()}/extensions/store/${this.storeId}/serve/${entryFile}`;
+
+    let jsCode: string;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      jsCode = await res.text();
+    } catch (e) {
+      console.error(`[Extensions] Failed to fetch web extension "${this.manifest.id}":`, e);
+      return;
+    }
+
+    // Evaluate in a sandboxed CommonJS-like context.
+    // require() is intentionally unsupported — web extensions must be self-contained.
+    const moduleObj: { exports: any } = { exports: {} };
+    const requireShim = (mod: string) => {
+      throw new Error(`[Web Extensions] require('${mod}') is not available in web extensions. Web extensions must not use Node.js or Electron APIs.`);
+    };
+    try {
+      // eslint-disable-next-line no-new-func
+      const fn = new Function("require", "module", "exports", jsCode);
+      fn(requireShim, moduleObj, moduleObj.exports);
+    } catch (e) {
+      console.error(`[Extensions] Failed to evaluate web extension "${this.manifest.id}":`, e);
+      return;
+    }
+
+    this.exports = moduleObj.exports as ExtensionExports;
+    if (typeof this.exports?.activate !== "function") {
+      console.error(`[Extensions] Web extension "${this.manifest.id}" has no activate() export.`);
+      this.exports = null;
+      return;
+    }
+
+    const api: ToxenExtensionAPI = {
+      apiVersion: WebExtension.apiVersion,
+      registerVisualizer: (localId, renderFn) => {
+        const fullId = `ext:${this.manifest.id}:${localId}`;
+        ExtensionManager.visualizerRenderers.set(fullId, renderFn);
+
+        const vizManifest = this.manifest.visualizers?.find(v => v.id === localId);
+        if (vizManifest?.options) {
+          ExtensionManager.visualizerOptions.set(fullId, vizManifest.options);
+        }
+        if (vizManifest?.name) {
+          ExtensionManager.visualizerNames.set(fullId, vizManifest.name);
+        }
+      },
+    };
+
+    try {
+      this.exports.activate(api);
+      this.loaded = true;
+      console.log(`[Extensions] Loaded web extension "${this.manifest.name}" v${this.manifest.version}`);
+    } catch (e) {
+      console.error(`[Extensions] Error activating web extension "${this.manifest.id}":`, e);
+      this.exports = null;
+    }
+  }
+
+  public unload(): void {
+    if (!this.loaded || !this.exports) return;
+
+    try {
+      this.exports.deactivate?.();
+    } catch (e) {
+      console.error(`[Extensions] Error deactivating web extension "${this.manifest.id}":`, e);
+    }
+
+    for (const [key] of ExtensionManager.visualizerRenderers) {
+      if (key.startsWith(`ext:${this.manifest.id}:`)) {
+        ExtensionManager.visualizerRenderers.delete(key);
+        ExtensionManager.visualizerOptions.delete(key);
+        ExtensionManager.visualizerNames.delete(key);
+      }
+    }
+
+    this.exports = null;
+    this.loaded = false;
+  }
+}
+
 // ─── Extension Manager ───────────────────────────────────────────────
 
 export default class ExtensionManager {
   public static extensions: Map<string, Extension> = new Map();
+  /** Web extensions loaded from the server CDN (web mode only). */
+  public static webExtensions: Map<string, WebExtension> = new Map();
   public static visualizerRenderers: Map<string, VisualizerRendererFn> = new Map();
   public static visualizerOptions: Map<string, VisualizerStyleOption[]> = new Map();
   public static visualizerNames: Map<string, string> = new Map();
   public static extensionThemes: Map<string, Theme> = new Map();
+
+  private static WEB_EXTENSIONS_STORAGE_KEY = "toxen_web_extensions";
 
   public static getExtensionsDir(): string {
     return CrossPlatform.getToxenDataPath("extensions");
@@ -340,6 +463,110 @@ export default class ExtensionManager {
     enabledMap[id] = false;
     Settings.set("enabledExtensions", enabledMap);
     await Settings.save({ suppressNotification: true });
+  }
+
+  // ─── Web Extension Methods ─────────────────────────────────────────
+
+  private static getStoredWebExtensions(): WebExtensionData[] {
+    try {
+      const stored = localStorage.getItem(this.WEB_EXTENSIONS_STORAGE_KEY);
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private static saveWebExtensions(): void {
+    const data: WebExtensionData[] = [];
+    for (const [, ext] of this.webExtensions) {
+      data.push({ storeId: ext.storeId, manifest: ext.manifest, enabled: ext.enabled });
+    }
+    localStorage.setItem(this.WEB_EXTENSIONS_STORAGE_KEY, JSON.stringify(data));
+  }
+
+  /**
+   * Discover web extensions previously installed and stored in localStorage.
+   * Call this on startup in web mode.
+   */
+  public static async discoverWeb(): Promise<void> {
+    const stored = this.getStoredWebExtensions();
+    for (const data of stored) {
+      const ext = new WebExtension(data.manifest, data.storeId, data.enabled);
+      this.webExtensions.set(data.manifest.id, ext);
+      if (data.enabled) {
+        this.registerThemesFromManifest(data.manifest);
+      }
+    }
+    console.log(`[Extensions] Discovered ${this.webExtensions.size} web extension(s).`);
+  }
+
+  /**
+   * Load all enabled web extensions (fetch JS from server and evaluate).
+   */
+  public static async loadAllWeb(): Promise<void> {
+    for (const [, ext] of this.webExtensions) {
+      if (ext.enabled) {
+        await ext.load();
+      }
+    }
+  }
+
+  /**
+   * Install (or update) a web extension from the store and enable it.
+   * Fetches the manifest from the server CDN endpoint, then loads the extension.
+   */
+  public static async installWebExtension(storeId: number, manifest: ExtensionManifest): Promise<void> {
+    // Replace existing entry if updating
+    const existing = this.webExtensions.get(manifest.id);
+    if (existing) {
+      existing.unload();
+      this.unregisterThemesFromManifest(existing.manifest);
+    }
+
+    const ext = new WebExtension(manifest, storeId, true);
+    this.webExtensions.set(manifest.id, ext);
+    await ext.load();
+    this.registerThemesFromManifest(manifest);
+    this.saveWebExtensions();
+  }
+
+  /**
+   * Enable a previously installed web extension.
+   */
+  public static async enableWeb(id: string): Promise<void> {
+    const ext = this.webExtensions.get(id);
+    if (!ext) return;
+
+    ext.enabled = true;
+    await ext.load();
+    this.registerThemesFromManifest(ext.manifest);
+    this.saveWebExtensions();
+  }
+
+  /**
+   * Disable a web extension without removing it.
+   */
+  public static async disableWeb(id: string): Promise<void> {
+    const ext = this.webExtensions.get(id);
+    if (!ext) return;
+
+    ext.enabled = false;
+    ext.unload();
+    this.unregisterThemesFromManifest(ext.manifest);
+    this.saveWebExtensions();
+  }
+
+  /**
+   * Remove a web extension entirely (unload and delete from localStorage).
+   */
+  public static removeWebExtension(id: string): void {
+    const ext = this.webExtensions.get(id);
+    if (ext) {
+      ext.unload();
+      this.unregisterThemesFromManifest(ext.manifest);
+      this.webExtensions.delete(id);
+    }
+    this.saveWebExtensions();
   }
 
   /**

@@ -1100,10 +1100,14 @@ export default class ToxenAppRenderer extends React.Component {
           }
         }
 
-        // Load extensions (desktop only)
+        // Load extensions
         if (toxenapi.isDesktop()) {
           await ExtensionManager.discover();
           await ExtensionManager.loadAll();
+        } else {
+          // Web: load web extensions from localStorage and fetch JS from server
+          await ExtensionManager.discoverWeb();
+          await ExtensionManager.loadAllWeb();
         }
 
         await Toxen.loadThemes(); // Loads themes
