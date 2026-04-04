@@ -7,6 +7,7 @@ import { VideoInfo } from '../../../../toxen/desktop/Ytdlp';
 import Settings from '../../../../toxen/Settings';
 import ExternalUrl from '../../../ExternalUrl/ExternalUrl';
 import './ImportPanel.scss';
+import type DesktopController from '../../../../../ToxenControllers/DesktopController';
 
 export default function ImportPanel() {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -36,7 +37,7 @@ export default function ImportPanel() {
               return;
 
             const promisedFiles: ToxenFile[] = paths.map(p => ({
-              name: toxenapi.path.basename(p),
+              name: (toxenapi as DesktopController).path.basename(p),
               path: p
             }));
             Promise.all(promisedFiles).then(files => {
