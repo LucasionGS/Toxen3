@@ -1,3 +1,9 @@
+<!-- VERSION: 2.7.3 -->
+## 2.7.3 - 04-04-2026
+### New Features
+- Added URL field to Edit Song panel
+- Better support for youtube playlist importing
+
 <!-- VERSION: 2.7.2 -->
 ## 2.7.2 - 18-03-2026
 ### New Features
