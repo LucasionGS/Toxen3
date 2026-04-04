@@ -2,10 +2,12 @@ import YTDlpWrap, { Progress } from "yt-dlp-wrap";
 import Settings from "../Settings";
 import fs from "fs";
 import os from "os";
+import { spawn } from "child_process";
 import { Toxen } from "../../ToxenApp";
 import System, { ToxenFile } from "../System";
 import {  } from "@mantine/modals";
 import { useModals } from "@mantine/modals";
+import type Song from "../Song";
 
 export default class Ytdlp {
   constructor(ytdlpPath: string) {
@@ -65,8 +67,60 @@ export default class Ytdlp {
     }
   }
 
-  public async importAudio(videoInfo: VideoInfo, onProgress?: (progress: Progress) => void, subtitleLanguage?: string | null): Promise<void> {
-    return new Promise<void>(async (resolve, reject) => {
+  public static isPlaylistUrl(url: string): boolean {
+    try {
+      const u = new URL(url);
+      return (
+        (u.hostname.includes("youtube.com") || u.hostname.includes("youtu.be"))
+        && u.searchParams.has("list")
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  public async getPlaylistVideos(url: string): Promise<VideoInfo[]> {
+    if (!this.isYtdlpInstalled()) await this.installYtdlp();
+    return new Promise((resolve, reject) => {
+      const proc = spawn(this.ytdlpPath, [
+        url,
+        "--flat-playlist",
+        "--dump-json",
+        "--quiet",
+        "--no-warnings",
+      ]);
+      let stdout = "";
+      proc.stdout.on("data", (chunk: Buffer) => { stdout += chunk.toString(); });
+      proc.on("close", () => {
+        const videos: VideoInfo[] = [];
+        for (const line of stdout.split("\n")) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          try {
+            const entry = JSON.parse(trimmed);
+            videos.push({
+              filename: entry.filename || "",
+              title: entry.title || "",
+              thumbnail: entry.thumbnail || (entry.thumbnails?.[entry.thumbnails.length - 1]?.url) || "",
+              original_url: entry.url || entry.original_url || entry.webpage_url || "",
+              uploader: entry.uploader || entry.channel || "",
+              artist: entry.artist || entry.creator || undefined,
+              track: entry.track || undefined,
+              creator: entry.creator || undefined,
+              playlist_title: entry.playlist_title || entry.playlist || undefined,
+              subtitles: {},
+              automatic_captions: {},
+            });
+          } catch { /* skip malformed lines */ }
+        }
+        resolve(videos);
+      });
+      proc.on("error", reject);
+    });
+  }
+
+  public async importAudio(videoInfo: VideoInfo, onProgress?: (progress: Progress) => void, subtitleLanguage?: string | null): Promise<Song | null> {
+    return new Promise<Song | null>(async (resolve, reject) => {
       const ytdlp = await this.getYtdlpWrap();
       // Download audio only in mp3 format
       const eightRandomChars = Math.random().toString(36).substring(2, 10);
@@ -287,6 +341,9 @@ export default class Ytdlp {
         async () => {
           const filterSpecialChars = (str: string) => str.replace(/[^a-zA-Z0-9]/g, "_");
           
+          // Capture song list before importing so we can identify the newly added song
+          const uidsBefore = new Set(Toxen.songList.map(s => s.uid));
+
           // Import audio file
           await System.handleImportedFiles([
             {
@@ -296,10 +353,15 @@ export default class Ytdlp {
           ]);
 
           await new Promise((resolve) => setTimeout(resolve, 250)); // make sure the song started playing.
-          
-          // Import thumbnail
 
-          // await System.handleImportedFiles([
+          const importedSong = Toxen.songList.find(s => !uidsBefore.has(s.uid)) ?? null;
+
+          // Stamp the source URL so it can be viewed/edited in EditSong
+          if (importedSong && videoInfo.original_url) {
+            importedSong.url = videoInfo.original_url;
+            await importedSong.saveInfo();
+          }
+
           //   {
           //     name: thumbnail,
           //     path: tmpBackgroundOutput,
@@ -331,7 +393,7 @@ export default class Ytdlp {
           // if (fs.existsSync(tmpBackgroundOutput)) fs.unlinkSync(tmpBackgroundOutput);
           if (tmpSubtitleOutput && fs.existsSync(tmpSubtitleOutput)) fs.unlinkSync(tmpSubtitleOutput);
           
-          resolve();
+          resolve(importedSong);
         }
       );
     });
@@ -421,6 +483,10 @@ export interface VideoInfo {
   thumbnail: string;
   original_url: string;
   uploader: string;
+  artist?: string;
+  track?: string;
+  creator?: string;
+  playlist_title?: string;
   subtitles?: {
     [languageCode: string]: {
       ext: string;

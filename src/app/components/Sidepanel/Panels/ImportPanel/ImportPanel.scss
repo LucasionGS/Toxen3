@@ -368,6 +368,63 @@
   }
 }
 
+// Playlist import view
+.playlist-import-view {
+  .playlist-entry-list {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid var(--border-secondary);
+    border-radius: 6px;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: var(--surface-bg);
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--border-secondary);
+      border-radius: 3px;
+
+      &:hover {
+        background: var(--border-primary);
+      }
+    }
+  }
+
+  .playlist-entry-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border-secondary);
+    transition: background var(--transition-fast);
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:hover {
+      background: var(--surface-bg-hover);
+    }
+  }
+
+  .playlist-entry-thumbnail {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 4px;
+    flex-shrink: 0;
+    background: var(--surface-bg-hover);
+
+    &--empty {
+      border: 1px solid var(--border-secondary);
+    }
+  }
+}
+
 // Responsive design
 @if ToxenIsWeb() {
   @media (max-width: 768px) {

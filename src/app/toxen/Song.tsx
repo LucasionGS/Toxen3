@@ -34,6 +34,7 @@ export default class Song implements ISong {
   public album: string;
   public genre: string;
   public source: string;
+  public url: string;
   public tags: string[];
   public paths: ISongPaths;
   public visualizerColor: string;
@@ -357,6 +358,7 @@ export default class Song implements ISong {
       "source",
       "tags",
       "album",
+      "url",
       "genre",
       "visualizerColor",
       "visualizerStyle",
@@ -2174,6 +2176,7 @@ export interface ISong {
   genre: string;
   album: string;
   source: string;
+  url: string;
   tags: string[];
   visualizerColor: string;
   visualizerStyle: VisualizerStyle | string;

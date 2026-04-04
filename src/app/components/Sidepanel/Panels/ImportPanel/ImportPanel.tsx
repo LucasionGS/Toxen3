@@ -1,13 +1,57 @@
-import { Alert, Button, Group, Image, Modal, Progress, TextInput, Card, Text, Badge, ActionIcon, Stack, Divider, Loader, Tooltip, Select } from '@mantine/core';
-import { IconDownload, IconExternalLink, IconMusic, IconPhoto, IconAlertTriangle, IconCheck, IconClock, IconLanguage } from '@tabler/icons-react';
+import { Alert, Autocomplete, Button, Checkbox, Group, Image, Modal, Progress, TextInput, Card, Text, Badge, ActionIcon, Stack, Divider, Loader, Tooltip, Select } from '@mantine/core';
+import { updateNotification } from '@mantine/notifications';
+import { IconDownload, IconExternalLink, IconMusic, IconAlertTriangle, IconCheck, IconClock, IconLanguage, IconList } from '@tabler/icons-react';
 import React from 'react'
 import System, { ToxenFile } from '../../../../toxen/System';
 import { Toxen } from '../../../../ToxenApp';
 import { VideoInfo } from '../../../../toxen/desktop/Ytdlp';
 import Settings from '../../../../toxen/Settings';
+import Playlist from '../../../../toxen/Playlist';
 import ExternalUrl from '../../../ExternalUrl/ExternalUrl';
 import './ImportPanel.scss';
 import type DesktopController from '../../../../../ToxenControllers/DesktopController';
+
+type ImportStatus = 'pending' | 'importing' | 'done' | 'error';
+
+interface PlaylistVideoEntry {
+  video: VideoInfo;
+  selected: boolean;
+  title: string;
+  artist: string;
+  status: ImportStatus;
+}
+
+function isPlaylistUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    return (
+      (u.hostname.includes('youtube.com') || u.hostname.includes('youtu.be'))
+      && u.searchParams.has('list')
+    );
+  } catch {
+    return false;
+  }
+}
+
+function parseYouTubeTitle(raw: string): { title: string; artist: string | null } {
+  const sep = raw.includes(' - ') ? ' - ' : raw.includes(' \u2013 ') ? ' \u2013 ' : null;
+  if (sep) {
+    const idx = raw.indexOf(sep);
+    return { artist: raw.slice(0, idx).trim(), title: raw.slice(idx + sep.length).trim() };
+  }
+  return { title: raw, artist: null };
+}
+
+function buildEntries(videos: VideoInfo[]): PlaylistVideoEntry[] {
+  const existingUrls = new Set((Toxen.songList ?? []).map(s => s.url).filter(Boolean));
+  return videos.map(video => {
+    const parsed = parseYouTubeTitle(video.title);
+    const title = video.track || parsed.title;
+    const artist = video.artist || video.creator || parsed.artist || video.uploader || '';
+    const alreadyImported = existingUrls.has(video.original_url);
+    return { video, selected: !alreadyImported, title, artist, status: 'pending' };
+  });
+}
 
 export default function ImportPanel() {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -77,6 +121,8 @@ function ImportOnlineMedia() {
   const [url, setUrl] = React.useState<string>("");
   const [importing, setImporting] = React.useState<boolean>(false);
   const [videos, setVideos] = React.useState<VideoInfo[]>([]);
+  const [playlistEntries, setPlaylistEntries] = React.useState<PlaylistVideoEntry[] | null>(null);
+  const [playlistTitle, setPlaylistTitle] = React.useState<string>("");
   const [acceptedResponsibility, setAcceptedResponsibility] = React.useState<boolean>(() => Settings.get("acceptedResponsibility"));
 
   React.useEffect(() => {
@@ -124,10 +170,21 @@ function ImportOnlineMedia() {
               
               setImporting(true);
               setVideos([]);
+              setPlaylistEntries(null);
               
               try {
-                const videoInfos = await Ytdlp.getVideoInfo(url);
-                setVideos(videoInfos);
+                if (isPlaylistUrl(url)) {
+                  const vids = await Ytdlp.getPlaylistVideos(url);
+                  if (vids.length === 0) {
+                    Toxen.error("No videos found in playlist", 3000);
+                  } else {
+                    setPlaylistTitle(vids[0]?.playlist_title || "YouTube Playlist");
+                    setPlaylistEntries(buildEntries(vids));
+                  }
+                } else {
+                  const videoInfos = await Ytdlp.getVideoInfo(url);
+                  setVideos(videoInfos);
+                }
               } catch (error) {
                 Toxen.error("Failed to load video information", 3000);
               }
@@ -155,9 +212,17 @@ function ImportOnlineMedia() {
 
             <div className={`video-results ${importing ? 'loading' : ''}`}>
               {importing && <Loader size="md" />}
-              {videos.map(v => (
-                <VideoCard key={v.original_url} video={v} />
-              ))}
+              {playlistEntries !== null ? (
+                <PlaylistImportView
+                  entries={playlistEntries}
+                  setEntries={setPlaylistEntries}
+                  playlistTitle={playlistTitle}
+                />
+              ) : (
+                videos.map(v => (
+                  <VideoCard key={v.original_url} video={v} />
+                ))
+              )}
             </div>
           </Stack>
         </Modal>
@@ -210,6 +275,200 @@ function ImportOnlineMedia() {
       )}
     </>
   )
+}
+
+function PlaylistEntryRow({ entry, disabled, onChange }: {
+  entry: PlaylistVideoEntry;
+  disabled: boolean;
+  onChange: (patch: Partial<PlaylistVideoEntry>) => void;
+}) {
+  const statusBadge = () => {
+    switch (entry.status) {
+      case 'importing': return <Badge size="xs" color="blue" variant="light"><IconClock size={10} style={{ marginRight: 3 }} />Importing</Badge>;
+      case 'done':      return <Badge size="xs" color="green" variant="light"><IconCheck size={10} style={{ marginRight: 3 }} />Done</Badge>;
+      case 'error':     return <Badge size="xs" color="red" variant="light"><IconAlertTriangle size={10} style={{ marginRight: 3 }} />Error</Badge>;
+      default:          return <Badge size="xs" color="gray" variant="light">Pending</Badge>;
+    }
+  };
+
+  return (
+    <div className="playlist-entry-row">
+      <Checkbox
+        checked={entry.selected}
+        onChange={(e) => onChange({ selected: e.currentTarget.checked })}
+        disabled={disabled || entry.status === 'done'}
+      />
+      {entry.video.thumbnail ? (
+        <img src={entry.video.thumbnail} alt="" className="playlist-entry-thumbnail" />
+      ) : (
+        <div className="playlist-entry-thumbnail playlist-entry-thumbnail--empty" />
+      )}
+      <TextInput
+        value={entry.title}
+        onChange={(e) => onChange({ title: e.currentTarget.value })}
+        placeholder="Title"
+        disabled={disabled || entry.status === 'done'}
+        size="xs"
+        style={{ flex: 2, minWidth: 0 }}
+      />
+      <TextInput
+        value={entry.artist}
+        onChange={(e) => onChange({ artist: e.currentTarget.value })}
+        placeholder="Artist"
+        disabled={disabled || entry.status === 'done'}
+        size="xs"
+        style={{ flex: 1, minWidth: 0 }}
+      />
+      <div style={{ flexShrink: 0 }}>{statusBadge()}</div>
+    </div>
+  );
+}
+
+function PlaylistImportView({ entries, setEntries, playlistTitle }: {
+  entries: PlaylistVideoEntry[];
+  setEntries: React.Dispatch<React.SetStateAction<PlaylistVideoEntry[] | null>>;
+  playlistTitle: string;
+}) {
+  const [targetPlaylist, setTargetPlaylist] = React.useState<string>('');
+  const [isImporting, setIsImporting] = React.useState<boolean>(false);
+  const ytdlp = React.useMemo(() => toxenapi.isDesktop() ? toxenapi.getYtdlp() : null, []);
+
+  const updateEntry = (index: number, patch: Partial<PlaylistVideoEntry>) => {
+    setEntries(prev => prev?.map((e, i) => i === index ? { ...e, ...patch } : e) ?? prev);
+  };
+
+  const pendingSelected = entries.filter(e => e.selected && e.status === 'pending');
+  const selectedCount = pendingSelected.length;
+
+  const handleImport = async () => {
+    const toImport = entries.map((e, i) => ({ ...e, idx: i })).filter(e => e.selected && e.status === 'pending');
+    if (toImport.length === 0 || !ytdlp) return;
+
+    setIsImporting(true);
+    const notifId = Toxen.notify({
+      title: `Importing ${toImport.length} song${toImport.length !== 1 ? 's' : ''}`,
+      content: `0 / ${toImport.length}`,
+    });
+
+    const importedSongs: any[] = [];
+
+    for (let i = 0; i < toImport.length; i++) {
+      const item = toImport[i];
+      updateEntry(item.idx, { status: 'importing' });
+      updateNotification({
+        id: notifId,
+        title: `Importing ${i + 1} / ${toImport.length}`,
+        message: item.title,
+        autoClose: false,
+      });
+
+      try {
+        const song = await ytdlp.importAudio(item.video, () => {}, null);
+        if (song) {
+          const needsUpdate = song.title !== item.title || (song.artist || '') !== item.artist;
+          if (needsUpdate) {
+            song.title = item.title;
+            song.artist = item.artist || undefined;
+            await song.saveInfo();
+          }
+          importedSongs.push(song);
+        }
+        updateEntry(item.idx, { status: 'done' });
+      } catch (err) {
+        console.error('Failed to import:', item.title, err);
+        updateEntry(item.idx, { status: 'error' });
+      }
+    }
+
+    // Assign to Toxen playlist if specified
+    const playlistName = targetPlaylist.trim();
+    if (playlistName && importedSongs.length > 0) {
+      let pl = Toxen.playlists?.find(p => p.name === playlistName);
+      if (!pl) {
+        pl = Playlist.create({ name: playlistName, songList: [] });
+        Playlist.addPlaylist(pl);
+      }
+      await pl.addSong(...importedSongs);
+      await Playlist.save();
+      Toxen.playlistPanel?.update();
+    }
+
+    updateNotification({
+      id: notifId,
+      title: 'Import complete',
+      message: `Imported ${importedSongs.length} of ${toImport.length} songs`,
+      autoClose: 4000,
+      color: 'green',
+    });
+
+    Toxen.updateSongPanels();
+    setIsImporting(false);
+  };
+
+  return (
+    <Stack gap="sm" className="playlist-import-view">
+      <Group justify="space-between" align="center">
+        <Group gap="xs">
+          <IconList size={16} />
+          <Text fw={500} size="sm" lineClamp={1}>{playlistTitle}</Text>
+        </Group>
+        <Badge variant="light">{entries.length} videos</Badge>
+      </Group>
+
+      <Autocomplete
+        label="Add to Toxen Playlist (optional)"
+        placeholder="Select or type a playlist name..."
+        data={(Toxen.playlists ?? []).map(p => p.name)}
+        value={targetPlaylist}
+        onChange={setTargetPlaylist}
+        disabled={isImporting}
+        size="sm"
+      />
+
+      <Group gap="xs" justify="space-between">
+        <Group gap="xs">
+          <Button
+            size="xs"
+            variant="subtle"
+            onClick={() => setEntries(prev => prev?.map(e => ({ ...e, selected: true })) ?? prev)}
+            disabled={isImporting}
+          >
+            Select All
+          </Button>
+          <Button
+            size="xs"
+            variant="subtle"
+            onClick={() => setEntries(prev => prev?.map(e => ({ ...e, selected: false })) ?? prev)}
+            disabled={isImporting}
+          >
+            Deselect All
+          </Button>
+        </Group>
+        <Text size="xs" c="dimmed">{selectedCount} selected</Text>
+      </Group>
+
+      <div className="playlist-entry-list">
+        {entries.map((entry, i) => (
+          <PlaylistEntryRow
+            key={entry.video.original_url + i}
+            entry={entry}
+            disabled={isImporting}
+            onChange={(patch) => updateEntry(i, patch)}
+          />
+        ))}
+      </div>
+
+      <Button
+        fullWidth
+        disabled={selectedCount === 0 || isImporting}
+        loading={isImporting}
+        leftSection={<IconDownload size={16} />}
+        onClick={handleImport}
+      >
+        Import {selectedCount} selected song{selectedCount !== 1 ? 's' : ''}
+      </Button>
+    </Stack>
+  );
 }
 
 function VideoCard(props: { video: VideoInfo }) {

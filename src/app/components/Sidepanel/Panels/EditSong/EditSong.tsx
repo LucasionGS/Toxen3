@@ -4,7 +4,6 @@ import Converter from "../../../../toxen/Converter";
 import Settings, { VisualizerStyle } from "../../../../toxen/Settings";
 import ExtensionManager from "../../../../toxen/extensions/ExtensionManager";
 import Song, { ISong } from "../../../../toxen/Song";
-import Playlist from "../../../../toxen/Playlist";
 import SubtitleParser from "../../../../toxen/SubtitleParser";
 import System from "../../../../toxen/System";
 import { Toxen } from "../../../../ToxenApp";
@@ -22,7 +21,6 @@ import ScreenPositionSelector from "../../../ScreenPositionSelector/ScreenPositi
 import { VisualizerStyleOptions } from "../SettingsPanel/SettingsPanel";
 import { useForceUpdate } from "@mantine/hooks";
 import { hideNotification, updateNotification } from "@mantine/notifications";
-import { FALSE } from "sass";
 
 interface EditSongProps { }
 
@@ -169,6 +167,15 @@ export default function EditSong(props: EditSongProps) {
             name="source"
             onChange={(v) => saveSettings('source', v.currentTarget.value)}
             defaultValue={getValue('source')}
+            onBlur={() => Toxen.editingSong.saveInfo()}
+            onKeyDown={textInputSaveOnEnter}
+          />
+          <TextInput
+            leftSection={<i className="fas fa-link" />}
+            label="URL"
+            name="url"
+            onChange={(v) => saveSettings('url', v.currentTarget.value)}
+            defaultValue={getValue('url')}
             onBlur={() => Toxen.editingSong.saveInfo()}
             onKeyDown={textInputSaveOnEnter}
           />
