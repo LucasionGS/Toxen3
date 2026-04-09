@@ -5,7 +5,7 @@ import { IconDownload, IconSearch, IconUpload, IconCheck, IconX, IconClock, Icon
 import { Toxen } from "../../ToxenApp";
 import Settings from "../../toxen/Settings";
 import User from "../../toxen/User";
-import ExtensionManager, { Extension } from "../../toxen/extensions/ExtensionManager";
+import ExtensionManager, { Extension, ExtensionManifest } from "../../toxen/extensions/ExtensionManager";
 //@ts-expect-error
 import toxshop from "../../../assets/toxshop200.gif";
 
@@ -21,13 +21,22 @@ interface StoreExtension {
   rejectionReason?: string;
   downloads: number;
   createdAt: string;
+  /** Whether this extension is compatible with the Toxen web client. */
+  webCompatible?: boolean;
 }
 
 function getInstallState(ext: StoreExtension): { label: string; icon: React.ReactNode; disabled: boolean; color?: string } {
-  const local = ExtensionManager.extensions.get(ext.extensionId);
-  if (!local) return { label: "Install", icon: <IconDownload size={14} />, disabled: false };
-  if (local.manifest.version !== ext.version) return { label: "Update", icon: <IconRefresh size={14} />, disabled: false, color: "yellow" };
-  return { label: "Installed", icon: <IconCheck size={14} />, disabled: true, color: "green" };
+  if (toxenapi.isDesktop()) {
+    const local = ExtensionManager.extensions.get(ext.extensionId);
+    if (!local) return { label: "Install", icon: <IconDownload size={14} />, disabled: false };
+    if (local.manifest.version !== ext.version) return { label: "Update", icon: <IconRefresh size={14} />, disabled: false, color: "yellow" };
+    return { label: "Installed", icon: <IconCheck size={14} />, disabled: true, color: "green" };
+  } else {
+    const webExt = ExtensionManager.webExtensions.get(ext.extensionId);
+    if (!webExt) return { label: "Install", icon: <IconDownload size={14} />, disabled: false };
+    if (webExt.manifest.version !== ext.version) return { label: "Update", icon: <IconRefresh size={14} />, disabled: false, color: "yellow" };
+    return { label: "Installed", icon: <IconCheck size={14} />, disabled: true, color: "green" };
+  }
 }
 
 function ExtensionCard({ ext, onDownload, showStatus, installing }: {
@@ -51,6 +60,9 @@ function ExtensionCard({ ext, onDownload, showStatus, installing }: {
             <Text fw={600} size="lg">{ext.name}</Text>
             <Badge size="sm" variant="outline">v{ext.version}</Badge>
             <Badge size="sm" variant="light" color="gray">API v{ext.apiVersion}</Badge>
+            {ext.webCompatible && (
+              <Badge size="sm" color="blue" title="This extension can be installed on Toxen Web">Web</Badge>
+            )}
             {showStatus && (
               <Badge
                 size="sm"
@@ -113,64 +125,84 @@ function BrowseTab() {
   useEffect(() => { fetchExtensions(); }, []);
 
   const handleDownload = async (ext: StoreExtension) => {
-    if (!toxenapi.isDesktop()) {
-      Toxen.error("Extensions can only be installed on the desktop version.");
+    if (!toxenapi.isDesktop() && !ext.webCompatible) {
+      Toxen.error("This extension is not compatible with the web version.");
       return;
     }
 
     setInstalling(ext.id);
     try {
-      const url = `${Settings.getServer()}/extensions/store/${ext.id}/download`;
-      const res = await Toxen.fetch(url);
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: "Download failed" }));
-        Toxen.error(err.error || "Download failed");
-        return;
-      }
+      if (toxenapi.isDesktop()) {
+        // Desktop: download zip and extract to filesystem
+        const url = `${Settings.getServer()}/extensions/store/${ext.id}/download`;
+        const res = await Toxen.fetch(url);
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: "Download failed" }));
+          Toxen.error(err.error || "Download failed");
+          return;
+        }
 
-      const zipBuffer = await res.arrayBuffer();
-      const yauzl = await import("yauzl");
-      const fs = await import("fs");
-      const fsp = fs.promises;
-      const Path = await import("path");
+        const zipBuffer = await res.arrayBuffer();
+        const yauzl = await import("yauzl");
+        const fs = await import("fs");
+        const fsp = fs.promises;
+        const Path = await import("path");
 
-      const extDir = ExtensionManager.getExtensionsDir();
-      const targetDir = Path.resolve(extDir, ext.extensionId);
+        const extDir = ExtensionManager.getExtensionsDir();
+        const targetDir = Path.resolve(extDir, ext.extensionId);
 
-      // Remove old version if exists
-      await fsp.rm(targetDir, { recursive: true, force: true });
-      await fsp.mkdir(targetDir, { recursive: true });
+        // Remove old version if exists
+        await fsp.rm(targetDir, { recursive: true, force: true });
+        await fsp.mkdir(targetDir, { recursive: true });
 
-      // Extract zip to targetDir
-      await new Promise<void>((resolve, reject) => {
-        yauzl.fromBuffer(Buffer.from(zipBuffer), { lazyEntries: true }, (err: Error | null, zipfile: any) => {
-          if (err) return reject(err);
+        // Extract zip to targetDir
+        await new Promise<void>((resolve, reject) => {
+          yauzl.fromBuffer(Buffer.from(zipBuffer), { lazyEntries: true }, (err: Error | null, zipfile: any) => {
+            if (err) return reject(err);
 
-          zipfile.readEntry();
-          zipfile.on("entry", (entry: any) => {
-            if (/\/$/.test(entry.fileName)) {
-              zipfile.readEntry();
-            } else {
-              zipfile.openReadStream(entry, async (err: Error | null, readStream: any) => {
-                if (err) return reject(err);
-                const outPath = Path.resolve(targetDir, entry.fileName);
-                const outDir = Path.dirname(outPath);
-                await fsp.mkdir(outDir, { recursive: true });
-                const writeStream = fs.createWriteStream(outPath);
-                readStream.pipe(writeStream);
-                writeStream.on("close", () => zipfile.readEntry());
-                writeStream.on("error", reject);
-              });
-            }
+            zipfile.readEntry();
+            zipfile.on("entry", (entry: any) => {
+              if (/\/$/.test(entry.fileName)) {
+                zipfile.readEntry();
+              } else {
+                zipfile.openReadStream(entry, async (err: Error | null, readStream: any) => {
+                  if (err) return reject(err);
+                  const outPath = Path.resolve(targetDir, entry.fileName);
+                  const outDir = Path.dirname(outPath);
+                  await fsp.mkdir(outDir, { recursive: true });
+                  const writeStream = fs.createWriteStream(outPath);
+                  readStream.pipe(writeStream);
+                  writeStream.on("close", () => zipfile.readEntry());
+                  writeStream.on("error", reject);
+                });
+              }
+            });
+            zipfile.on("end", () => resolve());
+            zipfile.on("error", reject);
           });
-          zipfile.on("end", () => resolve());
-          zipfile.on("error", reject);
         });
-      });
 
-      // Re-discover and load extensions
-      await ExtensionManager.discover();
-      await ExtensionManager.loadAll();
+        // Re-discover and load extensions
+        await ExtensionManager.discover();
+        await ExtensionManager.loadAll();
+      } else {
+        // Web: fetch the extension manifest from server CDN, then load via eval
+        const manifestUrl = `${Settings.getServer()}/extensions/store/${ext.id}/serve/extension.json`;
+        const manifestRes = await Toxen.fetch(manifestUrl);
+        if (!manifestRes.ok) {
+          Toxen.error("Failed to fetch extension manifest from server.");
+          return;
+        }
+        const manifest: ExtensionManifest = await manifestRes.json();
+
+        // Basic validation to ensure the manifest has required fields
+        if (!manifest || typeof manifest.id !== "string" || typeof manifest.name !== "string" || typeof manifest.version !== "string") {
+          Toxen.error("Extension manifest is invalid or missing required fields.");
+          return;
+        }
+
+        await ExtensionManager.installWebExtension(ext.id, manifest);
+      }
 
       Toxen.log(`Extension "${ext.name}" installed successfully!`);
       forceUpdate();
@@ -206,7 +238,7 @@ function BrowseTab() {
           <ExtensionCard
             key={ext.id}
             ext={ext}
-            onDownload={toxenapi.isDesktop() ? handleDownload : undefined}
+            onDownload={toxenapi.isDesktop() || ext.webCompatible ? handleDownload : undefined}
             installing={installing === ext.id}
           />
         ))

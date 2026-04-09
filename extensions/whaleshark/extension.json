@@ -5,6 +5,7 @@
   "author": "Toxen",
   "description": "A whale shark that swims across the screen, reacting to audio frequencies.",
   "main": "index.js",
+  "webCompatible": true,
   "visualizers": [
     {
       "id": "whaleshark",

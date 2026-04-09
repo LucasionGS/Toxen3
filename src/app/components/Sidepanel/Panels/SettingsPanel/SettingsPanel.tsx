@@ -55,11 +55,9 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           <Tabs.Tab value="Advanced">
             Advanced
           </Tabs.Tab>
-          {toxenapi.isDesktop() && (
-            <Tabs.Tab value="Extensions">
-              Extensions
-            </Tabs.Tab>
-          )}
+          <Tabs.Tab value="Extensions">
+            Extensions
+          </Tabs.Tab>
         </Tabs.List>
         <Tabs.Panel value="General">
           <h2>General</h2>
@@ -864,52 +862,99 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           {/* <HueSettings /> */}
         </Tabs.Panel>
 
-        {toxenapi.isDesktop() && (
-          <Tabs.Panel value="Extensions">
-            <h2>Extensions</h2>
-            <sup>Manage installed extensions. Extensions add new functionality like custom visualizers.</sup>
-            <br /><br />
-            {(() => {
-              const extensions = Array.from(ExtensionManager.extensions.values());
-              if (extensions.length === 0) {
-                return <Text>No extensions installed.</Text>;
-              }
-              return extensions.map(ext => (
-                <div key={ext.manifest.id} style={{ marginBottom: 12, padding: 8, border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4 }}>
-                  <Text fw={600}>{ext.manifest.name} <span style={{ opacity: 0.5, fontSize: "0.85em" }}>v{ext.manifest.version}</span></Text>
-                  {ext.manifest.description && <Text size="sm" style={{ opacity: 0.7 }}>{ext.manifest.description}</Text>}
-                  <Select
-                    allowDeselect={false}
-                    label="Status"
-                    defaultValue={ext.enabled ? "enabled" : "disabled"}
-                    data={[
-                      { value: "enabled", label: "Enabled" },
-                      { value: "disabled", label: "Disabled" },
-                    ]}
-                    onChange={async (value) => {
-                      if (value === "enabled") {
-                        await ExtensionManager.enable(ext.manifest.id);
-                      } else {
-                        await ExtensionManager.disable(ext.manifest.id);
-                      }
-                      forceUpdate();
-                    }}
-                    style={{ marginTop: 4 }}
-                  />
-                </div>
-              ));
-            })()}
-            <br />
-            <Button variant="subtle" onClick={() => {
-              if (!toxenapi.isDesktop()) return;
-              toxenapi.remote.shell.openPath(ExtensionManager.getExtensionsDir());
-            }}>
-              Open Extensions Folder
-            </Button>
-            <br /><br />
-            {toxenapi.isDesktop() && <ExtensionStorePanel />}
-          </Tabs.Panel>
-        )}
+        <Tabs.Panel value="Extensions">
+          <h2>Extensions</h2>
+          <sup>Manage installed extensions. Extensions add new functionality like custom visualizers.</sup>
+          <br /><br />
+          {toxenapi.isDesktop() ? (
+            <>
+              {(() => {
+                const extensions = Array.from(ExtensionManager.extensions.values());
+                if (extensions.length === 0) {
+                  return <Text>No extensions installed.</Text>;
+                }
+                return extensions.map(ext => (
+                  <div key={ext.manifest.id} style={{ marginBottom: 12, padding: 8, border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4 }}>
+                    <Text fw={600}>{ext.manifest.name} <span style={{ opacity: 0.5, fontSize: "0.85em" }}>v{ext.manifest.version}</span></Text>
+                    {ext.manifest.description && <Text size="sm" style={{ opacity: 0.7 }}>{ext.manifest.description}</Text>}
+                    <Select
+                      allowDeselect={false}
+                      label="Status"
+                      defaultValue={ext.enabled ? "enabled" : "disabled"}
+                      data={[
+                        { value: "enabled", label: "Enabled" },
+                        { value: "disabled", label: "Disabled" },
+                      ]}
+                      onChange={async (value) => {
+                        if (value === "enabled") {
+                          await ExtensionManager.enable(ext.manifest.id);
+                        } else {
+                          await ExtensionManager.disable(ext.manifest.id);
+                        }
+                        forceUpdate();
+                      }}
+                      style={{ marginTop: 4 }}
+                    />
+                  </div>
+                ));
+              })()}
+              <br />
+              <Button variant="subtle" onClick={() => {
+                if (!toxenapi.isDesktop()) return;
+                toxenapi.remote.shell.openPath(ExtensionManager.getExtensionsDir());
+              }}>
+                Open Extensions Folder
+              </Button>
+            </>
+          ) : (
+            <>
+              {(() => {
+                const extensions = Array.from(ExtensionManager.webExtensions.values());
+                if (extensions.length === 0) {
+                  return <Text>No web extensions installed. Browse the extension store below to install web-compatible extensions.</Text>;
+                }
+                return extensions.map(ext => (
+                  <div key={ext.manifest.id} style={{ marginBottom: 12, padding: 8, border: "1px solid rgba(255,255,255,0.1)", borderRadius: 4 }}>
+                    <Text fw={600}>{ext.manifest.name} <span style={{ opacity: 0.5, fontSize: "0.85em" }}>v{ext.manifest.version}</span></Text>
+                    {ext.manifest.description && <Text size="sm" style={{ opacity: 0.7 }}>{ext.manifest.description}</Text>}
+                    <Select
+                      allowDeselect={false}
+                      label="Status"
+                      defaultValue={ext.enabled ? "enabled" : "disabled"}
+                      data={[
+                        { value: "enabled", label: "Enabled" },
+                        { value: "disabled", label: "Disabled" },
+                      ]}
+                      onChange={async (value) => {
+                        if (value === "enabled") {
+                          await ExtensionManager.enableWeb(ext.manifest.id);
+                        } else {
+                          await ExtensionManager.disableWeb(ext.manifest.id);
+                        }
+                        forceUpdate();
+                      }}
+                      style={{ marginTop: 4 }}
+                    />
+                    <Button
+                      size="xs"
+                      color="red"
+                      variant="subtle"
+                      mt={6}
+                      onClick={() => {
+                        ExtensionManager.removeWebExtension(ext.manifest.id);
+                        forceUpdate();
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                ));
+              })()}
+            </>
+          )}
+          <br /><br />
+          <ExtensionStorePanel />
+        </Tabs.Panel>
       </Tabs>
     </>
   )
