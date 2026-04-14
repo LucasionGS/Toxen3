@@ -9,7 +9,6 @@ import Song from "../Song";
 import * as remote from "@electron/remote";
 import Settings from "../Settings";
 type Client = InstanceType<typeof RPC.Client>;
-type Presence = import("discord-rpc").Presence;
 
 // Class for handling Discord Game Presence
 export default class Discord {
@@ -91,27 +90,44 @@ export default class Discord {
 
       this.totalFails = 0;
 
-      let options: Presence = {
-        details: `${song?.isVideo() ? "Watching a video" : "Listening to a song"}`,
-        largeImageKey: "toxen",
+      const isVideo = song?.isVideo();
+      // type 2 = Listening, type 3 = Watching
+      const activityType = isVideo ? 3 : 2;
+
+      const rawActivity: Record<string, unknown> = {
+        type: activityType,
+        details: isVideo ? "Watching a video" : "Listening to a song",
+        assets: {
+          large_image: "toxen",
+          large_text: remote.app.isPackaged
+            ? "Toxen " + remote.app.getVersion()
+            : "Toxen " + remote.app.getVersion() + " | Developer Mode",
+        },
         buttons: [
           {
             label: "Get Toxen",
-            url: "https://toxen.net"
-          }
+            url: "https://toxen.net",
+          },
         ],
-        largeImageText: remote.app.isPackaged ? "Toxen " + remote.app.getVersion() : "Toxen " + remote.app.getVersion() + " | Developer Mode",
       };
+
       if (Settings.get("discordPresenceDetailed") && song) {
-        // options["startTimestamp"] = Date.now(); // For Time left
-        // options["endTimestamp"] = Date.now() + (SongManager.player.duration - SongManager.player.currentTime) * 1000; // For Time left
-        if (!Toxen.musicPlayer.media.paused) options["startTimestamp"] = Date.now() - (Toxen.musicPlayer.media.currentTime * 1000); // For Time Elapsed
-        options["details"] = (Toxen.musicPlayer.media.paused ? "(Paused) " : "")
-          + (`${song.isVideo() ? "Watching " : "Listening to "}`)
-          + `${song.getDisplayName()}`;
-        if (song.source) options["state"] = `\nFrom ${song.source}`;
+        if (!Toxen.musicPlayer.media.paused) {
+          rawActivity["timestamps"] = {
+            start: Math.floor((Date.now() - Toxen.musicPlayer.media.currentTime * 1000) / 1000),
+          };
+        }
+        rawActivity["details"] = (Toxen.musicPlayer.media.paused ? "(Paused) " : "")
+          + (isVideo ? "Watching " : "Listening to ")
+          + song.getDisplayName();
+        if (song.source) rawActivity["state"] = `From ${song.source}`;
       }
-      this.client.setActivity(options, process.pid);
+
+      // Use raw request so we can pass `type` — setActivity() does not expose it.
+      (this.client as any).request("SET_ACTIVITY", {
+        pid: process.pid,
+        activity: rawActivity,
+      });
       break;
     }
   }
