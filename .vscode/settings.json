@@ -1,6 +1,7 @@
 {
   "chat.tools.terminal.autoApprove": {
-    "npx tsc": true
+    "npx tsc": true,
+    "go": true
   },
   "js/ts.tsdk.path": "node_modules\\typescript\\lib"
 }
