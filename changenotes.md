@@ -1,3 +1,9 @@
+<!-- VERSION: 2.8.0 -->
+## 2.8.0 - 30-04-2026
+### New Features
+- **Experimental Integrations** - Integrated songs are streamed from their given provider directly to Toxen, allowing the full Toxen experience with a music streaming service. This is currently in an experimental stage, and only Soundcloud integration is available, but more will be added in the future.
+  - **Soundcloud Integration** - You can now stream your Soundcloud favorites in Toxen, without needing to download them. Just go to the new `Integrations` tab in the settings, enable Soundcloud, and you'll be able to search and add your favorite tracks.
+
 <!-- VERSION: 2.7.3 -->
 ## 2.7.3 - 04-04-2026
 ### New Features
