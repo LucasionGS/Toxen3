@@ -24,6 +24,8 @@ import User from "./User";
 import { hideNotification, updateNotification } from "@mantine/notifications";
 import PlaylistManager from "../components/PlaylistManager/PlaylistManager";
 import { friendSocket } from "./FriendSocket";
+import ProviderManager from "./providers/ProviderManager";
+import type { ProviderAudioSource, ProviderSongReference } from "./providers/Provider";
 // import HueManager from "./philipshue/HueManager";
 
 export default class Song implements ISong {
@@ -37,6 +39,7 @@ export default class Song implements ISong {
   public url: string;
   public tags: string[];
   public paths: ISongPaths;
+  public provider: ProviderSongReference;
   public visualizerColor: string;
   public visualizerStyle: VisualizerStyle | string;
   public visualizerStyleOptions: ISong["visualizerStyleOptions"];
@@ -172,6 +175,24 @@ export default class Song implements ISong {
     if (Settings.isRemote()) return this.paths.media ? `${this.dirname()}/${this.paths.media}` : "";
     else if (toxenapi.isDesktop()) return (this.paths && this.paths.media) ? toxenapi.path.resolve(this.dirname(), this.paths.media || "") : "";
     toxenapi.throwDesktopOnly("Unable to get media file.");
+  }
+
+  public usesProvider() {
+    return ProviderManager.isProviderSong(this);
+  }
+
+  public hasPlayableMedia() {
+    return this.usesProvider() || Boolean(this.paths?.media);
+  }
+
+  public async getMediaSource(): Promise<ProviderAudioSource> {
+    if (this.usesProvider()) {
+      return await ProviderManager.getAudioSource(this);
+    }
+
+    let url = this.mediaFile();
+    if (Settings.isRemote()) url = User.appendAuth(url);
+    return { url };
   }
 
   /**
@@ -355,6 +376,7 @@ export default class Song implements ISong {
       "title",
       "coArtists",
       "paths",
+      "provider",
       "source",
       "tags",
       "album",
@@ -484,6 +506,7 @@ export default class Song implements ISong {
   }
 
   private lastBlobUrl: string;
+  private lastProviderAudioSource: ProviderAudioSource;
 
   public async play(options?: {
     /**
@@ -508,8 +531,14 @@ export default class Song implements ISong {
     }
 
     options ?? (options = {});
-    let src = this.mediaFile();
-    if (Settings.isRemote()) src = User.appendAuth(src);
+    const sourceInfo = await this.getMediaSource().catch(error => {
+      console.error(error);
+      Toxen.error(error?.message ?? "Unable to load media source.");
+      return null as ProviderAudioSource;
+    });
+    if (!sourceInfo?.url) return;
+
+    let src = sourceInfo.url;
     if (Toxen.musicPlayer.state.src === src) return;
     // if (HueManager.isEnabled()) {
     //   HueManager.start().catch((error) => Toxen.error(error.message));
@@ -518,10 +547,12 @@ export default class Song implements ISong {
     //   HueManager.stop();
     // }
     if (Settings.isRemote() && this.isVideo()) Toxen.log("Streaming a video can take some time to load... Using audio files is much faster.", 3000);
+    if (this.lastProviderAudioSource?.revoke) this.lastProviderAudioSource.revoke();
+    this.lastProviderAudioSource = this.usesProvider() ? sourceInfo : null;
     if (this.lastBlobUrl) URL.revokeObjectURL(this.lastBlobUrl);
     let bg = this.backgroundFile();
 
-    if (!Settings.isRemote() && toxenapi.isDesktop()) {
+    if (!this.usesProvider() && !Settings.isRemote() && toxenapi.isDesktop()) {
       // For formats not natively supported by Chromium, transcode to a Blob URL
       // in memory using FFmpeg before handing the source to the audio element.
       // Seeking works natively since the full data is in memory.
@@ -566,10 +597,10 @@ export default class Song implements ISong {
     
     if (crossfadeEnabled && currentSong && !Toxen.musicPlayer.media.paused) {
       // Use crossfade for smooth transition
-      await Toxen.musicPlayer.crossfade(src, crossfadeDuration);
+      await Toxen.musicPlayer.crossfade(src, crossfadeDuration, { crossOrigin: sourceInfo.crossOrigin });
     } else {
       // Normal transition without crossfade
-      Toxen.musicPlayer.setSource(src, true);
+      Toxen.musicPlayer.setSource(src, true, { crossOrigin: sourceInfo.crossOrigin });
     }
   
   // If song has a background, force it. Otherwise, let Background component resolve defaults/shuffle
@@ -705,8 +736,8 @@ export default class Song implements ISong {
         });
       }
 
-      const convertable = Toxen.getSupportedConvertableAudioFiles();
-      songs = songs.filter(s => convertable.includes(toxenapi.getFileExtension(s.mediaFile()).toLowerCase()))
+      const convertable = Toxen.getTranscodeAudioFiles();
+      songs = songs.filter(s => !s.usesProvider() && convertable.includes(toxenapi.getFileExtension(s.mediaFile()).toLowerCase()))
 
       // Convert 3 at a time
       let i = 0;
@@ -822,7 +853,7 @@ export default class Song implements ISong {
   private static readonly SETTINGS_EXCLUDED_KEYS: (keyof ISong)[] = [
     "uid", "artist", "title", "coArtists", "album", "genre",
     "source", "tags", "year", "language",
-    "duration", "hash", "files", "playlistSettings",
+    "duration", "hash", "files", "playlistSettings", "provider",
   ];
 
   /**
@@ -1610,7 +1641,7 @@ export default class Song implements ISong {
       return [];
     }
     let iSongs: ISong[] = await Toxen.fetch(user.getCollectionPath()).then(res => res.json());
-    const songs: Song[] = iSongs.map(iSong => Song.create(iSong)).filter(s => s.paths && s.paths.media);
+    const songs: Song[] = iSongs.map(iSong => Song.create(iSong)).filter(s => s.paths && s.hasPlayableMedia());
     if (forEach) {
       songs.forEach(forEach);
     }
@@ -1857,6 +1888,7 @@ export default class Song implements ISong {
    * Returns whether the song's media file is a video. If false, it's an audio file.
    */
   public isVideo() {
+    if (this.usesProvider()) return false;
     const mediaFile = this.mediaFile();
     if (!mediaFile) return false;
     return Toxen.getSupportedVideoFiles().includes(toxenapi.getFileExtension(mediaFile).toLowerCase());
@@ -2117,10 +2149,11 @@ export default class Song implements ISong {
   }
 
   public async calculateDuration(): Promise<number> {
-    let mediaFile = this.mediaFile();
-    if (!mediaFile) throw new Error("No media file found for song: " + this.getDisplayName());
-    if (Settings.isRemote()) mediaFile = User.appendAuth(mediaFile);
-    const audio = new Audio(mediaFile);
+    if (this.provider?.duration) return this.provider.duration;
+    const sourceInfo = await this.getMediaSource();
+    if (!sourceInfo.url) throw new Error("No media file found for song: " + this.getDisplayName());
+    const audio = new Audio(sourceInfo.url);
+    if (sourceInfo.crossOrigin) audio.crossOrigin = sourceInfo.crossOrigin;
     return await Song.calculateDurationFrom(audio);
   }
 
@@ -2193,6 +2226,7 @@ export interface ISong {
   visualizerPulseBackground: "pulse" | "pulse-off";
   visualizerGlow: boolean;
   paths: ISongPaths;
+  provider?: ProviderSongReference;
   year: number;
   language: string;
   subtitleDelay: number;

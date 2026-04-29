@@ -3,6 +3,7 @@ import JSONX from "./JSONX";
 import { Toxen } from "../ToxenApp";
 import User from "./User";
 import Song from "./Song";
+import type { ProviderSettingsMap } from "./providers/Provider";
 
 export default class Settings {
   /**
@@ -89,6 +90,8 @@ export default class Settings {
       
       // Performance
       enableThumbnailCache: false,
+      // Integrations
+      providers: {},
       // Change notes
       lastShownChangeNotesVersion: "",
     };
@@ -398,6 +401,9 @@ export interface ISettings {
 
   // Extensions
   enabledExtensions: Record<string, boolean>;
+
+  // Integrations
+  providers: ProviderSettingsMap;
 }
 
 export enum VisualizerStyle {

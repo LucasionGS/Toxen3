@@ -8,6 +8,10 @@ import StoryboardParser from '../toxen/StoryboardParser';
 
 export type MediaSourceInfo = string;
 
+interface MusicPlayerSourceOptions {
+  crossOrigin?: "anonymous" | "use-credentials" | "";
+}
+
 interface MusicPlayerProps {
   getRef?: ((ref: MusicPlayer) => void),
   useSubtitleEditorMode?: boolean,
@@ -15,6 +19,7 @@ interface MusicPlayerProps {
 
 interface MusicPlayerState {
   src: MediaSourceInfo;
+  crossOrigin?: MusicPlayerSourceOptions["crossOrigin"];
 }
 
 export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayerState> {
@@ -22,7 +27,8 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
     super(props);
 
     this.state = {
-      src: null
+      src: null,
+      crossOrigin: undefined,
     }
   }
 
@@ -107,13 +113,14 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
     if (!this.props.useSubtitleEditorMode && options.updateDiscord) Toxen.discord?.setPresence();
   }
 
-  public setSource(src: MediaSourceInfo, playWhenReady: boolean = false) {
+  public setSource(src: MediaSourceInfo, playWhenReady: boolean = false, options?: MusicPlayerSourceOptions) {
     // Reset storyboard on song change
     StoryboardParser.resetCurrentEvents();
     // Reset crossfade trigger for new song
     this.crossfadeTriggered = false;
     this.setState({
-      src
+      src,
+      crossOrigin: options?.crossOrigin,
     }, () => playWhenReady ? this.play() : this.load()
     );
   }
@@ -161,7 +168,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
    * @param newSrc The source of the new song to fade into
    * @param duration The duration of the crossfade in seconds
    */
-  public async crossfade(newSrc: MediaSourceInfo, duration: number = 3): Promise<void> {
+  public async crossfade(newSrc: MediaSourceInfo, duration: number = 3, options?: MusicPlayerSourceOptions): Promise<void> {
     // Cancel any existing crossfade before starting a new one
     if (this.crossfadeInProgress) {
       console.log('Canceling previous crossfade to start new one');
@@ -174,7 +181,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
 
     // If there's no current source or it's paused, just switch normally
     if (!this.state.src || this.media.paused) {
-      this.setSource(newSrc, true);
+      this.setSource(newSrc, true, options);
       return;
     }
 
@@ -185,6 +192,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
     try {
       // Create temporary element for the outgoing song
       this.tempCrossfadeElement = document.createElement('audio');
+      if (this.state.crossOrigin) this.tempCrossfadeElement.crossOrigin = this.state.crossOrigin;
       this.tempCrossfadeElement.src = this.state.src;
       this.tempCrossfadeElement.currentTime = this.media.currentTime;
       this.tempCrossfadeElement.volume = this.media.volume;
@@ -199,7 +207,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
       // Reset storyboard on song change
       StoryboardParser.resetCurrentEvents();
       
-      this.setState({ src: newSrc }, async () => {
+      this.setState({ src: newSrc, crossOrigin: options?.crossOrigin }, async () => {
         try {
           // Start playing the new song
           await this.media.play();
@@ -276,7 +284,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
       const currentVolume = Settings.get('volume', 50);
       this.media.volume = currentVolume / 100;
       
-      this.setSource(newSrc, true);
+      this.setSource(newSrc, true, options);
     }
   }
 
@@ -456,6 +464,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
         onCanPlay={e => Toxen.musicControls.setMax(this.media.duration)}
         ref={ref => this.media = ref}
         hidden
+        crossOrigin={this.state.crossOrigin}
         src={this.state.src}
         onEnded={this.onEnded.bind(this)}
         onSeeking={this.onSeeking.bind(this)}
@@ -467,6 +476,7 @@ export default class MusicPlayer extends Component<MusicPlayerProps, MusicPlayer
       <video
         onCanPlay={e => Toxen.musicControls.setMax(this.media.duration)}
         ref={ref => this.media = ref}
+        crossOrigin={this.state.crossOrigin}
         src={this.state.src}
         onEnded={this.onEnded.bind(this)}
         onSeeking={this.onSeeking.bind(this)}

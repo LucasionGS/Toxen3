@@ -803,7 +803,7 @@ export default class DesktopController extends ToxenController {
           if (isDifferent) info.paths.dirname = ent.name;
 
 
-          if (info.paths.media) {
+          if (info.paths.media || info.provider?.id) {
             let song = $song.create(info);
             songs.push(song);
             if (isDifferent) song.saveInfo();

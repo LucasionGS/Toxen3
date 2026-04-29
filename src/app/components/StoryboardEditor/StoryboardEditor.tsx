@@ -291,7 +291,7 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
   const start = React.useCallback(() => {
     if (!Toxen.editingSong) return;
 
-    if (!Toxen.editingSong.paths.media.endsWith(".ogg")) {
+    if (!Toxen.editingSong.usesProvider() && !Toxen.editingSong.paths.media?.endsWith(".ogg")) {
       function PopupModalConfirmation() {
         const [converting, setConverting] = React.useState(false);
 

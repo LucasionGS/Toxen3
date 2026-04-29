@@ -19,6 +19,7 @@ import LoginForm from "../../../LoginForm/LoginForm";
 import User from "../../../../toxen/User";
 import { bytesToString } from "../../../AppBar/AppBar";
 import { Tab } from "react-bootstrap";
+import ProviderIntegrations from "./ProviderIntegrations";
 
 interface SettingsPanelProps { }
 
@@ -51,6 +52,9 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           </Tabs.Tab>
           <Tabs.Tab value="Account">
             Account
+          </Tabs.Tab>
+          <Tabs.Tab value="Integrations">
+            Integrations
           </Tabs.Tab>
           <Tabs.Tab value="Advanced">
             Advanced
@@ -812,6 +816,11 @@ export default function SettingsPanel(props: SettingsPanelProps) {
               )}
             </>)
           })()}
+        </Tabs.Panel>
+
+        <Tabs.Panel value="Integrations">
+          <h2>Integrations</h2>
+          <ProviderIntegrations />
         </Tabs.Panel>
 
         <Tabs.Panel value="Advanced">

@@ -21,6 +21,7 @@ import ScreenPositionSelector from "../../../ScreenPositionSelector/ScreenPositi
 import { VisualizerStyleOptions } from "../SettingsPanel/SettingsPanel";
 import { useForceUpdate } from "@mantine/hooks";
 import { hideNotification, updateNotification } from "@mantine/notifications";
+import ProviderManager from "../../../../toxen/providers/ProviderManager";
 
 interface EditSongProps { }
 
@@ -31,6 +32,8 @@ export default function EditSong(props: EditSongProps) {
   // State for playlist-specific settings mode
   const [isPlaylistMode, setIsPlaylistMode] = React.useState(false);
   const currentPlaylist = Toxen.playlist;
+  const isProviderSong = Toxen.editingSong.usesProvider();
+  const provider = ProviderManager.get(Toxen.editingSong.provider?.id);
   // const hasPlaylistSettings = currentPlaylist ? Toxen.editingSong.hasPlaylistSettings(currentPlaylist.name) : false;
   
   // Get current settings (either playlist-specific or song default)
@@ -208,36 +211,53 @@ export default function EditSong(props: EditSongProps) {
         )
         }
         <SidepanelSectionGroup title="Files & Media" icon={<i className="fas fa-file-audio" />} collapsible>
-        <SelectAsync
-          allowDeselect={false}
-          leftSection={<i className="fas fa-file-audio" />}
-          label="Media File"
-          name="paths.media"
-          defaultValue={getValue('paths.media')}
-          data={(async () => {
-            let song = Toxen.editingSong;
-            if (!song)
-              return [];
-            let path = song.dirname();
+        {isProviderSong ? (
+          <>
+            <TextInput
+              leftSection={<i className="fas fa-plug" />}
+              label="Provider"
+              value={provider?.displayName ?? Toxen.editingSong.provider?.id ?? "Unknown provider"}
+              disabled
+            />
+            <TextInput
+              leftSection={<i className="fas fa-link" />}
+              label="Provider Track"
+              value={Toxen.editingSong.provider?.url ?? Toxen.editingSong.provider?.trackId ?? ""}
+              disabled
+            />
+          </>
+        ) : (
+          <SelectAsync
+            allowDeselect={false}
+            leftSection={<i className="fas fa-file-audio" />}
+            label="Media File"
+            name="paths.media"
+            defaultValue={getValue('paths.media')}
+            data={(async () => {
+              let song = Toxen.editingSong;
+              if (!song)
+                return [];
+              let path = song.dirname();
 
-            let supported = Toxen.getSupportedMediaFiles();
-            return await Toxen.filterSupportedFiles(path, supported);
-          })}
-          onChange={(v) => {
-            if (isPlaylistMode && currentPlaylist) {
-              const currentSettings = getCurrentSettings();
-              const paths = currentSettings.paths || {};
-              saveSettings('paths', { ...paths, media: v });
-            } else {
-              Toxen.editingSong.paths.media = v;
-              Toxen.editingSong.saveInfo();
-            }
-            let current = Song.getCurrent();
-            if (Toxen.editingSong == current) {
-              Toxen.musicPlayer.setSource(current.mediaFile(), true);
-            }
-          }}
-        />
+              let supported = Toxen.getSupportedMediaFiles();
+              return await Toxen.filterSupportedFiles(path, supported);
+            })}
+            onChange={(v) => {
+              if (isPlaylistMode && currentPlaylist) {
+                const currentSettings = getCurrentSettings();
+                const paths = currentSettings.paths || {};
+                saveSettings('paths', { ...paths, media: v });
+              } else {
+                Toxen.editingSong.paths.media = v;
+                Toxen.editingSong.saveInfo();
+              }
+              let current = Song.getCurrent();
+              if (Toxen.editingSong == current) {
+                current.play();
+              }
+            }}
+          />
+        )}
         <BackgroundFileSelector
           label="Background file"
           defaultValue={getValue('paths.background')}
@@ -709,7 +729,7 @@ export default function EditSong(props: EditSongProps) {
       </>
 
       <SidepanelSectionGroup title="Export" icon={<i className="fas fa-file-export" />} collapsible>
-      <Button onClick={async () => {
+      {!isProviderSong && <Button onClick={async () => {
         if (toxenapi.isDesktop()) {
           toxenapi.remote.Menu.buildFromTemplate(
             (await Toxen.filterSupportedFiles(Toxen.editingSong.dirname(), Toxen.getSupportedMediaFiles())).map(file => {
@@ -737,9 +757,9 @@ export default function EditSong(props: EditSongProps) {
         else {
           toxenapi.throwDesktopOnly();
         }
-      }}><i className="fas fa-file-export"></i>&nbsp;Export Media File</Button>
+      }}><i className="fas fa-file-export"></i>&nbsp;Export Media File</Button>}
 
-      <br />
+      {!isProviderSong && <br />}
 
       <Button onClick={async () => {
         if (toxenapi.isDesktop()) {
