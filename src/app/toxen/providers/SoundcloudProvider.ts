@@ -1,4 +1,7 @@
 import type Song from "../Song";
+import Settings from "../Settings";
+import User from "../User";
+import { Toxen } from "../../ToxenApp";
 import Provider from "./Provider";
 import type { ProviderAudioSource, ProviderConfigurationField, ProviderSearchResult } from "./Provider";
 
@@ -32,6 +35,10 @@ interface SoundCloudSearchResponse {
   collection?: SoundCloudTrack[];
 }
 
+interface SoundCloudClientIdResponse {
+  clientId?: string;
+}
+
 export default class SoundcloudProvider extends Provider {
   public readonly id = "soundcloud";
   public readonly displayName = "SoundCloud";
@@ -53,6 +60,20 @@ export default class SoundcloudProvider extends Provider {
 
   public async search(query: string): Promise<ProviderSearchResult[]> {
     const clientId = await this.getClientId();
+
+    if (this.shouldUseProxy()) {
+      const data = await this.fetchProxyJson<SoundCloudSearchResponse>("/search/tracks", {
+        q: query,
+        client_id: clientId,
+        limit: 20,
+        app_locale: "en",
+      }, "SoundCloud search failed");
+
+      return (data.collection ?? [])
+        .filter(track => track?.id && track.title)
+        .map(track => this.trackToSearchResult(track));
+    }
+
     const searchUrl = new URL(`${SoundcloudProvider.apiBase}/search/tracks`);
     searchUrl.searchParams.set("q", query);
     searchUrl.searchParams.set("client_id", clientId);
@@ -115,6 +136,11 @@ export default class SoundcloudProvider extends Provider {
   }
 
   private async discoverClientId(): Promise<string> {
+    if (this.shouldUseProxy()) {
+      const data = await this.fetchProxyJson<SoundCloudClientIdResponse>("/client-id", undefined, "Unable to auto-detect SoundCloud client ID");
+      return data.clientId ?? "";
+    }
+
     try {
       const homepage = await fetch("https://soundcloud.com/").then(res => res.text());
       const scriptUrls = Array.from(homepage.matchAll(/<script[^>]+src="([^"]+\.js)"/g))
@@ -137,6 +163,12 @@ export default class SoundcloudProvider extends Provider {
   }
 
   private async getTrack(trackId: string, clientId: string): Promise<SoundCloudTrack> {
+    if (this.shouldUseProxy()) {
+      return await this.fetchProxyJson<SoundCloudTrack>(`/tracks/${encodeURIComponent(trackId)}`, {
+        client_id: clientId,
+      }, "Unable to load SoundCloud track");
+    }
+
     const url = new URL(`${SoundcloudProvider.apiBase}/tracks/${encodeURIComponent(trackId)}`);
     url.searchParams.set("client_id", clientId);
 
@@ -149,6 +181,13 @@ export default class SoundcloudProvider extends Provider {
   }
 
   private async resolveTrack(trackUrl: string, clientId: string): Promise<SoundCloudTrack> {
+    if (this.shouldUseProxy()) {
+      return await this.fetchProxyJson<SoundCloudTrack>("/resolve", {
+        url: trackUrl,
+        client_id: clientId,
+      }, "Unable to resolve SoundCloud URL");
+    }
+
     const url = new URL(`${SoundcloudProvider.apiBase}/resolve`);
     url.searchParams.set("url", trackUrl);
     url.searchParams.set("client_id", clientId);
@@ -162,6 +201,14 @@ export default class SoundcloudProvider extends Provider {
   }
 
   private async getStreamUrl(track: SoundCloudTrack, clientId: string): Promise<string> {
+    if (this.shouldUseProxy()) {
+      return User.appendAuth(this.getProxyUrl("/stream", {
+        track_id: track.id ? String(track.id) : undefined,
+        url: track.id ? undefined : track.permalink_url,
+        client_id: clientId,
+      }));
+    }
+
     const transcodings = track.media?.transcodings ?? [];
     const progressive = transcodings.find(item => (
       item.format?.protocol === "progressive"
@@ -189,6 +236,33 @@ export default class SoundcloudProvider extends Provider {
     return `${url}${separator}client_id=${encodeURIComponent(clientId)}`;
   }
 
+  private shouldUseProxy(): boolean {
+    return !toxenapi.isDesktop();
+  }
+
+  private getProxyUrl(path: string, params?: Record<string, string | number | undefined>): string {
+    const url = new URL(`${Settings.getServer()}/providers/soundcloud${path}`);
+    Object.entries(params ?? {}).forEach(([key, value]) => {
+      if (value !== undefined && value !== null && value !== "") {
+        url.searchParams.set(key, String(value));
+      }
+    });
+    return url.toString();
+  }
+
+  private async fetchProxyJson<ResponseType>(
+    path: string,
+    params: Record<string, string | number | undefined> | undefined,
+    fallbackMessage: string
+  ): Promise<ResponseType> {
+    const response = await Toxen.fetch(this.getProxyUrl(path, params));
+    if (!response.ok) {
+      const body = await response.json().catch((): null => null);
+      throw new Error(body?.error || `${fallbackMessage} (${response.status}).`);
+    }
+    return await response.json() as ResponseType;
+  }
+
   private trackToSearchResult(track: SoundCloudTrack): ProviderSearchResult {
     return {
       providerId: this.id,
@@ -196,7 +270,7 @@ export default class SoundcloudProvider extends Provider {
       title: track.title ?? "Unknown Title",
       artist: track.user?.username ?? "Unknown Artist",
       url: track.permalink_url,
-      artworkUrl: this.upgradeArtwork(track.artwork_url),
+      artworkUrl: this.getArtworkUrl(track.artwork_url),
       duration: track.duration,
       sourceData: track,
     };
@@ -205,5 +279,11 @@ export default class SoundcloudProvider extends Provider {
   private upgradeArtwork(artworkUrl?: string): string | undefined {
     if (!artworkUrl) return artworkUrl;
     return artworkUrl.replace("-large", "-t500x500");
+  }
+
+  private getArtworkUrl(artworkUrl?: string): string | undefined {
+    const upgraded = this.upgradeArtwork(artworkUrl);
+    if (!upgraded || !this.shouldUseProxy()) return upgraded;
+    return User.appendAuth(this.getProxyUrl("/artwork", { url: upgraded }));
   }
 }
