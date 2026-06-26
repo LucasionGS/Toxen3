@@ -759,6 +759,17 @@ export default function SettingsPanel(props: SettingsPanelProps) {
         <Tabs.Panel value="Performance">
           <h2>Performance</h2>
           <Checkbox
+            onClick={(e) => Settings.apply({ lowPerformanceMode: e.currentTarget.checked }, true)}
+            defaultChecked={Settings.get("lowPerformanceMode")}
+            name="lowPerformanceMode"
+            label="Low Performance Mode"
+          />
+          <sup>
+            Disables all additional rendering effects, including the visualizer, dynamic lighting, and storyboards.
+            Useful for improving performance on lower-end hardware, or on mobile devices when Toxen is just playing in the background.
+          </sup>
+
+          <Checkbox
             onClick={(e) => Settings.apply({ hideOffScreenSongElements: e.currentTarget.checked }, true)}
             defaultChecked={Settings.get("hideOffScreenSongElements")}
             name="hideOffScreenSongElements"

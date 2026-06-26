@@ -76,7 +76,11 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     const song = Toxen.background.storyboard?.getSong();
     const ctx = this.ctx;
 
-    const storyboardCallbacks = StoryboardParser.drawStoryboard(ctx, {
+    // When low performance mode is enabled, skip all additional rendering effects
+    // (storyboard, dynamic lighting, visualizer, star rush, floating title).
+    const lowPerformanceMode = Settings.get("lowPerformanceMode") ?? false;
+
+    const storyboardCallbacks = lowPerformanceMode ? [] : StoryboardParser.drawStoryboard(ctx, {
       currentSongTime: Toxen.musicPlayer.media.currentTime,
       songDuration: Toxen.musicPlayer.media.duration,
       isPaused: Toxen.musicPlayer.media.paused,
@@ -86,7 +90,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     const baseBackgroundDim = (Toxen.background.storyboard.getBackgroundDim() ?? 50) / 100; // Base opacity of the background.
     const storedColorAsRGB = hexToRgb(storedColor);
     let usedDimColor: string;
-    if (Toxen.background.storyboard.getDynamicLighting()) {
+    if (!lowPerformanceMode && Toxen.background.storyboard.getDynamicLighting()) {
       this.ctx.fillStyle = usedDimColor = this.dynamicDim >= 0 ? `rgba(0,0,0,${this.dynamicDim})`
         : `rgba(${storedColorAsRGB.r},${storedColorAsRGB.g},${storedColorAsRGB.b},${-this.dynamicDim / 2})`;
       // this.ctx.fillStyle = `rgba(0,0,0,${this.dynamicDim >= 0 ? this.dynamicDim : baseBackgroundDim})` // Disable dynamic lighting for now.
@@ -127,6 +131,14 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
       }
     }
 
+    if (lowPerformanceMode) {
+      // Static background dim only; reset any dynamic pulse scaling and skip the
+      // visualizer, dynamic lighting, star rush, storyboard, and floating title.
+      this.dynamicDim = baseBackgroundDim;
+      Toxen.background.updateDimScale(0);
+      Toxen.background.storyboard.resetData();
+      return;
+    }
 
     const style = Toxen.background.storyboard.getVisualizerStyle();
     const intensityMultiplier = Toxen.background.storyboard.getVisualizerIntensity();
