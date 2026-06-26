@@ -30,9 +30,11 @@ export default defineConfig({
       injectRegister: "auto",
       includeAssets: ["favicon.ico", "apple-touch-icon.png"],
       manifest: {
-        // Stable identity for the installed app. Absolute so it never depends on
-        // the manifest's own URL path.
-        id: "/",
+        // Stable identity for the installed app, kept distinct from start_url so
+        // a fresh app identity is minted. Android's WebAPK server caches mint
+        // results keyed on app identity; an earlier broken manifest can leave a
+        // cached failure, and a distinct id forces a clean re-mint.
+        id: "/?pwa=toxen",
         name: "Toxen",
         short_name: "Toxen",
         description: "Toxen Music Player",
