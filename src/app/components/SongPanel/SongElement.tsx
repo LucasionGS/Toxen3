@@ -1,14 +1,15 @@
-import React, { Component } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import Song from '../../toxen/Song';
 import "./SongElement.scss";
 import RenderIfVisible from "react-render-if-visible";
 import { useModals } from '@mantine/modals';
 import Settings from '../../toxen/Settings';
 import User from '../../toxen/User';
-import { Toxen } from '../../ToxenApp';
 import ImageCache from '../../toxen/ImageCache';
+import SongElementController from '../../toxen/controllers/SongElementController';
+import { useController } from '../../lib/useController';
 
-function SongElementDiv(props: { songElement: SongElement }) {
+function SongElementDiv(props: { controller: SongElementController }) {
   /// Observer object is cool and all but holy shit it makes this laggy
   // const [ref, observer] = useIntersection({
   //   root: Toxen.sidePanel?.containerRef?.current,
@@ -16,8 +17,8 @@ function SongElementDiv(props: { songElement: SongElement }) {
   //   rootMargin: "-128px 256px 0px 256px",
   // });
 
-  const { songElement } = props;
-  let song = songElement.props.song;
+  const { controller } = props;
+  let song = controller.song;
   
   // Use cached thumbnail instead of full background image
   const [thumbnailUrl, setThumbnailUrl] = React.useState<string | null>(null);
@@ -73,12 +74,12 @@ function SongElementDiv(props: { songElement: SongElement }) {
     };
   }, [song.backgroundFile(), song.hash]);
   
-  let classes = ["song-element", songElement.state.selected ? "selected" : null].filter(a => a);
+  let classes = ["song-element", controller.selected ? "selected" : null].filter(a => a);
   
   // Add loading class if thumbnail is being loaded
   if (isLoadingThumbnail) classes.push("loading-thumbnail");
   
-  if (songElement.state.playing) classes.push("playing");
+  if (controller.playing) classes.push("playing");
 
   // const ContextMenu: typeof songElement.ContextMenu = songElement.ContextMenu.bind(songElement);
   // const contextMenuRef = React.createRef<HTMLDivElement>();
@@ -100,7 +101,7 @@ function SongElementDiv(props: { songElement: SongElement }) {
       <div style={{
         position: "relative",
       }} className="song-element-container">
-        <div ref={ref => songElement.divElement = ref} className={classes.join(" ")} style={{
+        <div ref={ref => controller.divElement = ref} className={classes.join(" ")} style={{
           background: backgroundStyle,
 
           /// Style if using Observer object
@@ -111,21 +112,21 @@ function SongElementDiv(props: { songElement: SongElement }) {
         }}
           onClick={e => {
             if (e.ctrlKey) return;
-            songElement.play();
+            controller.play();
           }}
           onContextMenu={e => {
             e.preventDefault();
             song.contextMenuModal(modals);
           }}
           onMouseDownCapture={e => {
-            if (e.ctrlKey && e.buttons === 1) return songElement.select();
+            if (e.ctrlKey && e.buttons === 1) return controller.select();
           }}
           onMouseEnter={e => {
-            if (e.ctrlKey && e.buttons === 1) return songElement.select();
+            if (e.ctrlKey && e.buttons === 1) return controller.select();
           }}
         >
           <div className="song-progress-bar" style={{ 
-            width: (songElement.state.progressBar * 100) + "%",
+            width: (controller.progressBar * 100) + "%",
           }} />
           <p className="song-title" >
             {song.getDisplayName()}
@@ -137,92 +138,42 @@ function SongElementDiv(props: { songElement: SongElement }) {
 
 
 interface SongElementProps {
-  getRef?: ((ref: SongElement) => void);
   song: Song;
   playing?: boolean;
 }
 
-interface SongElementState {
-  selected: boolean;
-  playing: boolean;
-  showContextMenu: boolean;
-  progressBar: number;
-}
+export default function SongElement(props: SongElementProps) {
+  const controller = useMemo(
+    () => new SongElementController(props.song, props.playing ?? false),
+    // Controller identity is fixed for the lifetime of this element.
+    []
+  );
+  useController(controller);
 
-export default class SongElement extends Component<SongElementProps, SongElementState> {
-  constructor(props: SongElementProps) {
-    super(props);
+  // Register/unregister this element as the song's current element.
+  useEffect(() => {
+    props.song.currentElement = controller;
+    return () => {
+      if (props.song.currentElement === controller) {
+        props.song.currentElement = null;
+      }
+    };
+  }, [controller]);
 
-    this.state = {
-      selected: false,
-      playing: this.props.playing ?? false,
-      showContextMenu: false,
-      progressBar: 0,
-    }
+  if (Settings.isRemote() || Settings.get("hideOffScreenSongElements")) {
+    return (
+      <div className="song-element-permadiv" ref={ref => controller.divPermanentElement = ref}>
+        <RenderIfVisible defaultHeight={64} visibleOffset={500}>
+          <SongElementDiv controller={controller} />
+        </RenderIfVisible>
+      </div>
+    );
   }
-
-  componentDidMount() {
-    if (typeof this.props.getRef === "function") this.props.getRef(this);
-    
-    // Set this element as the current element for the song
-    this.props.song.currentElement = this;
-  }
-
-  componentWillUnmount() {
-    // Clear reference if this was the current element
-    if (this.props.song.currentElement === this) {
-      this.props.song.currentElement = null;
-    }
-  }
-
-  public play() {
-    this.props.song.play();
-  }
-
-  public select(force?: boolean) {
-
-    const state = force ?? !this.state.selected;
-    this.setState({ selected: state });
-  }
-
-  public divElement: HTMLDivElement;
-  public divPermanentElement: HTMLDivElement;
-
-  public setPlaying(playing: boolean) {
-    this.setState({ playing });
-  }
-
-  public setProgressBar(progress: number) {
-    this.setState({ progressBar: progress });
-  }
-
-  /**
-   * Invalidate cached thumbnails for this song's background
-   * Call this when the background image changes
-   */
-  public invalidateBackgroundCache() {
-    if (this.props.song.backgroundFile()) {
-      const bgFile = `${this.props.song.backgroundFile()}?h=${this.props.song.hash}`;
-      ImageCache.getInstance().invalidate(bgFile);
-    }
-  }
-
-  render() {
-    if (Settings.isRemote() || Settings.get("hideOffScreenSongElements")) {
-      return (
-        <div className="song-element-permadiv" ref={ref => this.divPermanentElement = ref}>
-          <RenderIfVisible defaultHeight={64} visibleOffset={500}>
-            <SongElementDiv songElement={this} />
-          </RenderIfVisible>
-        </div>
-      );
-    }
-    else {
-      return (
-        <div className="song-element-permadiv" ref={ref => this.divPermanentElement = ref}>
-          <SongElementDiv songElement={this} />
-        </div>
-      );
-    }
+  else {
+    return (
+      <div className="song-element-permadiv" ref={ref => controller.divPermanentElement = ref}>
+        <SongElementDiv controller={controller} />
+      </div>
+    );
   }
 }

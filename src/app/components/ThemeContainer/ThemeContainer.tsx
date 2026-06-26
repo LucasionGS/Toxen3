@@ -1,34 +1,30 @@
-import React, { Component } from "react"
+import React, { useEffect, useMemo, useRef } from "react"
 import Theme from "../../toxen/Theme"
+import ThemeContainerController from "../../toxen/controllers/ThemeContainerController"
+import { useController } from "../../lib/useController"
 
 interface Props {
-
+  controller?: ThemeContainerController;
+  onReady?: (controller: ThemeContainerController) => void;
 }
 
-interface State {
-  theme: Theme;
-}
+export default function ThemeContainer(props: Props) {
+  const controller = useMemo(
+    () => props.controller ?? new ThemeContainerController(),
+    []
+  );
+  useController(controller);
 
-export default class ThemeContainer extends Component<Props, State> {
-  constructor(props: Props) {
-    super(props)
-    this.state = {
-      theme: null
-    }
-  }
+  const onReadyRef = useRef(props.onReady);
+  onReadyRef.current = props.onReady;
+  useEffect(() => {
+    onReadyRef.current?.(controller);
+  }, [controller]);
 
-  setTheme(theme: Theme) {
-    this.setState({
-      theme: theme
-    })
-  }
-
-  render() {
-    if (!this.state.theme) return (<></>);
-    return (
-      <style>
-        {Theme.parseToCSS(this.state.theme)}
-      </style>
-    )
-  }
+  if (!controller.theme) return (<></>);
+  return (
+    <style>
+      {Theme.parseToCSS(controller.theme)}
+    </style>
+  )
 }

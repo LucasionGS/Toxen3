@@ -1,73 +1,41 @@
 import { Slider } from '@mantine/core';
-import React, { Component } from 'react'
+import React, { useEffect, useMemo, useRef } from 'react';
 import Settings from '../toxen/Settings';
 import Time from '../toxen/Time';
 import { Toxen } from '../ToxenApp';
 import "./MusicControls.scss";
 import ProgressBar from './ProgressBar';
+import MusicControlsController from '../toxen/controllers/MusicControlsController';
+import { useController } from '../lib/useController';
 
 interface MusicControlsProps {
-  getRef?: ((ref: MusicControls) => void),
+  /** Optional externally-owned controller. If omitted, one is created internally. */
+  controller?: MusicControlsController;
+  /** Invoked once on mount with the controller, so parents can register it (e.g. `Toxen.musicControls`). */
+  onReady?: (controller: MusicControlsController) => void;
 }
 
-interface MusicControlsState {
+export default function MusicControls(props: MusicControlsProps) {
+  const controller = useMemo(
+    () => props.controller ?? new MusicControlsController(),
+    []
+  );
+  useController(controller);
 
-}
+  const onReadyRef = useRef(props.onReady);
+  onReadyRef.current = props.onReady;
+  useEffect(() => {
+    onReadyRef.current?.(controller);
+  }, [controller]);
 
-export default class MusicControls extends Component<MusicControlsProps, MusicControlsState> {
-  constructor(props: MusicControlsProps) {
-    super(props);
+  const format = Settings.get("progressBarShowMs") ? "hh?:mm:ss:ms" : "hh?:mm:ss";
+  const styleForEnabled: React.CSSProperties = {
+    // filter: "drop-shadow(0 0 20px green)",
+    // outline: "3px solid green"
+    filter: "drop-shadow(2px 2px 1px green) drop-shadow(-2px 2px 1px green) drop-shadow(2px -2px 1px green) drop-shadow(-2px -2px 1px green)"
+  };
 
-    this.state = {
-
-    }
-  }
-
-  componentDidMount() {
-    if (typeof this.props.getRef === "function") this.props.getRef(this);
-  }
-
-  currentTime: Time = new Time();
-  duration: Time = new Time();
-
-  public setValue(value: number) {
-    this.currentTime = new Time(value * 1000);
-    this.setState({});
-    this.progressBar.setValue(value);
-  }
-
-  /**
-   * Sets the background value of the progress bar. This is useful for showing what part of a song is buffered.
-   */
-  public setBackgroundRange(start: number, end: number) {
-    this.progressBar.setBackgroundRange(start, end);
-  }
-
-  public setMax(max: number) {
-    this.duration = new Time(max * 1000);
-    this.setState({});
-    this.progressBar.setMax(max);
-  }
-
-  public setVolume(vol: number) {
-    Toxen.musicPlayer.setVolume(vol);
-    this.setVolumeSlider(vol);
-  }
-
-  public setVolumeSlider: React.Dispatch<React.SetStateAction<number>>;
-
-  public progressBar: ProgressBar;
-
-  
-  render() {
-    const format = Settings.get("progressBarShowMs") ? "hh?:mm:ss:ms" : "hh?:mm:ss";
-    const styleForEnabled: React.CSSProperties = {
-      // filter: "drop-shadow(0 0 20px green)",
-      // outline: "3px solid green"
-      filter: "drop-shadow(2px 2px 1px green) drop-shadow(-2px 2px 1px green) drop-shadow(2px -2px 1px green) drop-shadow(-2px -2px 1px green)"
-    };
-    
-    return (
+  return (
       <div className="toxen-music-controls">
         <div className="toxen-music-controls-buttons hide-on-inactive">
           <div hidden={!Toxen.isMiniplayer()} className="ctrl-btn" onClick={() => {
@@ -108,7 +76,7 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
 
         <span className="toxen-music-controls-progress-bar">
           <ProgressBar
-            ref={ref => this.progressBar = ref}
+            ref={ref => controller.attachProgressBar(ref)}
             fillColor={"greenyellow"}
             onClick={(e, v) => Toxen.musicPlayer.setPosition(v)}
             onDragging={(e, v) => Toxen.musicPlayer.setPosition(v)}
@@ -121,7 +89,7 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
         </span>
 
         <div className="toxen-music-controls-time hide-on-inactive">
-          <div className="toxen-music-controls-time-start">{this.currentTime.toTimestamp(format)}</div>
+          <div className="toxen-music-controls-time-start">{controller.currentTime.toTimestamp(format)}</div>
           <div className="toxen-music-controls-volume">
             Volume
             {/* <ProgressBar ref={ref => this.volSlider = ref} max={100} min={0} initialValue={Settings.get("volume") ?? 50} onDragging={(_, v, ref) => {
@@ -138,16 +106,15 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
               Settings.save({ suppressNotification: true });
             }}
             /> */}
-            <VolumeSlider controller={this} />
+            <VolumeSlider controller={controller} />
           </div>
-          <div className="toxen-music-controls-time-end">{this.duration.toTimestamp(format)}</div>
+          <div className="toxen-music-controls-time-end">{controller.duration.toTimestamp(format)}</div>
         </div>
       </div>
-    )
-  }
+  )
 }
 
-function VolumeSlider(props: { controller: MusicControls }) {
+function VolumeSlider(props: { controller: MusicControlsController }) {
   const { controller } = props;
   const [volume, setVolume] = React.useState(Settings.get("volume") ?? 50);
 

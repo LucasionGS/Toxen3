@@ -6,6 +6,7 @@ import Settings, { ISettings, VisualizerStyle, visualizerStyleOptionsMap } from 
 import { Toxen } from "../ToxenApp";
 // import Path from "path";
 import SongElement from "../components/SongPanel/SongElement";
+import SongElementController from "./controllers/SongElementController";
 // import Legacy, { Toxen2SongDetails } from "./Legacy";
 import { Failure, Result, Success } from "./Result";
 import System, { ToxenFile } from "./System";
@@ -330,7 +331,7 @@ export default class Song implements ISong {
    */
   public Element(key?: string) {
     return (
-      <SongElement key={key} playing={this.isPlaying()} song={this} ref={ref => this.currentElement = ref} />
+      <SongElement key={key} playing={this.isPlaying()} song={this} />
     );
   }
 
@@ -339,7 +340,7 @@ export default class Song implements ISong {
   }
 
   public get selected() {
-    return this.currentElement ? this.currentElement.state.selected : false;
+    return this.currentElement ? this.currentElement.selected : false;
   }
 
   public select(force?: boolean) {
@@ -539,7 +540,7 @@ export default class Song implements ISong {
     if (!sourceInfo?.url) return;
 
     let src = sourceInfo.url;
-    if (Toxen.musicPlayer.state.src === src) return;
+    if (Toxen.musicPlayer.src === src) return;
     // if (HueManager.isEnabled()) {
     //   HueManager.start().catch((error) => Toxen.error(error.message));
     // }
@@ -1523,14 +1524,14 @@ export default class Song implements ISong {
     hideNotification(notifId);
   }
 
-  public existingElements: SongElement[] = [];
+  public existingElements: SongElementController[] = [];
   /**
    * Remove the top element from the list of existing elements.
    */
   public popExistingElement() {
     return this.existingElements.pop();
   }
-  public currentElement: SongElement;
+  public currentElement: SongElementController;
 
   public createManagePlaylists(): ModalSettings {
     return {
@@ -1569,10 +1570,10 @@ export default class Song implements ISong {
     // this.isPlaying() = mode;
     Song.currentSong = this;
     if (this.currentElement) {
-      this.currentElement.setState({ playing: mode });
+      this.currentElement.setPlaying(mode);
       // Reset progress bar when song stops playing
       if (!mode) {
-        this.currentElement.setState({ progressBar: 0 });
+        this.currentElement.setProgressBar(0);
         // Restore original theme if this was the last playing song
         if (!Song.getCurrent()) {
           Toxen.restoreOriginalTheme();
@@ -1916,9 +1917,7 @@ export default class Song implements ISong {
    */
   public setProgressBar(progress: number, doComplete = false) {
     if (this.currentElement) {
-      this.currentElement.setState({
-        progressBar: progress
-      });
+      this.currentElement.setProgressBar(progress);
 
       if (doComplete && progress >= 1) {
         this.completeProgressBar();

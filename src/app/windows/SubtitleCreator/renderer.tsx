@@ -9,6 +9,8 @@ import "@fortawesome/fontawesome-free/js/all"; // Import FA
 import "@fortawesome/fontawesome-free/scss/regular.scss";
 import "@fortawesome/fontawesome-free/scss/solid.scss";
 import MusicPlayer from "../../components/MusicPlayer";
+import MusicPlayerController from "../../toxen/controllers/MusicPlayerController";
+import MusicControlsController from "../../toxen/controllers/MusicControlsController";
 import MusicControls from "./components/MusicControls/MusicControls";
 import { Toxen } from "../../ToxenApp";
 import Song from "../../toxen/Song";
@@ -64,17 +66,18 @@ export default function SubtitleCreatorScreen() {
   </>
 
   const song = data.song;
-  const musicPlayer: { current: MusicPlayer } = { current: null };
+  const musicPlayer: { current: MusicPlayerController } = { current: null };
   return (
     <>
       <AppBar />
       {/* TODO: Include controls */}
       {/* Currently MusicControls directly manipulates settings, which it shouldn't. */}
       {/* Possibly solution: A prop that allows calls of settings to be disabled? */}
-      <MusicPlayer useSubtitleEditorMode ref={mp => Toxen.musicPlayer = musicPlayer.current = mp} />
-      <MusicControls ref={mc => Toxen.musicControls = mc} />
-      <Subtitles ref={ref => {
-        Toxen.subtitles = ref;
+      <MusicPlayer useSubtitleEditorMode onReady={controller => Toxen.musicPlayer = musicPlayer.current = controller} />
+      {/* SubtitleCreator uses its own MusicControls class component; bridge it to the global controller slot. */}
+      <MusicControls ref={mc => Toxen.musicControls = mc as unknown as MusicControlsController} />
+      <Subtitles onReady={controller => {
+        Toxen.subtitles = controller;
 
         Toxen.musicPlayer.setSource(mediaPath, true);
         Toxen.subtitles.setSubtitles(subtitles);

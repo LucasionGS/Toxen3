@@ -1,62 +1,33 @@
-import React, { Component } from 'react'
-import Time from '../toxen/Time';
+import React, { useEffect, useMemo, useRef } from 'react'
 import "./LoadingScreen.scss";
+import LoadingScreenController from '../toxen/controllers/LoadingScreenController';
+import { useController } from '../lib/useController';
 
 interface LoadingScreenProps {
   initialShow?: boolean;
-  getRef?: (ref: LoadingScreen) => void;
+  controller?: LoadingScreenController;
+  onReady?: (controller: LoadingScreenController) => void;
 }
 
-interface LoadingScreenState {
-  show: boolean;
-  content: React.ReactNode;
-}
+export default function LoadingScreen(props: LoadingScreenProps) {
+  const controller = useMemo(
+    () => props.controller ?? new LoadingScreenController(),
+    []
+  );
+  useController(controller);
 
-export default class LoadingScreen extends Component<LoadingScreenProps, LoadingScreenState> {
-  constructor(props: LoadingScreenProps) {
-    super(props);
+  const onReadyRef = useRef(props.onReady);
+  onReadyRef.current = props.onReady;
+  useEffect(() => {
+    if (typeof props.initialShow === "boolean") controller.toggleVisible(props.initialShow);
+    onReadyRef.current?.(controller);
+  }, [controller]);
 
-    this.state = {
-      show: false,
-      // content: (<p className="center">Loading...</p>)
-      content: null
-    }
-  }
-
-  componentDidMount() {
-    if (typeof this.props.initialShow === "boolean") this.toggleVisible(this.props.initialShow);
-    if (typeof this.props.getRef === "function") this.props.getRef(this);
-  }
-
-  toggleVisible(): void;
-  toggleVisible(force?: boolean): void;
-  toggleVisible(force?: boolean) {
-    this.setState({
-      show: force ?? !this.state.show
-    })
-  }
-  
-  show() {
-    this.toggleVisible(true);
-  }
-  
-  hide() {
-    this.toggleVisible(false);
-  }
-
-  public setContent(content: React.ReactNode) {
-    this.setState({
-      content
-    });
-  }
-
-  render() {
-    return (
-      <div className={"toxen-loading-screen" + (this.state.show ? " toxen-loading-screen-show" : "")}>
-        <div className="toxen-loading-screen-content">
-          {this.state.content}
-        </div>
+  return (
+    <div className={"toxen-loading-screen" + (controller.visible ? " toxen-loading-screen-show" : "")}>
+      <div className="toxen-loading-screen-content">
+        {controller.content}
       </div>
-    )
-  }
+    </div>
+  )
 }

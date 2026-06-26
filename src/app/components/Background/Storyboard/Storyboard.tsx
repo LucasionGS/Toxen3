@@ -204,7 +204,7 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
   }
 
   public getFloatingSubtitles() {
-    return !!Toxen.subtitles.state.subtitles && (this.data.useFloatingTitleSubtitles
+    return !!Toxen.subtitles.subtitles && (this.data.useFloatingTitleSubtitles
       ?? (
         (this.state.song && this.getEffectiveSongSettings().useFloatingTitleSubtitles)
         ?? false
@@ -241,8 +241,8 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
   public getFloatingTitleText() {
     if (this.getFloatingSubtitles()) {
       return (
-        Toxen.subtitles.state.currentText
-          ? stripHtml(Toxen.subtitles.state.currentText)
+        Toxen.subtitles.currentText
+          ? stripHtml(Toxen.subtitles.currentText)
           : (this.data.floatingTitleText ?? (this.state.song && this.getEffectiveSongSettings().floatingTitleText || ""))
       );
     }

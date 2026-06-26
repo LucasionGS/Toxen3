@@ -1,110 +1,38 @@
-import React, { Component } from 'react'
+import React, { useEffect, useMemo, useRef } from 'react'
 import System from '../../toxen/System';
 import { Toxen } from '../../ToxenApp';
 import MusicPlayer from '../MusicPlayer';
+import MusicPlayerController from '../../toxen/controllers/MusicPlayerController';
+import BackgroundController from '../../toxen/controllers/BackgroundController';
 import "./Background.scss";
 import Storyboard from './Storyboard/Storyboard';
 import Visualizer from './Visualizer';
 //@ts-expect-error 
 import ToxenMax from "../../../icons/skull_max.png";
 import Settings from '../../toxen/Settings';
-import User from '../../toxen/User';
-import Asyncifier from '../../toxen/Asyncifier';
 import Subtitles from '../Subtitles/Subtitles';
 import AudioEffects from '../../toxen/AudioEffects';
-import Song from '../../toxen/Song';
+import { useController } from '../../lib/useController';
 
 interface BackgroundProps {
-  getRef?: ((ref: Background) => void),
+  controller?: BackgroundController;
+  onReady?: (controller: BackgroundController) => void;
 }
 
-interface BackgroundState {
-  image: string;
-  dimScale: number;
-}
+export default function Background(props: BackgroundProps) {
+  const controller = useMemo(
+    () => props.controller ?? new BackgroundController(),
+    []
+  );
+  useController(controller);
 
-export default class Background extends Component<BackgroundProps, BackgroundState> {
-  constructor(props: BackgroundProps) {
-    super(props);
+  const onReadyRef = useRef(props.onReady);
+  onReadyRef.current = props.onReady;
+  useEffect(() => {
+    onReadyRef.current?.(controller);
+  }, [controller]);
 
-    this.state = {
-      image: null,
-      dimScale: 0
-    }
-  }
-
-  componentDidMount() {
-    if (typeof this.props.getRef === "function") this.props.getRef(this);
-  }
-
-  setStateAsync = Asyncifier.createSetState(this);
-  // public update() {
-  //   this.setState({});
-  // }
-
-  public setBackground(source: string) {
-    // Append auth token for remote URLs so the browser can load them
-    if (source && Settings.isRemote()) {
-      source = User.appendAuth(source);
-    }
-    return this.setStateAsync({
-      image: source
-    })
-  }
-
-  /**
-   * Returns the currently in use background image. It will return the default image if no image is set.
-   */
-  public getBackground(): string {
-    // Priority: playlist background -> explicitly set runtime background -> song background via storyboard -> default(s)
-    const playlistBg = (Toxen.playlist && Toxen.playlist.getBackgroundPath());
-    if (playlistBg) return playlistBg;
-
-    if (this.state.image) return this.state.image;
-
-    // If no explicit background, use multi-backgrounds only
-    const shuffle = Settings.get("shuffleDefaultBackgrounds");
-    const list = Settings.get("defaultBackgrounds") || [];
-    if (list.length > 0) {
-      let bg: string;
-      if (shuffle) {
-        // Pick a stable random per current song to avoid flicker between frames
-        const curSong = Toxen.background?.storyboard?.getSong();
-        const seedStr = curSong?.uid || "global";
-        let hash = 0;
-        for (let i = 0; i < seedStr.length; i++) hash = ((hash << 5) - hash) + (seedStr.charCodeAt(i) + Song.getHistoryIndex());
-        const idx = Math.abs(hash) % list.length; 
-        bg = list[idx];
-      } else {
-        // Deterministic: first item in list
-        bg = list[0];
-      }
-      // Append auth for remote/web URLs
-      if (bg && Settings.isRemote()) {
-        bg = User.appendAuth(bg);
-      }
-      return bg;
-    }
-
-    // No defaults configured -- try theme background
-    const themeBgUrl = Toxen.theme?.getBackgroundImageUrl?.();
-    if (themeBgUrl) return themeBgUrl;
-
-    return null;
-  }
-
-  public musicPlayer: MusicPlayer;
-  public visualizer: Visualizer;
-  public storyboard: Storyboard;
-
-  public updateDimScale: (dimScale: number) => void = () => void 0;
-
-  render() {
-
-    // const dim = this.state.dimScale ?? 0;
-    // Toxen.background?.visualizer?.getDynamicDim() ?? 0;
-
-    return (
+  return (
       <div className="toxen-background"
         onClick={() => Settings.get("pauseWithClick") ? Toxen.musicPlayer.toggle() : null}
         // onDoubleClick={() => {
@@ -124,38 +52,36 @@ export default class Background extends Component<BackgroundProps, BackgroundSta
         onDragEnter={e => e.preventDefault()}
         onDragLeave={e => e.preventDefault()}
       >
-        <BackgroundImage ToxenMax={ToxenMax}  backgroundObject={this} />
+        <BackgroundImage ToxenMax={ToxenMax}  backgroundObject={controller} />
         {
           (() => {
-            let musicPlayer: { current: MusicPlayer } = { current: null };
+            let musicPlayer: { current: MusicPlayerController } = { current: null };
             return (<>
-              <MusicPlayer ref={ref => {
-                Toxen.musicPlayer = musicPlayer.current = ref;
-                if (ref) {
-                  // Initialize audio effects when music player is ready
-                  if (!Toxen.audioEffects) {
-                    Toxen.audioEffects = new AudioEffects();
-                  }
-                  // Initialize audio effects with the media element
-                  setTimeout(() => {
-                    if (ref.media) {
-                      Toxen.audioEffects.initialize(ref.media);
-                    }
-                  }, 100);
+              <MusicPlayer onReady={mpController => {
+                Toxen.musicPlayer = musicPlayer.current = mpController;
+                controller.musicPlayer = mpController;
+                // Initialize audio effects when music player is ready
+                if (!Toxen.audioEffects) {
+                  Toxen.audioEffects = new AudioEffects();
                 }
+                // Initialize audio effects with the media element
+                setTimeout(() => {
+                  if (mpController.media) {
+                    Toxen.audioEffects.initialize(mpController.media);
+                  }
+                }, 100);
               }} />
-              <Subtitles ref={ref => Toxen.subtitles = ref} musicPlayer={musicPlayer} />
-              <Storyboard ref={ref => this.storyboard = ref} />
-              <Visualizer ref={ref => this.visualizer = ref} />
+              <Subtitles onReady={controller => Toxen.subtitles = controller} musicPlayer={musicPlayer} />
+              <Storyboard ref={ref => controller.storyboard = ref} />
+              <Visualizer ref={ref => controller.visualizer = ref} />
             </>)
           })()
         }
       </div >
-    )
-  }
+  )
 }
 
-function BackgroundImage(props: { ToxenMax: string, backgroundObject: Background }) {
+function BackgroundImage(props: { ToxenMax: string, backgroundObject: BackgroundController }) {
   const { ToxenMax, backgroundObject } = props;
 
   const [dim, setDim] = React.useState<number>(0);
