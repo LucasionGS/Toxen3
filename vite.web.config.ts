@@ -47,12 +47,14 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Precache only the app shell. User audio/media belongs in IndexedDB/OPFS,
-        // never in the Workbox precache.
+        // Precache only the app shell. User audio/media must never be precached
+        // here; on the web it belongs in IndexedDB or OPFS (the Origin Private
+        // File System, navigator.storage.getDirectory()) for large blobs.
         globPatterns: ["**/*.{js,css,html,svg,woff,woff2,ttf}"],
         // SPA fallback so deep links resolve to the app shell when offline.
         navigateFallback: "index.html",
-        // Allow caching larger JS chunks (e.g. the FLAC decoder bundle).
+        // The main renderer bundle is a few MB; raise the cap so the app shell
+        // is fully precached rather than silently skipped.
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
       },
     }),
