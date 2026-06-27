@@ -12,7 +12,6 @@ import Song from "../../../../toxen/Song";
 import { Toxen } from "../../../../ToxenApp";
 import TButton from "../../../Button/Button";
 import { PanelDirection } from "../../Sidepanel";
-import SidepanelSectionGroup from "../../SidepanelSectionGroup";
 import "./SettingsPanel.scss";
 import { useForceUpdate } from "@mantine/hooks";
 import LoginForm from "../../../LoginForm/LoginForm";
@@ -211,11 +210,18 @@ export default function SettingsPanel(props: SettingsPanelProps) {
         <Tabs.Panel value="Visuals">
           <h2>Visuals</h2>
 
-          <SidepanelSectionGroup 
-            title="Theme & Appearance" 
-            icon={<i className="fas fa-palette" />}
-            collapsible
+          <Tabs
+            onChange={(key) => window.localStorage.setItem("settings-visuals-tab", key)}
+            defaultValue={window.localStorage.getItem("settings-visuals-tab") || "theme"}
           >
+            <Tabs.List>
+              <Tabs.Tab value="theme" leftSection={<i className="fas fa-palette" />}>Theme &amp; Appearance</Tabs.Tab>
+              <Tabs.Tab value="background" leftSection={<i className="fas fa-image" />}>Background</Tabs.Tab>
+              <Tabs.Tab value="visualizer" leftSection={<i className="fas fa-wave-square" />}>Audio Visualizer</Tabs.Tab>
+              <Tabs.Tab value="effects" leftSection={<i className="fas fa-magic" />}>Visual Effects</Tabs.Tab>
+            </Tabs.List>
+
+            <Tabs.Panel value="theme" pt="md">
             <Select
               allowDeselect={false}
               onChange={(value) => {
@@ -291,13 +297,9 @@ export default function SettingsPanel(props: SettingsPanelProps) {
                 Export Theme
               </Button>
             </Button.Group>
-          </SidepanelSectionGroup>
+            </Tabs.Panel>
 
-          <SidepanelSectionGroup 
-            title="Background Settings" 
-            icon={<i className="fas fa-image" />}
-            collapsible
-          >
+            <Tabs.Panel value="background" pt="md">
             {(function () {
               const [bgList, setBgList] = React.useState<string[]>(Settings.get("defaultBackgrounds") || []);
               const [shuffle, setShuffle] = React.useState<boolean>(Settings.get("shuffleDefaultBackgrounds") || false);
@@ -609,13 +611,9 @@ export default function SettingsPanel(props: SettingsPanelProps) {
             <sup>
               Enables pulsing on the background image of a song. Pulse is based off music intensity and volume.
             </sup>
-          </SidepanelSectionGroup>
+            </Tabs.Panel>
 
-          <SidepanelSectionGroup 
-            title="Audio Visualizer" 
-            icon={<i className="fas fa-wave-square" />}
-            collapsible
-          >
+            <Tabs.Panel value="visualizer" pt="md">
             <Select
               allowDeselect={false}
               onChange={(value) => {
@@ -720,13 +718,9 @@ export default function SettingsPanel(props: SettingsPanelProps) {
             <sup>
               Enable a glow effect on the visualizer.
             </sup>
-          </SidepanelSectionGroup>
+            </Tabs.Panel>
 
-          <SidepanelSectionGroup 
-            title="Visual Effects" 
-            icon={<i className="fas fa-magic" />}
-            collapsible
-          >
+            <Tabs.Panel value="effects" pt="md">
             <Checkbox 
               onClick={(e) => Settings.apply({ starRushEffect: e.currentTarget.checked }, true)} 
               defaultChecked={Settings.get("starRushEffect")} 
@@ -752,7 +746,8 @@ export default function SettingsPanel(props: SettingsPanelProps) {
               Set the intensity level of the star rush particle effect. 0.25x-2x.
               Higher values create more particles and faster movement.
             </sup>
-          </SidepanelSectionGroup>
+            </Tabs.Panel>
+          </Tabs>
           
         </Tabs.Panel>
 

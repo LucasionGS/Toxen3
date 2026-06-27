@@ -8,11 +8,10 @@ import SubtitleParser from "../../../../toxen/SubtitleParser";
 import System from "../../../../toxen/System";
 import { Toxen } from "../../../../ToxenApp";
 import SidepanelSectionHeader from "../../SidepanelSectionHeader";
-import SidepanelSectionGroup from "../../SidepanelSectionGroup";
 import "./EditSong.scss";
 // import fsp from "fs/promises";
 // import Path from "path";
-import { Button, Checkbox, ColorInput, InputLabel, Loader, NumberInput, Radio, Select, Slider, TextInput } from "@mantine/core";
+import { Button, Checkbox, ColorInput, InputLabel, Loader, NumberInput, Radio, Select, Slider, Tabs, TextInput } from "@mantine/core";
 import ListInput from "../../../ListInput/ListInput";
 import SelectAsync from "../../../SelectAsync/SelectAsync";
 import BackgroundFileSelector from "../../../BackgroundFileSelector/BackgroundFileSelector";
@@ -120,9 +119,20 @@ export default function EditSong(props: EditSongProps) {
         </Button.Group>
       </SidepanelSectionHeader>
       
-      <>
+      <Tabs defaultValue={isPlaylistMode ? "files" : "general"} keepMounted={false}>
+        <Tabs.List>
+          {!isPlaylistMode && (
+            <Tabs.Tab value="general" leftSection={<i className="fas fa-music" />}>General</Tabs.Tab>
+          )}
+          <Tabs.Tab value="files" leftSection={<i className="fas fa-file-audio" />}>Files &amp; Media</Tabs.Tab>
+          <Tabs.Tab value="visualizer" leftSection={<i className="fas fa-wave-square" />}>Visualizer</Tabs.Tab>
+          <Tabs.Tab value="effects" leftSection={<i className="fas fa-star" />}>Effects</Tabs.Tab>
+          <Tabs.Tab value="floatingTitle" leftSection={<i className="fas fa-heading" />}>Floating Title</Tabs.Tab>
+          <Tabs.Tab value="export" leftSection={<i className="fas fa-file-export" />}>Export</Tabs.Tab>
+        </Tabs.List>
+
         {!isPlaylistMode && (
-          <SidepanelSectionGroup title="General Information" icon={<i className="fas fa-music" />} collapsible>
+          <Tabs.Panel value="general" pt="md">
           <TextInput
             leftSection={<i className="fas fa-user" />}
             label="Artist"
@@ -207,10 +217,9 @@ export default function EditSong(props: EditSongProps) {
             defaultValue={getValue('tags')}
           />
 
-        </SidepanelSectionGroup>
-        )
-        }
-        <SidepanelSectionGroup title="Files & Media" icon={<i className="fas fa-file-audio" />} collapsible>
+          </Tabs.Panel>
+        )}
+        <Tabs.Panel value="files" pt="md">
         {isProviderSong ? (
           <>
             <TextInput
@@ -432,9 +441,9 @@ export default function EditSong(props: EditSongProps) {
         }}>
           Edit storyboard
         </Button>
-        </SidepanelSectionGroup>
+        </Tabs.Panel>
 
-        <SidepanelSectionGroup title="Visualizer" icon={<i className="fas fa-wave-square" />} collapsible>
+        <Tabs.Panel value="visualizer" pt="md">
         <ColorInput
           leftSection={<i className="fas fa-palette" />}
           label="Visualizer Color"
@@ -593,9 +602,9 @@ export default function EditSong(props: EditSongProps) {
           }}
         />
         <sup>Enables a shuffle effect on the visualizer for this song.</sup>
-        </SidepanelSectionGroup>
+        </Tabs.Panel>
 
-        <SidepanelSectionGroup title="Effects" icon={<i className="fas fa-star" />} collapsible>
+        <Tabs.Panel value="effects" pt="md">
         {/* Star Rush Effect */}
         <Select
           allowDeselect={false}
@@ -635,9 +644,9 @@ export default function EditSong(props: EditSongProps) {
           }}
         />
         <sup>Controls the intensity of the star rush effect for this song.</sup>
-        </SidepanelSectionGroup>
+        </Tabs.Panel>
 
-        <SidepanelSectionGroup title="Floating Title" icon={<i className="fas fa-heading" />} collapsible>
+        <Tabs.Panel value="floatingTitle" pt="md">
         <Checkbox
           label={<><i className="fas fa-eye" />&nbsp;Floating Title</>}
           name="floatingTitle"
@@ -725,10 +734,9 @@ export default function EditSong(props: EditSongProps) {
           }}
         />
         <sup>Set the outline color for the floating title text.</sup>
-        </SidepanelSectionGroup>
-      </>
+        </Tabs.Panel>
 
-      <SidepanelSectionGroup title="Export" icon={<i className="fas fa-file-export" />} collapsible>
+        <Tabs.Panel value="export" pt="md">
       {!isProviderSong && <Button onClick={async () => {
         if (toxenapi.isDesktop()) {
           toxenapi.remote.Menu.buildFromTemplate(
@@ -861,7 +869,8 @@ export default function EditSong(props: EditSongProps) {
           Toxen.error("Failed to export song package: " + error.message);
         }
       }}><i className="fas fa-file-archive"></i>&nbsp;Export Song Package (.txz)</Button>
-      </SidepanelSectionGroup>
+        </Tabs.Panel>
+      </Tabs>
     </div>
   )
 }
