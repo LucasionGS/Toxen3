@@ -134,20 +134,23 @@ export default class ProgressBar extends Component<ProgressBarProps, ProgressBar
     let percent = (100 / (max - min)) * (value - min);
     let percentBuffered = (100 / (max - min)) * ((this.state.bufferedRange[1] - this.state.bufferedRange[0]) - min);
 
-    let borderStyle: React.HTMLAttributes<HTMLDivElement>["style"] = {
-      borderColor: this.state.borderColor ?? "#fff"
-    };
+    const fillColor = this.state.fillColor ?? "#fff";
 
-    let fillStyle: React.HTMLAttributes<HTMLDivElement>["style"] = {
+    let borderStyle = {
+      borderColor: this.state.borderColor ?? "#fff",
+      ["--fill-color"]: fillColor,
+    } as React.CSSProperties;
+
+    let fillStyle = {
       width: `${percent}%`,
-      background: this.state.fillColor ?? "#fff",
-    };
-    let fillStyleBuffered: React.HTMLAttributes<HTMLDivElement>["style"] = {
-      background: this.state.fillColor ?? "#fff",
+      background: fillColor,
+    } as React.CSSProperties;
+    let fillStyleBuffered = {
+      background: fillColor,
       width: `${percentBuffered}%`,
       left: `${this.state.bufferedRange[0] / (max - min) * 100}%`,
       opacity: 0.2,
-    };
+    } as React.CSSProperties;
     return (
       <>
         <div className="toxen-progress-bar-container">
@@ -187,10 +190,10 @@ export default class ProgressBar extends Component<ProgressBarProps, ProgressBar
               if (typeof this.props.toolTip === "function") this.toolTip.setVisibility(this.hovering);
             }}
           >
-            <div className="toxen-progress-bar-fill" style={fillStyle}>
+            <div className="toxen-progress-bar-fill toxen-progress-bar-fill-main" style={fillStyle}>
               <Tooltip text="" ref={ref => this.toolTip = ref} />
             </div>
-            <div className="toxen-progress-bar-fill" style={fillStyleBuffered}></div>
+            <div className="toxen-progress-bar-fill toxen-progress-bar-fill-buffered" style={fillStyleBuffered}></div>
           </div>
         </div>
       </>

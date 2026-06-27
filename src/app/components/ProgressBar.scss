@@ -6,28 +6,93 @@
   * {
     user-select: none;
   }
+
   .toxen-progress-bar {
+    --fill-color: greenyellow;
     position: relative;
     margin: auto;
     width: 90%;
-    height: 1em;
-    transition: all 0.1s ease-in-out;
-    
-    border: 1px solid;
-    border-radius: 5px;
-    
+    height: 0.85em;
+    cursor: pointer;
+    box-sizing: border-box;
+
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 6px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+
+    transition:
+      height 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 0.18s ease,
+      box-shadow 0.18s ease,
+      background 0.18s ease;
+
     &:hover {
-      height: 2em;
-      border: 2px solid;
+      height: 1.4em;
+      border-color: var(--fill-color);
+      background: rgba(255, 255, 255, 0.16);
+      box-shadow:
+        inset 0 1px 2px rgba(0, 0, 0, 0.45),
+        0 0 12px -2px var(--fill-color);
+
+      .toxen-progress-bar-fill-main::after {
+        opacity: 1;
+        transform: translate(50%, -50%) scale(1);
+      }
     }
-    
-    // overflow: hidden;
+
+    &:active {
+      .toxen-progress-bar-fill-main::after {
+        transform: translate(50%, -50%) scale(0.88);
+      }
+    }
+
     .toxen-progress-bar-fill {
       position: absolute;
-      overflow: visible;
+      top: 0;
       height: 100%;
-      border-radius: 2px;
+      border-radius: inherit;
+      pointer-events: none;
     }
+
+    // Main playback fill with a glow + draggable knob
+    .toxen-progress-bar-fill-main {
+      left: 0;
+      box-shadow: 0 0 10px -2px var(--fill-color);
+      transition: box-shadow 0.18s ease;
+
+      &::after {
+        content: "";
+        position: absolute;
+        right: 0;
+        top: 50%;
+        width: 0.95em;
+        height: 0.95em;
+        border-radius: 50%;
+        background: var(--fill-color);
+        box-shadow:
+          0 0 8px var(--fill-color),
+          0 1px 3px rgba(0, 0, 0, 0.6);
+        transform: translate(50%, -50%) scale(0);
+        opacity: 0;
+        transition:
+          transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
+          opacity 0.18s ease;
+      }
+    }
+
+    // Buffered range indicator (width/left/opacity set inline)
+    .toxen-progress-bar-fill-buffered {
+      border-radius: inherit;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toxen-progress-bar-container .toxen-progress-bar,
+  .toxen-progress-bar-container .toxen-progress-bar .toxen-progress-bar-fill-main,
+  .toxen-progress-bar-container .toxen-progress-bar .toxen-progress-bar-fill-main::after {
+    transition: none;
   }
 }
 
@@ -36,12 +101,17 @@
     .toxen-progress-bar-container {
       .toxen-progress-bar {
         width: 95%;
-        height: 1.5em;
+        height: 0.9em;
         border-radius: 8px;
-        // Touch-friendly: always show expanded size
+
+        // Touch-friendly: always show expanded size + knob
         &:hover {
-          height: 1.5em;
-          border: 1px solid;
+          height: 0.9em;
+        }
+
+        .toxen-progress-bar-fill-main::after {
+          opacity: 1;
+          transform: translate(50%, -50%) scale(1);
         }
       }
     }

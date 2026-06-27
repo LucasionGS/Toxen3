@@ -28,8 +28,32 @@
     }
 
     .toxen-music-controls-volume {
+      margin-top: 1rem;
       width: 20%;
       text-align: center;
+
+      .toxen-volume-slider {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 4px;
+
+        .toxen-volume-icon {
+          width: 18px;
+          height: 18px;
+          flex: 0 0 auto;
+          color: var(--text-secondary, #cfd3cf);
+          transition: color 0.2s ease;
+        }
+
+        .toxen-volume-slider-input {
+          flex: 1 1 auto;
+        }
+
+        &:hover .toxen-volume-icon {
+          color: var(--accent-color, greenyellow);
+        }
+      }
     }
   }
 
@@ -45,10 +69,12 @@
     .ctrl-btn * {
       margin: 8px;
       font-size: 32px;
+      color: var(--text-secondary, #cfd3cf);
       transition: all 0.2s ease-in-out;
       &:hover {
         transform: translateY(-0.1em);
         cursor: pointer;
+        filter: drop-shadow(0 0 6px var(--accent-color, greenyellow));
       }
     }
   }

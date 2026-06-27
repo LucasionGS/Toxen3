@@ -32,7 +32,7 @@ export default function MusicControls(props: MusicControlsProps) {
   const styleForEnabled: React.CSSProperties = {
     // filter: "drop-shadow(0 0 20px green)",
     // outline: "3px solid green"
-    filter: "drop-shadow(2px 2px 1px green) drop-shadow(-2px 2px 1px green) drop-shadow(2px -2px 1px green) drop-shadow(-2px -2px 1px green)"
+    filter: "drop-shadow(2px 2px 1px var(--accent-color, greenyellow)) drop-shadow(-2px 2px 1px var(--accent-color, greenyellow)) drop-shadow(2px -2px 1px var(--accent-color, greenyellow)) drop-shadow(-2px -2px 1px var(--accent-color, greenyellow))"
   };
 
   return (
@@ -91,27 +91,54 @@ export default function MusicControls(props: MusicControlsProps) {
         <div className="toxen-music-controls-time hide-on-inactive">
           <div className="toxen-music-controls-time-start">{controller.currentTime.toTimestamp(format)}</div>
           <div className="toxen-music-controls-volume">
-            Volume
-            {/* <ProgressBar ref={ref => this.volSlider = ref} max={100} min={0} initialValue={Settings.get("volume") ?? 50} onDragging={(_, v, ref) => {
-              this.setVolume(v);
-              Settings.set("volume", v);
-            }}
-            onClick={(_, v, ref) => {
-              this.setVolume(v);
-              Settings.set("volume", v);
-            }}
-            onClickRelease={(_, v, ref) => {
-              this.setVolume(v);
-              Settings.set("volume", v);
-              Settings.save({ suppressNotification: true });
-            }}
-            /> */}
             <VolumeSlider controller={controller} />
           </div>
           <div className="toxen-music-controls-time-end">{controller.duration.toTimestamp(format)}</div>
         </div>
       </div>
   )
+}
+
+function VolumeIcon(props: { level: number }) {
+  const { level } = props;
+  return (
+    <svg
+      className="toxen-volume-icon"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path fill="currentColor" d="M3 9v6h4l5 5V4L7 9H3z" />
+      {level <= 0 ? (
+        <path
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          d="M16 9l5 6M21 9l-5 6"
+        />
+      ) : (
+        <>
+          <path
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            d="M16 8.5a5 5 0 0 1 0 7"
+          />
+          {level >= 50 && (
+            <path
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              d="M18.6 6a8.5 8.5 0 0 1 0 12"
+            />
+          )}
+        </>
+      )}
+    </svg>
+  );
 }
 
 function VolumeSlider(props: { controller: MusicControlsController }) {
@@ -121,23 +148,37 @@ function VolumeSlider(props: { controller: MusicControlsController }) {
   controller.setVolumeSlider = (n) => setVolume(n);
 
   return (
-    <Slider
-      max={100}
-      min={0}
-      value={volume}
-      onChange={(v) => {
-        controller.setVolume(v);
-        Settings.set("volume", v);
-      }}
-      onChangeEnd={(v) => {
-        controller.setVolume(v);
-        Settings.apply({
-          volume: v,
-        }, true);
-      }}
-      label={(v) => `${v}%`}
-      // Set fill color to white
-      color="gray"
-    />
+    <div className="toxen-volume-slider">
+      <VolumeIcon level={volume} />
+      <Slider
+        className="toxen-volume-slider-input"
+        max={100}
+        min={0}
+        value={volume}
+        onChange={(v) => {
+          controller.setVolume(v);
+          Settings.set("volume", v);
+        }}
+        onChangeEnd={(v) => {
+          controller.setVolume(v);
+          Settings.apply({
+            volume: v,
+          }, true);
+        }}
+        label={(v) => `${v}%`}
+        size="md"
+        styles={{
+          bar: {
+            background: "var(--accent-color)",
+            boxShadow: "0 0 8px -2px var(--accent-color)",
+          },
+          thumb: {
+            borderColor: "var(--accent-color)",
+            background: "var(--accent-color)",
+            boxShadow: "0 0 8px -1px var(--accent-color)",
+          },
+        }}
+      />
+    </div>
   )
 }
