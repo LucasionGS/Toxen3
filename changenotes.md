@@ -2,6 +2,14 @@
 
 This file contains the change logs for Toxen. 
 
+<!-- VERSION: 2.9.1 -->
+## 2.9.1 - 27-06-2026
+
+## Changes
+
+- Slight redesigns to the Progress bar and Volume slider.
+- Made Music Controls respect theme colors instead of being forced green
+
 <!-- VERSION: 2.9.0 -->
 ## 2.9.0 - 27-06-2026
 
