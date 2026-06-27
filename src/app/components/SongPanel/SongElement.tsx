@@ -5,6 +5,7 @@ import RenderIfVisible from "react-render-if-visible";
 import { useModals } from '@mantine/modals';
 import Settings from '../../toxen/Settings';
 import User from '../../toxen/User';
+import Converter from '../../toxen/Converter';
 import ImageCache from '../../toxen/ImageCache';
 import SongElementController from '../../toxen/controllers/SongElementController';
 import { useController } from '../../lib/useController';
@@ -86,53 +87,73 @@ function SongElementDiv(props: { controller: SongElementController }) {
   // let setOpened: (opened: boolean) => void;
   const modals = useModals();
 
-  // Build background style with fallback
-  const backgroundStyle = Settings.get("enableThumbnailCache", true) 
-    ? (thumbnailUrl 
-        ? `linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0)) 0% 0% / cover, url("${thumbnailUrl}")`
-        : isLoadingThumbnail 
-        ? 'linear-gradient(90deg, rgba(255,255,255,0.1) 25%, rgba(255,255,255,0.2) 50%, rgba(255,255,255,0.1) 75%), linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0.6))'
-        : undefined)
-    : (song.backgroundFile() 
-        ? `linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0)) 0% 0% / cover, url("${User.appendAuth(`${song.backgroundFile().replace(/\\/g, "/")}?h=${song.hash}`)}")`
-        : undefined);
+  // Resolve the background image (thumbnail when caching is enabled, else full file)
+  const bgImageUrl = Settings.get("enableThumbnailCache", true)
+    ? thumbnailUrl
+    : (song.backgroundFile()
+      ? User.appendAuth(`${song.backgroundFile().replace(/\\/g, "/")}?h=${song.hash}`)
+      : null);
+
+  const title = song.title || "Unknown Title";
+  const artist = song.artist || (song.coArtists && song.coArtists[0]) || "Unknown Artist";
+  const durationLabel = (song.duration && !isNaN(song.duration))
+    ? Converter.numberToTime(song.duration).toTimestamp("hh?:mm:ss")
+    : null;
 
   return (
-      <div style={{
-        position: "relative",
-      }} className="song-element-container">
-        <div ref={ref => controller.divElement = ref} className={classes.join(" ")} style={{
-          background: backgroundStyle,
-
-          /// Style if using Observer object
-          // background: observer?.isIntersecting ? `linear-gradient(to right, rgb(0, 0, 0), rgba(0, 0, 0, 0)) 0% 0% / cover, url("${bgFile.replace(/\\/g, "/")}")`: null,
-          // opacity: observer?.isIntersecting ? 1 : 0,
-          // transition: "transform 0.2s ease-in-out, opacity 0.2 ease-in-out",
-          // transform: `translateX(${observer?.isIntersecting ? "0" : "-64"}px)`,
+    <div className="song-element-container">
+      <div
+        ref={ref => controller.divElement = ref}
+        className={classes.join(" ")}
+        onClick={e => {
+          if (e.ctrlKey) return;
+          controller.play();
         }}
-          onClick={e => {
-            if (e.ctrlKey) return;
-            controller.play();
-          }}
-          onContextMenu={e => {
-            e.preventDefault();
-            song.contextMenuModal(modals);
-          }}
-          onMouseDownCapture={e => {
-            if (e.ctrlKey && e.buttons === 1) return controller.select();
-          }}
-          onMouseEnter={e => {
-            if (e.ctrlKey && e.buttons === 1) return controller.select();
-          }}
-        >
-          <div className="song-progress-bar" style={{ 
-            width: (controller.progressBar * 100) + "%",
-          }} />
-          <p className="song-title" >
-            {song.getDisplayName()}
-          </p>
+        onContextMenu={e => {
+          e.preventDefault();
+          song.contextMenuModal(modals);
+        }}
+        onMouseDownCapture={e => {
+          if (e.ctrlKey && e.buttons === 1) return controller.select();
+        }}
+        onMouseEnter={e => {
+          if (e.ctrlKey && e.buttons === 1) return controller.select();
+        }}
+      >
+        <div
+          className="song-element-bg"
+          style={bgImageUrl ? { backgroundImage: `url("${bgImageUrl}")` } : undefined}
+        />
+        <span className="song-element-accent" />
+        <div className="song-element-content">
+          <div className="song-element-info">
+            <span className="song-element-title">{title}</span>
+            <span className="song-element-artist">
+              {artist}
+              {song.album ? <span className="song-element-album"> · {song.album}</span> : null}
+            </span>
+          </div>
+          <div className="song-element-meta">
+            {controller.playing && (
+              <div className="song-element-eq" aria-hidden="true">
+                <span /><span /><span /><span />
+              </div>
+            )}
+            {song.isVideo() && (
+              <svg className="song-element-badge" viewBox="0 0 576 512" aria-hidden="true" focusable="false">
+                <title>Video</title>
+                <path fill="currentColor" d="M0 128C0 92.7 28.7 64 64 64H320c35.3 0 64 28.7 64 64V384c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V128zM559.1 99.8c10.4 5.6 16.9 16.4 16.9 28.2V384c0 11.8-6.5 22.6-16.9 28.2s-23 5-32.9-1.6l-96-64L416 337.1V320 192 174.9l14.2-9.5 96-64c9.8-6.5 22.4-7.2 32.9-1.6z" />
+              </svg>
+            )}
+            {durationLabel && <span className="song-element-duration">{durationLabel}</span>}
+          </div>
         </div>
+        <div
+          className="song-element-progress"
+          style={{ width: (controller.progressBar * 100) + "%" }}
+        />
       </div>
+    </div>
   )
 }
 

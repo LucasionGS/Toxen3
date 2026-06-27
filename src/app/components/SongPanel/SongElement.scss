@@ -1,293 +1,334 @@
 // Song Element Color Variables - using the new theming system
 :root {
-  --song-element-bg: var(--secondary-bg);
-  --song-element-bg-hover: var(--tertiary-bg);
-  --song-element-border: var(--border-primary);
-  --song-element-border-selected: var(--player-selected);
-  --song-element-border-playing: var(--player-playing);
-  --song-element-text: var(--text-primary);
-  --song-element-text-dim: var(--text-secondary);
-  --song-element-progress: var(--player-progress);
-  --song-element-shadow: var(--shadow-medium);
-  --song-element-shadow-playing: var(--shadow-accent);
-  --song-element-shadow-selected: rgba(255, 107, 53, 0.6);
+  --song-row-height: 60px;
+  --song-row-radius: 10px;
+  --song-row-bg: rgba(255, 255, 255, 0.035);
+  --song-row-bg-hover: rgba(var(--accent-color-rgb), 0.10);
+  --song-row-border: var(--border-secondary);
+  --song-row-accent: var(--accent-color);
+  --song-row-playing: var(--player-playing);
+  --song-row-selected: var(--player-selected);
 }
 
 .song-element-container {
   user-select: none;
-  margin-bottom: 2px;
-  
-  .song-element-context-menu-button {
-    display: none;
-    opacity: 0;
-    transition: opacity 0.2s ease-in-out;
-  }
-  
-  &:hover {
-    .song-element-context-menu-button {
-      display: initial;
-      opacity: 1;
-    }
+  margin-bottom: 4px;
+  // Isolate each row so layout/paint of one never invalidates the whole list.
+  contain: layout paint;
+}
 
-    .song-element {
-      .song-title {
-        padding-left: 36px;
-        transition: padding-left 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      }
-    }
-  }
-
-  // Smooth fade in animation
-  .song-element {
-    opacity: 0;
-    animation: songElementFadeIn 0.15s ease-out forwards;
-    animation-delay: calc(var(--animation-index, 0) * 0.02s);
-  }
-
-  @keyframes songElementFadeIn {
-    0% {
-      opacity: 0;
-      transform: translateX(-16px);
-    }
-    100% {
-      opacity: 1;
-      transform: translateX(0);
-    }
-  }
-
-  // Loading animation for thumbnails
-  @keyframes shimmer {
-    0% {
-      background-position: -200px 0;
-    }
-    100% {
-      background-position: calc(200px + 100%) 0;
-    }
-  }
+// Entrance animation on the persistent wrapper (keeps inner transforms free).
+.song-element-permadiv {
+  opacity: 0;
+  animation: songElementFadeIn 0.25s ease-out forwards;
+  animation-delay: calc(var(--animation-index, 0) * 0.025s);
 }
 
 .song-element {
   position: relative;
-  overflow: hidden;
-  width: 88%;
-  min-height: 64px;
+  display: block;
+  height: var(--song-row-height);
   box-sizing: border-box;
-  
-  // Modern glass morphism background
-  background: var(--song-element-bg);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--song-element-border);
-  border-radius: 8px;
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-  
-  // Smooth transitions
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  
-  // Box shadow for depth
-  box-shadow: 
-    0 2px 8px var(--song-element-shadow),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  border-radius: var(--song-row-radius);
+  background: var(--song-row-bg);
+  border: 1px solid var(--song-row-border);
+  cursor: pointer;
 
-  // Loading state for thumbnail generation
-  &.loading-thumbnail {
-    background-size: 200px 100%, cover !important;
-    animation: shimmer 1.5s ease-in-out infinite;
-  }
+  // Only animate compositor-friendly properties.
+  transition:
+    transform var(--transition-spring),
+    box-shadow var(--transition-normal),
+    border-color var(--transition-normal),
+    background-color var(--transition-normal);
+  will-change: transform;
+  transform: translateZ(0);
 
-  .song-title {
-    color: var(--song-element-text);
-    font-size: 16px;
-    font-weight: 500;
-    line-height: 1.4;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    padding: 12px 16px;
-    padding-left: 16px;
-    margin: 0;
-    
-    // Text shadow for better readability over background images
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  // Selected state - HIGHEST PRIORITY
-  &.selected {
-    width: 96% !important;
-    border-color: var(--song-element-border-selected) !important;
-    border-width: 3px !important;
-    border-radius: 12px !important;
-    background: rgba(255, 107, 53, 0.2) !important;
-    transform: translateX(12px) !important;
-    z-index: 100 !important;
-    box-shadow: 
-      0 8px 32px var(--song-element-shadow-selected),
-      0 0 0 2px rgba(255, 107, 53, 0.4),
-      inset 0 2px 0 rgba(255, 255, 255, 0.3) !important;
-    
-    .song-title {
-      font-weight: 700 !important;
-      color: #fff !important;
-      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9) !important;
-    }
-    
-    // Selected and playing combined - still orange dominates
-    &.playing {
-      background: rgba(255, 107, 53, 0.25) !important;
-      box-shadow: 
-        0 10px 40px var(--song-element-shadow-selected),
-        0 0 0 2px rgba(255, 107, 53, 0.5),
-        0 0 20px var(--accent-color-dim),
-        inset 0 2px 0 rgba(255, 255, 255, 0.3) !important;
-    }
-  }
-
-  // Playing state - lower priority than selected
-  &.playing:not(.selected) {
-    width: 94%;
-    border-color: var(--song-element-border-playing);
-    border-width: 2px;
-    border-radius: 12px;
-    background: var(--accent-color-dim);
-    transform: translateX(8px);
-    box-shadow: 
-      0 6px 20px var(--song-element-shadow-playing),
-      0 0 0 1px var(--accent-color-hover),
-      inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  }
-
-  // Hover state
-  &:hover {
-    width: 98%;
-    border-top-right-radius: 12px;
-    border-bottom-right-radius: 12px;
-    background: var(--song-element-bg-hover);
-    transform: translateX(6px);
-    cursor: pointer;
-    box-shadow: 
-      0 8px 24px var(--song-element-shadow),
-      inset 0 1px 0 rgba(255, 255, 255, 0.15);
-
-    .song-title {
-      white-space: normal;
-      word-break: break-word;
-      padding-left: 36px;
-    }
+  // Text-contrast gradient sitting above the image, below the content.
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.82) 0%,
+      rgba(0, 0, 0, 0.55) 45%,
+      rgba(0, 0, 0, 0.12) 100%
+    );
+    z-index: 1;
+    pointer-events: none;
   }
 }
 
-// Proximity effect for neighboring song elements
-.song-element-permadiv:has(+ .song-element-permadiv + .song-element-permadiv .song-element:hover) .song-element {
-  width: 90%;
-  border-top-right-radius: 8px;
-  border-bottom-right-radius: 8px;
-  transform: translateX(2px);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.song-element-permadiv:has(+ .song-element-permadiv .song-element:hover) .song-element {
-  width: 92%;
-  border-top-right-radius: 10px;
-  border-bottom-right-radius: 10px;
-  transform: translateX(3px);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.song-element-permadiv:has(.song-element:hover) {
-  & + .song-element-permadiv .song-element {
-    width: 92%;
-    border-top-right-radius: 10px;
-    border-bottom-right-radius: 10px;
-    transform: translateX(3px);
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-
-  & + .song-element-permadiv + .song-element-permadiv .song-element {
-    width: 90%;
-    border-top-right-radius: 8px;
-    border-bottom-right-radius: 8px;
-    transform: translateX(2px);
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-}
-
-// Progress bar styling
-.song-element .song-progress-bar {
+// Separate, absolutely-positioned background layer (steady during transforms).
+.song-element-bg {
   position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    var(--song-element-progress) 0%,
-    rgba(0, 255, 0, 0.1) 100%
-  );
-  border-radius: inherit;
-  transition: width 0.3s ease-out;
-  z-index: 1;
+  inset: 0;
+  z-index: 0;
+  background-color: rgba(var(--accent-color-rgb), 0.05);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.9;
+  transform: scale(1.02);
+  transition: transform var(--transition-slow), opacity var(--transition-normal);
 }
 
-// Ensure title text is above progress bar
-.song-element .song-title {
+// Loading shimmer for thumbnails still being generated.
+.song-element.loading-thumbnail .song-element-bg {
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.10) 50%,
+    rgba(255, 255, 255, 0.04) 75%
+  );
+  background-size: 200% 100%;
+  animation: songShimmer 1.4s ease-in-out infinite;
+}
+
+// Glowing left accent bar.
+.song-element-accent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  z-index: 3;
+  background: var(--song-row-accent);
+  opacity: 0;
+  transform: scaleY(0.3);
+  transform-origin: center;
+  transition: opacity var(--transition-normal), transform var(--transition-spring);
+  border-top-left-radius: var(--song-row-radius);
+  border-bottom-left-radius: var(--song-row-radius);
+}
+
+.song-element-content {
   position: relative;
   z-index: 2;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px 0 18px;
+}
+
+.song-element-info {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.song-element-title {
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85);
+  transition: color var(--transition-fast);
+}
+
+.song-element-artist {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.song-element-album {
+  opacity: 0.7;
+}
+
+.song-element-meta {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.song-element-badge {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
+  color: var(--text-secondary);
+  opacity: 0.85;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+}
+
+.song-element-duration {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.3px;
+  color: var(--text-secondary);
+  background: rgba(0, 0, 0, 0.35);
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+
+// Animated equalizer shown while a row is playing.
+.song-element-eq {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  width: 16px;
+  height: 14px;
+
+  span {
+    flex: 1;
+    height: 30%;
+    border-radius: 1px;
+    background: var(--song-row-playing);
+    box-shadow: 0 0 6px var(--accent-color-hover);
+    animation: songEq 0.9s ease-in-out infinite;
+  }
+
+  span:nth-child(1) { animation-delay: 0s; }
+  span:nth-child(2) { animation-delay: 0.25s; }
+  span:nth-child(3) { animation-delay: 0.5s; }
+  span:nth-child(4) { animation-delay: 0.15s; }
+}
+
+// Thin glowing progress bar along the bottom.
+.song-element-progress {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  z-index: 4;
+  background: linear-gradient(
+    90deg,
+    var(--accent-color) 0%,
+    rgba(var(--accent-color-rgb), 0.4) 100%
+  );
+  box-shadow: 0 0 8px var(--accent-color-hover);
+  border-bottom-left-radius: var(--song-row-radius);
+  transition: width 0.25s linear;
+}
+
+/* ---------- Interactive states ---------- */
+
+.song-element:hover {
+  background: var(--song-row-bg-hover);
+  transform: translateX(6px);
+  border-color: var(--accent-color-hover);
+  box-shadow: 0 6px 20px var(--shadow-heavy), 0 0 0 1px var(--accent-color-dim);
+
+  .song-element-bg { transform: scale(1.06); opacity: 1; }
+  .song-element-accent { opacity: 1; transform: scaleY(1); }
+  .song-element-title { color: #fff; }
+}
+
+.song-element.playing {
+  border-color: var(--song-row-playing);
+  background: var(--accent-color-dim);
+  transform: translateX(8px);
+  box-shadow:
+    0 6px 22px var(--shadow-accent),
+    0 0 0 1px var(--accent-color-hover),
+    0 0 22px var(--accent-color-dim);
+
+  .song-element-accent {
+    opacity: 1;
+    transform: scaleY(1);
+    width: 4px;
+    box-shadow: 0 0 12px var(--accent-color);
+  }
+  .song-element-title { color: #fff; }
+}
+
+.song-element.selected {
+  border-color: var(--song-row-selected);
+  background: rgba(255, 107, 53, 0.18);
+  transform: translateX(12px);
+  z-index: 5;
+  box-shadow:
+    0 8px 28px rgba(255, 107, 53, 0.4),
+    0 0 0 2px rgba(255, 107, 53, 0.5);
+
+  .song-element-accent {
+    background: var(--song-row-selected);
+    opacity: 1;
+    transform: scaleY(1);
+    width: 4px;
+  }
+  .song-element-title { color: #fff; font-weight: 700; }
+  .song-element-progress {
+    background: linear-gradient(90deg, #ff6b35, rgba(255, 107, 53, 0.4));
+    box-shadow: 0 0 8px rgba(255, 107, 53, 0.6);
+  }
+}
+
+.song-element.selected.playing {
+  box-shadow:
+    0 10px 34px rgba(255, 107, 53, 0.45),
+    0 0 0 2px rgba(255, 107, 53, 0.55),
+    0 0 22px var(--accent-color-dim);
+}
+
+/* ---------- Subtle proximity "fan" effect (transform only) ---------- */
+.song-element-permadiv:has(.song-element:hover) {
+  & + .song-element-permadiv .song-element { transform: translateX(3px); }
+  & + .song-element-permadiv + .song-element-permadiv .song-element { transform: translateX(1px); }
+}
+
+/* ---------- Keyframes ---------- */
+@keyframes songElementFadeIn {
+  0% { opacity: 0; transform: translateX(-14px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes songShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes songEq {
+  0%, 100% { height: 25%; }
+  50% { height: 100%; }
+}
+
+// Respect reduced-motion preferences.
+@media (prefers-reduced-motion: reduce) {
+  .song-element,
+  .song-element-bg,
+  .song-element-accent,
+  .song-element-permadiv {
+    transition: none;
+    animation: none;
+  }
+  .song-element-permadiv { opacity: 1; }
+  .song-element-eq span { animation: none; height: 60%; }
 }
 
 // Responsive adjustments
 @if ToxenIsWeb() {
   @media (max-width: 768px) {
     .song-element {
-      width: 100%;
-      min-height: 52px;
-      border-radius: 10px;
-      border-top-right-radius: 10px;
-      border-bottom-right-radius: 10px;
-
+      &:hover,
+      &.playing,
       &.selected {
-        width: 100% !important;
-        transform: none !important;
-        border-radius: 12px !important;
-      }
-
-      &.playing:not(.selected) {
-        width: 100%;
         transform: none;
-        border-radius: 12px;
       }
+    }
 
-      &:hover {
-        width: 100%;
+    // Disable proximity effects on mobile (no hover).
+    .song-element-permadiv:has(.song-element:hover) {
+      & + .song-element-permadiv .song-element,
+      & + .song-element-permadiv + .song-element-permadiv .song-element {
         transform: none;
-        border-top-right-radius: 10px;
-        border-bottom-right-radius: 10px;
-      }
-
-      .song-title {
-        font-size: 14px;
-        padding: 14px 16px;
       }
     }
 
-    // Disable proximity effects on mobile (no hover)
-    .song-element-permadiv:has(+ .song-element-permadiv + .song-element-permadiv .song-element:hover) .song-element,
-    .song-element-permadiv:has(+ .song-element-permadiv .song-element:hover) .song-element,
-    .song-element-permadiv:has(.song-element:hover) + .song-element-permadiv .song-element,
-    .song-element-permadiv:has(.song-element:hover) + .song-element-permadiv + .song-element-permadiv .song-element {
-      width: 100%;
-      transform: none;
-      border-radius: 10px;
-    }
-
-    .song-element-container {
-      .song-element-context-menu-button {
-        display: initial;
-        opacity: 0.7;
-      }
-
-      &:hover .song-element .song-title {
-        padding-left: 16px;
-      }
-    }
+    .song-element-title { font-size: 14px; }
   }
 }
