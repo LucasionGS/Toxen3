@@ -1,6 +1,6 @@
 # Change logs
 
-This file contains the change logs for Toxen. 
+This file contains the change logs for Toxen.
 
 <!-- VERSION: 2.9.1 -->
 ## 2.9.1 - 27-06-2026
