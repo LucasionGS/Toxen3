@@ -1,3 +1,25 @@
+# Change logs
+
+This file contains the change logs for Toxen. 
+
+<!-- VERSION: 2.9.0 -->
+## 2.9.0 - 27-06-2026
+
+## New Features
+
+- **Low Performance Mode** - Added a new setting to enable Low Performance Mode, which disables certain visual effects and fully disables the visualizer.
+  - This can be found in `Settings > Performance > Low Performance Mode`.
+
+## Changes
+
+- **Track List overhaul** - The track list has been reworked to be more performant and visually appealing. Just a new look, works just like before!
+- **Better Settings & Edit Song Panel** - Restructured the both Settings panel and the Edit Song panel to be more organized and easier to navigate. The options have been grouped into tabs so things aren't so cluttered and you dont need to scroll 10 years to find the right setting.
+
+## Boring stuff
+
+- Major refactor of some internal components as part of a bigger refactor process.
+  - (~~For devs: Migration to fully functional components, and removal of class components where possible~~)
+
 <!-- VERSION: 2.8.0 -->
 ## 2.8.0 - 30-04-2026
 ### New Features
