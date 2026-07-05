@@ -7,6 +7,7 @@ import { Toxen } from "../ToxenApp";
 import { ModalsContextProps } from "@mantine/modals/lib/context";
 import React from "react";
 import { Button, Stack } from "@mantine/core";
+import { IconFileImport, IconTrash } from "@tabler/icons-react";
 import System, { ToxenFile } from "./System";
 import User from "./User";
 // import * as remote from "@electron/remote";
@@ -354,12 +355,12 @@ export default class Playlist {
           <p>Choose a background image for the playlist.</p>
           <Stack>
             <Button
-              leftSection={<i className="fas fa-file-import"></i>}
+              leftSection={<IconFileImport size="1em" />}
               onClick={promptImage}
             >Set background</Button>
             <Button
               color="red"
-              leftSection={<i className="fas fa-trash"></i>}
+              leftSection={<IconTrash size="1em" />}
               onClick={() => {
                 this.removeBackground();;
                 Toxen.playlistPanel.update();

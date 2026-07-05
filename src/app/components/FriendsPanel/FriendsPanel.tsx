@@ -24,7 +24,7 @@ export function FriendsIconBadge() {
 
   return (
     <span style={{ position: "relative", display: "inline-flex" }}>
-      <i className="fas fa-user-friends" />
+      <IconUsers size="1em" />
       {onlineCount > 0 && (
         <span style={{
           position: "absolute",
@@ -63,6 +63,7 @@ import {
   IconMusic,
   IconUserMinus,
   IconUserPlus,
+  IconUsers,
   IconX,
 } from "@tabler/icons-react";
 import User from "../../toxen/User";

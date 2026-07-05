@@ -3,9 +3,6 @@ import React from "react";
 import ReactDOM from "react-dom";
 import ReactDOMClient from "react-dom/client";
 import ToxenAppRenderer, { Toxen } from "./app/ToxenApp";
-import "@fortawesome/fontawesome-free/js/all"; // Import FA
-import "@fortawesome/fontawesome-free/scss/regular.scss";
-import "@fortawesome/fontawesome-free/scss/solid.scss";
 import Settings from "./app/toxen/Settings";
 import Song from "./app/toxen/Song";
 import Stats from "./app/toxen/Statistics";

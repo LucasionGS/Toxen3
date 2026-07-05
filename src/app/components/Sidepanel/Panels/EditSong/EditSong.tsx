@@ -12,6 +12,7 @@ import "./EditSong.scss";
 // import fsp from "fs/promises";
 // import Path from "path";
 import { Button, Checkbox, ColorInput, InputLabel, Loader, NumberInput, Radio, Select, Slider, Tabs, TextInput } from "@mantine/core";
+import { IconList, IconFolderOpen, IconRefresh, IconMusic, IconFileMusic, IconWaveSquare, IconStar, IconHeading, IconFileExport, IconUser, IconDisc, IconGuitarPick, IconLink, IconLanguage, IconCalendar, IconPlug, IconBadgeCc, IconClock, IconMicrophone, IconCheck, IconMovie, IconPalette, IconRainbow, IconHeartbeat, IconColorSwatch, IconChartBar, IconSun, IconArrowsShuffle, IconGauge, IconEye, IconTypography, IconUnderline, IconStack2, IconBorderStyle2, IconFileZip } from "@tabler/icons-react";
 import ListInput from "../../../ListInput/ListInput";
 import SelectAsync from "../../../SelectAsync/SelectAsync";
 import BackgroundFileSelector from "../../../BackgroundFileSelector/BackgroundFileSelector";
@@ -88,16 +89,12 @@ export default function EditSong(props: EditSongProps) {
     <div key={`${isPlaylistMode ? currentPlaylist?.name : 'song'}-${Toxen.editingSong.uid}`}>
       <SidepanelSectionHeader>
         <h1>Edit music details</h1>
-        {/* <button className="tx-btn tx-btn-action" onClick={() => Toxen.editSongForm.submit()}>
-          <i className="fas fa-save"></i>&nbsp;
-          Save
-        </button> */}
         <Button.Group>
           {inActivePlaylist && (
             <Button 
               variant={isPlaylistMode ? "filled" : "light"} 
               onClick={() => setIsPlaylistMode(!isPlaylistMode)}
-              leftSection={<i className="fas fa-list"></i>}
+              leftSection={<IconList size="1em" />}
               title={isPlaylistMode ? `Switch to Song Settings` : `Switch to Playlist-specific settings for: ${currentPlaylist.name}`}
             >
               {isPlaylistMode ? `For Playlist: ${currentPlaylist.name}` : 'Song Settings'}
@@ -105,15 +102,15 @@ export default function EditSong(props: EditSongProps) {
           )}
           {
             !Settings.isRemote() && toxenapi.isDesktop() && (
-            <Button onClick={() => toxenapi.remote.shell.openPath(Toxen.editingSong.dirname())} leftSection={<i className="fas fa-folder-open"></i>}>
+            <Button onClick={() => toxenapi.remote.shell.openPath(Toxen.editingSong.dirname())} leftSection={<IconFolderOpen size="1em" />}>
               Open music folder
             </Button>
             )
           }
-          <Button onClick={() => Toxen.reloadSection()} leftSection={<i className="fas fa-redo"></i>}>
+          <Button onClick={() => Toxen.reloadSection()} leftSection={<IconRefresh size="1em" />}>
             Reload data
           </Button>
-          <Button className="advanced-only" onClick={() => Toxen.editingSong.copyUID()} leftSection={<i className="fas fa-redo"></i>}>
+          <Button className="advanced-only" onClick={() => Toxen.editingSong.copyUID()} leftSection={<IconRefresh size="1em" />}>
             Copy UUID
           </Button>
         </Button.Group>
@@ -122,19 +119,19 @@ export default function EditSong(props: EditSongProps) {
       <Tabs defaultValue={isPlaylistMode ? "files" : "general"} keepMounted={false}>
         <Tabs.List>
           {!isPlaylistMode && (
-            <Tabs.Tab value="general" leftSection={<i className="fas fa-music" />}>General</Tabs.Tab>
+            <Tabs.Tab value="general" leftSection={<IconMusic size="1em" />}>General</Tabs.Tab>
           )}
-          <Tabs.Tab value="files" leftSection={<i className="fas fa-file-audio" />}>Files &amp; Media</Tabs.Tab>
-          <Tabs.Tab value="visualizer" leftSection={<i className="fas fa-wave-square" />}>Visualizer</Tabs.Tab>
-          <Tabs.Tab value="effects" leftSection={<i className="fas fa-star" />}>Effects</Tabs.Tab>
-          <Tabs.Tab value="floatingTitle" leftSection={<i className="fas fa-heading" />}>Floating Title</Tabs.Tab>
-          <Tabs.Tab value="export" leftSection={<i className="fas fa-file-export" />}>Export</Tabs.Tab>
+          <Tabs.Tab value="files" leftSection={<IconFileMusic size="1em" />}>Files &amp; Media</Tabs.Tab>
+          <Tabs.Tab value="visualizer" leftSection={<IconWaveSquare size="1em" />}>Visualizer</Tabs.Tab>
+          <Tabs.Tab value="effects" leftSection={<IconStar size="1em" />}>Effects</Tabs.Tab>
+          <Tabs.Tab value="floatingTitle" leftSection={<IconHeading size="1em" />}>Floating Title</Tabs.Tab>
+          <Tabs.Tab value="export" leftSection={<IconFileExport size="1em" />}>Export</Tabs.Tab>
         </Tabs.List>
 
         {!isPlaylistMode && (
           <Tabs.Panel value="general" pt="md">
           <TextInput
-            leftSection={<i className="fas fa-user" />}
+            leftSection={<IconUser size="1em" />}
             label="Artist"
             name="artist"
             onChange={(v) => saveSettings('artist', v.currentTarget.value)}
@@ -143,7 +140,7 @@ export default function EditSong(props: EditSongProps) {
             onKeyDown={textInputSaveOnEnter}
           />
           <TextInput
-            leftSection={<i className="fas fa-heading" />}
+            leftSection={<IconHeading size="1em" />}
             label="Title"
             onChange={(v) => saveSettings('title', v.currentTarget.value)}
             defaultValue={getValue('title')}
@@ -157,7 +154,7 @@ export default function EditSong(props: EditSongProps) {
             defaultValue={getValue('coArtists')}
           />
           <TextInput
-            leftSection={<i className="fas fa-compact-disc" />}
+            leftSection={<IconDisc size="1em" />}
             label="Album"
             name="album"
             onChange={(v) => saveSettings('album', v.currentTarget.value)}
@@ -166,7 +163,7 @@ export default function EditSong(props: EditSongProps) {
             onKeyDown={textInputSaveOnEnter}
           />
           <TextInput
-            leftSection={<i className="fas fa-guitar" />}
+            leftSection={<IconGuitarPick size="1em" />}
             label="Genre"
             name="genre"
             onChange={(v) => saveSettings('genre', v.currentTarget.value)}
@@ -175,7 +172,7 @@ export default function EditSong(props: EditSongProps) {
             onKeyDown={textInputSaveOnEnter}
           />
           <TextInput
-            leftSection={<i className="fas fa-link" />}
+            leftSection={<IconLink size="1em" />}
             label="Source"
             name="source"
             onChange={(v) => saveSettings('source', v.currentTarget.value)}
@@ -184,7 +181,7 @@ export default function EditSong(props: EditSongProps) {
             onKeyDown={textInputSaveOnEnter}
           />
           <TextInput
-            leftSection={<i className="fas fa-link" />}
+            leftSection={<IconLink size="1em" />}
             label="URL"
             name="url"
             onChange={(v) => saveSettings('url', v.currentTarget.value)}
@@ -193,7 +190,7 @@ export default function EditSong(props: EditSongProps) {
             onKeyDown={textInputSaveOnEnter}
           />
           <TextInput
-            leftSection={<i className="fas fa-language" />}
+            leftSection={<IconLanguage size="1em" />}
             label="Language"
             name="language"
             onChange={(v) => saveSettings('language', v.currentTarget.value)}
@@ -202,7 +199,7 @@ export default function EditSong(props: EditSongProps) {
             onKeyDown={textInputSaveOnEnter}
           />
           <NumberInput
-            leftSection={<i className="fas fa-calendar" />}
+            leftSection={<IconCalendar size="1em" />}
             label="Release Year"
             name="year"
             onChange={(v) => saveSettings('year', +v)}
@@ -223,13 +220,13 @@ export default function EditSong(props: EditSongProps) {
         {isProviderSong ? (
           <>
             <TextInput
-              leftSection={<i className="fas fa-plug" />}
+              leftSection={<IconPlug size="1em" />}
               label="Provider"
               value={provider?.displayName ?? Toxen.editingSong.provider?.id ?? "Unknown provider"}
               disabled
             />
             <TextInput
-              leftSection={<i className="fas fa-link" />}
+              leftSection={<IconLink size="1em" />}
               label="Provider Track"
               value={Toxen.editingSong.provider?.url ?? Toxen.editingSong.provider?.trackId ?? ""}
               disabled
@@ -238,7 +235,7 @@ export default function EditSong(props: EditSongProps) {
         ) : (
           <SelectAsync
             allowDeselect={false}
-            leftSection={<i className="fas fa-file-audio" />}
+            leftSection={<IconFileMusic size="1em" />}
             label="Media File"
             name="paths.media"
             defaultValue={getValue('paths.media')}
@@ -292,7 +289,7 @@ export default function EditSong(props: EditSongProps) {
 
         <SelectAsync
           allowDeselect={false}
-          leftSection={<i className="fas fa-closed-captioning" />}
+          leftSection={<IconBadgeCc size="1em" />}
           label="Subtitle file"
           name="paths.subtitles"
           defaultValue={getValue('paths.subtitles')}
@@ -327,7 +324,7 @@ export default function EditSong(props: EditSongProps) {
           }}
         />
         <NumberInput
-          leftSection={<i className="fas fa-clock" />}
+          leftSection={<IconClock size="1em" />}
           label="Subtitle Offset (ms)"
           name="subtitleDelay"
           defaultValue={getValue('subtitleDelay')}
@@ -343,7 +340,7 @@ export default function EditSong(props: EditSongProps) {
           <>
             <InputLabel>Auto-transcribe with Whisper</InputLabel>
             <Button
-              leftSection={<i className="fas fa-microphone"></i>}
+              leftSection={<IconMicrophone size="1em" />}
               onClick={async () => {
                 try {
                   const infoLog = Toxen.notify({
@@ -362,7 +359,7 @@ export default function EditSong(props: EditSongProps) {
                   updateNotification({
                     id: infoLog,
                     message: (<>
-                      <i className="fas fa-check"></i>&nbsp;
+                      <IconCheck size="1em" />&nbsp;
                       Transcription completed successfully!
                     </>)
                   });
@@ -401,7 +398,7 @@ export default function EditSong(props: EditSongProps) {
         )}
         <SelectAsync
           allowDeselect={false}
-          leftSection={<i className="fas fa-film" />}
+          leftSection={<IconMovie size="1em" />}
           label="Storyboard file"
           name="paths.storyboard"
           defaultValue={getValue('paths.storyboard')}
@@ -445,7 +442,7 @@ export default function EditSong(props: EditSongProps) {
 
         <Tabs.Panel value="visualizer" pt="md">
         <ColorInput
-          leftSection={<i className="fas fa-palette" />}
+          leftSection={<IconPalette size="1em" />}
           label="Visualizer Color"
           name="visualizerColor"
           defaultValue={getValue('visualizerColor') ?? "<Default>"}
@@ -463,7 +460,7 @@ export default function EditSong(props: EditSongProps) {
           }}
         />
         <Checkbox
-          label={<><i className="fas fa-rainbow" />&nbsp;Force Visualizer Rainbow Mode</>}
+          label={<><IconRainbow size="1em" />&nbsp;Force Visualizer Rainbow Mode</>}
           name="visualizerForceRainbowMode"
           defaultChecked={getValue('visualizerForceRainbowMode')}
           onChange={(v) => {
@@ -475,7 +472,7 @@ export default function EditSong(props: EditSongProps) {
 
         <Select
           allowDeselect={false}
-          leftSection={<i className="fas fa-heartbeat" />}
+          leftSection={<IconHeartbeat size="1em" />}
           label="Background pulsing"
           name="visualizerPulseBackground"
           defaultValue={getValue('visualizerPulseBackground') ?? ""}
@@ -507,7 +504,7 @@ export default function EditSong(props: EditSongProps) {
 
         <Select
           allowDeselect={false}
-          leftSection={<i className="fas fa-swatchbook" />}
+          leftSection={<IconColorSwatch size="1em" />}
           label="Autogenerated Theme"
           name="autogeneratedTheme"
           defaultValue={getValue('autogeneratedTheme') ? "enabled" : getValue('autogeneratedTheme') === false ? "disabled" : ""}
@@ -526,7 +523,7 @@ export default function EditSong(props: EditSongProps) {
 
         <Select
           allowDeselect={false}
-          leftSection={<i className="fas fa-chart-bar" />}
+          leftSection={<IconChartBar size="1em" />}
           label="Visualizer Style"
           name="visualizerStyle"
           defaultValue={getValue('visualizerStyle') ?? ""}
@@ -570,7 +567,7 @@ export default function EditSong(props: EditSongProps) {
         {/* Visualizer Glow */}
         <Select
           allowDeselect={false}
-          leftSection={<i className="fas fa-sun" />}
+          leftSection={<IconSun size="1em" />}
           label="Visualizer Glow"
           name="visualizerGlow"
           defaultValue={getValue('visualizerGlow') ? "enabled" : getValue('visualizerGlow') === false ? "disabled" : ""}
@@ -588,7 +585,7 @@ export default function EditSong(props: EditSongProps) {
         {/* Visualizer Shuffle */}
         <Select
           allowDeselect={false}
-          leftSection={<i className="fas fa-random" />}
+          leftSection={<IconArrowsShuffle size="1em" />}
           label="Visualizer Shuffle"
           name="visualizerShuffle"
           defaultValue={getValue('visualizerShuffle') ? "enabled" : getValue('visualizerShuffle') === false ? "disabled" : ""}
@@ -608,7 +605,7 @@ export default function EditSong(props: EditSongProps) {
         {/* Star Rush Effect */}
         <Select
           allowDeselect={false}
-          leftSection={<i className="fas fa-star" />}
+          leftSection={<IconStar size="1em" />}
           label="Star Rush Effect"
           name="starRushEffect"
           defaultValue={getValue('starRushEffect') ? "enabled" : getValue('starRushEffect') === false ? "disabled" : ""}
@@ -625,7 +622,7 @@ export default function EditSong(props: EditSongProps) {
 
         <Select
           allowDeselect={false}
-          leftSection={<i className="fas fa-tachometer-alt" />}
+          leftSection={<IconGauge size="1em" />}
           label="Star Rush Intensity"
           name="starRushIntensity"
           defaultValue={getValue('starRushIntensity')?.toString() || ""}
@@ -648,7 +645,7 @@ export default function EditSong(props: EditSongProps) {
 
         <Tabs.Panel value="floatingTitle" pt="md">
         <Checkbox
-          label={<><i className="fas fa-eye" />&nbsp;Floating Title</>}
+          label={<><IconEye size="1em" />&nbsp;Floating Title</>}
           name="floatingTitle"
           defaultChecked={getValue('floatingTitle')}
           onChange={v => {
@@ -658,7 +655,7 @@ export default function EditSong(props: EditSongProps) {
         <sup>Gives the floating title an underline</sup>
 
         <TextInput
-          leftSection={<i className="fas fa-font" />}
+          leftSection={<IconTypography size="1em" />}
           label="Floating Title: Text"
           name="floatingTitleText"
           placeholder="<Default>"
@@ -671,7 +668,7 @@ export default function EditSong(props: EditSongProps) {
 
         {/* useFloatingTitleSubtitles */}
         <Checkbox
-          label={<><i className="fas fa-closed-captioning" />&nbsp;Floating Title: Use Subtitles</>}
+          label={<><IconBadgeCc size="1em" />&nbsp;Floating Title: Use Subtitles</>}
           name="useFloatingTitleSubtitles"
           defaultChecked={getValue('useFloatingTitleSubtitles')}
           onChange={v => {
@@ -681,7 +678,7 @@ export default function EditSong(props: EditSongProps) {
         <sup>Use the subtitles if selected, as the text for the floating title. This overrides the text field.</sup>
 
         <Checkbox
-          label={<><i className="fas fa-underline" />&nbsp;Floating Title: Underline</>}
+          label={<><IconUnderline size="1em" />&nbsp;Floating Title: Underline</>}
           name="floatingTitleUnderline"
           defaultChecked={getValue('floatingTitleUnderline')}
           onChange={v => {
@@ -702,7 +699,7 @@ export default function EditSong(props: EditSongProps) {
         <sup>Set the position of the floating title.</sup>
 
         <Checkbox
-          label={<><i className="fas fa-wave-square" />&nbsp;Floating Title: Reactive</>}
+          label={<><IconWaveSquare size="1em" />&nbsp;Floating Title: Reactive</>}
           name="floatingTitleReactive"
           defaultChecked={getValue('floatingTitleReactive')}
           onChange={v => {
@@ -712,7 +709,7 @@ export default function EditSong(props: EditSongProps) {
         <sup>Enables the floating title to react to the music.</sup>
 
         <Checkbox
-          label={<><i className="fas fa-layer-group" />&nbsp;Floating Title: Override Visualizer</>}
+          label={<><IconStack2 size="1em" />&nbsp;Floating Title: Override Visualizer</>}
           name="floatingTitleOverrideVisualizer"
           defaultChecked={getValue('floatingTitleOverrideVisualizer')}
           onChange={v => {
@@ -722,7 +719,7 @@ export default function EditSong(props: EditSongProps) {
         <sup>Enables the floating title to override the visualizer if necessary. Otherwise its just placed on top.</sup>
 
         <ColorInput
-          leftSection={<i className="fas fa-border-style" />}
+          leftSection={<IconBorderStyle2 size="1em" />}
           label="Floating Title: Outline Color"
           placeholder="#FFFFFF"
           defaultValue={getValue('floatingTitleOutlineColor') || "#FFFFFF"}
@@ -765,7 +762,7 @@ export default function EditSong(props: EditSongProps) {
         else {
           toxenapi.throwDesktopOnly();
         }
-      }}><i className="fas fa-file-export"></i>&nbsp;Export Media File</Button>}
+      }}><IconFileExport size="1em" />&nbsp;Export Media File</Button>}
 
       {!isProviderSong && <br />}
 
@@ -794,7 +791,7 @@ export default function EditSong(props: EditSongProps) {
             })
           ).popup();
         }
-      }}><i className="fas fa-file-export"></i>&nbsp;Export Image File</Button>
+      }}><IconFileExport size="1em" />&nbsp;Export Image File</Button>
 
       <Button onClick={async () => {
         if (toxenapi.isDesktop()) {
@@ -831,7 +828,7 @@ export default function EditSong(props: EditSongProps) {
             })
           ).popup();
         }
-      }}><i className="fas fa-file-export"></i>&nbsp;Export Subtitle File</Button>
+      }}><IconFileExport size="1em" />&nbsp;Export Subtitle File</Button>
 
       <br />
 
@@ -868,7 +865,7 @@ export default function EditSong(props: EditSongProps) {
           console.error("Failed to export song package:", error);
           Toxen.error("Failed to export song package: " + error.message);
         }
-      }}><i className="fas fa-file-archive"></i>&nbsp;Export Song Package (.txz)</Button>
+      }}><IconFileZip size="1em" />&nbsp;Export Song Package (.txz)</Button>
         </Tabs.Panel>
       </Tabs>
     </div>

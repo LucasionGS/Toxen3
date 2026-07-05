@@ -1,5 +1,6 @@
 import { Button, Group, Image, Modal, Spoiler } from "@mantine/core";
 import React, { Component, useState } from "react";
+import { IconMaximize, IconWindowMinimize, IconMinimize, IconCaretDown, IconX, IconUserCircle } from "@tabler/icons-react";
 import { Toxen } from "../../ToxenApp";
 //@ts-expect-error 
 // import txnLogo from "../../../icons/toxen.png";
@@ -36,7 +37,7 @@ export default class AppBar extends Component<AppBarProps, AppBarState> {
                   e.stopPropagation();
                   Toxen.toggleMiniplayer();
                 }}>
-                <i className="fas fa-window-restore"></i>
+                <IconMinimize size="1em" />
               </div>
               {/* Toxen Action button */}
               <div className="appBarButton appBar__actionButton"
@@ -59,16 +60,17 @@ export default class AppBar extends Component<AppBarProps, AppBarState> {
                   }
                 }}>
                 {/* Arrow down icon */}
-                <i className="fas fa-caret-down"></i>
+                <IconCaretDown size="1em" />
               </div>
               {/* Minimize button */}
               <div className="appBarButton appBar__minimizeButton"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
+                  if (!toxenapi.isDesktop()) return;
                   toxenapi.remote.getCurrentWindow().minimize();
                 }}>
-                <i className="fas fa-window-minimize"></i>
+                <IconWindowMinimize size="1em" />
               </div>
 
               {/* Maximize */}
@@ -76,6 +78,7 @@ export default class AppBar extends Component<AppBarProps, AppBarState> {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
+                  if (!toxenapi.isDesktop()) return;
                   const win = toxenapi.remote.getCurrentWindow();
                   const isMaximized = win.isMaximized();
                   if (isMaximized) {
@@ -85,7 +88,7 @@ export default class AppBar extends Component<AppBarProps, AppBarState> {
                     win.maximize();
                   }
                 }}>
-                <i className="fas fa-window-maximize"></i>
+                <IconMaximize size="1em" />
               </div>
 
               {/* Close button */}
@@ -93,9 +96,10 @@ export default class AppBar extends Component<AppBarProps, AppBarState> {
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
+                  if (!toxenapi.isDesktop()) return;
                   toxenapi.remote.getCurrentWindow().close();
                 }}>
-                <i className="fas fa-times"></i>
+                <IconX size="1em" />
               </div>
             </>
           )
@@ -155,7 +159,7 @@ function UserManage() {
           setOpened(true);
         }}>
         {/* User icon */}
-        <i className="fas fa-user-circle" />
+        <IconUserCircle size="1em" />
       </div>
       <Modal opened={opened} onClose={() => setOpened(false)}>
         {

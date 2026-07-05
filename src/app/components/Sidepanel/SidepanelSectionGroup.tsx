@@ -1,4 +1,5 @@
 import React from 'react';
+import { IconChevronDown, IconChevronUp } from '@tabler/icons-react';
 import './SidepanelSectionGroup.scss';
 
 interface Props {
@@ -37,7 +38,7 @@ export default class SidepanelSectionGroup extends React.Component<Props, State>
               <h3>{title}</h3>
             </div>
             {collapsible && (
-              <i className={`fas fa-chevron-${collapsed ? 'down' : 'up'}`}></i>
+              collapsed ? <IconChevronDown size="1em" /> : <IconChevronUp size="1em" />
             )}
           </div>
         )}

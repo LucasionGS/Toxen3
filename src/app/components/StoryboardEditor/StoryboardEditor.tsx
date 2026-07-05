@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import "./StoryboardEditor.scss";
 import { Button, Checkbox, Collapse, ColorInput, Group, NumberInput, Select, Slider, TextInput, TextInputProps } from "@mantine/core";
+import { IconDeviceFloppy, IconPlayerStop, IconPlayerSkipBack, IconAlignCenter } from "@tabler/icons-react";
 import { Toxen } from "../../ToxenApp";
 import StoryboardParser from "../../toxen/StoryboardParser";
 import { useModals } from "@mantine/modals";
@@ -404,7 +405,7 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
       <div className="storyboard-controls">
         <div className="control-group primary-controls">
           <Button
-            leftSection={<i className="fas fa-save" />}
+            leftSection={<IconDeviceFloppy size="1em" />}
             onClick={() => {
               const saveLocation = song.storyboardFile() || song.dirname("storyboard.tsb");
               StoryboardParser.save(saveLocation, config, song);
@@ -418,7 +419,7 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
           </Button>
           <Button
             color="red"
-            leftSection={<i className="fas fa-stop" />}
+            leftSection={<IconPlayerStop size="1em" />}
             onClick={() => {
               stop();
               Toxen.setMode("Player");
@@ -428,7 +429,7 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
           </Button>
           <Button
             variant="outline"
-            leftSection={<i className="fas fa-step-backward" />}
+            leftSection={<IconPlayerSkipBack size="1em" />}
             onClick={() => {
               Toxen.musicPlayer.pause();
               Toxen.musicPlayer.media.currentTime = bpmOffset / 1000;
@@ -497,7 +498,7 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
         <div className="control-group">
           <Button
             variant="outline"
-            leftSection={<i className="fas fa-align-center" />}
+            leftSection={<IconAlignCenter size="1em" />}
             onClick={() => {
               const beat = config.bpm ?? 120;
               const beatOffset = config.bpmOffset ?? 0;

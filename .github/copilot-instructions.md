@@ -341,7 +341,7 @@ Custom `ToxenIsWeb()` SCSS function returns true for web builds (configured in `
 - `showdown` + `html-react-parser` - Markdown rendering
 - `react-select` v5.8 - Searchable select dropdowns
 - `react-render-if-visible` - Virtualization for performance
-- `@fortawesome/fontawesome-free` - Additional icons
+- `@tabler/icons-react` - Additional icons
 
 ## Feature Areas
 

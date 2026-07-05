@@ -8,6 +8,7 @@ This file contains the change logs for Toxen.
 ## Changes
 
 - **More Visualizer Customization Options** - Added Y-Axis customization for `Waveform`
+- **No more Font Awesome** - Replaced all remaining Font Awesome icons with Tabler Icons.
 
 <!-- VERSION: 2.9.1 -->
 ## 2.9.1 - 27-06-2026

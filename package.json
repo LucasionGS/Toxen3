@@ -62,7 +62,6 @@
   "license": "MIT",
   "dependencies": {
     "@electron/remote": "^2.1.2",
-    "@fortawesome/fontawesome-free": "^6.5.2",
     "@mantine/core": "^7.10.1",
     "@mantine/hooks": "^7.10.1",
     "@mantine/modals": "^7.10.1",

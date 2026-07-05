@@ -1,5 +1,6 @@
 import { Slider } from '@mantine/core';
 import React, { Component } from 'react'
+import { IconPlayerPlay, IconPlayerPause } from '@tabler/icons-react';
 import Time from '../../../../toxen/Time';
 import { Toxen } from '../../../../ToxenApp';
 import "./MusicControls.scss";
@@ -65,8 +66,8 @@ export default class MusicControls extends Component<MusicControlsProps, MusicCo
       <div className="toxen-music-controls">
         <div className="toxen-music-controls-buttons">
           <div className="ctrl-btn" onClick={() => Toxen.musicPlayer.toggle()}>
-            <span hidden={Toxen.musicPlayer && Toxen.musicPlayer.media && !Toxen.musicPlayer.media.paused}><i className="fas fa-play"></i></span>
-            <span hidden={Toxen.musicPlayer && Toxen.musicPlayer.media && Toxen.musicPlayer.media.paused}><i className="fas fa-pause"></i></span>
+            <span hidden={Toxen.musicPlayer && Toxen.musicPlayer.media && !Toxen.musicPlayer.media.paused}><IconPlayerPlay size="1em" /></span>
+            <span hidden={Toxen.musicPlayer && Toxen.musicPlayer.media && Toxen.musicPlayer.media.paused}><IconPlayerPause size="1em" /></span>
           </div>
         </div>
 

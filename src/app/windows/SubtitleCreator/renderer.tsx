@@ -5,9 +5,6 @@ import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom";
 import "../../ToxenApp.scss";
 import AppBar from "../../components/AppBar/AppBar";
-import "@fortawesome/fontawesome-free/js/all"; // Import FA
-import "@fortawesome/fontawesome-free/scss/regular.scss";
-import "@fortawesome/fontawesome-free/scss/solid.scss";
 import MusicPlayer from "../../components/MusicPlayer";
 import MusicPlayerController from "../../toxen/controllers/MusicPlayerController";
 import MusicControlsController from "../../toxen/controllers/MusicControlsController";

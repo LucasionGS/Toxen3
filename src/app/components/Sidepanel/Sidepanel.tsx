@@ -1,5 +1,6 @@
 // import * as remote from "@electron/remote"
 import React, { useState } from 'react';
+import { IconChevronLeft } from '@tabler/icons-react';
 import Asyncifier from '../../toxen/Asyncifier';
 import Settings from '../../toxen/Settings';
 import { Toxen } from '../../ToxenApp';
@@ -190,7 +191,7 @@ export default class Sidepanel extends React.Component<Props, State> {
             this.show(false);
             if (typeof this.props.onClose === "function") this.props.onClose();
           }}>
-            <i className="fas fa-chevron-left"></i>
+            <IconChevronLeft size="1em" />
             {
               this.state.show && (
                 <span className="sidepanel-icon-title">Close</span>

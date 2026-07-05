@@ -50,7 +50,7 @@ import SettingsPanel from "./components/Sidepanel/Panels/SettingsPanel/SettingsP
 import EditSong from "./components/Sidepanel/Panels/EditSong/EditSong";
 import InitialData from "./windows/SubtitleCreator/models/InitialData";
 import User from "./toxen/User";
-import { IconLayoutNavbarExpand } from "@tabler/icons-react";
+import { IconLayoutNavbarExpand, IconMenu2, IconMusic, IconRefresh, IconSearch, IconList, IconWand, IconFileImport, IconSettings, IconInfoCircle, IconMailOpened, IconBadgeCc } from "@tabler/icons-react";
 // import HueManager from "./toxen/philipshue/HueManager";
 import ImportPanel from "./components/Sidepanel/Panels/ImportPanel/ImportPanel";
 // import YTDlpWrap from "yt-dlp-wrap";
@@ -1211,7 +1211,7 @@ export default class ToxenAppRenderer extends React.Component {
           <LoadingScreen onReady={controller => Toxen.loadingScreen = controller} initialShow={true} />
           <div className="song-panel-toggle hide-on-inactive" onClick={() => Toxen.sidePanel.show()}>
             &nbsp;
-            <i className="fas fa-bars"></i>
+            <IconMenu2 size="1em" />
             <span className="song-panel-toggle-title">Menu</span>
           </div>
         </div>
@@ -1230,7 +1230,7 @@ export default class ToxenAppRenderer extends React.Component {
           {/* Empty object for refreshing */}
           <SidepanelSection key="$empty" id="$empty" />
           {/* Song Panel */}
-          <SidepanelSection key="songPanel" id="songPanel" title="Music" icon={<i className="fas fa-music"></i>}>
+          <SidepanelSection key="songPanel" id="songPanel" title="Music" icon={<IconMusic size="1em" />}>
             <SidepanelSectionHeader>
               {() => (
                 <div style={{ position: "relative" }}>
@@ -1301,7 +1301,7 @@ export default class ToxenAppRenderer extends React.Component {
                       }
                       <Button color="green" onClick={() => Toxen.sidePanel.setSectionId("playlist")}>Change Playlist</Button>
                       <Button
-                        leftSection={<i className="fas fa-redo"></i>}
+                        leftSection={<IconRefresh size="1em" />}
                         onClick={async () => {
                           await Toxen.loadSongs();
                           Toxen.songPanel.update();
@@ -1311,7 +1311,7 @@ export default class ToxenAppRenderer extends React.Component {
                         Reload Library
                       </Button>
                       <Button
-                        leftSection={<i className="fas fa-search"></i>}
+                        leftSection={<IconSearch size="1em" />}
                         onClick={async () => {
                           Toxen.showCurrentSong();
                         }}
@@ -1326,22 +1326,22 @@ export default class ToxenAppRenderer extends React.Component {
           </SidepanelSection>
 
           {/* Playlist Management Panel */}
-          <SidepanelSection key="playlist" id="playlist" title="Playlist" icon={<i className="fas fa-th-list"></i>}>
+          <SidepanelSection key="playlist" id="playlist" title="Playlist" icon={<IconList size="1em" />}>
             <PlaylistPanel ref={ref => Toxen.playlistPanel = ref} />
           </SidepanelSection>
 
           {/* Playlist Management Panel */}
-          <SidepanelSection key="effects" id="effects" title="Effects" icon={<i className="fa-solid fa-wand-magic-sparkles"></i>}>
+          <SidepanelSection key="effects" id="effects" title="Effects" icon={<IconWand size="1em" />}>
             <EffectsPanel />
           </SidepanelSection>
 
           {/* Import Panel */}
-          <SidepanelSection key="importSong" id="importSong" title="Import" icon={<i className="fas fa-file-import"></i>} disabled={!toxenapi.isDesktop()}>
+          <SidepanelSection key="importSong" id="importSong" title="Import" icon={<IconFileImport size="1em" />} disabled={!toxenapi.isDesktop()}>
             <ImportPanel />
           </SidepanelSection>
 
           {/* Keep settings tab at the bottom */}
-          <SidepanelSection key="settings" id="settings" title="Settings" icon={<i className="fas fa-cog"></i>} separator>
+          <SidepanelSection key="settings" id="settings" title="Settings" icon={<IconSettings size="1em" />} separator>
             <SettingsPanel />
           </SidepanelSection>
 
@@ -1353,12 +1353,12 @@ export default class ToxenAppRenderer extends React.Component {
           )}
 
           {/* About Panel */}
-          <SidepanelSection key="stats" id="stats" title="About" icon={<i className="fas fa-info-circle"></i>}
+          <SidepanelSection key="stats" id="stats" title="About" icon={<IconInfoCircle size="1em" />}
             dynamicContent={AboutSection}
           ></SidepanelSection>
 
 
-          <SidepanelSection key="changelogs" id="changelogs" title="Changes" icon={<i className="fas fa-envelope-open-text"></i>}
+          <SidepanelSection key="changelogs" id="changelogs" title="Changes" icon={<IconMailOpened size="1em" />}
             dynamicContent={async (section) => {
               return (
                 <>
@@ -1368,7 +1368,7 @@ export default class ToxenAppRenderer extends React.Component {
                       Toxen.resetChangeLogs();
                       Toxen.reloadSection();
                     }}>
-                      <i className="fas fa-sync-alt"></i>
+                      <IconRefresh size="1em" />
                       &nbsp;Reload change logs
                     </Button>
                   </SidepanelSectionHeader>
@@ -1378,15 +1378,7 @@ export default class ToxenAppRenderer extends React.Component {
                 </>
               );
             }} />
-
-          {/* Toxen2 Migration */}
-          {/* <SidepanelSection key="migration" id="migration"
-            // title="Migration" icon={<i className="fas fa-exchange-alt"></i>}
-            dynamicContent={async (section) => {
-              return (<MigrationPanel />);
-            }} /> */}
-
-          {/* No-icon panels. Doesn't appear as a clickable panel, instead only accessible by custom action */}
+            
           {/* Edit song Panel */}
           <SidepanelSection key="editSong" id="editSong">
             <EditSong />
@@ -1396,7 +1388,7 @@ export default class ToxenAppRenderer extends React.Component {
             <StoryboardEditorPanel />
           </SidepanelSection>
 
-          <SidepanelSection key="subtitleEditor" id="subtitleEditor" title="Subtitles" icon={<i className="fas fa-closed-captioning"></i>}>
+          <SidepanelSection key="subtitleEditor" id="subtitleEditor" title="Subtitles" icon={<IconBadgeCc size="1em" />}>
             <SubtitleEditorPanel />
           </SidepanelSection>
 

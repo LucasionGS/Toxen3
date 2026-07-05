@@ -1,4 +1,5 @@
 import { Checkbox, Tabs, TextInput, NumberInput, Select, Button, ColorInput, RangeSlider, Slider, Text, Alert } from "@mantine/core";
+import { IconFolder, IconFolderOpen, IconRefresh, IconPalette, IconPhoto, IconWaveSquare, IconWand, IconBrush, IconDownload, IconTrash, IconX } from "@tabler/icons-react";
 // import * as remote from "@electron/remote";
 // import type { EntertainmentArea } from "hue-sync";
 import React, { useEffect } from "react";
@@ -95,7 +96,7 @@ export default function SettingsPanel(props: SettingsPanelProps) {
                   ].filter(x => x)}
                 />
                 <Button
-                  leftSection={<i className="fas fa-folder" />}
+                  leftSection={<IconFolder size="1em" />}
                   onClick={() => {
                     if (!toxenapi.isDesktop()) return;
                     let value = toxenapi.remote.dialog.showOpenDialogSync(toxenapi.remote.getCurrentWindow(), {
@@ -118,7 +119,7 @@ export default function SettingsPanel(props: SettingsPanelProps) {
                   }}>
                   &nbsp;Change Music Folder
                 </Button>
-                <Button leftSection={<i className="fas fa-folder-open" />} onClick={() => toxenapi.remote.shell.openPath(Settings.get("libraryDirectory"))}>
+                <Button leftSection={<IconFolderOpen size="1em" />} onClick={() => toxenapi.remote.shell.openPath(Settings.get("libraryDirectory"))}>
                   &nbsp;Open Music Folder
                 </Button>
                 <sup>
@@ -174,12 +175,12 @@ export default function SettingsPanel(props: SettingsPanelProps) {
               <>
                 <TextInput disabled onClick={callback} value={bg} name="sidepanelBackground" label="Sidepanel Background" />
                 <Button
-                  leftSection={<i className="fas fa-folder" />}
+                  leftSection={<IconFolder size="1em" />}
                   onClick={callback}>
                   Change background
                 </Button>
                 <Button
-                  leftSection={<i className="fas fa-sync-alt" />}
+                  leftSection={<IconRefresh size="1em" />}
                   color="red"
                   onClick={() => {
                     Settings.apply({ sidepanelBackground: null }, true);
@@ -215,10 +216,10 @@ export default function SettingsPanel(props: SettingsPanelProps) {
             defaultValue={window.localStorage.getItem("settings-visuals-tab") || "theme"}
           >
             <Tabs.List>
-              <Tabs.Tab value="theme" leftSection={<i className="fas fa-palette" />}>Theme &amp; Appearance</Tabs.Tab>
-              <Tabs.Tab value="background" leftSection={<i className="fas fa-image" />}>Background</Tabs.Tab>
-              <Tabs.Tab value="visualizer" leftSection={<i className="fas fa-wave-square" />}>Audio Visualizer</Tabs.Tab>
-              <Tabs.Tab value="effects" leftSection={<i className="fas fa-magic" />}>Visual Effects</Tabs.Tab>
+              <Tabs.Tab value="theme" leftSection={<IconPalette size="1em" />}>Theme &amp; Appearance</Tabs.Tab>
+              <Tabs.Tab value="background" leftSection={<IconPhoto size="1em" />}>Background</Tabs.Tab>
+              <Tabs.Tab value="visualizer" leftSection={<IconWaveSquare size="1em" />}>Audio Visualizer</Tabs.Tab>
+              <Tabs.Tab value="effects" leftSection={<IconWand size="1em" />}>Visual Effects</Tabs.Tab>
             </Tabs.List>
 
             <Tabs.Panel value="theme" pt="md">
@@ -266,20 +267,20 @@ export default function SettingsPanel(props: SettingsPanelProps) {
             
             <Button.Group>
               <Button 
-                leftSection={<i className="fas fa-paint-brush" />} 
+                leftSection={<IconBrush size="1em" />} 
                 onClick={() => Toxen.setMode("ThemeEditor")}
                 disabled={ExtensionManager.isExtensionStyle(selectedTheme)}
               >
                 Edit Theme
               </Button>
               <Button 
-                leftSection={<i className="fas fa-sync-alt" />} 
+                leftSection={<IconRefresh size="1em" />} 
                 onClick={() => Toxen.loadThemes()}
               >
                 Reload Themes
               </Button>
               <Button 
-                leftSection={<i className="fas fa-download" />} 
+                leftSection={<IconDownload size="1em" />} 
                 onClick={async () => {
                   if (Toxen.theme) {
                     try {
@@ -439,8 +440,8 @@ export default function SettingsPanel(props: SettingsPanelProps) {
                   </sup>
 
                   <Button.Group>
-                    <Button leftSection={<i className="fas fa-folder-open" />} onClick={addMultiple}>Add background(s)</Button>
-                    <Button color="red" leftSection={<i className="fas fa-trash" />} onClick={clearList}>Clear list</Button>
+                    <Button leftSection={<IconFolderOpen size="1em" />} onClick={addMultiple}>Add background(s)</Button>
+                    <Button color="red" leftSection={<IconTrash size="1em" />} onClick={clearList}>Clear list</Button>
                   </Button.Group>
                   <div style={{ marginTop: 8 }}>
                     {bgList?.length ? (
@@ -544,7 +545,7 @@ export default function SettingsPanel(props: SettingsPanelProps) {
                                   justifyContent: 'center'
                                 }}
                               >
-                                <i className="fas fa-times" />
+                                <IconX size="1em" />
                               </button>
                               {!shuffle && i === 0 && (
                                 <div

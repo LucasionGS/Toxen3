@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { IconDeviceFloppy } from '@tabler/icons-react';
 import FormInput from './FormInputFields/FormInput';
 import "./Form.scss";
 
@@ -46,7 +47,7 @@ export default class Form extends Component<Props> {
       }} method="post">
         {this.props.children}
         <button ref={ref => this.formSubmitBtn = ref} hidden={this.props.hideSubmit ?? false} type="submit" className="tx-btn tx-btn-action form-submit-btn">
-          <i className="fas fa-save"></i>
+          <IconDeviceFloppy size="1em" />
           &nbsp;
             {this.props.saveButtonText ?? "Submit"}
         </button>

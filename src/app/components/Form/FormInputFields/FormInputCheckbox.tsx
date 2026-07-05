@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { IconCircleCheck, IconCircle } from '@tabler/icons-react';
 import FormInput from './FormInput';
 import "./FormInputCheckbox.scss";
 
@@ -21,8 +22,8 @@ export default function FormInputCheckbox(props: Props) {
       setValue(newState);
     }}>
       <input type="hidden" name={props.name} value={FormInput.toStringValue("boolean", value)} />
-      <span className="toggle-icon" hidden={!value}><i className="fas fa-check-circle"></i></span>
-      <span className="toggle-icon" hidden={value}><i className="far fa-circle"></i></span>
+      <span className="toggle-icon" hidden={!value}><IconCircleCheck size="1em" /></span>
+      <span className="toggle-icon" hidden={value}><IconCircle size="1em" /></span>
       &nbsp;
       {props.children}
     </div>

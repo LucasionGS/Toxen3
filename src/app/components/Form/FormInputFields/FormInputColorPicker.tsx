@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { IconRefresh } from '@tabler/icons-react';
 
 interface Props {
   name: string;
@@ -50,7 +51,7 @@ export default function FormInputColorPicker(props: Props) {
             setValue(props.defaultValue);
             if (typeof props.onChange === "function") props.onChange(props.defaultValue);
           }}>
-            <i className="fas fa-redo"></i>
+            <IconRefresh size="1em" />
             &nbsp;
             Reset
           </button>

@@ -1,5 +1,6 @@
 import { Slider } from '@mantine/core';
 import React, { useEffect, useMemo, useRef } from 'react';
+import { IconWindowMaximize, IconArrowsShuffle, IconChevronsLeft, IconChevronsRight, IconPlayerPlay, IconPlayerPause, IconRefresh, IconArrowsMove } from '@tabler/icons-react';
 import Settings from '../toxen/Settings';
 import Time from '../toxen/Time';
 import { Toxen } from '../ToxenApp';
@@ -41,36 +42,36 @@ export default function MusicControls(props: MusicControlsProps) {
           <div hidden={!Toxen.isMiniplayer()} className="ctrl-btn" onClick={() => {
             Toxen.toggleMiniplayer();
           }}>
-            <span><i className="fas fa-window-maximize"></i></span>
+            <span><IconWindowMaximize size="1em" /></span>
           </div>
           <div className="ctrl-btn" onClick={() => {
             Settings.set("shuffle", !Settings.get("shuffle"));
             Settings.save({ suppressNotification: true });
           }}>
-            <span hidden={!Settings.get("shuffle")}><i className="fas fa-random" style={styleForEnabled}></i></span>
-            <span hidden={Settings.get("shuffle")}><i className="fas fa-random"></i></span>
+            <span hidden={!Settings.get("shuffle")}><IconArrowsShuffle size="1em" style={styleForEnabled} /></span>
+            <span hidden={Settings.get("shuffle")}><IconArrowsShuffle size="1em" /></span>
           </div>
           <div className="ctrl-btn" onClick={() => Toxen.musicPlayer.playPrev()}>
-            <i className="fas fa-angle-double-left"></i>
+            <IconChevronsLeft size="1em" />
           </div>
           <div className="ctrl-btn" onClick={() => Toxen.musicPlayer.toggle()}>
-            <span hidden={Toxen.musicPlayer && Toxen.musicPlayer.media && !Toxen.musicPlayer.media.paused}><i className="fas fa-play"></i></span>
-            <span hidden={Toxen.musicPlayer && Toxen.musicPlayer.media && Toxen.musicPlayer.media.paused}><i className="fas fa-pause"></i></span>
+            <span hidden={Toxen.musicPlayer && Toxen.musicPlayer.media && !Toxen.musicPlayer.media.paused}><IconPlayerPlay size="1em" /></span>
+            <span hidden={Toxen.musicPlayer && Toxen.musicPlayer.media && Toxen.musicPlayer.media.paused}><IconPlayerPause size="1em" /></span>
           </div>
           <div className="ctrl-btn" onClick={() => {
             Toxen.musicPlayer.playNext();
           }}>
-            <i className="fas fa-angle-double-right"></i>
+            <IconChevronsRight size="1em" />
           </div>
           <div className="ctrl-btn" onClick={() => {
             Settings.set("repeat", !Settings.get("repeat"));
             Settings.save({ suppressNotification: true });
           }}>
-            <span hidden={!Settings.get("repeat")}><i className="fas fa-redo" style={styleForEnabled}></i></span>
-            <span hidden={Settings.get("repeat")}><i className="fas fa-redo"></i></span>
+            <span hidden={!Settings.get("repeat")}><IconRefresh size="1em" style={styleForEnabled} /></span>
+            <span hidden={Settings.get("repeat")}><IconRefresh size="1em" /></span>
           </div>
           <div hidden={!Toxen.isMiniplayer()} className="ctrl-btn window-draggable">
-            <span><i className="fas fa-arrows-alt"></i></span>
+            <span><IconArrowsMove size="1em" /></span>
           </div>
         </div>
 
