@@ -2,6 +2,13 @@
 
 This file contains the change logs for Toxen.
 
+<!-- UPCOMING: 2.9.2 -->
+## 2.9.2 - TBD
+
+## Changes
+
+- **More Visualizer Customization Options** - Added Y-Axis customization for `Waveform`
+
 <!-- VERSION: 2.9.1 -->
 ## 2.9.1 - 27-06-2026
 
