@@ -458,6 +458,17 @@ export interface VisualizerStyleOption {
 };
   
 export const visualizerStyleOptions: Partial<Record<string, VisualizerStyleOption[]>> = {
+  [VisualizerStyle.Waveform]: [
+    {
+      name: "Y Position",
+      key: "y",
+      type: "range",
+      defaultValue: -0.1,
+      min: -0.1,
+      max: 100,
+      step: 0.1,
+    },
+  ],
   [VisualizerStyle.Orb]: [
     {
       name: "X Position",

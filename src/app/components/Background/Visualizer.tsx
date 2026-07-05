@@ -702,8 +702,11 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
         }
         case VisualizerStyle.Waveform: {
           // Smooth connected wave that looks like a real audio waveform (inspired by toxen-poly)
+          const vsOptions = {
+            y: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Waveform, "y") ?? 50,
+          }
           const maxHeight = getMaxHeight(0.25);
-          const centerY = vHeight / 2;
+          const centerY = typeof vsOptions.y === "number" && vsOptions.y > -0.1 ? (vHeight / 100 * vsOptions.y) : (vHeight / 2);
           const stepX = vWidth / (len - 1);
           
           // Create a smooth waveform by interpolating between points
