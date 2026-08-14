@@ -159,6 +159,18 @@ export default function SettingsPanel(props: SettingsPanelProps) {
 
           <Checkbox
             mt="md"
+            onClick={(e) => Settings.apply({ dragToScroll: e.currentTarget.checked }, true)}
+            defaultChecked={Settings.get("dragToScroll") ?? true}
+            name="dragToScroll"
+            label="Drag To Scroll"
+          />
+          <sup>
+            Scroll the panel by grabbing an empty spot and dragging it, and let it glide to a stop when you let go.
+            Sliders, text fields and other controls keep working as normal.
+          </sup>
+
+          <Checkbox
+            mt="md"
             onClick={(e) => Settings.apply({ songWheelEffect: e.currentTarget.checked }, true)}
             defaultChecked={Settings.get("songWheelEffect")}
             name="songWheelEffect"

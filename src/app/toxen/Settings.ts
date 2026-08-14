@@ -76,6 +76,7 @@ export default class Settings {
       lowPerformanceMode: false,
       songWheelEffect: false,
       songWheelIntensity: 1,
+      dragToScroll: true,
       visualizerUseWorker: true,
       starRushEffect: false,
       starRushIntensity: 1,
@@ -412,6 +413,11 @@ export interface ISettings {
    * Multiplier for how pronounced the track list curve is. `1` is the default.
    */
   songWheelIntensity: number;
+  /**
+   * Allow the sidepanel to be scrolled by grabbing and dragging it, with a
+   * momentum glide when released.
+   */
+  dragToScroll: boolean;
 
   // Background Effects
   starRushEffect: boolean;

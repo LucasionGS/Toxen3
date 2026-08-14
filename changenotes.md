@@ -9,6 +9,8 @@ This file contains the change logs for Toxen.
 
 - **Curved Track List** - The track list can now curve as you scroll, bringing the tracks nearest the middle of the panel forward while the ones towards the edges tilt away.
   - Turn it on in `Settings > Sidepanel > Curved Track List`, and set how strong the curve is right below it.
+- **Drag To Scroll** - Grab an empty spot in the side panel and drag it to scroll, and it keeps gliding for a moment after you let go. Sliders, text fields and other controls still work as normal.
+  - Can be turned off in `Settings > Sidepanel > Drag To Scroll`.
 
 ## Changes
 

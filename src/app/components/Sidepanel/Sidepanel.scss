@@ -687,6 +687,17 @@ body[miniplayer] .sidepanel {
 }
 
 .sidepanel-content {
+  // Held while a grab-scroll is in progress. Muting the children keeps rows from
+  // lighting up under the cursor and hands the grab cursor to the whole area.
+  &.drag-scrolling {
+    cursor: grabbing;
+    user-select: none;
+
+    * {
+      pointer-events: none;
+    }
+  }
+
   // Enhanced scrollbar design
   &::-webkit-scrollbar {
     width: 10px;

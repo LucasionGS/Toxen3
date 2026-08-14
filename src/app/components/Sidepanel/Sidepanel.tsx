@@ -6,6 +6,7 @@ import Settings from '../../toxen/Settings';
 import { Toxen } from '../../ToxenApp';
 import "./Sidepanel.scss";
 import SidepanelSection from './SidepanelSection';
+import { attachDragScroll } from '../../lib/dragScroll';
 
 export type PanelDirection = "left" | "right";
 
@@ -47,6 +48,28 @@ export default class Sidepanel extends React.Component<Props, State> {
   }
 
   public containerRef = React.createRef<HTMLDivElement>();
+
+  private dragScrollElement: HTMLDivElement = null;
+  private detachDragScroll: () => void = null;
+
+  /**
+   * Binds grab-and-drag scrolling to the content area. The ref callback fires on
+   * every render, so this only rebinds when the element itself changes.
+   */
+  private bindDragScroll(ref: HTMLDivElement) {
+    if (!ref || ref === this.dragScrollElement) return;
+    this.detachDragScroll?.();
+    this.dragScrollElement = ref;
+    this.detachDragScroll = attachDragScroll(ref, {
+      enabled: () => Settings.get("dragToScroll") ?? true,
+    });
+  }
+
+  componentWillUnmount() {
+    this.detachDragScroll?.();
+    this.detachDragScroll = null;
+    this.dragScrollElement = null;
+  }
 
   public async reloadSection() {
     let id = this.state.sectionId;
@@ -245,6 +268,7 @@ export default class Sidepanel extends React.Component<Props, State> {
               onScroll={e => this.scrollStorage[this.state.sectionId] = e.currentTarget.scrollTop}
               ref={ref => {
                 if (ref) {
+                  this.bindDragScroll(ref);
                   ref.scrollTo(0, this.scrollStorage[this.state.sectionId] ?? 0);
                 }
               }}
