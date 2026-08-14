@@ -729,6 +729,69 @@ namespace StoryboardParser {
     }
   });
 
+  addStoryboardComponent("rainfallEffect", {
+    name: "Rainfall Effect",
+    arguments: [
+      {
+        name: "Enabled",
+        identifier: "enabled",
+        type: "Boolean"
+      },
+    ],
+    action: (args) => {
+      let enabled = getAsType<"Boolean">(args.enabled);
+      Toxen.background.storyboard.data.rainfallEffect = enabled;
+    }
+  });
+
+  addStoryboardComponent("rainfallFrequency", {
+    name: "Rainfall Frequency",
+    arguments: [
+      {
+        name: "Frequency",
+        identifier: "frequency",
+        type: "Number"
+      },
+    ],
+    action: (args) => {
+      let frequency = getAsType<"Number">(args.frequency);
+      frequency = Math.max(0.1, Math.min(10, frequency)); // Clamp for safety
+      Toxen.background.storyboard.data.rainfallFrequency = frequency;
+    }
+  });
+
+  addStoryboardComponent("rainfallSpeed", {
+    name: "Rainfall Speed",
+    arguments: [
+      {
+        name: "Speed",
+        identifier: "speed",
+        type: "Number"
+      },
+    ],
+    action: (args) => {
+      let speed = getAsType<"Number">(args.speed);
+      speed = Math.max(0.1, Math.min(10, speed)); // Clamp for safety
+      Toxen.background.storyboard.data.rainfallSpeed = speed;
+    }
+  });
+
+  addStoryboardComponent("rainfallImageScale", {
+    name: "Rainfall Image Scale",
+    arguments: [
+      {
+        name: "Scale",
+        identifier: "scale",
+        type: "Number"
+      },
+    ],
+    action: (args) => {
+      let scale = getAsType<"Number">(args.scale);
+      scale = Math.max(0.1, Math.min(10, scale)); // Clamp for safety
+      Toxen.background.storyboard.data.rainfallImageScale = scale;
+    }
+  });
+
   addStoryboardComponent("text", {
     name: "Text",
     arguments: [

@@ -641,6 +641,97 @@ export default function EditSong(props: EditSongProps) {
           }}
         />
         <sup>Controls the intensity of the star rush effect for this song.</sup>
+
+        {/* Rainfall Effect */}
+        <Select
+          allowDeselect={false}
+          leftSection={<IconStar size="1em" />}
+          label="Rainfall Effect"
+          name="rainfallEffect"
+          defaultValue={getValue('rainfallEffect') ? "enabled" : getValue('rainfallEffect') === false ? "disabled" : ""}
+          data={[
+            { value: "", label: "<Default>" },
+            { value: "enabled", label: "Enabled" },
+            { value: "disabled", label: "Disabled" }
+          ]}
+          onChange={(v) => {
+            saveSettings('rainfallEffect', v === "enabled" ? true : v === "disabled" ? false : null);
+          }}
+        />
+        <sup>Enables a particle effect where rain drops fall from the top of the screen.</sup>
+
+        <Select
+          allowDeselect={false}
+          leftSection={<IconGauge size="1em" />}
+          label="Rainfall Frequency"
+          name="rainfallFrequency"
+          defaultValue={getValue('rainfallFrequency')?.toString() || ""}
+          data={[
+            { value: "", label: "<Default>" },
+            { value: "0.25", label: "Very Low (0.25x)" },
+            { value: "0.5", label: "Low (0.5x)" },
+            { value: "1", label: "Normal (1x)" },
+            { value: "2", label: "High (2x)" },
+            { value: "3", label: "Very High (3x)" },
+            { value: "5", label: "Maximum (5x)" }
+          ]}
+          onChange={(v) => {
+            saveSettings('rainfallFrequency', v ? parseFloat(v) : null);
+          }}
+        />
+        <sup>Controls how frequently rain drops spawn for this song.</sup>
+
+        <Select
+          allowDeselect={false}
+          leftSection={<IconGauge size="1em" />}
+          label="Rainfall Speed"
+          name="rainfallSpeed"
+          defaultValue={getValue('rainfallSpeed')?.toString() || ""}
+          data={[
+            { value: "", label: "<Default>" },
+            { value: "0.25", label: "Very Slow (0.25x)" },
+            { value: "0.5", label: "Slow (0.5x)" },
+            { value: "1", label: "Normal (1x)" },
+            { value: "2", label: "Fast (2x)" },
+            { value: "3", label: "Very Fast (3x)" },
+            { value: "5", label: "Maximum (5x)" }
+          ]}
+          onChange={(v) => {
+            saveSettings('rainfallSpeed', v ? parseFloat(v) : null);
+          }}
+        />
+        <sup>Controls how fast the rain drops fall for this song.</sup>
+
+        <BackgroundFileSelector
+          label="Rainfall Custom Image"
+          defaultValue={getValue('rainfallImage')}
+          sourceDir={Toxen.editingSong.dirname()}
+          description="Optionally use a custom image for each rain drop instead of the default streak."
+          onChange={(v) => {
+            saveSettings('rainfallImage', v || null);
+          }}
+        />
+
+        <Select
+          allowDeselect={false}
+          leftSection={<IconGauge size="1em" />}
+          label="Rainfall Image Scale"
+          name="rainfallImageScale"
+          defaultValue={getValue('rainfallImageScale')?.toString() || ""}
+          data={[
+            { value: "", label: "<Default>" },
+            { value: "0.25", label: "Very Small (0.25x)" },
+            { value: "0.5", label: "Small (0.5x)" },
+            { value: "1", label: "Normal (1x)" },
+            { value: "2", label: "Large (2x)" },
+            { value: "3", label: "Very Large (3x)" },
+            { value: "5", label: "Maximum (5x)" }
+          ]}
+          onChange={(v) => {
+            saveSettings('rainfallImageScale', v ? parseFloat(v) : null);
+          }}
+        />
+        <sup>Scale multiplier for the custom rainfall image. Only applies when a custom image is set.</sup>
         </Tabs.Panel>
 
         <Tabs.Panel value="floatingTitle" pt="md">

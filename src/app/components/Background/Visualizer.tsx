@@ -44,6 +44,15 @@ interface StarRushParticle {
   acceleration: number;
 }
 
+interface RainfallParticle {
+  x: number;
+  y: number;
+  vy: number; // fall velocity (pixels per frame at speed 1)
+  length: number; // streak length for the default drop
+  size: number; // base size (also width of the drop / image reference size)
+  opacity: number;
+}
+
 export default class Visualizer extends Component<VisualizerProps, VisualizerState> {
   constructor(props: VisualizerProps) {
     super(props);
@@ -62,6 +71,14 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
   // Star rush particle system
   private starRushParticles: StarRushParticle[] = [];
   private lastParticleSpawn = 0;
+
+  // Rainfall particle system
+  private rainfallParticles: RainfallParticle[] = [];
+  private lastRainSpawn = 0;
+  private rainImage: HTMLImageElement | null = null;
+  private rainImagePath: string | null = null;
+  private rainImageLoaded = false;
+
   private boundLoop: (time: number) => void;
 
   public getDynamicDim() {
@@ -268,6 +285,8 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     if (!Toxen.musicPlayer.media.paused) {
       // Star rush particle effect
       this.updateStarRushParticles(time, vWidth, vHeight, dataArray, dynLight);
+      // Rainfall particle effect
+      this.updateRainfallParticles(time, vWidth, vHeight);
     }
     
     if (style !== VisualizerStyle.None) {
@@ -2718,7 +2737,124 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
       
       ctx.restore();
     }
-    
+
+    ctx.restore();
+  }
+
+  /**
+   * Ensures the custom rainfall image (if any) is loaded and cached.
+   * Reloads whenever the resolved image path changes.
+   */
+  private ensureRainImage(imagePath: string | null) {
+    if (imagePath === this.rainImagePath) return;
+    this.rainImagePath = imagePath;
+    this.rainImage = null;
+    this.rainImageLoaded = false;
+
+    if (!imagePath) return;
+
+    const img = new Image();
+    img.src = Settings.isRemote() ? User.appendAuth(imagePath) : imagePath;
+    img.onload = () => {
+      // Only apply if the path hasn't changed since the load started.
+      if (this.rainImagePath === imagePath) {
+        this.rainImage = img;
+        this.rainImageLoaded = true;
+      }
+    };
+    img.onerror = () => {
+      if (this.rainImagePath === imagePath) {
+        this.rainImage = null;
+        this.rainImageLoaded = false;
+      }
+    };
+  }
+
+  /**
+   * Updates and renders the rainfall particle effect.
+   */
+  private updateRainfallParticles(time: number, vWidth: number, vHeight: number) {
+    const enabled = Toxen.background.storyboard.getRainfallEffect();
+    if (!enabled) {
+      if (this.rainfallParticles.length > 0) this.rainfallParticles = [];
+      return;
+    }
+
+    const ctx = this.ctx;
+    const frequency = Math.max(0.1, Toxen.background.storyboard.getRainfallFrequency());
+    const speed = Math.max(0.1, Toxen.background.storyboard.getRainfallSpeed());
+    const imagePath = Toxen.background.storyboard.getRainfallImage();
+    const imageScale = Math.max(0.1, Toxen.background.storyboard.getRainfallImageScale());
+
+    this.ensureRainImage(imagePath);
+
+    // Spawn new drops based on frequency. Higher frequency => shorter interval and more drops per batch.
+    const spawnInterval = Math.max(8, 60 / frequency);
+    if (time - this.lastRainSpawn > spawnInterval) {
+      const dropsToSpawn = Math.max(1, Math.round(frequency));
+      for (let i = 0; i < dropsToSpawn; i++) {
+        this.createRainfallParticle(vWidth);
+      }
+      this.lastRainSpawn = time;
+    }
+
+    // Update existing drops and cull those that fall off-screen.
+    for (let i = this.rainfallParticles.length - 1; i >= 0; i--) {
+      const p = this.rainfallParticles[i];
+      p.y += p.vy * speed;
+      if (p.y - p.length > vHeight + 20) {
+        this.rainfallParticles.splice(i, 1);
+      }
+    }
+
+    this.renderRainfallParticles(ctx, imageScale);
+  }
+
+  /**
+   * Creates a single rainfall drop at a random horizontal position above the screen.
+   */
+  private createRainfallParticle(vWidth: number) {
+    const size = 1 + Math.random() * 1.5;
+    const particle: RainfallParticle = {
+      x: Math.random() * vWidth,
+      y: -(Math.random() * 40) - 10, // start slightly above the top edge
+      vy: 4 + Math.random() * 4, // base fall speed (multiplied by the speed setting)
+      length: 8 + Math.random() * 12, // streak length for the default drop
+      size: size,
+      opacity: 0.4 + Math.random() * 0.4,
+    };
+    this.rainfallParticles.push(particle);
+  }
+
+  /**
+   * Renders all rainfall drops, either as the custom image or as the default streaks.
+   */
+  private renderRainfallParticles(ctx: CanvasRenderingContext2D, imageScale: number) {
+    const useImage = this.rainImageLoaded && this.rainImage;
+    ctx.save();
+
+    for (const p of this.rainfallParticles) {
+      if (p.opacity <= 0) continue;
+      ctx.globalAlpha = p.opacity;
+
+      if (useImage) {
+        const img = this.rainImage;
+        const baseWidth = p.size * 8; // reference size so drops aren't microscopic
+        const width = baseWidth * imageScale;
+        const aspect = img.naturalHeight > 0 ? img.naturalWidth / img.naturalHeight : 1;
+        const height = aspect > 0 ? width / aspect : width;
+        ctx.drawImage(img, p.x - width / 2, p.y - height / 2, width, height);
+      } else {
+        // Default rain drop: a thin vertical streak.
+        ctx.strokeStyle = 'rgba(200, 220, 255, 0.8)';
+        ctx.lineWidth = p.size;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y - p.length);
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+      }
+    }
+
     ctx.restore();
   }
 
@@ -2788,6 +2924,8 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     this.stopped = true;
     // Clear star rush particles when stopping
     this.starRushParticles = [];
+    // Clear rainfall particles when stopping
+    this.rainfallParticles = [];
   }
   public isStopped() {
     return this.stopped;

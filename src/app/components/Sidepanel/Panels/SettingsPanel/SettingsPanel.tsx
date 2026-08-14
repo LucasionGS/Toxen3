@@ -747,6 +747,101 @@ export default function SettingsPanel(props: SettingsPanelProps) {
               Set the intensity level of the star rush particle effect. 0.25x-2x.
               Higher values create more particles and faster movement.
             </sup>
+
+            <Checkbox
+              mt="md"
+              onClick={(e) => Settings.apply({ rainfallEffect: e.currentTarget.checked }, true)}
+              defaultChecked={Settings.get("rainfallEffect")}
+              name="rainfallEffect"
+              label="Rainfall Effect"
+            />
+            <sup>
+              Enable a particle effect where rain drops fall from the top of the screen.
+            </sup>
+
+            <Text>Rainfall Frequency</Text>
+            <Slider
+              onChange={v => Settings.set("rainfallFrequency", v)}
+              onChangeEnd={v => Settings.apply({ rainfallFrequency: v }, true)}
+              defaultValue={Settings.get("rainfallFrequency") || 1}
+              name="rainfallFrequency"
+              label={(value) => `${value}x`}
+              min={0.25}
+              max={5}
+              step={0.25}
+            />
+            <sup>
+              How frequently rain drops spawn. Higher values create denser rainfall. 0.25x-5x.
+            </sup>
+
+            <Text>Rainfall Speed</Text>
+            <Slider
+              onChange={v => Settings.set("rainfallSpeed", v)}
+              onChangeEnd={v => Settings.apply({ rainfallSpeed: v }, true)}
+              defaultValue={Settings.get("rainfallSpeed") || 1}
+              name="rainfallSpeed"
+              label={(value) => `${value}x`}
+              min={0.25}
+              max={5}
+              step={0.25}
+            />
+            <sup>
+              How fast the rain drops fall. Higher values make the rain fall faster. 0.25x-5x.
+            </sup>
+
+            {(function () {
+              const [rainImg, setRainImg] = React.useState(Settings.get("rainfallImage"));
+              const chooseRainImage = async () => {
+                const img = await Settings.selectFile({
+                  filters: [
+                    { name: "Images", extensions: Toxen.getSupportedImageFiles().map(f => f.replace(".", "")) }
+                  ]
+                });
+                if (img) {
+                  Settings.apply({ rainfallImage: img }, true);
+                  setRainImg(img);
+                }
+              };
+              return (
+                <>
+                  <TextInput disabled onClick={chooseRainImage} value={rainImg || ""} name="rainfallImage" label="Rainfall Custom Image" placeholder="<Default rain drop>" />
+                  <sup>
+                    Optionally use a custom image for each rain drop instead of the default streak.
+                  </sup>
+                  <Button.Group>
+                    <Button
+                      leftSection={<IconFolder size="1em" />}
+                      onClick={chooseRainImage}>
+                      Choose image
+                    </Button>
+                    <Button
+                      leftSection={<IconRefresh size="1em" />}
+                      color="red"
+                      onClick={() => {
+                        Settings.apply({ rainfallImage: null }, true);
+                        setRainImg("");
+                      }}>
+                      Reset
+                    </Button>
+                  </Button.Group>
+                </>
+              );
+            })()}
+
+            <Text>Rainfall Image Scale</Text>
+            <Slider
+              onChange={v => Settings.set("rainfallImageScale", v)}
+              onChangeEnd={v => Settings.apply({ rainfallImageScale: v }, true)}
+              defaultValue={Settings.get("rainfallImageScale") || 1}
+              name="rainfallImageScale"
+              label={(value) => `${value}x`}
+              min={0.25}
+              max={5}
+              step={0.25}
+            />
+            <sup>
+              Scale multiplier for the custom rainfall image. Only applies when a custom image is set. 0.25x-5x.
+            </sup>
             </Tabs.Panel>
           </Tabs>
           
