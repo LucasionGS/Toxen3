@@ -5,6 +5,13 @@
   bottom: 0;
   width: 100vw;
   height: var(--bodyHeight);
+  pointer-events: none;
+}
+
+// Extension styles, the floating title and storyboard callbacks draw here, on top of the layer
+// the worker owns.
+.audio-visualizer-overlay {
+  z-index: 1;
 }
 
 @if ToxenIsWeb() {

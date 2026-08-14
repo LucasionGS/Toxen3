@@ -861,6 +861,20 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           </sup>
 
           <Checkbox
+            onClick={(e) => {
+              Settings.apply({ visualizerUseWorker: e.currentTarget.checked }, true);
+              Toxen.log("Restart Toxen for this to take effect.", 5000);
+            }}
+            defaultChecked={Settings.get("visualizerUseWorker") ?? true}
+            name="visualizerUseWorker"
+            label="Render Visualizer On A Separate Thread"
+          />
+          <sup>
+            Draws the visualizer off the main thread so the interface stays responsive while it renders.
+            Turn this off if the visualizer looks wrong or fails to appear. Requires a restart to take effect.
+          </sup>
+
+          <Checkbox
             onClick={(e) => Settings.apply({ hideOffScreenSongElements: e.currentTarget.checked }, true)}
             defaultChecked={Settings.get("hideOffScreenSongElements")}
             name="hideOffScreenSongElements"

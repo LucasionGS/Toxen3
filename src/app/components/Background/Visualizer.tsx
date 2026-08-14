@@ -1,58 +1,41 @@
 import React, { Component } from 'react';
-import Settings, { VisualizerStyle } from '../../toxen/Settings';
+import Settings, { VisualizerStyle, visualizerStyleOptions } from '../../toxen/Settings';
 import { Toxen } from '../../ToxenApp';
 import "./Visualizer.scss";
-// @ts-expect-error 
-import txnLogo from "../../../icons/toxen.png";
-import { hexToRgb, invertRgb, rgbToHex } from '../Form/FormInputFields/FormInputColorPicker';
+import { hexToRgb } from '../Form/FormInputFields/FormInputColorPicker';
 import StoryboardParser from '../../toxen/StoryboardParser';
-// import HueManager from '../../toxen/philipshue/HueManager';
-import MathX from '../../toxen/MathX';
-import { ISong } from '../../toxen/Song';
 import { ThemeStyleTemplate } from '../../toxen/Theme';
-import ExtensionManager from '../../toxen/extensions/ExtensionManager';
+import ExtensionManager, { VisualizerRenderContext, VisualizerRendererFn } from '../../toxen/extensions/ExtensionManager';
 import User from '../../toxen/User';
-
-const imgSize = 256;
-const toxenLogo = new Image(imgSize, imgSize);
-toxenLogo.src = txnLogo;
-
-// Center image cache for circular visualizers (Orb, WaveformCircle)
-const circleImageCache: Map<string, { src: string; img: HTMLImageElement }> = new Map();
-function getCachedCircleImage(key: string, imgSrc: string): HTMLImageElement {
-  const cached = circleImageCache.get(key);
-  if (cached && cached.src === imgSrc) return cached.img;
-  const img = new Image();
-  img.src = imgSrc;
-  circleImageCache.set(key, { src: imgSrc, img });
-  return img;
-}
+import FrameProfiler from '../../toxen/FrameProfiler';
+import AudioAnalyser, { DEFAULT_FFTSIZE } from './AudioAnalyser';
+import VisualizerImages from './VisualizerImages';
+import Frame from './visualizers/frame';
+import VisualizerLayer, { FramePayload } from './visualizers/layer';
+import { fallbackVisualizer, getBuiltInVisualizer } from './visualizers/registry';
+import WorkerBridge from './visualizers/worker/WorkerBridge';
+import { drawFloatingTitle, FloatingTitleOptions, getFloatingTitleCutout, layoutFloatingTitle } from './FloatingTitle';
 
 interface VisualizerProps { }
 
 interface VisualizerState { }
 
-interface StarRushParticle {
-  x: number;
-  y: number;
-  vx: number; // velocity x
-  vy: number; // velocity y
-  age: number; // time since creation
-  maxAge: number; // when to remove particle
-  size: number;
-  opacity: number;
-  acceleration: number;
-}
+const DATA_SIZE = 255;
+const BAR_OPACITY = 0.7;
+const LOGO_KEY = "logo";
+const RAINBOW_GRADIENT = "linear-gradient(90deg, rgba(255,0,0,1) 0%, rgba(255,154,0,1) 10%, rgba(208,222,33,1) 20%, rgba(79,220,74,1) 30%, rgba(63,218,216,1) 40%, rgba(47,201,226,1) 50%, rgba(28,127,238,1) 60%, rgba(95,21,242,1) 70%, rgba(186,12,248,1) 80%, rgba(251,7,217,1) 90%, rgba(255,0,0,1) 100%)";
 
-interface RainfallParticle {
-  x: number;
-  y: number;
-  vy: number; // fall velocity (pixels per frame at speed 1)
-  length: number; // streak length for the default drop
-  size: number; // base size (also width of the drop / image reference size)
-  opacity: number;
-}
-
+/**
+ * The visualizer paints two stacked canvases.
+ *
+ * The lower one holds the dim, the particles and the built-in style, and is handed to a worker
+ * via OffscreenCanvas when the platform allows it. The upper one stays on the main thread and
+ * holds everything that cannot leave it: extension styles, which are third-party code typed
+ * against a `CanvasRenderingContext2D`, the floating title, whose font is a system font, and the
+ * storyboard callbacks, which close over main-thread state.
+ *
+ * Both paths render through the same VisualizerLayer, so the worker and the fallback cannot drift.
+ */
 export default class Visualizer extends Component<VisualizerProps, VisualizerState> {
   constructor(props: VisualizerProps) {
     super(props);
@@ -61,129 +44,406 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
   }
 
   private lastColor: string = "";
+  private lastFillColor: string = "";
   private lastBackground: string = "";
-  private curLen: number = 0;
-  /**
-   * Dynamic dim for the background of the visualizer.
-   */
   private dynamicDim = 0;
-  
-  // Star rush particle system
-  private starRushParticles: StarRushParticle[] = [];
-  private lastParticleSpawn = 0;
 
-  // Rainfall particle system
-  private rainfallParticles: RainfallParticle[] = [];
-  private lastRainSpawn = 0;
-  private rainImage: HTMLImageElement | null = null;
-  private rainImagePath: string | null = null;
-  private rainImageLoaded = false;
+  private images = new VisualizerImages();
+  private analyser = new AudioAnalyser();
+  private layer = new VisualizerLayer();
+  private bridge = new WorkerBridge();
+  private overlayFrame = new Frame();
+
+  private payload: FramePayload = {
+    time: 0, songTime: 0, isPaused: false,
+    spectrum: null, len: 0,
+    width: 0, height: 0, left: 0, top: 0,
+    dimColor: "", styleId: null,
+    dynLight: 0, opacity: BAR_OPACITY, pulseEnabled: false,
+    storedColor: "", isRainbow: false, isGlow: false,
+    intensityMultiplier: 1, power: 1,
+    progressBarTop: 0, progressBarLeft: 0,
+    options: {}, imageKeys: {}, logoKey: null,
+    starRush: null, rainfall: null, titleCutout: null,
+  };
 
   private boundLoop: (time: number) => void;
 
   public getDynamicDim() {
     return this.dynamicDim;
   }
+
   private loop(time: number) {
     if (!this.stopped) requestAnimationFrame(this.boundLoop);
-    if (!this.ctx) return;
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    if (!Toxen.musicPlayer || !Toxen.musicPlayer.media) return console.log("Player or media missing");
+    if (!this.overlayCtx) return;
+    FrameProfiler.beginFrame(time);
 
-    const song = Toxen.background.storyboard?.getSong();
-    const ctx = this.ctx;
+    const overlayCtx = this.overlayCtx;
+    overlayCtx.clearRect(0, 0, this.overlayCanvas.width, this.overlayCanvas.height);
 
-    // When low performance mode is enabled, skip all additional rendering effects
-    // (storyboard, dynamic lighting, visualizer, star rush, floating title).
+    if (!Toxen.musicPlayer || !Toxen.musicPlayer.media) return;
+
+    const media = Toxen.musicPlayer.media;
+    const storyboard = Toxen.background.storyboard;
+    storyboard.beginFrame();
+    const song = storyboard.getSong();
+
+    // Low performance mode skips every additional rendering effect: storyboard, dynamic
+    // lighting, visualizer, particles and floating title.
     const lowPerformanceMode = Settings.get("lowPerformanceMode") ?? false;
 
-    const storyboardCallbacks = lowPerformanceMode ? [] : StoryboardParser.drawStoryboard(ctx, {
-      currentSongTime: Toxen.musicPlayer.media.currentTime,
-      songDuration: Toxen.musicPlayer.media.duration,
-      isPaused: Toxen.musicPlayer.media.paused,
+    const storyboardCallbacks = lowPerformanceMode ? [] : StoryboardParser.drawStoryboard(overlayCtx, {
+      currentSongTime: media.currentTime,
+      songDuration: media.duration,
+      isPaused: media.paused,
     });
 
-    let storedColor = Toxen.background.storyboard.getVisualizerColor();
-    const baseBackgroundDim = (Toxen.background.storyboard.getBackgroundDim() ?? 50) / 100; // Base opacity of the background.
-    const storedColorAsRGB = hexToRgb(storedColor);
+    const storedColor = storyboard.getVisualizerColor();
+    const baseBackgroundDim = (storyboard.getBackgroundDim() ?? 50) / 100;
     let usedDimColor: string;
-    if (!lowPerformanceMode && Toxen.background.storyboard.getDynamicLighting()) {
-      this.ctx.fillStyle = usedDimColor = this.dynamicDim >= 0 ? `rgba(0,0,0,${this.dynamicDim})`
-        : `rgba(${storedColorAsRGB.r},${storedColorAsRGB.g},${storedColorAsRGB.b},${-this.dynamicDim / 2})`;
-      // this.ctx.fillStyle = `rgba(0,0,0,${this.dynamicDim >= 0 ? this.dynamicDim : baseBackgroundDim})` // Disable dynamic lighting for now.
+
+    if (!lowPerformanceMode && storyboard.getDynamicLighting()) {
+      const rgb = hexToRgb(storedColor);
+      usedDimColor = this.dynamicDim >= 0
+        ? `rgba(0,0,0,${this.dynamicDim})`
+        : `rgba(${rgb.r},${rgb.g},${rgb.b},${-this.dynamicDim / 2})`;
     }
     else {
-      this.ctx.fillStyle = usedDimColor = `rgba(0,0,0,${baseBackgroundDim})`;
+      usedDimColor = `rgba(0,0,0,${baseBackgroundDim})`;
     }
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height); // Background dim
 
-    storedColor = Toxen.background.storyboard.getVisualizerColor();
-    if (Toxen.background.storyboard.getVisualizerRainbow()) {
-      Toxen.musicControls.progressBar.setFillColor(
-        "linear-gradient(90deg, rgba(255,0,0,1) 0%, rgba(255,154,0,1) 10%, rgba(208,222,33,1) 20%, rgba(79,220,74,1) 30%, rgba(63,218,216,1) 40%, rgba(47,201,226,1) 50%, rgba(28,127,238,1) 60%, rgba(95,21,242,1) 70%, rgba(186,12,248,1) 80%, rgba(251,7,217,1) 90%, rgba(255,0,0,1) 100%)"
-      );
+    const isRainbow = storyboard.getVisualizerRainbow();
+    // setFillColor is a setState, so it must only run when the colour actually changes.
+    const fillColor = isRainbow ? RAINBOW_GRADIENT : storedColor;
+    if (this.lastFillColor !== fillColor) {
+      this.lastFillColor = fillColor;
+      Toxen.musicControls.progressBar.setFillColor(fillColor);
     }
-    else if (this.lastColor !== storedColor) {
-      Toxen.musicControls.progressBar.setFillColor(storedColor);
-    }
-    // Update autogenerated theme if enabled and color changed
     if (this.lastColor !== storedColor) {
       Toxen.applyAutogeneratedThemeIfEnabled();
     }
-      
     this.lastColor = storedColor ?? this.lastColor;
-    const backgroundFile = Toxen.background.storyboard.getBackground();
-    if (this.lastBackground !== backgroundFile) {
-      this.lastBackground = backgroundFile;
-      if (backgroundFile) {
-        const img = new Image();
-        const fullFile = User.appendAuth(`${Toxen.background.storyboard.getBackground(true)}?h=${song.hash}`);
-        img.src = fullFile;
-        img.onload = () => {
-          if (this.lastBackground === backgroundFile) Toxen.background.setBackground(img.src);
-        }
-      }
-      else {
-        Toxen.background.setBackground(null);
-      }
-    }
+
+    this.updateBackground(storyboard, song);
+
+    const payload = this.payload;
+    payload.time = time;
+    payload.songTime = media.currentTime;
+    payload.isPaused = media.paused;
+    payload.width = this.overlayCanvas.width;
+    payload.height = this.overlayCanvas.height;
+    payload.left = this.left;
+    payload.top = this.top;
+    payload.dimColor = usedDimColor;
+    payload.opacity = BAR_OPACITY;
+    payload.storedColor = storedColor;
+    payload.isRainbow = isRainbow;
+    payload.titleCutout = null;
 
     if (lowPerformanceMode) {
-      // Static background dim only; reset any dynamic pulse scaling and skip the
-      // visualizer, dynamic lighting, star rush, storyboard, and floating title.
       this.dynamicDim = baseBackgroundDim;
       Toxen.background.updateDimScale(0);
-      Toxen.background.storyboard.resetData();
+      payload.styleId = null;
+      payload.starRush = null;
+      payload.rainfall = null;
+      payload.isGlow = false;
+      payload.dynLight = 0;
+      payload.len = 0;
+      this.submit(payload, this.emptySpectrum);
+      storyboard.resetData();
+      storyboard.endFrame();
+      FrameProfiler.endFrame();
       return;
     }
 
-    const style = Toxen.background.storyboard.getVisualizerStyle();
-    const intensityMultiplier = Toxen.background.storyboard.getVisualizerIntensity();
+    const style = storyboard.getVisualizerStyle();
+    const intensityMultiplier = storyboard.getVisualizerIntensity();
+    const power = (1 / (Settings.get("volume") / 100));
 
-    ctx.fillStyle = ctx.strokeStyle = storedColor;
-    // let dimLowHigh = 1.25 - this.dynamicDim;
-    // ctx.fillStyle = ctx.strokeStyle = rgbToHex({
-    //   r: Math.min(255, Math.round(storedColorAsRGB.r * dimLowHigh)),
-    //   g: Math.min(255, Math.round(storedColorAsRGB.g * dimLowHigh)),
-    //   b: Math.min(255, Math.round(storedColorAsRGB.b * dimLowHigh)),
-    // });
-    let [vWidth, vHeight, vLeft, vTop] = [
-      this.canvas.width,
-      this.canvas.height,
-      this.left,
-      this.top
-    ];
+    const spectrum = this.readSpectrum(storyboard);
+    const len = spectrum.length;
+    const dynLight = this.getDynamicLight(spectrum, len, intensityMultiplier, power);
 
-    const dataSize = 255;
+    this.dynamicDim = baseBackgroundDim - dynLight;
 
-    let dataArray = this.getFrequencyData(
+    const pulseEnabled = storyboard.getVisualizerPulseBackground();
+    Toxen.background.updateDimScale(pulseEnabled ? dynLight : 0);
+
+    const extensionRenderer = this.resolveExtension(style);
+    const builtIn = extensionRenderer ? null : (getBuiltInVisualizer(style as string) ?? fallbackVisualizer);
+    const drawsBuiltIn = style !== VisualizerStyle.None && builtIn !== null;
+
+    payload.len = len;
+    payload.dynLight = dynLight;
+    payload.pulseEnabled = pulseEnabled;
+    payload.isGlow = storyboard.getVisualizerGlow();
+    payload.intensityMultiplier = intensityMultiplier;
+    payload.power = power;
+    payload.styleId = drawsBuiltIn ? builtIn.id : null;
+    payload.progressBarTop = 0;
+    payload.progressBarLeft = 0;
+    payload.logoKey = this.registerImage(LOGO_KEY, this.images.getLogoElement());
+
+    // Unknown styles fall back to ProgressBar, which needs the bar geometry.
+    const usesProgressBarGeometry = drawsBuiltIn && builtIn === fallbackVisualizer;
+    if (usesProgressBarGeometry) {
+      const rect = Toxen.musicControls.progressBar.progressBarObject.getBoundingClientRect();
+      payload.progressBarTop = rect.top;
+      payload.progressBarLeft = rect.left;
+    }
+
+    this.collectStyleOptions(storyboard, style, payload);
+
+    payload.starRush = storyboard.getStarRushEffect()
+      ? { intensity: storyboard.getStarRushIntensity(), visualizerIntensity: intensityMultiplier }
+      : null;
+
+    if (storyboard.getRainfallEffect()) {
+      const imagePath = storyboard.getRainfallImage();
+      const src = imagePath
+        ? (Settings.isRemote() ? User.appendAuth(imagePath) : imagePath)
+        : null;
+      payload.rainfall = {
+        frequency: storyboard.getRainfallFrequency(),
+        speed: storyboard.getRainfallSpeed(),
+        imageScale: storyboard.getRainfallImageScale(),
+        imageKey: src ? this.registerImage(src, this.images.getElement(src)) : null,
+      };
+    } else {
+      payload.rainfall = null;
+    }
+
+    FrameProfiler.mark("resolve");
+
+    // The ProgressBar style reassigns the height the floating title is laid out against.
+    const titleHeight = usesProgressBarGeometry ? payload.progressBarTop : payload.height;
+    const title = this.prepareTitle(overlayCtx, style, song, payload.width, titleHeight);
+    if (title && title.overrideVisualizer && title.layout.shouldOverride) {
+      payload.titleCutout = getFloatingTitleCutout(title.layout);
+    }
+
+    this.submit(payload, spectrum);
+
+    FrameProfiler.mark("draw");
+
+    if (extensionRenderer && style !== VisualizerStyle.None) {
+      this.drawExtensionStyle(style, extensionRenderer, overlayCtx, payload, spectrum);
+    }
+
+    if (title) {
+      drawFloatingTitle(overlayCtx, title.layout, title.options, this.lastColor ?? '#fff', BAR_OPACITY);
+    }
+
+    FrameProfiler.mark("title");
+
+    for (const callback of storyboardCallbacks) {
+      callback();
+    }
+
+    storyboard.resetData();
+    storyboard.endFrame();
+    FrameProfiler.endFrame();
+  }
+
+  private emptySpectrum = new Uint8Array(0);
+
+  /**
+   * Hands the frame to the worker, or draws it here when the worker is unavailable or has
+   * dropped out.
+   */
+  private submit(payload: FramePayload, spectrum: Uint8Array) {
+    if (this.bridge.isActive) {
+      payload.spectrum = spectrum;
+      // A dropped frame means the worker is still busy. Skipping beats queueing a stale one.
+      if (this.bridge.sendFrame(payload, spectrum)) return;
+      if (this.bridge.isActive) return;
+    }
+
+    const ctx = this.layerCtx ?? this.adoptLayerOntoOverlay();
+    if (!ctx) return;
+
+    payload.spectrum = spectrum;
+    this.layer.render(ctx, payload, key => this.images.getByKey(key));
+  }
+
+  /**
+   * A canvas whose control has been transferred can never hand back a 2D context, so if the
+   * worker dies mid-session the lower canvas is dead. Hide it and draw the layer onto the
+   * overlay instead, below everything the overlay already draws.
+   */
+  private adoptLayerOntoOverlay(): CanvasRenderingContext2D {
+    if (!this.overlayCtx) return null;
+    if (this.canvas && this.canvas.style.display !== "none") {
+      this.canvas.style.display = "none";
+    }
+    return this.overlayCtx;
+  }
+
+  /**
+   * Registers an image with the worker the first time it is seen and returns the key the payload
+   * should reference it by, or null while it is still loading.
+   */
+  private registerImage(key: string, element: HTMLImageElement | null): string | null {
+    if (!element || !element.complete || element.naturalWidth <= 0) return null;
+    if (this.bridge.isActive) this.bridge.sendImage(key, element);
+    return key;
+  }
+
+  /**
+   * Resolves the current style's declared options up front, since the worker cannot call back
+   * into the storyboard.
+   */
+  private collectStyleOptions(storyboard: typeof Toxen.background.storyboard, style: VisualizerStyle | string, payload: FramePayload) {
+    const options = payload.options;
+    const imageKeys = payload.imageKeys;
+    for (const key of Object.keys(options)) delete options[key];
+    for (const key of Object.keys(imageKeys)) delete imageKeys[key];
+
+    const declared = visualizerStyleOptions[style as string] ?? ExtensionManager.getVisualizerOptions(style as string);
+    if (!declared) return;
+
+    const song = storyboard.getSong();
+    for (const option of declared) {
+      const value = storyboard.getVisualizerOption(style, option.key);
+      options[option.key] = value;
+
+      if (option.type === "songImage" && typeof value === "string" && value && song) {
+        const src = User.appendAuth(`${song.dirname()}/${value}`);
+        const key = this.registerImage(src, this.images.getElement(src));
+        if (key) imageKeys[value] = key;
+      }
+    }
+  }
+
+  private resolveExtension(style: VisualizerStyle | string) {
+    return ExtensionManager.isExtensionStyle(style as string)
+      ? ExtensionManager.getVisualizerRenderer(style as string)
+      : undefined;
+  }
+
+  /**
+   * Extension styles are third-party functions typed against the public `apiVersion: 1` context,
+   * whose `setRainbowIfEnabled` does not take a context argument. They draw on the overlay, which
+   * keeps them on a real CanvasRenderingContext2D.
+   */
+  private drawExtensionStyle(
+    style: VisualizerStyle | string,
+    extensionRenderer: VisualizerRendererFn,
+    ctx: CanvasRenderingContext2D,
+    payload: FramePayload,
+    spectrum: Uint8Array,
+  ) {
+    const frame = this.overlayFrame;
+    frame.ctx = ctx;
+    frame.dataArray = spectrum;
+    frame.len = payload.len;
+    frame.dataSize = DATA_SIZE;
+    frame.vWidth = payload.width;
+    frame.vHeight = payload.height;
+    frame.vLeft = payload.left;
+    frame.vTop = payload.top;
+    frame.time = payload.time;
+    frame.songTime = payload.songTime;
+    frame.isPaused = payload.isPaused;
+    frame.dynLight = payload.dynLight;
+    frame.opacity = payload.opacity;
+    frame.pulseEnabled = payload.pulseEnabled;
+    frame.storedColor = payload.storedColor;
+    frame.isRainbow = payload.isRainbow;
+    frame.isGlow = payload.isGlow;
+    frame.intensityMultiplier = payload.intensityMultiplier;
+    frame.power = payload.power;
+
+    const oldShadowBlur = ctx.shadowBlur;
+    const oldShadowColor = ctx.shadowColor;
+    if (payload.isGlow) ctx.shadowColor = payload.storedColor;
+    ctx.fillStyle = ctx.strokeStyle = payload.storedColor;
+
+    const renderContext: VisualizerRenderContext = {
+      ctx,
+      dataArray: spectrum,
+      len: payload.len,
+      dataSize: DATA_SIZE,
+      vWidth: payload.width,
+      vHeight: payload.height,
+      vLeft: payload.left,
+      vTop: payload.top,
+      time: payload.time,
+      dynLight: payload.dynLight,
+      opacity: payload.opacity,
+      pulseEnabled: payload.pulseEnabled,
+      storedColor: payload.storedColor,
+      isRainbow: payload.isRainbow,
+      isGlow: payload.isGlow,
+      intensityMultiplier: payload.intensityMultiplier,
+      getMaxHeight: frame.getMaxHeight,
+      getMaxWidth: frame.getMaxWidth,
+      setBarShadowBlur: frame.setBarShadowBlur,
+      setRainbowIfEnabled: (x, y, w, h, i) => frame.setRainbowIfEnabled(ctx, x, y, w, h, i),
+      getOption: key => payload.options[key] ?? null,
+    };
+
+    try {
+      extensionRenderer(renderContext);
+    } catch (e) {
+      console.error(`[Extensions] Visualizer render error (${style}):`, e);
+    }
+
+    ctx.shadowBlur = oldShadowBlur;
+    ctx.shadowColor = oldShadowColor;
+  }
+
+  private prepareTitle(
+    ctx: CanvasRenderingContext2D,
+    style: VisualizerStyle | string,
+    song: ReturnType<typeof Toxen.background.storyboard.getSong>,
+    vWidth: number,
+    vHeight: number,
+  ) {
+    const storyboard = Toxen.background.storyboard;
+    if (!storyboard?.getFloatingTitle() || !song) return null;
+
+    const text = storyboard.getFloatingTitleText();
+    if (!text) return null;
+
+    const options: FloatingTitleOptions = {
+      text,
+      position: storyboard.getFloatingTitlePosition() ?? "center",
+      underline: storyboard.getFloatingTitleUnderline(),
+      reactive: storyboard.getFloatingTitleReactive(),
+      overrideVisualizer: storyboard.getFloatingTitleOverrideVisualizer(),
+      outlineColor: storyboard.getFloatingTitleOutlineColor() ?? "white",
+      usingSubtitles: storyboard.getFloatingSubtitles(),
+      isMiniplayer: Toxen.isMiniplayer(),
+    };
+
+    const layout = layoutFloatingTitle(ctx, options, style, vWidth, vHeight, this.dynamicDim);
+    return { options, layout, overrideVisualizer: options.overrideVisualizer };
+  }
+
+  private updateBackground(storyboard: typeof Toxen.background.storyboard, song: ReturnType<typeof Toxen.background.storyboard.getSong>) {
+    const backgroundFile = storyboard.getBackground();
+    if (this.lastBackground === backgroundFile) return;
+
+    this.lastBackground = backgroundFile;
+    if (!backgroundFile) {
+      Toxen.background.setBackground(null);
+      return;
+    }
+
+    const img = new Image();
+    img.src = User.appendAuth(`${storyboard.getBackground(true)}?h=${song.hash}`);
+    img.onload = () => {
+      if (this.lastBackground === backgroundFile) Toxen.background.setBackground(img.src);
+    };
+  }
+
+  private readSpectrum(storyboard: typeof Toxen.background.storyboard) {
+    const dataArray = this.analyser.read(
       Settings.get("fftSize") ? Math.pow(2, Settings.get("fftSize") + 4) : Visualizer.DEFAULT_FFTSIZE
-    ).reverse();
-    // dataArray = dataArray.filter((_, i) => i >= (dataArray.length / 2));
-    dataArray = dataArray.slice(dataArray.length / 2);
+    );
 
-    // Normalize the data
-    if (Toxen.background.storyboard.getVisualizerNormalize()) {
+    if (storyboard.getVisualizerNormalize()) {
       let maxVal = 0;
       for (let i = 0; i < dataArray.length; i++) {
         if (dataArray[i] > maxVal) maxVal = dataArray[i];
@@ -193,45 +453,13 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
         dataArray[i] = Math.round(dataArray[i] / max) * 2;
       }
     }
-    // else if (!Toxen.background.storyboard.getVisualizerNormalize()) { // Placeholder for future settings
-    //   const len = dataArray.length;
-    //   const fr = 1 / len; // Fraction
-    //   let rank: [number, number, number][] = [];
-    //   // const newData = Uint8Array.from(dataArray);
-    //   dataArray.forEach((v, i) => {
-    //     rank.push([v, i, 0]);
-    //   });
 
-    //   // Sort by value to be highest first
-    //   rank = rank
-    //     .toSorted(([a], [b]) => b - a)
-    //     .map((v, i) => [v[0], v[1], i])
-    //     .toSorted(([, a], [, b]) => b - a) as [number, number, number][];
-
-    //   // Normalize the data
-    //   dataArray = dataArray.map((_, i) => {
-    //     const [value, index, r] = rank[i];
-    //     // if (r > len / 2) {
-    //     //   return value / 2;
-    //     // }
-    //     // else {
-    //     //   return value;
-    //     // }
-    //     return Math.round(value * ((len - r) * fr));
-    //   }).toReversed();
-    // }
-
-    // Shuffle the array to make it look more random.
-    if (
-      Toxen.background.storyboard.getVisualizerShuffle()
-      // (Settings.get("visualizerShuffle") ?? false)
-    ) {
+    if (storyboard.getVisualizerShuffle()) {
       let seed = 1;
-      // Seeded pseudo-random number generator.
-      function random() {
-        var x = Math.sin(seed++) * dataArray.length;
+      const random = () => {
+        const x = Math.sin(seed++) * dataArray.length;
         return x - Math.floor(x);
-      }
+      };
       for (let i = dataArray.length - 1; i > 0; i--) {
         const j = Math.floor(random() * (i + 1));
         const tmp = dataArray[i];
@@ -240,2692 +468,33 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
       }
     }
 
-    const len = this.curLen = dataArray.length;
-    const power = (1 / (Settings.get("volume") / 100));
-    const getMaxHeight = (multipler?: number) => (intensityMultiplier * vHeight * (multipler ?? 1)) ^ power ^ power
-    const getMaxWidth = (multipler?: number) => (intensityMultiplier * vWidth * (multipler ?? 1)) ^ power ^ power
-
-
-    const opacity = 0.7; // Opacity of the visualizer bars.
-
-    const dynLight = (() => {
-      const maxHeight = getMaxHeight(0.3) || 1;
-      const unitH = maxHeight / dataSize;
-      let averageHeight = 0;
-      for (let i = 0; i < len; i++) {
-        const data = dataArray[i];
-        averageHeight += (data * unitH);
-      }
-
-      averageHeight /= len;
-      averageHeight = Math.min(averageHeight, maxHeight);
-      return (averageHeight / maxHeight);
-    })();;
-
-    this.dynamicDim = baseBackgroundDim - dynLight;
-
-    const pulseEnabled = Toxen.background.storyboard.getVisualizerPulseBackground();
-
-    Toxen.background.updateDimScale(pulseEnabled ? dynLight : 0);
-
-    // try { HueManager.transition(); } catch (error) { } // Broken atm
-
-    // if (style === VisualizerStyle.None && !Settings.get("backgroundDynamicLighting")) return;
-    const oldShadowBlur = ctx.shadowBlur;
-    const oldShadowColor = ctx.shadowColor;
-    if (Toxen.background.storyboard.getVisualizerGlow()) {
-
-      // ctx.shadowColor = rgbToHex(invertRgb(storedColorAsRGB));
-      ctx.shadowColor = storedColor;
-    }
-    const setBarShadowBlur = (height: number) => {
-      ctx.shadowBlur = height / 3; // Shadow based on height of the bar
-    };
-
-    if (!Toxen.musicPlayer.media.paused) {
-      // Star rush particle effect
-      this.updateStarRushParticles(time, vWidth, vHeight, dataArray, dynLight);
-      // Rainfall particle effect
-      this.updateRainfallParticles(time, vWidth, vHeight);
-    }
-    
-    if (style !== VisualizerStyle.None) {
-      // Check if style is an extension visualizer
-      const extRenderer = ExtensionManager.isExtensionStyle(style as string)
-        ? ExtensionManager.getVisualizerRenderer(style as string)
-        : undefined;
-
-      if (extRenderer) {
-        const isRainbow = Toxen.background.storyboard.getVisualizerRainbow();
-        const isGlow = Toxen.background.storyboard.getVisualizerGlow();
-        const renderCtx = {
-          ctx, dataArray, len, dataSize,
-          vWidth, vHeight, vLeft, vTop,
-          time, dynLight, opacity,
-          pulseEnabled,
-          storedColor,
-          isRainbow,
-          isGlow,
-          intensityMultiplier,
-          getMaxHeight, getMaxWidth, setBarShadowBlur,
-          setRainbowIfEnabled: (x: number, y: number, w: number, h: number, i: number) =>
-            this.setRainbowIfEnabled(ctx, x, y, w, h, i),
-          getOption: (key: string) =>
-            Toxen.background.storyboard.getVisualizerOption(style as string, key),
-        };
-        try {
-          extRenderer(renderCtx);
-        } catch (e) {
-          console.error(`[Extensions] Visualizer render error (${style}):`, e);
-        }
-      } else {
-      let useLogo = false;
-      switch (style) {
-        default:
-        case VisualizerStyle.ProgressBar: { // Progress bar is default.
-          vHeight = Toxen.musicControls.progressBar.progressBarObject.getBoundingClientRect().top;
-          vLeft = Toxen.musicControls.progressBar.progressBarObject.getBoundingClientRect().left;
-          const maxHeight = getMaxHeight(0.30);
-          const unitW = ((vWidth - 20 /* Progress bar curve */) - (vLeft * 2)) / len;
-          const unitH = maxHeight / dataSize;
-          for (let i = 0; i < len; i++) {
-            const data = dataArray[i];
-            const _barHeight = (data * unitH);
-            // Position and size
-            const [barX, barY, barWidth, barHeight] = [
-              (i * unitW) + vLeft + 10 /* Progress bar curve */, // barX
-              vHeight - _barHeight - vTop, // barY
-              unitW, // barWidth
-              _barHeight // barHeight
-            ];
-
-            setBarShadowBlur(barHeight);
-
-            // If rainbow:
-            this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, null, {
-              top: false,
-              bottom: true
-            });
-
-            this.useAlpha(opacity, ctx => {
-              // ctx.shadowBlur = barHeight / 5;
-              // ctx.shadowColor = rgbToHex(invertRgb(storedColorAsRGB));
-              ctx.fillRect(barX, barY, barWidth, barHeight); // Draw basic visualizer
-              // ctx.shadowBlur = 0;
-              // ctx.shadowColor = "transparent";
-            });
-          }
-          break;
-        }
-
-        case VisualizerStyle.Bottom: {
-          const maxHeight = getMaxHeight(0.30);
-          const unitW = vWidth / len;
-          const unitH = maxHeight / dataSize;
-          for (let i = 0; i < len; i++) {
-            const data = dataArray[i];
-            const _barHeight = (data * unitH);
-            // Position and size
-            const [barX, barY, barWidth, barHeight] = [
-              (i * unitW), // barX
-              vHeight - _barHeight, // barY
-              unitW, // barWidth
-              _barHeight // barHeight
-            ];
-
-            setBarShadowBlur(barHeight);
-
-            // If rainbow:
-            this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, null, {
-              top: false,
-              bottom: true
-            });
-
-            this.useAlpha(opacity, ctx => {
-              ctx.fillRect(barX, barY, barWidth, barHeight); // Bottom visuals
-            });
-          }
-          break;
-        }
-
-        case VisualizerStyle.Top: {
-          const maxHeight = getMaxHeight(0.30);
-          const unitW = vWidth / len;
-          const unitH = maxHeight / dataSize;
-          for (let i = 0; i < len; i++) {
-            const data = dataArray[i];
-            const _barHeight = (data * unitH);
-            // Position and size
-            const [barX, barY, barWidth, barHeight] = [
-              (i * unitW), // barX
-              0, // barY
-              unitW, // barWidth
-              _barHeight // barHeight
-            ];
-
-            setBarShadowBlur(barHeight);
-
-            // If rainbow:
-            this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, null, {
-              top: true,
-              bottom: false
-            });
-
-            this.useAlpha(opacity, ctx => {
-              ctx.fillRect(barX, barY, barWidth, barHeight); // Top visuals
-            });
-          }
-          break;
-        }
-
-        // Visualizer on the top and bottom
-        case VisualizerStyle.TopAndBottom: {
-          const maxHeight = getMaxHeight(0.30);
-          const unitW = vWidth / len;
-          const unitH = maxHeight / dataSize;
-          for (let i = 0; i < len; i++) {
-            const data = dataArray[i];
-            const _barHeight = (data * unitH);
-            // Position and size
-            const [barX, barY, barWidth, barHeight] = [
-              (i * unitW), // barX
-              vHeight - _barHeight, // barY
-              unitW, // barWidth
-              _barHeight // barHeight
-            ];
-
-            setBarShadowBlur(barHeight);
-
-            this.useAlpha(opacity, ctx => {
-              this.setRainbowIfEnabled(ctx, barX, 0, barWidth, barHeight, i, null, {
-                top: true,
-                bottom: false
-              });
-              ctx.fillRect(barX, 0, barWidth, barHeight); // Top visuals
-              this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, null, {
-                top: false,
-                bottom: true
-              });
-              ctx.fillRect(barX, barY, barWidth, barHeight); // Bottom visuals
-            });
-          }
-          break;
-        }
-
-        // Visualizer on the left and right
-        case VisualizerStyle.Sides: {
-          const maxWidth = getMaxWidth(0.15);
-          const unitH = vHeight / (dataSize / 2);
-          const halfLen = len / 2;
-          const unitW = maxWidth / len;
-
-          for (let i = 0; i < len; i++) {
-            const data = dataArray[i];
-            let _barWidth = (data * unitW);
-            _barWidth += _barWidth / 2;
-            // Position and size
-            const [barX, barY, barWidth, barHeight] = [
-              0, // barX
-              (i * unitH), // barY
-              _barWidth, // barWidth
-              unitH // barHeight
-            ];
-
-            
-            this.useAlpha(opacity, ctx => {
-              setBarShadowBlur(barWidth);
-
-              if (i % 2 === 0) {
-                this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, null, {
-                  top: false,
-                  bottom: false
-                });
-                ctx.fillRect(barX, barY / 2, barWidth, barHeight); // Left
-              }
-              else {
-                this.setRainbowIfEnabled(ctx, barX + barWidth, barY, barWidth, barHeight, i, null, {
-                  top: false,
-                  bottom: false
-                });
-                ctx.fillRect(vWidth - barWidth, barY / 2, barWidth, barHeight); // Right
-              }
-            });
-          }
-        }
-          break;
-
-        case VisualizerStyle.Center: {
-          const maxHeight = getMaxHeight(0.25);
-          const unitW = vWidth / len;
-          const unitH = maxHeight / dataSize;
-          for (let i = 0; i < len; i++) {
-            const data = dataArray[i];
-            const _barHeight = (data * unitH);
-            // Position and size
-            const [barX, barY, barWidth, barHeight] = [
-              (i * unitW), // barX
-              (vHeight / 2) - _barHeight, // barY
-              unitW, // barWidth
-              _barHeight * 2 // barHeight
-            ];
-
-            setBarShadowBlur(barHeight);
-
-            // If rainbow:
-            this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i);
-
-            this.useAlpha(opacity, ctx => {
-              ctx.fillRect(barX, barY, barWidth, barHeight); // Draw basic visualizer
-            });
-          }
-          break;
-        }
-
-        case VisualizerStyle.SingularityWithLogo:
-          // Use logo if SingularityWithLogo is selected, and fall through into the regular Singularity.
-          useLogo = true;
-        case VisualizerStyle.Singularity: {
-          let cycleIncrementer = 360 / len;
-          const maxHeight = getMaxHeight(0.50);
-          // let smallestHeight = maxHeight;
-          let smallestHeight = 0;
-          const unitH = maxHeight / dataSize;
-          const unitW = (vWidth * 1.25 + unitH) / len;
-          // const unitW = unitH * 5;
-          for (let i = 0; i < len; i++) {
-            const data = dataArray[i];
-            const _barHeight = (data * unitH);
-            // Position and size
-            const [barX, barY, barWidth, barHeight] = this.getBar(
-              (vWidth / 2) - (unitW / 2) /* Progress bar curve */, // barX
-              (vHeight / 2), // barY
-              unitW, // barWidth
-              _barHeight // barHeight
-            );
-
-            setBarShadowBlur(barHeight);
-
-            smallestHeight += barHeight;
-            // If rainbow:
-            this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, cycleIncrementer);
-
-            this.useAlpha(opacity, ctx => {
-              ctx.save();
-              // ctx.setTransform(1, 0, 0, 1, barX + 11, barY - 132);
-              ctx.setTransform(1, 0, 0, 1, barX, barY);
-              ctx.rotate((cycleIncrementer * i + (time / 20000)) * Math.PI);
-              // ctx.fillRect(-(unitW / 2), 128, barWidth, barHeight); // Draw basic visualizer
-              ctx.fillRect(-(unitW / 2), 0, barWidth, barHeight); // Draw basic visualizer
-              ctx.restore();
-            });
-          }
-
-          if (useLogo) {
-            smallestHeight /= len;
-            smallestHeight *= 1.5;
-            // smallestHeight += 128;
-            this.useAlpha(opacity, ctx => {
-              if (toxenLogo.complete) {
-                ctx.save();
-                ctx.setTransform(1, 0, 0, 1, (vWidth / 2) - imgSize, (vHeight / 2) - imgSize);
-                ctx.drawImage(toxenLogo,
-                  0,
-                  0,
-
-                  imgSize,
-                  imgSize,
-
-                  imgSize - smallestHeight / 2,
-                  imgSize - smallestHeight / 2,
-
-                  smallestHeight,
-                  smallestHeight
-                );
-                ctx.restore();
-              }
-            })
-          }
-          break;
-        }
-
-        case VisualizerStyle.MirroredSingularityWithLogo:
-          // Use logo if MirroredSingularityWithLogo is selected, and fall through into the regular MirroredSingularity.
-          useLogo = true;
-        case VisualizerStyle.MirroredSingularity: {
-          let newData = dataArray.filter(d => d > 0);
-          const len = newData.length;
-          let cycleIncrementer = 180 / len;
-          const maxHeight = getMaxHeight(0.50);
-          // let smallestHeight = maxHeight;
-          let smallestHeight = 0;
-          const unitH = maxHeight / dataSize;
-          const unitW = (vWidth * 1.25 + unitH) / len;
-          // const unitW = unitH * 5;
-          for (let i = 0; i < len; i++) {
-            const data = newData[i];
-            const _barHeight = (data * unitH);
-            // Position and size
-            const [barX, barY, barWidth, barHeight] = this.getBar(
-              (vWidth / 2) - (unitW / 2) /* Progress bar curve */, // barX
-              (vHeight / 2), // barY
-              unitW, // barWidth
-              _barHeight // barHeight
-            );
-
-            setBarShadowBlur(barHeight);
-
-            smallestHeight += barHeight;
-            // If rainbow:
-            this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i, cycleIncrementer);
-
-            this.useAlpha(opacity, ctx => {
-              ctx.save();
-              ctx.setTransform(1, 0, 0, 1, barX, barY);
-              ctx.rotate(((cycleIncrementer * (Math.PI / 180)) * i));
-              ctx.fillRect(-(unitW / 2), 0, barWidth, barHeight); // Draw basic visualizer
-              ctx.restore();
-            });
-            this.useAlpha(opacity, ctx => {
-              ctx.save();
-              ctx.setTransform(1, 0, 0, 1, barX, barY);
-              ctx.rotate(0 - ((cycleIncrementer * (Math.PI / 180)) * i));
-              ctx.fillRect(-(unitW / 2), 0, barWidth, barHeight); // Draw basic visualizer
-              ctx.restore();
-            });
-          }
-
-          if (useLogo) {
-            smallestHeight /= len;
-            smallestHeight *= 1.5;
-            // smallestHeight += 128;
-            this.useAlpha(opacity, ctx => {
-              if (toxenLogo.complete) {
-                ctx.save();
-                ctx.setTransform(1, 0, 0, 1, (vWidth / 2) - imgSize, (vHeight / 2) - imgSize);
-                ctx.drawImage(toxenLogo,
-                  0,
-                  0,
-
-                  imgSize,
-                  imgSize,
-
-                  imgSize - smallestHeight / 2,
-                  imgSize - smallestHeight / 2,
-
-                  smallestHeight,
-                  smallestHeight
-                );
-                ctx.restore();
-              }
-            })
-          }
-          break;
-        }
-        case VisualizerStyle.PulseWave: {
-          // Generate a smooth waveform between the higest points of each bar.
-          const maxHeight = getMaxHeight(0.25);
-          const unitW = vWidth / len;
-          const unitH = maxHeight / dataSize;
-          // const centerY = (vHeight / 4) * 3;
-          const centerY = (vHeight / 2);
-          for (let i = 0; i < len; i++) {
-            const data = dataArray[i];
-            const _barHeight = Math.max(1, data * unitH);
-            // Position and size
-            const [barX, barY, barWidth, barHeight] = [
-              (i * unitW), // barX
-              centerY - _barHeight, // barY
-              unitW, // barWidth
-              _barHeight * 2 // barHeight
-            ];
-
-            // setBarShadowBlur(barHeight); // Extremely laggy
-
-            const nextData = dataArray[i + 1];
-
-            if (typeof nextData === "number") {
-              const nextBarHeight = (nextData * unitH);
-              const nextBarY = centerY - nextBarHeight;
-              const nextBarX = ((i + 1) * unitW);
-              const nextBarWidth = unitW;
-
-              // If rainbow:
-              this.setRainbowIfEnabled(ctx, barX, barY, barWidth, barHeight, i);
-
-              ctx.save();
-              ctx.beginPath();
-              this.useAlpha(opacity, ctx => {
-                ctx.moveTo(barX, barY);
-                ctx.lineTo(nextBarX, nextBarY);
-                ctx.lineTo(nextBarX + nextBarWidth, nextBarY);
-                ctx.lineTo(barX + barWidth, barY);
-                // ctx.closePath();
-                // ctx.fill();
-                // ctx.restore();
-                // Downward
-                const _barY = centerY + _barHeight;
-                const _nextBarY = centerY + nextBarHeight;
-                // ctx.save();
-                // ctx.beginPath();
-                ctx.moveTo(barX, _barY);
-                ctx.lineTo(nextBarX, _nextBarY);
-                ctx.lineTo(nextBarX + nextBarWidth, _nextBarY);
-                ctx.lineTo(barX + barWidth, _barY);
-              });
-              ctx.closePath();
-              ctx.fill();
-              ctx.restore();
-            }
-          }
-          break;
-        }
-        case VisualizerStyle.Waveform: {
-          // Smooth connected wave that looks like a real audio waveform (inspired by toxen-poly)
-          const vsOptions = {
-            y: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Waveform, "y") ?? 50,
-          }
-          const maxHeight = getMaxHeight(0.25);
-          const centerY = typeof vsOptions.y === "number" && vsOptions.y > -0.1 ? (vHeight / 100 * vsOptions.y) : (vHeight / 2);
-          const stepX = vWidth / (len - 1);
-          
-          // Create a smooth waveform by interpolating between points
-          const wavePoints: { x: number; y: number }[] = [];
-          
-          // Generate wave points with smoothing
-          for (let i = 0; i < len; i++) {
-            // Reduce the maximum amplitude to 25% of screen height
-            const rawAmplitude = (dataArray[i] / 255) * maxHeight;
-            
-            // Apply smoothing by averaging with neighboring values
-            let smoothedAmplitude = rawAmplitude;
-            if (i > 0 && i < len - 1) {
-              const prevAmplitude = (dataArray[i - 1] / 255) * maxHeight;
-              const nextAmplitude = (dataArray[i + 1] / 255) * maxHeight;
-              smoothedAmplitude = (prevAmplitude + rawAmplitude + nextAmplitude) / 3;
-            }
-            
-            // Add subtle wave motion
-            const x = i * stepX;
-            const waveMotion = Math.sin(time * 0.001 + i * 0.15) * 3;
-            const amplitude = smoothedAmplitude * Math.sin(i * 0.2 + time * 0.002);
-            const y = centerY + waveMotion + amplitude;
-            
-            wavePoints.push({ x, y });
-          }
-          
-          // Set up glow effect for the waveform
-          if (Toxen.background.storyboard.getVisualizerGlow()) {
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = storedColor;
-          }
-          
-          // Set up colors
-          if (Toxen.background.storyboard.getVisualizerRainbow()) {
-            // Create a gradient along the waveform
-            const gradient = ctx.createLinearGradient(0, 0, vWidth, 0);
-            const steps = 6;
-            for (let i = 0; i <= steps; i++) {
-              const hue = (i / steps * 360 + time * 0.1) % 360;
-              gradient.addColorStop(i / steps, `hsl(${hue}, 70%, 60%)`);
-            }
-            ctx.strokeStyle = gradient;
-            ctx.fillStyle = gradient;
-          } else {
-            ctx.strokeStyle = storedColor;
-            ctx.fillStyle = storedColor;
-          }
-          
-          this.useAlpha(opacity, ctx => {
-            ctx.save();
-            
-            // Draw the main waveform line with smooth curves
-            ctx.beginPath();
-            ctx.lineWidth = 3;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            
-            // Start the path
-            ctx.moveTo(wavePoints[0].x, wavePoints[0].y);
-            
-            // Create smooth curves between points using quadratic curves
-            for (let i = 1; i < wavePoints.length - 1; i++) {
-              const current = wavePoints[i];
-              const next = wavePoints[i + 1];
-              const controlX = (current.x + next.x) / 2;
-              const controlY = (current.y + next.y) / 2;
-              
-              ctx.quadraticCurveTo(current.x, current.y, controlX, controlY);
-            }
-            
-            // Complete the path to the last point
-            const lastPoint = wavePoints[wavePoints.length - 1];
-            ctx.lineTo(lastPoint.x, lastPoint.y);
-            
-            // Stroke the waveform line
-            ctx.stroke();
-            
-            // Create a filled area under/over the waveform for more visual impact
-            ctx.beginPath();
-            ctx.moveTo(wavePoints[0].x, centerY);
-            
-            // Trace the top of the waveform
-            ctx.lineTo(wavePoints[0].x, wavePoints[0].y);
-            for (let i = 1; i < wavePoints.length - 1; i++) {
-              const current = wavePoints[i];
-              const next = wavePoints[i + 1];
-              const controlX = (current.x + next.x) / 2;
-              const controlY = (current.y + next.y) / 2;
-              ctx.quadraticCurveTo(current.x, current.y, controlX, controlY);
-            }
-            ctx.lineTo(lastPoint.x, lastPoint.y);
-            
-            // Close the path back to center line
-            ctx.lineTo(lastPoint.x, centerY);
-            ctx.closePath();
-            
-            // Fill with a more transparent version
-            const currentAlpha = ctx.globalAlpha;
-            ctx.globalAlpha = currentAlpha * 0.3;
-            ctx.fill();
-            ctx.globalAlpha = currentAlpha;
-            
-            // Add some additional wave details for more authentic look
-            ctx.beginPath();
-            ctx.lineWidth = 1;
-            ctx.setLineDash([2, 3]);
-            
-            // Draw additional harmonic lines
-            for (let h = 0; h < 2; h++) {
-              const harmonicOffset = (h + 1) * 30;
-              ctx.beginPath();
-              ctx.moveTo(0, centerY + harmonicOffset);
-              
-              for (let i = 0; i < len; i++) {
-                // Reduce harmonic amplitude and add smoothing
-                let rawAmplitude = (dataArray[i] / 255) * 12 * (1 - h * 0.4);
-                
-                // Smooth harmonics as well
-                if (i > 0 && i < len - 1) {
-                  const prevAmp = (dataArray[i - 1] / 255) * 12 * (1 - h * 0.4);
-                  const nextAmp = (dataArray[i + 1] / 255) * 12 * (1 - h * 0.4);
-                  rawAmplitude = (prevAmp + rawAmplitude + nextAmp) / 3;
-                }
-                
-                const x = i * stepX;
-                const y = centerY + harmonicOffset + rawAmplitude * Math.sin(i * 0.4 + time * 0.003 + h);
-                
-                if (i === 0) {
-                  ctx.moveTo(x, y);
-                } else {
-                  ctx.lineTo(x, y);
-                }
-              }
-              
-              ctx.globalAlpha = currentAlpha * 0.3 * (1 - h * 0.2);
-              ctx.stroke();
-              
-              // Mirror below center
-              ctx.beginPath();
-              ctx.moveTo(0, centerY - harmonicOffset);
-              
-              for (let i = 0; i < len; i++) {
-                let rawAmplitude = (dataArray[i] / 255) * 12 * (1 - h * 0.4);
-                
-                if (i > 0 && i < len - 1) {
-                  const prevAmp = (dataArray[i - 1] / 255) * 12 * (1 - h * 0.4);
-                  const nextAmp = (dataArray[i + 1] / 255) * 12 * (1 - h * 0.4);
-                  rawAmplitude = (prevAmp + rawAmplitude + nextAmp) / 3;
-                }
-                
-                const x = i * stepX;
-                const y = centerY - harmonicOffset - rawAmplitude * Math.sin(i * 0.4 + time * 0.003 + h);
-                
-                if (i === 0) {
-                  ctx.moveTo(x, y);
-                } else {
-                  ctx.lineTo(x, y);
-                }
-              }
-              
-              ctx.stroke();
-            }
-            
-            ctx.globalAlpha = currentAlpha;
-            ctx.setLineDash([]);
-            ctx.restore();
-          });
-          break;
-        }
-        case VisualizerStyle.Orb: {
-          // const vsOptions = (Settings.get("visualizerStyleOptions", {}))[VisualizerStyle.Orb] ?? {};
-          const vsOptions = {
-            x: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Orb, "x") ?? 50,
-            y: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Orb, "y") ?? 50,
-            size: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Orb, "size") ?? 0,
-            opaque: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Orb, "opaque") ?? false,
-            orbImage: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Orb, "orbImage") as string ?? "",
-          }
-          // console.log(vsOptions);
-          
-          
-          const maxHeight = getMaxHeight(0.25);
-          const unitAngle = (2 * Math.PI) / len; // Half-circle
-          const unitH = maxHeight / dataSize;
-          const rSizeX = vWidth / 2;
-          const rSizeY = vHeight / 2;
-          let centerX = typeof vsOptions.x === "number" && vsOptions.x > -0.1 ? (vWidth / 100 * vsOptions.x) : rSizeX;
-          let centerY = typeof vsOptions.y === "number" && vsOptions.y > -0.1 ? (vHeight / 100 * vsOptions.y) : rSizeY;
-          const radius = (vsOptions.size > 0 ? (
-            vsOptions.size + (vsOptions.size * (dynLight / 4))
-          ) : (
-            (Math.min(rSizeX, rSizeY) * 0.45) + (Math.min(rSizeX, rSizeY) * 0.2) * dynLight
-          ));
-
-          if (pulseEnabled) {
-            centerX = rSizeX + ((centerX - rSizeX) * (1 + (dynLight / 4)));
-            centerY = rSizeY + ((centerY - rSizeY) * (1 + (dynLight / 4)));
-          }
-          
-          const rotation = Math.PI / 2 + ((time / 20000) * Math.PI);
-
-          let highest = 0;
-
-          ctx.lineWidth = 3;
-          ctx.globalAlpha = opacity;
-
-          const isRainbow = Toxen.background.storyboard.getVisualizerRainbow();
-          const isGlow = Toxen.background.storyboard.getVisualizerGlow();
-
-          // Batch all bars into a single path when not using rainbow
-          // This is critical for glow performance: shadow blur is applied once per stroke() call
-          if (!isRainbow) {
-            if (isGlow) {
-              // Use average-based shadow for the entire batch
-              setBarShadowBlur(maxHeight * 0.4);
-            }
-            ctx.beginPath();
-            for (let i = 0; i < len; i++) {
-              const data = dataArray[i];
-              const barHeight = Math.max(1, data * unitH);
-              if (barHeight > highest) highest = barHeight;
-
-              const angle = i * unitAngle + rotation;
-              const mirroredAngle = (-i - 1) * unitAngle + rotation;
-
-              const cosA = Math.cos(angle);
-              const sinA = Math.sin(angle);
-              const cosM = Math.cos(mirroredAngle);
-              const sinM = Math.sin(mirroredAngle);
-
-              ctx.moveTo(centerX + cosA * radius, centerY + sinA * radius);
-              ctx.lineTo(centerX + cosA * (radius + barHeight), centerY + sinA * (radius + barHeight));
-
-              ctx.moveTo(centerX + cosM * radius, centerY + sinM * radius);
-              ctx.lineTo(centerX + cosM * (radius + barHeight), centerY + sinM * (radius + barHeight));
-            }
-            ctx.stroke();
-          } else {
-            // Rainbow mode: need per-bar strokes for different colors
-            const oldShadow = ctx.shadowBlur;
-            ctx.shadowBlur = 0; // Disable shadow for per-bar strokes
-            for (let i = 0; i < len; i++) {
-              const data = dataArray[i];
-              const barHeight = Math.max(1, data * unitH);
-              if (barHeight > highest) highest = barHeight;
-
-              const angle = i * unitAngle + rotation;
-              const mirroredAngle = (-i - 1) * unitAngle + rotation;
-
-              const cosA = Math.cos(angle);
-              const sinA = Math.sin(angle);
-              const cosM = Math.cos(mirroredAngle);
-              const sinM = Math.sin(mirroredAngle);
-
-              const x1 = centerX + cosA * radius;
-              const y1 = centerY + sinA * radius;
-
-              this.setRainbowIfEnabled(ctx, x1, y1, barHeight, barHeight, i);
-
-              ctx.beginPath();
-              ctx.moveTo(x1, y1);
-              ctx.lineTo(centerX + cosA * (radius + barHeight), centerY + sinA * (radius + barHeight));
-              ctx.stroke();
-
-              ctx.beginPath();
-              ctx.moveTo(centerX + cosM * radius, centerY + sinM * radius);
-              ctx.lineTo(centerX + cosM * (radius + barHeight), centerY + sinM * (radius + barHeight));
-              ctx.stroke();
-            }
-            ctx.shadowBlur = oldShadow;
-          }
-
-          ctx.globalAlpha = 1;
-
-          if (vsOptions.opaque) {
-            // Apply a radial glow to the orb based on heighest
-            ctx.save();
-            setBarShadowBlur(highest);
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-            ctx.lineWidth = 3;
-            ctx.fillStyle = storedColor;
-            ctx.fill();
-            ctx.restore();
-          }
-
-          // Draw center image if configured
-          if (vsOptions.orbImage && song) {
-            const imgSrc = User.appendAuth(`${song.dirname()}/${vsOptions.orbImage}`);
-            const orbImg = getCachedCircleImage("orb", imgSrc);
-            if (orbImg.complete && orbImg.naturalWidth > 0) {
-              ctx.save();
-              setBarShadowBlur(highest);
-              ctx.beginPath();
-              ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-              ctx.clip();
-              const d = radius * 2;
-              // Center-crop: pick the largest centered square from the source image
-              const srcSize = Math.min(orbImg.naturalWidth, orbImg.naturalHeight);
-              const sx = (orbImg.naturalWidth - srcSize) / 2;
-              const sy = (orbImg.naturalHeight - srcSize) / 2;
-              ctx.drawImage(orbImg, sx, sy, srcSize, srcSize, centerX - radius, centerY - radius, d, d);
-              ctx.restore();
-            }
-          }
-          break;
-        }
-        case VisualizerStyle.FluidOrb: {
-          const vsOptions = {
-            x: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.FluidOrb, "x") ?? 50,
-            y: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.FluidOrb, "y") ?? 50,
-            size: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.FluidOrb, "size") ?? 0,
-            speed: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.FluidOrb, "speed") ?? 1,
-            opaque: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.FluidOrb, "opaque") ?? false,
-            orbImage: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.FluidOrb, "orbImage") as string ?? "",
-          }
-
-          const maxHeight = getMaxHeight(0.3);
-          const unitAngle = (2 * Math.PI) / len;
-          const unitH = maxHeight / dataSize;
-          const rSizeX = vWidth / 2;
-          const rSizeY = vHeight / 2;
-          let centerX = typeof vsOptions.x === "number" && vsOptions.x > -0.1 ? (vWidth / 100 * vsOptions.x) : rSizeX;
-          let centerY = typeof vsOptions.y === "number" && vsOptions.y > -0.1 ? (vHeight / 100 * vsOptions.y) : rSizeY;
-          const radius = (vsOptions.size > 0 ? (
-            vsOptions.size + (vsOptions.size * (dynLight / 4))
-          ) : (
-            (Math.min(rSizeX, rSizeY) * 0.45) + (Math.min(rSizeX, rSizeY) * 0.2) * dynLight
-          ));
-
-          if (pulseEnabled) {
-            centerX = rSizeX + ((centerX - rSizeX) * (1 + (dynLight / 4)));
-            centerY = rSizeY + ((centerY - rSizeY) * (1 + (dynLight / 4)));
-          }
-
-          const rotation = Math.PI / 2 + Math.PI + ((time / 20000) * Math.PI * vsOptions.speed);
-          let highest = 0;
-          ctx.globalAlpha = opacity;
-
-          const isRainbow = Toxen.background.storyboard.getVisualizerRainbow();
-          const isGlow = Toxen.background.storyboard.getVisualizerGlow();
-
-          // Build smoothed bar heights using multiple passes of circular moving average
-          const rawHeights: number[] = [];
-          for (let i = 0; i < len; i++) {
-            const data = dataArray[i];
-            rawHeights.push(Math.max(1, data * unitH));
-          }
-          // 3 passes of weighted circular moving average with window of 5 neighbors each side
-          let smoothed = rawHeights;
-          for (let pass = 0; pass < 3; pass++) {
-            const next = new Array(len);
-            const w = 5;
-            for (let i = 0; i < len; i++) {
-              let sum = 0;
-              let weight = 0;
-              for (let j = -w; j <= w; j++) {
-                const idx = (i + j + len) % len;
-                const wt = 1 - Math.abs(j) / (w + 1); // Triangle weighting
-                sum += smoothed[idx] * wt;
-                weight += wt;
-              }
-              next[i] = sum / weight;
-            }
-            smoothed = next;
-          }
-
-          // Build points from smoothed heights
-          const points: { x: number; y: number; h: number }[] = [];
-          for (let i = 0; i < len; i++) {
-            const barHeight = smoothed[i];
-            if (barHeight > highest) highest = barHeight;
-            const angle = i * unitAngle + rotation;
-            const r = radius + barHeight;
-            points.push({
-              x: centerX + Math.cos(angle) * r,
-              y: centerY + Math.sin(angle) * r,
-              h: barHeight,
-            });
-          }
-          // Mirror: build mirrored points from same smoothed data
-          const mirrorPoints: { x: number; y: number; h: number }[] = [];
-          for (let i = 0; i < len; i++) {
-            const barHeight = smoothed[i];
-            const mirroredAngle = (-i - 1) * unitAngle + rotation;
-            const r = radius + barHeight;
-            mirrorPoints.push({
-              x: centerX + Math.cos(mirroredAngle) * r,
-              y: centerY + Math.sin(mirroredAngle) * r,
-              h: barHeight,
-            });
-          }
-
-          // Helper: draw a smooth closed curve through an array of points using cubic bezier
-          const drawSmoothCurve = (pts: { x: number; y: number }[]) => {
-            if (pts.length < 2) return;
-            ctx.beginPath();
-            appendSmoothCurve(pts);
-          };
-
-          // Appends a closed smooth curve as a subpath without calling beginPath
-          const appendSmoothCurve = (pts: { x: number; y: number }[]) => {
-            if (pts.length < 2) return;
-            const n = pts.length;
-            ctx.moveTo(
-              (pts[n - 1].x + pts[0].x) / 2,
-              (pts[n - 1].y + pts[0].y) / 2
-            );
-            for (let i = 0; i < n; i++) {
-              const curr = pts[i];
-              const next = pts[(i + 1) % n];
-              const midX = (curr.x + next.x) / 2;
-              const midY = (curr.y + next.y) / 2;
-              ctx.quadraticCurveTo(curr.x, curr.y, midX, midY);
-            }
-            ctx.closePath();
-          };
-
-          if (!isRainbow) {
-            ctx.lineWidth = 3;
-            if (isGlow) setBarShadowBlur(maxHeight * 0.5);
-            // Outer curve
-            drawSmoothCurve(points);
-            ctx.strokeStyle = storedColor;
-            ctx.stroke();
-            // Fill with translucent version
-            ctx.fillStyle = storedColor.replace("rgb(", "rgba(").replace(")", ", 0.12)");
-            ctx.fill();
-            // Mirror curve
-            drawSmoothCurve(mirrorPoints);
-            ctx.stroke();
-            ctx.fill();
-          } else {
-            // Rainbow: draw segments with color gradients
-            ctx.lineWidth = 3;
-            const oldShadow = ctx.shadowBlur;
-            ctx.shadowBlur = 0;
-            const n = points.length;
-            for (let i = 0; i < n; i++) {
-              const curr = points[i];
-              const next = points[(i + 1) % n];
-              const midX = (curr.x + next.x) / 2;
-              const midY = (curr.y + next.y) / 2;
-              this.setRainbowIfEnabled(ctx, curr.x, curr.y, curr.h, curr.h, i);
-              ctx.beginPath();
-              if (i === 0) {
-                const prev = points[n - 1];
-                ctx.moveTo((prev.x + curr.x) / 2, (prev.y + curr.y) / 2);
-              } else {
-                const prev = points[i - 1];
-                ctx.moveTo((prev.x + curr.x) / 2, (prev.y + curr.y) / 2);
-              }
-              ctx.quadraticCurveTo(curr.x, curr.y, midX, midY);
-              ctx.stroke();
-            }
-            // Mirror
-            for (let i = 0; i < mirrorPoints.length; i++) {
-              const curr = mirrorPoints[i];
-              const next = mirrorPoints[(i + 1) % mirrorPoints.length];
-              const midX = (curr.x + next.x) / 2;
-              const midY = (curr.y + next.y) / 2;
-              this.setRainbowIfEnabled(ctx, curr.x, curr.y, curr.h, curr.h, i);
-              ctx.beginPath();
-              if (i === 0) {
-                const prev = mirrorPoints[mirrorPoints.length - 1];
-                ctx.moveTo((prev.x + curr.x) / 2, (prev.y + curr.y) / 2);
-              } else {
-                const prev = mirrorPoints[i - 1];
-                ctx.moveTo((prev.x + curr.x) / 2, (prev.y + curr.y) / 2);
-              }
-              ctx.quadraticCurveTo(curr.x, curr.y, midX, midY);
-              ctx.stroke();
-            }
-            ctx.shadowBlur = oldShadow;
-          }
-
-          ctx.globalAlpha = 1;
-
-          // Solid fill if opaque — clip to the curve shape
-          if (vsOptions.opaque) {
-            ctx.save();
-            setBarShadowBlur(highest);
-            drawSmoothCurve(points);
-            ctx.fillStyle = storedColor;
-            ctx.fill();
-            drawSmoothCurve(mirrorPoints);
-            ctx.fill();
-            ctx.restore();
-          }
-
-          // Draw center image clipped to the dynamic curve shape
-          if (vsOptions.orbImage && song) {
-            const imgSrc = User.appendAuth(`${song.dirname()}/${vsOptions.orbImage}`);
-            const orbImg = getCachedCircleImage("fluidorb", imgSrc);
-            if (orbImg.complete && orbImg.naturalWidth > 0) {
-              ctx.save();
-              setBarShadowBlur(highest);
-              // Combine both curves into a single path for clipping
-              // Reverse mirrorPoints so both curves wind the same direction
-              ctx.beginPath();
-              appendSmoothCurve(points);
-              appendSmoothCurve(mirrorPoints.slice().reverse());
-              ctx.clip();
-              const extent = radius + highest;
-              const d = extent * 2;
-              const srcSize = Math.min(orbImg.naturalWidth, orbImg.naturalHeight);
-              const sx = (orbImg.naturalWidth - srcSize) / 2;
-              const sy = (orbImg.naturalHeight - srcSize) / 2;
-              ctx.drawImage(orbImg, sx, sy, srcSize, srcSize, centerX - extent, centerY - extent, d, d);
-              ctx.restore();
-            }
-          }
-          break;
-        }
-        case VisualizerStyle.WaveformCircle: {
-          // Combines Orb's circular distribution with Waveform's smooth rendering
-          const vsOptions = {
-            x: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.WaveformCircle, "x") ?? 50,
-            y: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.WaveformCircle, "y") ?? 50,
-            size: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.WaveformCircle, "size") ?? 0,
-            smoothing: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.WaveformCircle, "smoothing") ?? 0.7,
-            thickness: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.WaveformCircle, "thickness") ?? 3,
-            centerImage: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.WaveformCircle, "centerImage") as string ?? "",
-          }
-          
-          const maxHeight = getMaxHeight(0.4); // Slightly higher amplitude than regular waveform
-          const rSizeX = vWidth / 2;
-          const rSizeY = vHeight / 2;
-          let centerX = typeof vsOptions.x === "number" && vsOptions.x > -0.1 ? (vWidth / 100 * vsOptions.x) : rSizeX;
-          let centerY = typeof vsOptions.y === "number" && vsOptions.y > -0.1 ? (vHeight / 100 * vsOptions.y) : rSizeY;
-          const baseRadius = (vsOptions.size > 0 ? (
-            vsOptions.size + (vsOptions.size * (dynLight / 4))
-          ) : (
-            (Math.min(rSizeX, rSizeY) * 0.3) + (Math.min(rSizeX, rSizeY) * 0.15) * dynLight
-          ));
-
-          if (pulseEnabled) {
-            centerX = rSizeX + ((centerX - rSizeX) * (1 + (dynLight / 4)));
-            centerY = rSizeY + ((centerY - rSizeY) * (1 + (dynLight / 4)));
-          }
-          
-          const rotation = Math.PI / 2 + ((time / 30000) * Math.PI); // Slower rotation than Orb
-
-          // Pre-process audio data with smoothing
-          const smoothedData: number[] = [];
-          for (let i = 0; i < len; i++) {
-            let smoothedValue = dataArray[i];
-            if (vsOptions.smoothing > 0 && i > 0 && i < len - 1) {
-              const prev = dataArray[i - 1];
-              const next = dataArray[i + 1];
-              const current = dataArray[i];
-              smoothedValue = current * (1 - vsOptions.smoothing) + (prev + next) * vsOptions.smoothing / 2;
-            }
-            smoothedData.push(smoothedValue);
-          }
-
-          // Generate circular waveform points
-          const wavePoints: { x: number; y: number; amplitude: number }[] = [];
-          const unitAngle = (2 * Math.PI) / len;
-          const unitH = maxHeight / dataSize;
-          
-          for (let i = 0; i < len; i++) {
-            const amplitude = Math.max(1, smoothedData[i] * unitH);
-            const angle = i * unitAngle + rotation;
-            
-            // Add subtle wave motion like in the linear waveform
-            const waveMotion = Math.sin(time * 0.0008 + i * 0.1) * (amplitude * 0.1);
-            const dynamicRadius = baseRadius + amplitude + waveMotion;
-            
-            // Original angle point
-            const x = centerX + Math.cos(angle) * dynamicRadius;
-            const y = centerY + Math.sin(angle) * dynamicRadius;
-            wavePoints.push({ x, y, amplitude });
-          }
-
-          // Set up glow effect
-          if (Toxen.background.storyboard.getVisualizerGlow()) {
-            ctx.shadowBlur = 15;
-            ctx.shadowColor = storedColor;
-          }
-          
-          // Set up colors
-          if (Toxen.background.storyboard.getVisualizerRainbow()) {
-            const gradient = ctx.createRadialGradient(centerX, centerY, baseRadius, centerX, centerY, baseRadius + maxHeight);
-            const steps = 8;
-            for (let i = 0; i <= steps; i++) {
-              const hue = (i / steps * 360 + time * 0.05) % 360;
-              gradient.addColorStop(i / steps, `hsl(${hue}, 70%, 60%)`);
-            }
-            ctx.strokeStyle = gradient;
-            ctx.fillStyle = gradient;
-          } else {
-            ctx.strokeStyle = storedColor;
-            ctx.fillStyle = storedColor;
-          }
-
-          this.useAlpha(opacity, ctx => {
-            ctx.save();
-            
-            // Draw the main circular waveform with smooth curves
-            ctx.beginPath();
-            ctx.lineWidth = vsOptions.thickness;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            
-            // Start the circular path
-            ctx.moveTo(wavePoints[0].x, wavePoints[0].y);
-            
-            // Create smooth curves between points using quadratic curves
-            for (let i = 1; i < wavePoints.length; i++) {
-              const current = wavePoints[i];
-              const prev = wavePoints[i - 1];
-              
-              // Calculate control point for smooth curve
-              // Use the actual array index for angle calculation since we have len*2 points
-              const pointIndex = i;
-              const totalPoints = wavePoints.length;
-              const controlAngle = (pointIndex * (2 * Math.PI) / totalPoints + rotation) - (Math.PI / totalPoints);
-              const controlRadius = baseRadius + (prev.amplitude + current.amplitude) / 2;
-              const controlX = centerX + Math.cos(controlAngle) * controlRadius;
-              const controlY = centerY + Math.sin(controlAngle) * controlRadius;
-              
-              ctx.quadraticCurveTo(controlX, controlY, current.x, current.y);
-            }
-            
-            // Close the circular path smoothly
-            const firstPoint = wavePoints[0];
-            const lastPoint = wavePoints[wavePoints.length - 1];
-            const closingControlAngle = rotation - (Math.PI / wavePoints.length);
-            const closingControlRadius = baseRadius + (lastPoint.amplitude + firstPoint.amplitude) / 2;
-            const closingControlX = centerX + Math.cos(closingControlAngle) * closingControlRadius;
-            const closingControlY = centerY + Math.sin(closingControlAngle) * closingControlRadius;
-            
-            ctx.quadraticCurveTo(closingControlX, closingControlY, firstPoint.x, firstPoint.y);
-            ctx.closePath();
-            
-            // Stroke the circular waveform
-            ctx.stroke();
-            
-            // Create a filled area between the base circle and waveform for visual impact
-            ctx.beginPath();
-            
-            // Draw inner circle (base radius)
-            ctx.arc(centerX, centerY, baseRadius, 0, Math.PI * 2, false);
-            
-            // Draw outer waveform path (reverse direction for proper fill)
-            ctx.moveTo(wavePoints[0].x, wavePoints[0].y);
-            for (let i = wavePoints.length - 1; i > 0; i--) {
-              const current = wavePoints[i];
-              const next = wavePoints[i - 1];
-              
-              const pointIndex = i;
-              const totalPoints = wavePoints.length;
-              const controlAngle = (pointIndex * (2 * Math.PI) / totalPoints + rotation) - (Math.PI / totalPoints);
-              const controlRadius = baseRadius + (current.amplitude + next.amplitude) / 2;
-              const controlX = centerX + Math.cos(controlAngle) * controlRadius;
-              const controlY = centerY + Math.sin(controlAngle) * controlRadius;
-              
-              ctx.quadraticCurveTo(controlX, controlY, next.x, next.y);
-            }
-            ctx.closePath();
-            
-            // Fill with a more transparent version
-            const currentAlpha = ctx.globalAlpha;
-            ctx.globalAlpha = currentAlpha * 0.2;
-            ctx.fill();
-            ctx.globalAlpha = currentAlpha;
-            
-            // Add center circle for reference (subtle)
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, baseRadius * 0.1, 0, Math.PI * 2);
-            ctx.globalAlpha = currentAlpha * 0.5;
-            ctx.fill();
-            ctx.globalAlpha = currentAlpha;
-            
-            ctx.restore();
-          });
-
-          // Draw center image if configured
-          if (vsOptions.centerImage && song) {
-            const imgSrc = User.appendAuth(`${song.dirname()}/${vsOptions.centerImage}`);
-            const wcImg = getCachedCircleImage("waveformcircle", imgSrc);
-            if (wcImg.complete && wcImg.naturalWidth > 0) {
-              ctx.save();
-              ctx.beginPath();
-              ctx.arc(centerX, centerY, baseRadius, 0, Math.PI * 2);
-              ctx.clip();
-              const d = baseRadius * 2;
-              const srcSize = Math.min(wcImg.naturalWidth, wcImg.naturalHeight);
-              const sx = (wcImg.naturalWidth - srcSize) / 2;
-              const sy = (wcImg.naturalHeight - srcSize) / 2;
-              ctx.drawImage(wcImg, sx, sy, srcSize, srcSize, centerX - baseRadius, centerY - baseRadius, d, d);
-              ctx.restore();
-            }
-          }
-          break;
-        }
-        case VisualizerStyle.Heart: {
-          const vsOptions = {
-            x: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Heart, "x") ?? 50,
-            y: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Heart, "y") ?? 50,
-            size: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Heart, "size") ?? 0,
-            opaque: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Heart, "opaque") ?? false,
-          }
-
-          const maxHeight = getMaxHeight(0.25);
-          const unitH = maxHeight / dataSize;
-          const rSizeX = vWidth / 2;
-          const rSizeY = vHeight / 2;
-          let centerX = typeof vsOptions.x === "number" && vsOptions.x > -0.1 ? (vWidth / 100 * vsOptions.x) : rSizeX;
-          let centerY = typeof vsOptions.y === "number" && vsOptions.y > -0.1 ? (vHeight / 100 * vsOptions.y) : rSizeY;
-
-          // Heart parametric equations:
-          // x(t) = 16 * sin³(t)
-          // y(t) = -(13cos(t) - 5cos(2t) - 2cos(3t) - cos(4t))  (negated for canvas coords)
-          const heartX = (t: number) => 16 * Math.pow(Math.sin(t), 3);
-          const heartY = (t: number) => -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
-          const heartYOffset = 6; // Center the heart vertically (canvas y ranges from -5 to 17)
-
-          // Scale factor - pulsates with audio like a beating heart
-          const baseScale = vsOptions.size > 0 ? (vsOptions.size / 16) : (Math.min(rSizeX, rSizeY) * 0.035);
-          const scale = baseScale + (baseScale * (dynLight / 3));
-
-          if (pulseEnabled) {
-            centerX = rSizeX + ((centerX - rSizeX) * (1 + (dynLight / 4)));
-            centerY = rSizeY + ((centerY - rSizeY) * (1 + (dynLight / 4)));
-          }
-
-          let highest = 0;
-
-          // Distribute bars over the right half of the heart (t: 0 to PI), mirror to left half
-          ctx.lineWidth = 3;
-          ctx.globalAlpha = opacity;
-
-          const isRainbow = Toxen.background.storyboard.getVisualizerRainbow();
-          const isGlow = Toxen.background.storyboard.getVisualizerGlow();
-
-          // Precompute all bar data for both batched and per-bar paths
-          if (!isRainbow) {
-            if (isGlow) {
-              setBarShadowBlur(maxHeight * 0.4);
-            }
-            ctx.beginPath();
-            for (let i = 0; i < len; i++) {
-              const data = dataArray[i];
-              const barHeight = Math.max(1, data * unitH);
-              if (barHeight > highest) highest = barHeight;
-
-              const t = (i / len) * Math.PI;
-              const hx = heartX(t) * scale;
-              const hy = (heartY(t) - heartYOffset) * scale;
-
-              const dx = (heartX(t + 0.01) - heartX(t - 0.01)) * scale;
-              const dy = ((heartY(t + 0.01)) - (heartY(t - 0.01))) * scale;
-              const tangentLen = Math.sqrt(dx * dx + dy * dy);
-
-              let nx: number, ny: number;
-              if (tangentLen > 0.001) {
-                nx = dy / tangentLen;
-                ny = -dx / tangentLen;
-                if (nx * hx + ny * hy < 0) { nx = -nx; ny = -ny; }
-              } else {
-                const radLen = Math.sqrt(hx * hx + hy * hy) || 1;
-                nx = hx / radLen;
-                ny = hy / radLen;
-              }
-
-              // Right side bar
-              ctx.moveTo(centerX + hx, centerY + hy);
-              ctx.lineTo(centerX + hx + nx * barHeight, centerY + hy + ny * barHeight);
-
-              // Mirrored bar (left side)
-              ctx.moveTo(centerX - hx, centerY + hy);
-              ctx.lineTo(centerX - hx - nx * barHeight, centerY + hy + ny * barHeight);
-            }
-            ctx.stroke();
-          } else {
-            // Rainbow mode: need per-bar strokes for different colors
-            const oldShadow = ctx.shadowBlur;
-            ctx.shadowBlur = 0;
-            for (let i = 0; i < len; i++) {
-              const data = dataArray[i];
-              const barHeight = Math.max(1, data * unitH);
-              if (barHeight > highest) highest = barHeight;
-
-              const t = (i / len) * Math.PI;
-              const hx = heartX(t) * scale;
-              const hy = (heartY(t) - heartYOffset) * scale;
-
-              const dx = (heartX(t + 0.01) - heartX(t - 0.01)) * scale;
-              const dy = ((heartY(t + 0.01)) - (heartY(t - 0.01))) * scale;
-              const tangentLen = Math.sqrt(dx * dx + dy * dy);
-
-              let nx: number, ny: number;
-              if (tangentLen > 0.001) {
-                nx = dy / tangentLen;
-                ny = -dx / tangentLen;
-                if (nx * hx + ny * hy < 0) { nx = -nx; ny = -ny; }
-              } else {
-                const radLen = Math.sqrt(hx * hx + hy * hy) || 1;
-                nx = hx / radLen;
-                ny = hy / radLen;
-              }
-
-              const x1 = centerX + hx;
-              const y1 = centerY + hy;
-              this.setRainbowIfEnabled(ctx, x1, y1, barHeight, barHeight, i);
-
-              ctx.beginPath();
-              ctx.moveTo(x1, y1);
-              ctx.lineTo(centerX + hx + nx * barHeight, centerY + hy + ny * barHeight);
-              ctx.stroke();
-
-              ctx.beginPath();
-              ctx.moveTo(centerX - hx, centerY + hy);
-              ctx.lineTo(centerX - hx - nx * barHeight, centerY + hy + ny * barHeight);
-              ctx.stroke();
-            }
-            ctx.shadowBlur = oldShadow;
-          }
-
-          ctx.globalAlpha = 1;
-
-          if (vsOptions.opaque) {
-            // Fill the heart shape
-            ctx.save();
-            setBarShadowBlur(highest);
-            ctx.beginPath();
-            const steps = 200;
-            for (let i = 0; i <= steps; i++) {
-              const t = (i / steps) * (2 * Math.PI);
-              const px = centerX + heartX(t) * scale;
-              const py = centerY + (heartY(t) - heartYOffset) * scale;
-              if (i === 0) ctx.moveTo(px, py);
-              else ctx.lineTo(px, py);
-            }
-            ctx.closePath();
-            ctx.fillStyle = storedColor;
-            ctx.fill();
-            ctx.restore();
-          }
-          break;
-        }
-        case VisualizerStyle.DNA: {
-          const vsOptions = {
-            x: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.DNA, "x") ?? 50,
-            size: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.DNA, "size") ?? 0,
-          }
-
-          const maxHeight = getMaxHeight(0.20);
-          const unitH = maxHeight / dataSize;
-          const rSizeX = vWidth / 2;
-          const centerX = typeof vsOptions.x === "number" && vsOptions.x > -0.1 ? (vWidth / 100 * vsOptions.x) : rSizeX;
-
-          // Helix amplitude - how wide the strands spread
-          const baseAmplitude = vsOptions.size > 0 ? vsOptions.size : (vWidth * 0.12);
-          const amplitude = baseAmplitude + (baseAmplitude * dynLight * 0.3);
-          const scrollSpeed = time * 0.0005;
-          const yStep = vHeight / len;
-          const turns = 4; // Number of full helix rotations
-
-          const isRainbow = Toxen.background.storyboard.getVisualizerRainbow();
-          const isGlow = Toxen.background.storyboard.getVisualizerGlow();
-
-          ctx.globalAlpha = opacity;
-
-          if (!isRainbow) {
-            if (isGlow) setBarShadowBlur(maxHeight * 0.3);
-
-            // Draw rungs (connecting bars between strands)
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            for (let i = 0; i < len; i++) {
-              const data = dataArray[i];
-              const barIntensity = data / dataSize;
-              const y = i * yStep;
-              const phase = (i / len) * Math.PI * turns + scrollSpeed;
-              const sinPhase = Math.sin(phase);
-              const cosPhase = Math.cos(phase);
-
-              // Only draw rungs visible from the "front" (depth effect)
-              if (barIntensity > 0.08) {
-                const x1 = centerX + sinPhase * amplitude;
-                const x2 = centerX - sinPhase * amplitude;
-                ctx.moveTo(x1, y);
-                ctx.lineTo(x2, y);
-              }
-            }
-            ctx.stroke();
-
-            // Draw strand 1 (smooth curve)
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            for (let i = 0; i < len; i++) {
-              const y = i * yStep;
-              const phase = (i / len) * Math.PI * turns + scrollSpeed;
-              const data = dataArray[i];
-              const wobble = (data / dataSize) * amplitude * 0.15;
-              const x = centerX + Math.sin(phase) * (amplitude + wobble);
-              if (i === 0) ctx.moveTo(x, y);
-              else ctx.lineTo(x, y);
-            }
-            ctx.stroke();
-
-            // Draw strand 2
-            ctx.beginPath();
-            for (let i = 0; i < len; i++) {
-              const y = i * yStep;
-              const phase = (i / len) * Math.PI * turns + scrollSpeed;
-              const data = dataArray[i];
-              const wobble = (data / dataSize) * amplitude * 0.15;
-              const x = centerX + Math.sin(phase + Math.PI) * (amplitude + wobble);
-              if (i === 0) ctx.moveTo(x, y);
-              else ctx.lineTo(x, y);
-            }
-            ctx.stroke();
-          } else {
-            const oldShadow = ctx.shadowBlur;
-            ctx.shadowBlur = 0;
-
-            // Rungs with rainbow
-            ctx.lineWidth = 2;
-            for (let i = 0; i < len; i++) {
-              const data = dataArray[i];
-              const barIntensity = data / dataSize;
-              const y = i * yStep;
-              const phase = (i / len) * Math.PI * turns + scrollSpeed;
-
-              if (barIntensity > 0.08) {
-                const x1 = centerX + Math.sin(phase) * amplitude;
-                const x2 = centerX - Math.sin(phase) * amplitude;
-                this.setRainbowIfEnabled(ctx, x1, y, Math.abs(x2 - x1), 2, i);
-                ctx.beginPath();
-                ctx.moveTo(x1, y);
-                ctx.lineTo(x2, y);
-                ctx.stroke();
-              }
-            }
-
-            // Strands with rainbow (draw as segments)
-            ctx.lineWidth = 3;
-            for (let i = 1; i < len; i++) {
-              const y0 = (i - 1) * yStep;
-              const y1 = i * yStep;
-              const phase0 = ((i - 1) / len) * Math.PI * turns + scrollSpeed;
-              const phase1 = (i / len) * Math.PI * turns + scrollSpeed;
-              const x0 = centerX + Math.sin(phase0) * amplitude;
-              const x1 = centerX + Math.sin(phase1) * amplitude;
-
-              this.setRainbowIfEnabled(ctx, x1, y1, 3, 3, i);
-              ctx.beginPath();
-              ctx.moveTo(x0, y0);
-              ctx.lineTo(x1, y1);
-              ctx.stroke();
-
-              // Second strand
-              const mx0 = centerX + Math.sin(phase0 + Math.PI) * amplitude;
-              const mx1 = centerX + Math.sin(phase1 + Math.PI) * amplitude;
-              ctx.beginPath();
-              ctx.moveTo(mx0, y0);
-              ctx.lineTo(mx1, y1);
-              ctx.stroke();
-            }
-
-            ctx.shadowBlur = oldShadow;
-          }
-
-          ctx.globalAlpha = 1;
-          break;
-        }
-        case VisualizerStyle.Rings: {
-          const vsOptions = {
-            x: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Rings, "x") ?? 50,
-            y: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Rings, "y") ?? 50,
-            size: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Rings, "size") ?? 0,
-          }
-
-          const rSizeX = vWidth / 2;
-          const rSizeY = vHeight / 2;
-          let centerX = typeof vsOptions.x === "number" && vsOptions.x > -0.1 ? (vWidth / 100 * vsOptions.x) : rSizeX;
-          let centerY = typeof vsOptions.y === "number" && vsOptions.y > -0.1 ? (vHeight / 100 * vsOptions.y) : rSizeY;
-
-          if (pulseEnabled) {
-            centerX = rSizeX + ((centerX - rSizeX) * (1 + (dynLight / 4)));
-            centerY = rSizeY + ((centerY - rSizeY) * (1 + (dynLight / 4)));
-          }
-
-          const maxRadius = vsOptions.size > 0 ? vsOptions.size : (Math.min(rSizeX, rSizeY) * 0.85);
-          const numRings = Math.min(len, 24);
-          const radiusStep = maxRadius / numRings;
-          const rotation = time * 0.0003;
-
-          const isGlow = Toxen.background.storyboard.getVisualizerGlow();
-          const isRainbow = Toxen.background.storyboard.getVisualizerRainbow();
-
-          for (let i = 0; i < numRings; i++) {
-            // Map ring to frequency band (group bins for smoother response)
-            const binStart = Math.floor((i / numRings) * len);
-            const binEnd = Math.floor(((i + 1) / numRings) * len);
-            let sum = 0;
-            for (let b = binStart; b < binEnd; b++) sum += dataArray[b];
-            const avg = sum / (binEnd - binStart);
-            const amplitude = avg / dataSize;
-
-            const baseRadius = (i + 1) * radiusStep;
-            const pulseAmount = amplitude * radiusStep * 1.5;
-            const ringRadius = baseRadius + pulseAmount + (baseRadius * dynLight * 0.1);
-
-            if (isRainbow) {
-              const hue = ((i / numRings) * 360 + time * 0.05) % 360;
-              ctx.strokeStyle = `hsl(${hue}, 80%, 55%)`;
-            }
-
-            if (isGlow) {
-              ctx.shadowBlur = amplitude * 20;
-            }
-
-            ctx.globalAlpha = opacity * (0.25 + amplitude * 0.75);
-            ctx.lineWidth = 1.5 + amplitude * 4;
-
-            ctx.beginPath();
-            // Slightly deform each ring based on audio for organic feel
-            const segments = 64;
-            for (let s = 0; s <= segments; s++) {
-              const angle = (s / segments) * Math.PI * 2 + rotation * (i % 2 === 0 ? 1 : -1);
-              // Subtle per-segment deformation from neighboring frequency data
-              const deformIdx = Math.floor((s / segments) * (binEnd - binStart)) + binStart;
-              const deform = deformIdx < len ? (dataArray[deformIdx] / dataSize) * radiusStep * 0.3 : 0;
-              const r = ringRadius + deform;
-              const x = centerX + Math.cos(angle) * r;
-              const y = centerY + Math.sin(angle) * r;
-              if (s === 0) ctx.moveTo(x, y);
-              else ctx.lineTo(x, y);
-            }
-            ctx.closePath();
-            ctx.stroke();
-          }
-
-          ctx.globalAlpha = 1;
-          break;
-        }
-        case VisualizerStyle.Spiral: {
-          const vsOptions = {
-            x: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Spiral, "x") ?? 50,
-            y: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Spiral, "y") ?? 50,
-            size: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Spiral, "size") ?? 0,
-            rotationSpeed: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Spiral, "rotationSpeed") ?? 0.4,
-            rotationDirection: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Spiral, "rotationDirection") ?? "clockwise",
-          }
-
-          const maxHeight = getMaxHeight(0.20);
-          const unitH = maxHeight / dataSize;
-          const rSizeX = vWidth / 2;
-          const rSizeY = vHeight / 2;
-          let centerX = typeof vsOptions.x === "number" && vsOptions.x > -0.1 ? (vWidth / 100 * vsOptions.x) : rSizeX;
-          let centerY = typeof vsOptions.y === "number" && vsOptions.y > -0.1 ? (vHeight / 100 * vsOptions.y) : rSizeY;
-
-          if (pulseEnabled) {
-            centerX = rSizeX + ((centerX - rSizeX) * (1 + (dynLight / 4)));
-            centerY = rSizeY + ((centerY - rSizeY) * (1 + (dynLight / 4)));
-          }
-
-          const baseMaxRadius = vsOptions.size > 0 ? vsOptions.size : (Math.min(rSizeX, rSizeY) * 0.75);
-          const maxRadius = baseMaxRadius + (baseMaxRadius * dynLight * 0.15);
-          const directionMultiplier = vsOptions.rotationDirection === "counter-clockwise" ? -1 : 1;
-          const rotation = time * (vsOptions.rotationSpeed / 1000) * directionMultiplier;
-          const numArms = 2;
-          const turns = 3;
-
-          const isRainbow = Toxen.background.storyboard.getVisualizerRainbow();
-          const isGlow = Toxen.background.storyboard.getVisualizerGlow();
-
-          ctx.lineWidth = 3;
-          ctx.globalAlpha = opacity;
-
-          // Draw each spiral arm
-          for (let arm = 0; arm < numArms; arm++) {
-            const armOffset = (arm / numArms) * Math.PI * 2;
-
-            if (!isRainbow) {
-              if (isGlow) setBarShadowBlur(maxHeight * 0.3);
-
-              // Batched frequency bars along the spiral
-              ctx.beginPath();
-              for (let i = 0; i < len; i++) {
-                const data = dataArray[i];
-                const barHeight = Math.max(1, data * unitH) * 0.5;
-
-                const t = i / len;
-                const angle = t * turns * Math.PI * 2 + rotation + armOffset;
-                const radius = t * maxRadius * 0.85 + maxRadius * 0.08;
-
-                const cosA = Math.cos(angle);
-                const sinA = Math.sin(angle);
-
-                ctx.moveTo(centerX + cosA * radius, centerY + sinA * radius);
-                ctx.lineTo(centerX + cosA * (radius + barHeight), centerY + sinA * (radius + barHeight));
-              }
-              ctx.stroke();
-
-              // Draw spiral backbone (subtle)
-              const oldAlpha = ctx.globalAlpha;
-              ctx.globalAlpha = opacity * 0.35;
-              ctx.lineWidth = 1.5;
-              ctx.beginPath();
-              const backboneSteps = 200;
-              for (let i = 0; i <= backboneSteps; i++) {
-                const t = i / backboneSteps;
-                const angle = t * turns * Math.PI * 2 + rotation + armOffset;
-                const radius = t * maxRadius * 0.85 + maxRadius * 0.08;
-                const x = centerX + Math.cos(angle) * radius;
-                const y = centerY + Math.sin(angle) * radius;
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-              }
-              ctx.stroke();
-              ctx.globalAlpha = oldAlpha;
-              ctx.lineWidth = 3;
-            } else {
-              const oldShadow = ctx.shadowBlur;
-              ctx.shadowBlur = 0;
-
-              for (let i = 0; i < len; i++) {
-                const data = dataArray[i];
-                const barHeight = Math.max(1, data * unitH) * 0.5;
-
-                const t = i / len;
-                const angle = t * turns * Math.PI * 2 + rotation + armOffset;
-                const radius = t * maxRadius * 0.85 + maxRadius * 0.08;
-
-                const cosA = Math.cos(angle);
-                const sinA = Math.sin(angle);
-
-                this.setRainbowIfEnabled(ctx, centerX + cosA * radius, centerY + sinA * radius, barHeight, barHeight, i);
-                ctx.beginPath();
-                ctx.moveTo(centerX + cosA * radius, centerY + sinA * radius);
-                ctx.lineTo(centerX + cosA * (radius + barHeight), centerY + sinA * (radius + barHeight));
-                ctx.stroke();
-              }
-
-              ctx.shadowBlur = oldShadow;
-            }
-          }
-
-          ctx.globalAlpha = 1;
-          break;
-        }
-
-        case VisualizerStyle.Clock: {
-          const vsOptions = {
-            x: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Clock, "x") ?? 50,
-            y: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Clock, "y") ?? 50,
-            size: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Clock, "size") ?? 0,
-            centerImage: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Clock, "centerImage") as string ?? "",
-          }
-
-          const maxHeight = getMaxHeight(0.15);
-          const unitH = maxHeight / dataSize;
-          const rSizeX = vWidth / 2;
-          const rSizeY = vHeight / 2;
-          let centerX = typeof vsOptions.x === "number" && vsOptions.x > -0.1 ? (vWidth / 100 * vsOptions.x) : rSizeX;
-          let centerY = typeof vsOptions.y === "number" && vsOptions.y > -0.1 ? (vHeight / 100 * vsOptions.y) : rSizeY;
-
-          if (pulseEnabled) {
-            centerX = rSizeX + ((centerX - rSizeX) * (1 + (dynLight / 4)));
-            centerY = rSizeY + ((centerY - rSizeY) * (1 + (dynLight / 4)));
-          }
-
-          const baseRadius = vsOptions.size > 0 ? vsOptions.size : (Math.min(rSizeX, rSizeY) * 0.55);
-          const clockRadius = baseRadius + (baseRadius * dynLight * 0.08);
-
-          const isRainbow = Toxen.background.storyboard.getVisualizerRainbow();
-          const isGlow = Toxen.background.storyboard.getVisualizerGlow();
-
-          ctx.globalAlpha = opacity;
-
-          // Get current time
-          const now = new Date();
-          const hours = now.getHours() % 12;
-          const minutes = now.getMinutes();
-          const seconds = now.getSeconds();
-          const millis = now.getMilliseconds();
-
-          const secondAngle = ((seconds + millis / 1000) / 60) * Math.PI * 2 - Math.PI / 2;
-          const minuteAngle = ((minutes + seconds / 60) / 60) * Math.PI * 2 - Math.PI / 2;
-          const hourAngle = ((hours + minutes / 60) / 12) * Math.PI * 2 - Math.PI / 2;
-
-          // --- Draw frequency bars around the clock rim ---
-          if (isGlow) setBarShadowBlur(maxHeight * 0.3);
-
-          if (!isRainbow) {
-            ctx.beginPath();
-            for (let i = 0; i < len; i++) {
-              const data = dataArray[i];
-              const barHeight = Math.max(1, data * unitH) * 0.4;
-              const angle = (i / len) * Math.PI * 2 - Math.PI / 2;
-              const cosA = Math.cos(angle);
-              const sinA = Math.sin(angle);
-              ctx.moveTo(centerX + cosA * clockRadius, centerY + sinA * clockRadius);
-              ctx.lineTo(centerX + cosA * (clockRadius + barHeight), centerY + sinA * (clockRadius + barHeight));
-            }
-            ctx.lineWidth = 2;
-            ctx.stroke();
-          } else {
-            const oldShadow = ctx.shadowBlur;
-            ctx.shadowBlur = 0;
-            ctx.lineWidth = 2;
-            for (let i = 0; i < len; i++) {
-              const data = dataArray[i];
-              const barHeight = Math.max(1, data * unitH) * 0.4;
-              const angle = (i / len) * Math.PI * 2 - Math.PI / 2;
-              const cosA = Math.cos(angle);
-              const sinA = Math.sin(angle);
-              this.setRainbowIfEnabled(ctx, centerX + cosA * clockRadius, centerY + sinA * clockRadius, barHeight, barHeight, i);
-              ctx.beginPath();
-              ctx.moveTo(centerX + cosA * clockRadius, centerY + sinA * clockRadius);
-              ctx.lineTo(centerX + cosA * (clockRadius + barHeight), centerY + sinA * (clockRadius + barHeight));
-              ctx.stroke();
-            }
-            ctx.shadowBlur = oldShadow;
-          }
-
-          // --- Draw clock face circle ---
-          ctx.shadowBlur = 0;
-          const oldAlpha = ctx.globalAlpha;
-
-          // Draw center image if configured (behind clock elements)
-          if (vsOptions.centerImage && song) {
-            const imgSrc = User.appendAuth(`${song.dirname()}/${vsOptions.centerImage}`);
-            const clockImg = getCachedCircleImage("clock", imgSrc);
-            if (clockImg.complete && clockImg.naturalWidth > 0) {
-              ctx.save();
-              ctx.beginPath();
-              ctx.arc(centerX, centerY, clockRadius, 0, Math.PI * 2);
-              ctx.clip();
-              const d = clockRadius * 2;
-              const srcSize = Math.min(clockImg.naturalWidth, clockImg.naturalHeight);
-              const sx = (clockImg.naturalWidth - srcSize) / 2;
-              const sy = (clockImg.naturalHeight - srcSize) / 2;
-              ctx.drawImage(clockImg, sx, sy, srcSize, srcSize, centerX - clockRadius, centerY - clockRadius, d, d);
-              ctx.restore();
-            }
-          } else {
-            ctx.globalAlpha = opacity * 0.15;
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, clockRadius, 0, Math.PI * 2);
-            ctx.fill();
-          }
-          ctx.globalAlpha = oldAlpha;
-
-          // Clock rim
-          ctx.globalAlpha = opacity * 0.5;
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.arc(centerX, centerY, clockRadius, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.globalAlpha = oldAlpha;
-
-          // --- Hour markers and numbers ---
-          ctx.lineWidth = 2.5;
-          const fontSize = Math.max(12, clockRadius * 0.14);
-          ctx.font = `bold ${fontSize}px sans-serif`;
-          const storedTextAlign = ctx.textAlign;
-          const storedBaseline = ctx.textBaseline;
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          for (let i = 0; i < 12; i++) {
-            const angle = (i / 12) * Math.PI * 2 - Math.PI / 2;
-            const cosA = Math.cos(angle);
-            const sinA = Math.sin(angle);
-
-            // Tick mark
-            const innerTick = clockRadius * 0.88;
-            const outerTick = clockRadius * 0.96;
-            ctx.beginPath();
-            ctx.moveTo(centerX + cosA * innerTick, centerY + sinA * innerTick);
-            ctx.lineTo(centerX + cosA * outerTick, centerY + sinA * outerTick);
-            ctx.stroke();
-
-            // Number
-            const numRadius = clockRadius * 0.76;
-            const num = i === 0 ? 12 : i;
-            ctx.fillText(num.toString(), centerX + cosA * numRadius, centerY + sinA * numRadius);
-          }
-
-          ctx.textAlign = storedTextAlign;
-          ctx.textBaseline = storedBaseline;
-          
-          // Minute ticks
-          ctx.lineWidth = 1;
-          ctx.globalAlpha = opacity * 0.4;
-          for (let i = 0; i < 60; i++) {
-            if (i % 5 === 0) continue; // Skip hour positions
-            const angle = (i / 60) * Math.PI * 2 - Math.PI / 2;
-            const cosA = Math.cos(angle);
-            const sinA = Math.sin(angle);
-            const innerTick = clockRadius * 0.93;
-            const outerTick = clockRadius * 0.96;
-            ctx.beginPath();
-            ctx.moveTo(centerX + cosA * innerTick, centerY + sinA * innerTick);
-            ctx.lineTo(centerX + cosA * outerTick, centerY + sinA * outerTick);
-            ctx.stroke();
-          }
-          ctx.globalAlpha = oldAlpha;
-
-          // --- Clock hands ---
-          // Hour hand
-          ctx.lineWidth = Math.max(4, clockRadius * 0.035);
-          ctx.lineCap = "round";
-          ctx.beginPath();
-          ctx.moveTo(centerX, centerY);
-          ctx.lineTo(
-            centerX + Math.cos(hourAngle) * clockRadius * 0.5,
-            centerY + Math.sin(hourAngle) * clockRadius * 0.5
-          );
-          ctx.stroke();
-
-          // Minute hand
-          ctx.lineWidth = Math.max(3, clockRadius * 0.025);
-          ctx.beginPath();
-          ctx.moveTo(centerX, centerY);
-          ctx.lineTo(
-            centerX + Math.cos(minuteAngle) * clockRadius * 0.7,
-            centerY + Math.sin(minuteAngle) * clockRadius * 0.7
-          );
-          ctx.stroke();
-
-          // Second hand (thinner, slightly transparent)
-          ctx.globalAlpha = opacity * 0.8;
-          ctx.lineWidth = Math.max(1.5, clockRadius * 0.012);
-          ctx.beginPath();
-          // Small counter-weight behind center
-          ctx.moveTo(
-            centerX - Math.cos(secondAngle) * clockRadius * 0.12,
-            centerY - Math.sin(secondAngle) * clockRadius * 0.12
-          );
-          ctx.lineTo(
-            centerX + Math.cos(secondAngle) * clockRadius * 0.82,
-            centerY + Math.sin(secondAngle) * clockRadius * 0.82
-          );
-          ctx.stroke();
-          ctx.globalAlpha = oldAlpha;
-
-          // Center dot
-          ctx.beginPath();
-          ctx.arc(centerX, centerY, Math.max(3, clockRadius * 0.03), 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.lineCap = "butt";
-          ctx.globalAlpha = 1;
-          break;
-        }
-
-        case VisualizerStyle.Jellyfish: {
-          const vsOptions = {
-            x: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Jellyfish, "x") ?? 50,
-            y: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Jellyfish, "y") ?? 50,
-            size: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Jellyfish, "size") ?? 0,
-            swimming: Toxen.background.storyboard.getVisualizerOption(VisualizerStyle.Jellyfish, "swimming") ?? false,
-          }
-
-          const maxHeight = getMaxHeight(0.15);
-          const unitH = maxHeight / dataSize;
-          const rSizeX = vWidth / 2;
-          const rSizeY = vHeight / 2;
-          let centerX = typeof vsOptions.x === "number" && vsOptions.x > -0.1 ? (vWidth / 100 * vsOptions.x) : rSizeX;
-          let centerY = typeof vsOptions.y === "number" && vsOptions.y > -0.1 ? (vHeight / 100 * vsOptions.y) : rSizeY;
-
-          const baseSize = vsOptions.size > 0 ? vsOptions.size : (Math.min(rSizeX, rSizeY) * 0.5);
-
-          // Swimming: DVD-screensaver style smooth drift with facing direction
-          let swimAngle = 0;
-          if (vsOptions.swimming) {
-            const t = time * 0.00008;
-            // Padding accounts for full jellyfish extent: bell + tentacles
-            const padX = baseSize * 1.3; // bell width + tentacle spread margin
-            const padY = baseSize * 1.6 + baseSize * 0.65; // tentacle length + bell height
-            const rangeX = Math.max(0, (vWidth - padX * 2) / 2);
-            const rangeY = Math.max(0, (vHeight - padY * 2) / 2);
-            // Layered sine waves for smooth, screen-covering path
-            const freqX1 = 0.7, freqX2 = 1.83;
-            const freqY1 = 0.53, freqY2 = 1.37;
-            centerX = rSizeX + Math.sin(t * freqX1) * rangeX * 0.65 + Math.sin(t * freqX2) * rangeX * 0.35;
-            centerY = rSizeY + Math.sin(t * freqY1) * rangeY * 0.6 + Math.sin(t * freqY2) * rangeY * 0.4;
-
-            // Analytical velocity (derivative of position) for facing direction
-            const vx = Math.cos(t * freqX1) * freqX1 * rangeX * 0.65 + Math.cos(t * freqX2) * freqX2 * rangeX * 0.35;
-            const vy = Math.cos(t * freqY1) * freqY1 * rangeY * 0.6 + Math.cos(t * freqY2) * freqY2 * rangeY * 0.4;
-            // Jellyfish natural orientation is bell-up (pointing -Y), so offset by PI/2
-            swimAngle = Math.atan2(vy, vx) + Math.PI / 2;
-          }
-
-          if (pulseEnabled) {
-            centerX = rSizeX + ((centerX - rSizeX) * (1 + (dynLight / 4)));
-            centerY = rSizeY + ((centerY - rSizeY) * (1 + (dynLight / 4)));
-          }
-
-          const bellWidth = baseSize;
-          const bellHeight = baseSize * 0.65;
-
-          // Bell contracts/pulses with the music
-          const pulseScale = 1 + dynLight * 0.12;
-          const bw = bellWidth * pulseScale;
-          const bh = bellHeight * pulseScale;
-
-          const isRainbow = Toxen.background.storyboard.getVisualizerRainbow();
-          const isGlow = Toxen.background.storyboard.getVisualizerGlow();
-
-          ctx.globalAlpha = opacity;
-          ctx.lineCap = "round";
-
-          // Apply rotation for swimming direction
-          if (vsOptions.swimming && swimAngle !== 0) {
-            ctx.save();
-            ctx.translate(centerX, centerY);
-            ctx.rotate(swimAngle);
-            ctx.translate(-centerX, -centerY);
-          }
-
-          // --- Bell (dome) ---
-          // Draw the bell as a smooth dome with frequency-reactive bumps
-          const bellSegments = Math.min(len, 128);
-
-          if (isGlow) setBarShadowBlur(maxHeight * 0.25);
-
-          // Semi-transparent bell fill
-          const oldAlpha = ctx.globalAlpha;
-          ctx.globalAlpha = opacity * 0.12;
-          ctx.beginPath();
-          ctx.moveTo(centerX - bw, centerY);
-          for (let i = 0; i <= bellSegments; i++) {
-            const t = i / bellSegments; // 0 to 1, left to right
-            const angle = t * Math.PI; // 0 to PI (left to right across the dome)
-            const baseX = centerX - bw * Math.cos(angle);
-            const baseY = centerY - bh * Math.sin(angle);
-
-            // Add frequency reactivity to the dome surface
-            const dataIdx = Math.min(Math.floor(t * len), len - 1);
-            const bump = (dataArray[dataIdx] * unitH) * 0.2;
-            const nx = 0;
-            const ny = -Math.sin(angle);
-            const fx = baseX + nx * bump;
-            const fy = baseY + ny * bump;
-
-            if (i === 0) ctx.moveTo(fx, fy);
-            else ctx.lineTo(fx, fy);
-          }
-          // Close bottom
-          ctx.lineTo(centerX + bw, centerY);
-          ctx.closePath();
-          ctx.fill();
-          ctx.globalAlpha = oldAlpha;
-
-          // Bell outline with frequency bumps
-          ctx.lineWidth = 2.5;
-          ctx.beginPath();
-          for (let i = 0; i <= bellSegments; i++) {
-            const t = i / bellSegments;
-            const angle = t * Math.PI;
-            const baseX = centerX - bw * Math.cos(angle);
-            const baseY = centerY - bh * Math.sin(angle);
-
-            const dataIdx = Math.min(Math.floor(t * len), len - 1);
-            const bump = (dataArray[dataIdx] * unitH) * 0.25;
-            const ny = -Math.sin(angle);
-            const fx = baseX;
-            const fy = baseY + ny * bump;
-
-            if (i === 0) ctx.moveTo(fx, fy);
-            else ctx.lineTo(fx, fy);
-          }
-          ctx.stroke();
-
-          // Inner bell ridges (subtle lines inside the dome)
-          ctx.globalAlpha = opacity * 0.2;
-          ctx.lineWidth = 1;
-          for (let r = 0; r < 3; r++) {
-            const ridgeScale = 0.4 + r * 0.2;
-            ctx.beginPath();
-            for (let i = 0; i <= bellSegments; i++) {
-              const t = i / bellSegments;
-              const angle = t * Math.PI;
-              const rx = centerX - bw * ridgeScale * Math.cos(angle);
-              const ry = centerY - bh * ridgeScale * Math.sin(angle);
-              const dataIdx = Math.min(Math.floor(t * len), len - 1);
-              const bump = (dataArray[dataIdx] * unitH) * 0.1 * ridgeScale;
-              const ny = -Math.sin(angle);
-              if (i === 0) ctx.moveTo(rx, ry + ny * bump);
-              else ctx.lineTo(rx, ry + ny * bump);
-            }
-            ctx.stroke();
-          }
-          ctx.globalAlpha = oldAlpha;
-
-          // --- Tentacles ---
-          const numTentacles = 9;
-          const tentacleMaxLen = baseSize * 1.6;
-          const tentacleSegments = 30;
-          const tentacleSpread = bw * 1.6;
-
-          ctx.lineWidth = 2;
-
-          for (let t = 0; t < numTentacles; t++) {
-            const tNorm = t / (numTentacles - 1); // 0 to 1
-            const anchorX = centerX + (tNorm - 0.5) * tentacleSpread;
-            const anchorY = centerY + bh * 0.05; // Just below the bell rim
-
-            // Each tentacle uses a portion of the frequency data
-            const dataStart = Math.floor((t / numTentacles) * len);
-            const dataEnd = Math.floor(((t + 1) / numTentacles) * len);
-
-            // Tentacle length varies by position (center ones are longer)
-            const centerFactor = 1 - Math.abs(tNorm - 0.5) * 1.2;
-            const tLen = tentacleMaxLen * (0.5 + centerFactor * 0.5);
-
-            // Average frequency for this tentacle's band
-            let avgFreq = 0;
-            for (let i = dataStart; i < dataEnd; i++) {
-              avgFreq += dataArray[i];
-            }
-            avgFreq /= Math.max(1, dataEnd - dataStart);
-            const freqIntensity = avgFreq / dataSize;
-
-            if (isRainbow) {
-              this.setRainbowIfEnabled(ctx, anchorX, anchorY, tLen, tLen, t * (len / numTentacles));
-            }
-
-            ctx.globalAlpha = opacity * (0.5 + centerFactor * 0.3);
-            ctx.beginPath();
-            ctx.moveTo(anchorX, anchorY);
-
-            for (let s = 1; s <= tentacleSegments; s++) {
-              const sNorm = s / tentacleSegments; // 0 to 1 along tentacle
-              const segY = anchorY + sNorm * tLen;
-
-              // Sinusoidal wave along the tentacle, reactive to audio
-              const waveFreq = 2.5 + t * 0.3;
-              const waveAmp = (10 + freqIntensity * 40) * sNorm;
-              const phaseOffset = t * 0.7 + time * 0.002;
-              const waveX = Math.sin(sNorm * Math.PI * waveFreq + phaseOffset) * waveAmp;
-
-              ctx.lineTo(anchorX + waveX, segY);
-            }
-            ctx.stroke();
-          }
-          ctx.globalAlpha = oldAlpha;
-
-          // --- Small dot details on bell rim ---
-          ctx.globalAlpha = opacity * 0.6;
-          const dotCount = 16;
-          for (let i = 0; i < dotCount; i++) {
-            const t = (i + 0.5) / dotCount;
-            const angle = t * Math.PI;
-            const dx = centerX - bw * Math.cos(angle);
-            const dy = centerY - bh * 0.08 * Math.sin(angle);
-            const dataIdx = Math.min(Math.floor(t * len), len - 1);
-            const dotSize = 1.5 + (dataArray[dataIdx] / dataSize) * 3;
-            ctx.beginPath();
-            ctx.arc(dx, dy, dotSize, 0, Math.PI * 2);
-            ctx.fill();
-          }
-
-          // Restore rotation transform
-          if (vsOptions.swimming && swimAngle !== 0) {
-            ctx.restore();
-          }
-
-          ctx.globalAlpha = 1;
-          ctx.lineCap = "butt";
-          break;
-        }
-      }
-    }} // end else (built-in switch)
-
-    ctx.shadowBlur = oldShadowBlur;
-    ctx.shadowColor = oldShadowColor;
-
-    // // Star rush particle effect
-    // this.updateStarRushParticles(time, vWidth, vHeight, dataArray, dynLight);
-
-    // Add floating title if enabled
-    const usingSubtitles = Toxen.background.storyboard?.getFloatingSubtitles();
-    const enabled = Toxen.background.storyboard?.getFloatingTitle();
-    const underline = Toxen.background.storyboard?.getFloatingTitleUnderline();
-    const reactive = Toxen.background.storyboard?.getFloatingTitleReactive();
-    const overrideVisualizer = Toxen.background.storyboard?.getFloatingTitleOverrideVisualizer();
-    const outlineColor = Toxen.background.storyboard?.getFloatingTitleOutlineColor() ?? "white";
-    const title = Toxen.background.storyboard?.getFloatingTitleText();
-    if (enabled && song && title) {
-      let shouldOverride = overrideVisualizer;
-      const subWithMultiplier = Toxen.isMiniplayer() ? 0.9 : 0.5; // Miniplayer should take up more, as text would be too small.
-      const _fontSize = (48 * (vWidth / 1280) * (usingSubtitles ? (subWithMultiplier * 1.2) : 1));
-
-      const fontSize = MathX.clamp(reactive ? _fontSize + (_fontSize - (_fontSize * this.dynamicDim * 2)) : _fontSize, _fontSize, _fontSize * 2);
-      // const font = `${fontSize}px Calibri`;
-      const font = `${fontSize}px Calibri Light`; // TODO: Make this a setting and customizable font
-      const fontColor = this.lastColor ?? '#fff';
-      const textHeight = fontSize;
-
-      // Text wrapping for subtitles - wrap at approximately half screen width
-      const maxLineWidth = vWidth * subWithMultiplier; // 50% of screen width
-      const textLines = usingSubtitles ? this.wrapText(ctx, title, maxLineWidth, font) : [title];
-      
-      // Calculate total text block dimensions
-      ctx.font = font;
-      const lineHeight = fontSize * 1.2; // Add some line spacing
-      const totalTextHeight = textLines.length * lineHeight;
-      const maxTextWidth = Math.max(...textLines.map(line => ctx.measureText(line).width));
-
-      let textX: number;
-      let textY: number;
-      // let boxY: number;
-
-      type TextPosition = ISong["floatingTitlePosition"];
-
-      const position: TextPosition = Toxen.background.storyboard?.getFloatingTitlePosition() ?? "center";
-      const isCenterType = style === VisualizerStyle.Center || style === VisualizerStyle.PulseWave || style === VisualizerStyle.Waveform;
-      const margin = 16;
-      
-      // Calculate base position for the text block center
-      let baseCenterX: number;
-      let baseCenterY: number;
-      
-      switch (position) {
-        default: // Also center
-          baseCenterX = vWidth / 2;
-          baseCenterY = vHeight / 2;
-          shouldOverride = isCenterType;
-          break;
-
-        case "left":
-          baseCenterX = margin + maxTextWidth / 2;
-          baseCenterY = vHeight / 2;
-          shouldOverride = isCenterType || style === VisualizerStyle.Sides;
-          break;
-
-        case "right":
-          baseCenterX = vWidth - margin - maxTextWidth / 2;
-          baseCenterY = vHeight / 2;
-          shouldOverride = isCenterType || style === VisualizerStyle.Sides;
-          break;
-
-        case "top":
-          baseCenterX = vWidth / 2;
-          baseCenterY = margin + totalTextHeight / 2;
-          shouldOverride = style === VisualizerStyle.Top || style === VisualizerStyle.TopAndBottom;
-          break;
-
-        case "bottom":
-          baseCenterX = vWidth / 2;
-          baseCenterY = vHeight - margin * 3 - totalTextHeight / 2;
-          shouldOverride = style === VisualizerStyle.Bottom || style === VisualizerStyle.TopAndBottom || style === VisualizerStyle.ProgressBar;
-          break;
-
-        case "top-left":
-          baseCenterX = margin + maxTextWidth / 2;
-          baseCenterY = margin + totalTextHeight / 2;
-          shouldOverride = style === VisualizerStyle.Top || style === VisualizerStyle.TopAndBottom || style === VisualizerStyle.Sides;
-          break;
-
-        case "top-right":
-          baseCenterX = vWidth - margin - maxTextWidth / 2;
-          baseCenterY = margin + totalTextHeight / 2;
-          shouldOverride = style === VisualizerStyle.Top || style === VisualizerStyle.TopAndBottom || style === VisualizerStyle.Sides;
-          break;
-
-        case "bottom-left":
-          baseCenterX = margin + maxTextWidth / 2;
-          baseCenterY = vHeight - margin - totalTextHeight / 2;
-          shouldOverride = style === VisualizerStyle.Bottom || style === VisualizerStyle.TopAndBottom || style === VisualizerStyle.ProgressBar || style === VisualizerStyle.Sides;
-          break;
-
-        case "bottom-right":
-          baseCenterX = vWidth - margin - maxTextWidth / 2;
-          baseCenterY = vHeight - margin - totalTextHeight / 2;
-          shouldOverride = style === VisualizerStyle.Bottom || style === VisualizerStyle.TopAndBottom || style === VisualizerStyle.ProgressBar || style === VisualizerStyle.Sides;
-          break;
-      }
-
-      // Before drawing, clear the area if needed
-      if (overrideVisualizer && shouldOverride) {
-        ctx.fillStyle = usedDimColor;
-        const clearX = baseCenterX - maxTextWidth / 2 - 5;
-        const clearY = baseCenterY - totalTextHeight / 2 - 5;
-        const clearWidth = maxTextWidth + 10;
-        const clearHeight = totalTextHeight + 10;
-        
-        ctx.clearRect(clearX, clearY, clearWidth, clearHeight);
-        ctx.fillRect(clearX, clearY, clearWidth, clearHeight);
-      }
-
-      // Draw each line of text
-      this.useAlpha(opacity, ctx => {
-        ctx.font = font;
-        
-        textLines.forEach((line, index) => {
-          const lineWidth = ctx.measureText(line).width;
-          textX = baseCenterX - lineWidth / 2; // Center each line
-          textY = baseCenterY - totalTextHeight / 2 + (index + 1) * lineHeight - lineHeight * 0.3; // Adjust for proper vertical centering
-          
-          if (underline && index === textLines.length - 1) {
-            // Add underline to the last line only
-            ctx.strokeStyle = outlineColor;
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(textX, textY + 10);
-            ctx.lineTo(textX + lineWidth, textY + 10);
-            ctx.stroke();
-          }
-          
-          // Add text with customizable outline
-          ctx.fillStyle = fontColor;
-          ctx.fillText(line, textX, textY);
-          ctx.lineWidth = 1;
-          ctx.strokeStyle = outlineColor;
-          ctx.strokeText(line, textX, textY);
-        });
-      });
-    }
-
-    if (storyboardCallbacks.length > 0) {
-      for (const callback of storyboardCallbacks) {
-        callback();
-      }
-    }
-
-    // Reset storyboard specifics after drawing.
-    Toxen.background.storyboard.resetData();
+    return dataArray;
   }
 
   /**
-   * Wraps text to fit within a specified width, breaking on words when possible
-   * @param ctx Canvas context for measuring text
-   * @param text Text to wrap
-   * @param maxWidth Maximum width for each line
-   * @param font Font to use for measuring
-   * @returns Array of text lines
+   * Average bar height as a fraction of the maximum, used for the dynamic dim and by styles that
+   * react to loudness.
    */
-  private wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, font: string): string[] {
-    const originalFont = ctx.font;
-    ctx.font = font;
-    
-    const words = text.split(' ');
-    const lines: string[] = [];
-    let currentLine = '';
+  private getDynamicLight(dataArray: Uint8Array, len: number, intensityMultiplier: number, power: number) {
+    const maxHeight = ((intensityMultiplier * this.overlayCanvas.height * 0.3) ^ power ^ power) || 1;
+    const unitH = maxHeight / DATA_SIZE;
 
-    for (let i = 0; i < words.length; i++) {
-      const word = words[i];
-      const testLine = currentLine + (currentLine ? ' ' : '') + word;
-      const testWidth = ctx.measureText(testLine).width;
-
-      if (testWidth > maxWidth && currentLine) {
-        lines.push(currentLine);
-        currentLine = word;
-      } else {
-        currentLine = testLine;
-      }
+    let averageHeight = 0;
+    for (let i = 0; i < len; i++) {
+      averageHeight += (dataArray[i] * unitH);
     }
+    averageHeight /= len;
 
-    if (currentLine) {
-      lines.push(currentLine);
-    }
-
-    ctx.font = originalFont;
-    return lines.length > 0 ? lines : [text]; // Return original text if wrapping fails
+    return Math.min(averageHeight, maxHeight) / maxHeight;
   }
 
-  /**
-   * Gets the bar array object.
-   */
-  private getBar(barX: number, barY: number, barWidth: number, barHeight: number): [number, number, number, number] {
-    return [
-      barX,
-      barY,
-      barWidth,
-      barHeight // Should adjust height appropriately depending on visualizer intensity. Not yet implemented.
-    ];
-  }
-
-  private getCycleIncrementer() {
-    return 360 / this.curLen;
-  }
-
-  private setRainbow(ctx: CanvasRenderingContext2D, barX: number, barY: number, barWidth: number, barHeight: number, i: number, cycleIncrementer?: number, options?: {
-    top?: boolean;
-    bottom?: boolean;
-  }, customHandler?: (ctx: CanvasRenderingContext2D, rainbowColor: string) => void) {
-    const rainbowColor = `hsl(${(cycleIncrementer ?? this.getCycleIncrementer()) * i + (Toxen.musicPlayer.media.currentTime * 50)}, 100%, 50%)`;
-    if (customHandler) {
-      return customHandler(ctx, rainbowColor);
-    }
-
-    ctx.shadowColor = rainbowColor;
-
-    const grd = ctx.createLinearGradient(barX, barY, barX + barWidth, barY + barHeight);
-    if (!options) {
-      grd.addColorStop(0, rainbowColor);
-    }
-    else {
-      if (options.top) {
-        grd.addColorStop(0, "white");
-        grd.addColorStop(0.35, rainbowColor);
-      }
-      else {
-        grd.addColorStop(0, rainbowColor);
-      }
-      if (options.bottom) {
-        grd.addColorStop(0.65, rainbowColor);
-        grd.addColorStop(1, "white");
-      }
-      else {
-        grd.addColorStop(1, rainbowColor);
-      }
-    }
-    ctx.fillStyle = grd;
-    ctx.strokeStyle = grd;
-  }
-
-  /**
-   * Toggles on Rainbow colors only if `Settings.get("visualizerRainbowMode")` is `true`
-   */
-  private setRainbowIfEnabled(ctx: CanvasRenderingContext2D, barX: number, barY: number, barWidth: number, barHeight: number, i: number, cycleIncrementer?: number, options?: {
-    top?: boolean;
-    bottom?: boolean;
-  }, customHandler?: (ctx: CanvasRenderingContext2D, rainbowColor: string) => void) {
-    if (Toxen.background.storyboard.getVisualizerRainbow()) {
-      this.setRainbow(ctx, barX, barY, barWidth, barHeight, i, cycleIncrementer, options, customHandler);
-    }
-  }
-
-  /**
-   * Change the globalAlpha value temporarily on a Context2D object and revert back to normal when finished.
-   * @param alpha Alpha to use temporarily
-   * @param callback Code to execute using the temporary alpha.
-   * @param ctx Context to use. If omitted, uses `this.ctx`.
-   */
-  private useAlpha(alpha: number, callback: (ctx: CanvasRenderingContext2D) => void, ctx: CanvasRenderingContext2D = this.ctx) {
-    let oldAlpha = ctx.globalAlpha;
-    ctx.globalAlpha = alpha;
-    callback(ctx);
-    ctx.globalAlpha = oldAlpha;
-  }
-
-  /**
-   * Change the shadow settings temporarily on a Context2D object and revert back to normal when finished.
-   * @param blur Shadow blur to use temporarily
-   * @param color Shadow color to use temporarily
-   * @param callback Code to execute using the temporary shadow settings.
-   * @param ctx Context to use. If omitted, uses `this.ctx`.
-   */
-  private useShadow({
-    blur = 0,
-    color = "transparent",
-  }: {
-    blur?: number;
-    color?: string;
-  }, callback: (ctx: CanvasRenderingContext2D) => void, ctx: CanvasRenderingContext2D = this.ctx) {
-    const oldBlur = ctx.shadowBlur;
-    const oldColor = ctx.shadowColor
-
-    ctx.shadowBlur = blur;
-    ctx.shadowColor = color;
-    callback(ctx);
-    ctx.shadowBlur = oldBlur;
-    ctx.shadowColor = oldColor;
-  }
-
-  /**
-   * Updates and renders the star rush particle effect
-   */
-  private updateStarRushParticles(time: number, vWidth: number, vHeight: number, dataArray: Uint8Array, dynLight: number) {
-    const starRushEnabled = Toxen.background.storyboard.getStarRushEffect();
-    if (!starRushEnabled) return;
-
-    const ctx = this.ctx;
-    const centerX = vWidth / 2;
-    const centerY = vHeight / 2;
-    const intensity = Toxen.background.storyboard.getStarRushIntensity();
-    const visualizerIntensity = Toxen.background.storyboard.getVisualizerIntensity();
-    
-    // Calculate average audio intensity for particle spawning
-    const avgAudio = dataArray.reduce((sum, val) => sum + val, 0) / dataArray.length;
-    const audioIntensity = (avgAudio / 255) * intensity;
-    
-    // Spawn new particles based on audio intensity and time
-    const timeSinceLastSpawn = time - this.lastParticleSpawn;
-    const spawnRate = Math.max(16, 100 - (audioIntensity * 80)); // Spawn more frequently with louder audio
-    
-    if (timeSinceLastSpawn > spawnRate) {
-      const particlesToSpawn = Math.floor(1 + audioIntensity * 3); // Spawn more particles with louder audio
-      
-      for (let i = 0; i < particlesToSpawn; i++) {
-        this.createStarRushParticle(centerX, centerY, audioIntensity, visualizerIntensity);
-      }
-      
-      this.lastParticleSpawn = time;
-    }
-    
-    // Update existing particles
-    for (let i = this.starRushParticles.length - 1; i >= 0; i--) {
-      const particle = this.starRushParticles[i];
-      this.updateStarRushParticle(particle, time, visualizerIntensity);
-      
-      // Remove particles that are too old or off-screen
-      if (particle.age >= particle.maxAge || 
-          particle.x < -50 || particle.x > vWidth + 50 || 
-          particle.y < -50 || particle.y > vHeight + 50) {
-        this.starRushParticles.splice(i, 1);
-      }
-    }
-    
-    // Render all particles
-    this.renderStarRushParticles(ctx);
-  }
-
-  /**
-   * Creates a new star rush particle
-   */
-  private createStarRushParticle(centerX: number, centerY: number, audioIntensity: number, visualizerIntensity: number) {
-    const angle = Math.random() * Math.PI * 2; // Random direction
-    // Initial speed affected by both audio and visualizer intensity
-    const baseSpeed = 0.5 + Math.random() * 1.5;
-    const visualizerSpeedMultiplier = 0.5 + (visualizerIntensity * 0.5); // 0.5x to 1.5x based on visualizer intensity
-    const initialSpeed = baseSpeed * visualizerSpeedMultiplier;
-    const maxAge = 3000 + Math.random() * 2000; // 3-5 seconds lifetime
-    
-    // Calculate offset distance from center in the direction of travel
-    const offsetDistance = 20 + Math.random() * 30; // Start particles 20-50 pixels from center
-    const startOffsetX = Math.cos(angle) * offsetDistance;
-    const startOffsetY = Math.sin(angle) * offsetDistance;
-    
-    const particle: StarRushParticle = {
-      x: centerX + startOffsetX, // Start offset in the direction of travel
-      y: centerY + startOffsetY,
-      vx: Math.cos(angle) * initialSpeed,
-      vy: Math.sin(angle) * initialSpeed,
-      age: 0,
-      maxAge: maxAge,
-      size: 1 + Math.random() * 2 + (audioIntensity * 2), // Size varies with audio
-      opacity: 0.8 + Math.random() * 0.2,
-      acceleration: 1.002 + audioIntensity * 0.003 + visualizerIntensity * 0.001 // Particles accelerate more with audio and visualizer intensity
-    };
-    
-    this.starRushParticles.push(particle);
-  }
-
-  /**
-   * Updates a single star rush particle
-   */
-  private updateStarRushParticle(particle: StarRushParticle, time: number, visualizerIntensity: number) {
-    // Age the particle
-    particle.age += 16; // Assuming ~60fps (16ms per frame)
-    
-    // Calculate distance from center for acceleration
-    const dx = particle.x - (this.canvas.width / 2);
-    const dy = particle.y - (this.canvas.height / 2);
-    const distanceFromCenter = Math.sqrt(dx * dx + dy * dy);
-    
-    // Accelerate particles as they move outward (the further, the faster)
-    // Visualizer intensity affects both base acceleration and distance-based acceleration
-    const baseAccelerationMultiplier = 1 + (distanceFromCenter * 0.00005);
-    const visualizerAccelerationBoost = 1 + (visualizerIntensity * 0.002); // Up to 20% boost from visualizer intensity
-    const accelerationMultiplier = baseAccelerationMultiplier * visualizerAccelerationBoost;
-    
-    particle.vx *= particle.acceleration * accelerationMultiplier;
-    particle.vy *= particle.acceleration * accelerationMultiplier;
-    
-    // Update position
-    particle.x += particle.vx;
-    particle.y += particle.vy;
-    
-    // Fade out as particle ages
-    const ageRatio = particle.age / particle.maxAge;
-    particle.opacity = Math.max(0, 0.8 * (1 - ageRatio));
-  }
-
-  /**
-   * Renders all star rush particles
-   */
-  private renderStarRushParticles(ctx: CanvasRenderingContext2D) {
-    ctx.save();
-    
-    for (const particle of this.starRushParticles) {
-      if (particle.opacity <= 0) continue;
-      
-      ctx.save();
-      ctx.globalAlpha = particle.opacity;
-      
-      // Create a radial gradient for the particle
-      const gradient = ctx.createRadialGradient(
-        particle.x, particle.y, 0,
-        particle.x, particle.y, particle.size
-      );
-      gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-      gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.6)');
-      gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-      
-      ctx.fillStyle = gradient;
-      ctx.beginPath();
-      ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-      ctx.fill();
-      
-      // Add a small bright center dot
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-      ctx.beginPath();
-      ctx.arc(particle.x, particle.y, particle.size * 0.3, 0, Math.PI * 2);
-      ctx.fill();
-      
-      ctx.restore();
-    }
-
-    ctx.restore();
-  }
-
-  /**
-   * Ensures the custom rainfall image (if any) is loaded and cached.
-   * Reloads whenever the resolved image path changes.
-   */
-  private ensureRainImage(imagePath: string | null) {
-    if (imagePath === this.rainImagePath) return;
-    this.rainImagePath = imagePath;
-    this.rainImage = null;
-    this.rainImageLoaded = false;
-
-    if (!imagePath) return;
-
-    const img = new Image();
-    img.src = Settings.isRemote() ? User.appendAuth(imagePath) : imagePath;
-    img.onload = () => {
-      // Only apply if the path hasn't changed since the load started.
-      if (this.rainImagePath === imagePath) {
-        this.rainImage = img;
-        this.rainImageLoaded = true;
-      }
-    };
-    img.onerror = () => {
-      if (this.rainImagePath === imagePath) {
-        this.rainImage = null;
-        this.rainImageLoaded = false;
-      }
-    };
-  }
-
-  /**
-   * Updates and renders the rainfall particle effect.
-   */
-  private updateRainfallParticles(time: number, vWidth: number, vHeight: number) {
-    const enabled = Toxen.background.storyboard.getRainfallEffect();
-    if (!enabled) {
-      if (this.rainfallParticles.length > 0) this.rainfallParticles = [];
-      return;
-    }
-
-    const ctx = this.ctx;
-    const frequency = Math.max(0.1, Toxen.background.storyboard.getRainfallFrequency());
-    const speed = Math.max(0.1, Toxen.background.storyboard.getRainfallSpeed());
-    const imagePath = Toxen.background.storyboard.getRainfallImage();
-    const imageScale = Math.max(0.1, Toxen.background.storyboard.getRainfallImageScale());
-
-    this.ensureRainImage(imagePath);
-
-    // Spawn new drops based on frequency. Higher frequency => shorter interval and more drops per batch.
-    const spawnInterval = Math.max(8, 60 / frequency);
-    if (time - this.lastRainSpawn > spawnInterval) {
-      const dropsToSpawn = Math.max(1, Math.round(frequency));
-      for (let i = 0; i < dropsToSpawn; i++) {
-        this.createRainfallParticle(vWidth);
-      }
-      this.lastRainSpawn = time;
-    }
-
-    // Update existing drops and cull those that fall off-screen.
-    for (let i = this.rainfallParticles.length - 1; i >= 0; i--) {
-      const p = this.rainfallParticles[i];
-      p.y += p.vy * speed;
-      if (p.y - p.length > vHeight + 20) {
-        this.rainfallParticles.splice(i, 1);
-      }
-    }
-
-    this.renderRainfallParticles(ctx, imageScale);
-  }
-
-  /**
-   * Creates a single rainfall drop at a random horizontal position above the screen.
-   */
-  private createRainfallParticle(vWidth: number) {
-    const size = 1 + Math.random() * 1.5;
-    const particle: RainfallParticle = {
-      x: Math.random() * vWidth,
-      y: -(Math.random() * 40) - 10, // start slightly above the top edge
-      vy: 4 + Math.random() * 4, // base fall speed (multiplied by the speed setting)
-      length: 8 + Math.random() * 12, // streak length for the default drop
-      size: size,
-      opacity: 0.4 + Math.random() * 0.4,
-    };
-    this.rainfallParticles.push(particle);
-  }
-
-  /**
-   * Renders all rainfall drops, either as the custom image or as the default streaks.
-   */
-  private renderRainfallParticles(ctx: CanvasRenderingContext2D, imageScale: number) {
-    const useImage = this.rainImageLoaded && this.rainImage;
-    ctx.save();
-
-    for (const p of this.rainfallParticles) {
-      if (p.opacity <= 0) continue;
-      ctx.globalAlpha = p.opacity;
-
-      if (useImage) {
-        const img = this.rainImage;
-        const baseWidth = p.size * 8; // reference size so drops aren't microscopic
-        const width = baseWidth * imageScale;
-        const aspect = img.naturalHeight > 0 ? img.naturalWidth / img.naturalHeight : 1;
-        const height = aspect > 0 ? width / aspect : width;
-        ctx.drawImage(img, p.x - width / 2, p.y - height / 2, width, height);
-      } else {
-        // Default rain drop: a thin vertical streak.
-        ctx.strokeStyle = 'rgba(200, 220, 255, 0.8)';
-        ctx.lineWidth = p.size;
-        ctx.beginPath();
-        ctx.moveTo(p.x, p.y - p.length);
-        ctx.lineTo(p.x, p.y);
-        ctx.stroke();
-      }
-    }
-
-    ctx.restore();
-  }
-
-  private initializeAudioAnalyser() {
-    const audioFile = Toxen.musicPlayer.media;
-    const audioContext = new AudioContext();
-    const source = audioContext.createMediaElementSource(audioFile);
-    const analyser = audioContext.createAnalyser();
-    analyser.fftSize = Visualizer.DEFAULT_FFTSIZE;
-    
-    // Store references for audio effects to use
-    this.audioContext = audioContext;
-    this.sourceNode = source;
-    
-    // Connect source -> analyser for visualization
-    source.connect(analyser);
-    
-    // Create a gain node for effects processing
-    this.effectsGainNode = audioContext.createGain();
-    
-    // Connect source -> analyser for visualization
-    source.connect(analyser);
-    
-    // Connect source -> effects gain -> destination for audio output
-    source.connect(this.effectsGainNode);
-    this.effectsGainNode.connect(audioContext.destination);
-    
-    this.audioData = analyser;
-    
-    // Initialize audio effects if they exist, but don't let them break audio flow
-    setTimeout(() => {
-      if (Toxen.audioEffects && !Toxen.audioEffects.initialized) {
-        try {
-          Toxen.audioEffects.connectToSharedAudioGraph(audioContext, source, this.effectsGainNode);
-        } catch (error) {
-          console.warn('Audio effects failed to initialize, using direct audio path:', error);
-          // Ensure audio still flows even if effects fail
-        }
-      }
-    }, 100);
-  }
-
-
-  public static readonly DEFAULT_FFTSIZE = 1024;
-  private frequencyBuffer: Uint8Array<ArrayBuffer> | null = null;
-  private getFrequencyData(fftSize?: number) {
-    if (fftSize && this.audioData.fftSize != fftSize) {
-      this.audioData.fftSize = fftSize;
-      this.frequencyBuffer = null; // Invalidate buffer on size change
-    }
-    const bufferLength = this.audioData.frequencyBinCount;
-    if (!this.frequencyBuffer || this.frequencyBuffer.length !== bufferLength) {
-      this.frequencyBuffer = new Uint8Array(bufferLength);
-    }
-    this.audioData.getByteFrequencyData(this.frequencyBuffer);
-
-    return this.frequencyBuffer;
-  }
-
-  private audioData: AnalyserNode;
-  private audioContext: AudioContext | null = null;
-  private sourceNode: MediaElementAudioSourceNode | null = null;
-  private effectsGainNode: GainNode | null = null;
+  public static readonly DEFAULT_FFTSIZE = DEFAULT_FFTSIZE;
 
   private stopped = true;
   public stop() {
     this.stopped = true;
-    // Clear star rush particles when stopping
-    this.starRushParticles = [];
-    // Clear rainfall particles when stopping
-    this.rainfallParticles = [];
+    this.layer.clearParticles();
+    this.bridge.clear();
   }
   public isStopped() {
     return this.stopped;
@@ -2933,7 +502,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
 
   public start() {
     this.update();
-    this.initializeAudioAnalyser();
+    if (!this.analyser.initialized) this.analyser.initialize(Toxen.musicPlayer.media);
     this.stopped = false;
     this.loop(0);
   }
@@ -2944,31 +513,83 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
         Toxen.theme.styles["accentColor"].value
       );
     }
-    
+
     return "#ffffff";
   };
 
+  /** Lower layer. Owned by the worker once transferred, so it has no main-thread context then. */
   public canvas: HTMLCanvasElement;
-  public width: number = 0;
-  public height: number = 0;
+  private layerCtx: CanvasRenderingContext2D;
+
+  public overlayCanvas: HTMLCanvasElement;
+  private overlayCtx: CanvasRenderingContext2D;
+
   public left: number = 0;
   public top: number = 0;
-  public ctx: CanvasRenderingContext2D;
 
-  public length: Uint8Array;
+  private layerRef = React.createRef<HTMLCanvasElement>();
+  private overlayRef = React.createRef<HTMLCanvasElement>();
 
   componentDidMount() {
-    window.addEventListener("resize", this.updateThis);
-  }
+    this.canvas = this.layerRef.current;
+    this.overlayCanvas = this.overlayRef.current;
 
-  componentDidUpdate() { }
+    const useWorker = (Settings.get("visualizerUseWorker") ?? true) && WorkerBridge.isSupported();
+    if (!useWorker || !this.bridge.attach(this.canvas)) {
+      this.layerCtx = this.canvas.getContext("2d");
+    }
+    this.overlayCtx = this.overlayCanvas.getContext("2d");
+
+    this.measure();
+    window.addEventListener("resize", this.updateThis);
+
+    // The canvas is sized from CSS, so it can change without a window resize: --bodyHeight, the
+    // side panel and the miniplayer all move it.
+    if (typeof ResizeObserver !== "undefined") {
+      this.resizeObserver = new ResizeObserver(() => this.measure());
+      this.resizeObserver.observe(this.overlayCanvas);
+    }
+  }
 
   componentWillUnmount() {
     this.stop();
+    this.bridge.dispose();
+    this.resizeObserver?.disconnect();
     window.removeEventListener("resize", this.updateThis);
   }
 
+  private resizeObserver: ResizeObserver;
+
+  /**
+   * The lower canvas may belong to the worker, in which case its backing store can only be sized
+   * from there.
+   */
+  private measure() {
+    const overlay = this.overlayCanvas;
+    if (!overlay) return;
+
+    const box = overlay.getBoundingClientRect();
+    const width = Math.round(box.width);
+    const height = Math.round(box.height);
+
+    this.left = box.left;
+    this.top = box.top;
+
+    // Assigning width or height clears the canvas, so only do it on an actual change.
+    if (overlay.width === width && overlay.height === height) return;
+
+    overlay.width = width;
+    overlay.height = height;
+
+    if (this.bridge.isActive) this.bridge.resize(width, height);
+    else if (this.canvas) {
+      this.canvas.width = width;
+      this.canvas.height = height;
+    }
+  }
+
   update() {
+    this.measure();
     this.setState({});
   }
 
@@ -2977,21 +598,8 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
   render() {
     return (
       <div>
-        <canvas className="audio-visualizer" ref={ref => {
-          this.canvas = ref;
-          if (ref && Toxen.musicControls && Toxen.musicControls.progressBar && Toxen.musicControls.progressBar.progressBarObject) {
-            this.ctx = ref.getContext("2d");
-            let box = ref.getBoundingClientRect();
-
-            this.width = ref.width = box.width;
-            this.height = ref.height = box.height;
-
-            this.left = box.left;
-            this.top = box.top;
-          }
-        }}>
-
-        </canvas>
+        <canvas className="audio-visualizer" ref={this.layerRef}></canvas>
+        <canvas className="audio-visualizer audio-visualizer-overlay" ref={this.overlayRef}></canvas>
       </div>
     )
   }

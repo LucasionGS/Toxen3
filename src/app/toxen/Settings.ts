@@ -74,6 +74,7 @@ export default class Settings {
       remoteSyncOnSongEdit: false,
       hideOffScreenSongElements: true,
       lowPerformanceMode: false,
+      visualizerUseWorker: true,
       starRushEffect: false,
       starRushIntensity: 1,
       rainfallEffect: false,
@@ -239,7 +240,11 @@ export default class Settings {
   public static get<T extends keyof ISettings>(key: T): ISettings[T] | undefined;
   public static get<T extends string, ValueType = any>(key: T): ValueType | undefined;
   public static get<T extends keyof ISettings>(key: T, fallback?: ISettings[T]): ISettings[T] | undefined {
-    // if (Settings.data && Settings.data.hasOwnProperty(key)) return Settings.data[key];
+    // Almost every key is a plain property. Skipping the split keeps this off the visualizer's
+    // hot path, where it is called dozens of times per frame.
+    if (Settings.data && (key as string).indexOf(".") === -1) {
+      return (Settings.data as any)[key] ?? fallback;
+    }
     return JSONX.getObjectValue(Settings.data, key) ?? fallback;
   }
 
@@ -391,6 +396,10 @@ export interface ISettings {
    * mobile devices.
    */
   lowPerformanceMode: boolean;
+  /**
+   * Render the visualizer on a worker thread via OffscreenCanvas. Requires a restart to change.
+   */
+  visualizerUseWorker: boolean;
 
   // Background Effects
   starRushEffect: boolean;

@@ -31,12 +31,29 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
     return this.state.song;
   };
 
+  private frameSettings: ISong = null;
+
+  /**
+   * Resolves the effective song settings once for the frame about to be drawn. Every `get*`
+   * getter below reaches for them, and resolving rebuilds the full ISong each time.
+   */
+  public beginFrame() {
+    this.frameSettings = this.state.song
+      ? this.state.song.getEffectiveSettings(Toxen.playlist?.name)
+      : ({} as ISong);
+  }
+
+  public endFrame() {
+    this.frameSettings = null;
+  }
+
   /**
    * Gets the effective settings for the current song, considering playlist-specific overrides
    */
   public getEffectiveSongSettings(): ISong {
+    if (this.frameSettings) return this.frameSettings;
     if (!this.state.song) return {} as ISong;
-    
+
     // Get the current playlist and use it to get effective settings
     const currentPlaylist = Toxen.playlist;
     return this.state.song.getEffectiveSettings(currentPlaylist?.name);

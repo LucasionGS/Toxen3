@@ -7,8 +7,16 @@ This file contains the change logs for Toxen.
 
 ## Changes
 
+- **Visualizer Renders On Its Own Thread** - The visualizer is now drawn separately from the rest of the app, so the interface stays responsive while it runs. Toxen falls back to the old behaviour on its own if your system doesn't support it.
+  - This can be turned off in `Settings > Performance > Render Visualizer On A Separate Thread`.
+- **Smoother Interface During Playback** - The background pulse and the progress bar colour no longer force the interface to redraw itself on every frame.
 - **More Visualizer Customization Options** - Added Y-Axis customization for `Waveform`
 - **No more Font Awesome** - Replaced all remaining Font Awesome icons with Tabler Icons.
+
+## Boring stuff
+
+- The visualizer was split from one 3000 line file into a registry of individual styles, and it does less repeated work each frame.
+- Added a frame timing tool behind advanced settings for measuring visualizer performance.
 
 <!-- VERSION: 2.9.1 -->
 ## 2.9.1 - 27-06-2026

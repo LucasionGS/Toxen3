@@ -84,11 +84,19 @@ export default function Background(props: BackgroundProps) {
 function BackgroundImage(props: { ToxenMax: string, backgroundObject: BackgroundController }) {
   const { ToxenMax, backgroundObject } = props;
 
-  const [dim, setDim] = React.useState<number>(0);
-  backgroundObject.updateDimScale = setDim;
-  
+  const imageRef = React.useRef<HTMLImageElement>(null);
+  const lastScale = React.useRef(1);
+
+  // The visualizer calls this every frame. Writing the transform directly keeps it out of React,
+  // which would otherwise reconcile this component 60 times a second.
+  backgroundObject.updateDimScale = (dimScale: number) => {
+    const scale = dimScale > 0 ? 1 + (dimScale / 4) : 1;
+    if (scale === lastScale.current) return;
+    lastScale.current = scale;
+    if (imageRef.current) imageRef.current.style.transform = `scale(${scale})`;
+  };
+
   return (<img // hidden={this.state.image ? false : true}
-    className="toxen-background-image" src={backgroundObject.getBackground() || ToxenMax} alt="background" style={{
-      transform: dim > 0 ? `scale(${1 + (dim / 4)})` : "scale(1)"
-    }} />);
+    ref={imageRef}
+    className="toxen-background-image" src={backgroundObject.getBackground() || ToxenMax} alt="background" />);
 }
