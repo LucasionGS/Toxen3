@@ -29,6 +29,54 @@
   }
 }
 
+/* ---------- Wheel scroll effect ---------- */
+
+// How far a row at the very edge of the scrollport is pulled back from the
+// centred row. Multiplied by --wheel-intensity, set from the settings.
+$wheel-depth: 52px;
+$wheel-tilt: 11deg;
+$wheel-shrink: 0.09;
+$wheel-fade: 0.45;
+
+// Sampled off a circle so the rows trace a curve instead of a V. The key is the
+// animation stop, the value how far that stop sits from the vertical centre.
+$wheel-arc: (
+  0: 1, 5: 0.75, 10: 0.56, 20: 0.3, 30: 0.13, 40: 0.03,
+  50: 0,
+  60: 0.03, 70: 0.13, 80: 0.3, 90: 0.56, 95: 0.75, 100: 1
+);
+
+@keyframes songWheelArc {
+  @each $stop, $factor in $wheel-arc {
+    #{$stop}% {
+      transform:
+        perspective(1000px)
+        translateX(calc(#{$wheel-depth} * var(--wheel-intensity, 1) * #{-$factor}))
+        rotateY(calc(#{$wheel-tilt} * var(--wheel-intensity, 1) * #{$factor}))
+        scale(calc(1 - #{$wheel-shrink * $factor} * var(--wheel-intensity, 1)));
+      opacity: #{1 - $wheel-fade * $factor};
+    }
+  }
+}
+
+// Driven entirely by the scroll position of the sidepanel, so the curve costs
+// nothing per frame. Browsers without scroll-driven animations keep a flat list.
+@supports (animation-timeline: view()) {
+  body.song-wheel .song-element-container {
+    transform-origin: right center;
+    backface-visibility: hidden;
+    animation: songWheelArc linear both;
+    animation-timeline: view(block);
+    animation-range: cover 0% cover 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.song-wheel .song-element-container {
+    animation: none;
+  }
+}
+
 // Animation delays for staggered song element appearance
 .song-element-permadiv {
   --animation-index: 0;

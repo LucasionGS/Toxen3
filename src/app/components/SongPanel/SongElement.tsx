@@ -10,51 +10,45 @@ import ImageCache from '../../toxen/ImageCache';
 import SongElementController from '../../toxen/controllers/SongElementController';
 import { useController } from '../../lib/useController';
 
-function SongElementDiv(props: { controller: SongElementController }) {
-  /// Observer object is cool and all but holy shit it makes this laggy
-  // const [ref, observer] = useIntersection({
-  //   root: Toxen.sidePanel?.containerRef?.current,
-  //   threshold: 1,
-  //   rootMargin: "-128px 256px 0px 256px",
-  // });
-
-  const { controller } = props;
-  let song = controller.song;
-  
-  // Use cached thumbnail instead of full background image
+/**
+ * Loads the cached thumbnail for a song's background, if thumbnail caching is
+ * enabled. Returns `null` when there is nothing to show (no background, caching
+ * disabled, or the load failed).
+ */
+function useSongThumbnail(song: Song) {
   const [thumbnailUrl, setThumbnailUrl] = React.useState<string | null>(null);
   const [isLoadingThumbnail, setIsLoadingThumbnail] = React.useState(false);
-  
+
   React.useEffect(() => {
     let isMounted = true;
-    
+
     const loadThumbnail = async () => {
       if (!song.backgroundFile()) {
         setThumbnailUrl(null);
         setIsLoadingThumbnail(false);
         return;
       }
-      
+
       // Check if thumbnail caching is enabled
       if (!Settings.get("enableThumbnailCache", true)) {
         setThumbnailUrl(null);
         setIsLoadingThumbnail(false);
         return;
       }
-      
+
       setIsLoadingThumbnail(true);
-      
+
       try {
         const bgFile = User.appendAuth(`${song.backgroundFile()}?h=${song.hash}`);
         const imageCache = ImageCache.getInstance();
-        
+
         // Get thumbnail with appropriate size for song list items
         const thumbnail = await imageCache.getThumbnail(
-          bgFile, 
-          song.hash, 
+          bgFile,
+          song.hash,
           { width: 160, height: 90 } // Optimized size for song list
         );
-        
+
         if (isMounted) {
           setThumbnailUrl(thumbnail);
           setIsLoadingThumbnail(false);
@@ -67,14 +61,31 @@ function SongElementDiv(props: { controller: SongElementController }) {
         }
       }
     };
-    
+
     loadThumbnail();
-    
+
     return () => {
       isMounted = false;
     };
-  }, [song.backgroundFile(), song.hash]);
-  
+  }, [song, song.backgroundFile(), song.hash]);
+
+  return { thumbnailUrl, isLoadingThumbnail };
+}
+
+function SongElementDiv(props: { controller: SongElementController }) {
+  /// Observer object is cool and all but holy shit it makes this laggy
+  // const [ref, observer] = useIntersection({
+  //   root: Toxen.sidePanel?.containerRef?.current,
+  //   threshold: 1,
+  //   rootMargin: "-128px 256px 0px 256px",
+  // });
+
+  const { controller } = props;
+  const song = controller.song;
+
+  // Use cached thumbnail instead of full background image
+  const { thumbnailUrl, isLoadingThumbnail } = useSongThumbnail(song);
+
   let classes = ["song-element", controller.selected ? "selected" : null].filter(a => a);
   
   // Add loading class if thumbnail is being loaded
@@ -159,42 +170,45 @@ function SongElementDiv(props: { controller: SongElementController }) {
 
 
 interface SongElementProps {
+  /** The song this row renders. All displayed data is derived from it. */
   song: Song;
-  playing?: boolean;
 }
 
-export default function SongElement(props: SongElementProps) {
+/**
+ * A single row in the song list. Everything it shows is derived from the
+ * {@link Song} it is given; imperative updates (playing state, progress bar,
+ * selection) come through the {@link SongElementController} it registers on
+ * that song as `song.currentElement`.
+ */
+export default function SongElement({ song }: SongElementProps) {
+  // One controller per song; a row reused for a different song gets a fresh one.
   const controller = useMemo(
-    () => new SongElementController(props.song, props.playing ?? false),
-    // Controller identity is fixed for the lifetime of this element.
-    []
+    () => new SongElementController(song, song.isPlaying()),
+    [song]
   );
   useController(controller);
 
   // Register/unregister this element as the song's current element.
   useEffect(() => {
-    props.song.currentElement = controller;
+    song.currentElement = controller;
     return () => {
-      if (props.song.currentElement === controller) {
-        props.song.currentElement = null;
+      if (song.currentElement === controller) {
+        song.currentElement = null;
       }
     };
-  }, [controller]);
+  }, [song, controller]);
 
-  if (Settings.isRemote() || Settings.get("hideOffScreenSongElements")) {
-    return (
-      <div className="song-element-permadiv" ref={ref => controller.divPermanentElement = ref}>
+  const virtualize = Settings.isRemote() || Settings.get("hideOffScreenSongElements");
+
+  return (
+    <div className="song-element-permadiv" ref={ref => controller.divPermanentElement = ref}>
+      {virtualize ? (
         <RenderIfVisible defaultHeight={64} visibleOffset={500}>
           <SongElementDiv controller={controller} />
         </RenderIfVisible>
-      </div>
-    );
-  }
-  else {
-    return (
-      <div className="song-element-permadiv" ref={ref => controller.divPermanentElement = ref}>
+      ) : (
         <SongElementDiv controller={controller} />
-      </div>
-    );
-  }
+      )}
+    </div>
+  );
 }

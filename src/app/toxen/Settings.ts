@@ -74,6 +74,8 @@ export default class Settings {
       remoteSyncOnSongEdit: false,
       hideOffScreenSongElements: true,
       lowPerformanceMode: false,
+      songWheelEffect: false,
+      songWheelIntensity: 1,
       visualizerUseWorker: true,
       starRushEffect: false,
       starRushIntensity: 1,
@@ -400,6 +402,16 @@ export interface ISettings {
    * Render the visualizer on a worker thread via OffscreenCanvas. Requires a restart to change.
    */
   visualizerUseWorker: boolean;
+
+  /**
+   * Curve the track list as it scrolls, so rows arc away from the vertical
+   * centre of the panel. Ignored while {@link lowPerformanceMode} is on.
+   */
+  songWheelEffect: boolean;
+  /**
+   * Multiplier for how pronounced the track list curve is. `1` is the default.
+   */
+  songWheelIntensity: number;
 
   // Background Effects
   starRushEffect: boolean;

@@ -495,6 +495,12 @@ export class Toxen {
 
     document.body.classList.toggle("advanced", Settings.isAdvanced());
 
+    document.body.classList.toggle(
+      "song-wheel",
+      (Settings.get("songWheelEffect") ?? false) && !Settings.get("lowPerformanceMode")
+    );
+    document.body.style.setProperty("--wheel-intensity", String(Settings.get("songWheelIntensity") ?? 1));
+
     // Disable hueEnabled while its still broken.
     // if (Settings.get("hueEnabled")) Settings.set("hueEnabled", false);
     

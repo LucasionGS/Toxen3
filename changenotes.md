@@ -5,6 +5,11 @@ This file contains the change logs for Toxen.
 <!-- UPCOMING: 2.9.2 -->
 ## 2.9.2 - TBD
 
+## New Features
+
+- **Curved Track List** - The track list can now curve as you scroll, bringing the tracks nearest the middle of the panel forward while the ones towards the edges tilt away.
+  - Turn it on in `Settings > Sidepanel > Curved Track List`, and set how strong the curve is right below it.
+
 ## Changes
 
 - **Visualizer Renders On Its Own Thread** - The visualizer is now drawn separately from the rest of the app, so the interface stays responsive while it runs. Toxen falls back to the old behaviour on its own if your system doesn't support it.
@@ -16,6 +21,7 @@ This file contains the change logs for Toxen.
 ## Boring stuff
 
 - The visualizer was split from one 3000 line file into a registry of individual styles, and it does less repeated work each frame.
+- Song rows in the track list are no longer built by the song data model itself, and rows in the queue now keep track of which song they belong to correctly.
 - Added a frame timing tool behind advanced settings for measuring visualizer performance.
 
 <!-- VERSION: 2.9.1 -->

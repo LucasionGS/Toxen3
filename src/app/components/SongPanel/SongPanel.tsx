@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef } from 'react'
 import { Toxen } from '../../ToxenApp';
 import ViewController from '../../toxen/controllers/ViewController';
 import { useController } from '../../lib/useController';
+import SongElement from './SongElement';
 import './SongPanel.scss';
 
 interface SongPanelProps {
@@ -47,7 +48,7 @@ export default function SongPanel(props: SongPanelProps) {
   return (
     <div className="song-panel">
       {/* {Toxen.playlist ? <>Playlist: <code>{Toxen.playlist.name}</code><br /></> : ""} */}
-      {songs.map(s => s.Element(s.dirname()))}
+      {songs.map(s => <SongElement key={s.dirname()} song={s} />)}
     </div>
   );
 }

@@ -157,6 +157,33 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           />
           <sup>Choose which side the sidepanel should appear on.</sup>
 
+          <Checkbox
+            mt="md"
+            onClick={(e) => Settings.apply({ songWheelEffect: e.currentTarget.checked }, true)}
+            defaultChecked={Settings.get("songWheelEffect")}
+            name="songWheelEffect"
+            label="Curved Track List"
+          />
+          <sup>
+            Curves the track list as you scroll, so the tracks nearest the middle of the panel come forward
+            and the ones towards the edges tilt away. Turned off while Low Performance Mode is on.
+          </sup>
+
+          <Text>Curve Strength</Text>
+          <Slider
+            onChange={v => document.body.style.setProperty("--wheel-intensity", String(v))}
+            onChangeEnd={v => Settings.apply({ songWheelIntensity: v }, true)}
+            defaultValue={Settings.get("songWheelIntensity") || 1}
+            name="songWheelIntensity"
+            label={(value) => `${value}x`}
+            min={0.25}
+            max={2}
+            step={0.25}
+          />
+          <sup>
+            How much the track list curves. 0.25x-2x. Higher values push the outer tracks further away.
+          </sup>
+
           {(function () {
             const [bg, setBg] = React.useState(Settings.get("sidepanelBackground"));
             const callback = async () => {

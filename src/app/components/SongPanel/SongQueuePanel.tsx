@@ -4,6 +4,7 @@ import Song from '../../toxen/Song';
 import { Button } from '@mantine/core';
 import ViewController from '../../toxen/controllers/ViewController';
 import { useController } from '../../lib/useController';
+import SongElement from './SongElement';
 
 interface SongQueuePanelProps {
   controller?: ViewController;
@@ -42,7 +43,7 @@ export default function SongQueuePanel(props: SongQueuePanelProps) {
     <>
       <h2>Current Queue</h2>
       <Button title="Remove all songs from the queue." color="red" onClick={() => Song.clearQueue()}>Clear Queue</Button>
-      {songs.map(s => s.Element())}
+      {songs.map(s => <SongElement key={s.uid} song={s} />)}
       <hr />
     </>
   )

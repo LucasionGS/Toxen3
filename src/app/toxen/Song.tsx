@@ -5,8 +5,7 @@ import Settings, { ISettings, VisualizerStyle, visualizerStyleOptionsMap } from 
 // import { Dir, Dirent } from "fs";
 import { Toxen } from "../ToxenApp";
 // import Path from "path";
-import SongElement from "../components/SongPanel/SongElement";
-import SongElementController from "./controllers/SongElementController";
+import type SongElementController from "./controllers/SongElementController";
 // import Legacy, { Toxen2SongDetails } from "./Legacy";
 import { Failure, Result, Success } from "./Result";
 import System, { ToxenFile } from "./System";
@@ -341,15 +340,6 @@ export default class Song implements ISong {
       ((this.artist ?? ((this.coArtists && this.coArtists[0]) ? this.coArtists[0] : null)) ?? "Unknown Artist") // Artist
       + " - " +
       (this.title ?? "Unknown Title") // Title
-    );
-  }
-
-  /**
-   * React element of Song.
-   */
-  public Element(key?: string) {
-    return (
-      <SongElement key={key} playing={this.isPlaying()} song={this} />
     );
   }
 
@@ -1547,13 +1537,10 @@ export default class Song implements ISong {
     hideNotification(notifId);
   }
 
-  public existingElements: SongElementController[] = [];
   /**
-   * Remove the top element from the list of existing elements.
+   * Controller for this song's row in the song list, set by the `SongElement`
+   * view while it is mounted. `null` when the song has no rendered row.
    */
-  public popExistingElement() {
-    return this.existingElements.pop();
-  }
   public currentElement: SongElementController;
 
   public createManagePlaylists(): ModalSettings {
