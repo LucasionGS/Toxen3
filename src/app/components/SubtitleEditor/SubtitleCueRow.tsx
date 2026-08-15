@@ -1,12 +1,12 @@
-import React, { useEffect, useState } from "react";
-import { ActionIcon, Textarea, TextInput, Tooltip } from "@mantine/core";
+import React, { useState } from "react";
+import { ActionIcon, Textarea, Tooltip } from "@mantine/core";
 import {
   IconAlertTriangle, IconBracketsContainEnd, IconBracketsContainStart, IconPalette,
   IconPlayerPlay, IconRowInsertBottom, IconTrash
 } from "@tabler/icons-react";
-import Time from "../../toxen/Time";
 import SubtitleEditorController, { EditorCue } from "./SubtitleEditorController";
 import SubtitleOptionsForm from "./SubtitleOptionsForm";
+import SubtitleTimestampInput from "./SubtitleTimestampInput";
 
 interface SubtitleCueRowProps {
   controller: SubtitleEditorController;
@@ -14,59 +14,6 @@ interface SubtitleCueRowProps {
   active: boolean;
   selected: boolean;
   overlapping: boolean;
-}
-
-function formatMs(ms: number) {
-  return new Time(ms).toTimestamp(Time.FORMATS.STANDARD_WITH_MS);
-}
-
-function TimestampInput(props: { valueMs: number, onCommit: (ms: number) => void }) {
-  const [text, setText] = useState(() => formatMs(props.valueMs));
-  const [focused, setFocused] = useState(false);
-  const [invalid, setInvalid] = useState(false);
-
-  useEffect(() => {
-    if (!focused) {
-      setText(formatMs(props.valueMs));
-      setInvalid(false);
-    }
-  }, [props.valueMs, focused]);
-
-  const commit = () => {
-    setFocused(false);
-    try {
-      const time = Time.fromTimestamp(text);
-      setInvalid(false);
-      props.onCommit(time.valueOf());
-    } catch {
-      setText(formatMs(props.valueMs));
-      setInvalid(false);
-    }
-  };
-
-  return (
-    <TextInput
-      size="xs"
-      w={104}
-      className="subtitle-editor-timestamp"
-      error={invalid || undefined}
-      value={text}
-      onFocus={() => setFocused(true)}
-      onChange={e => {
-        setText(e.currentTarget.value);
-        try {
-          Time.fromTimestamp(e.currentTarget.value);
-          setInvalid(false);
-        } catch {
-          setInvalid(true);
-        }
-      }}
-      onBlur={commit}
-      onKeyDown={e => {
-        if (e.key === "Enter") e.currentTarget.blur();
-      }}
-    />
-  );
 }
 
 export default function SubtitleCueRow(props: SubtitleCueRowProps) {
@@ -81,16 +28,16 @@ export default function SubtitleCueRow(props: SubtitleCueRowProps) {
   ].filter(Boolean).join(" ");
 
   return (
-    <div className={classes} onClick={() => controller.selectCue(cue.uid)}>
+    <div className={classes} onClick={e => controller.selectCue(cue.uid, e.ctrlKey || e.metaKey)}>
       <div className="subtitle-editor-cue-times">
-        <TimestampInput valueMs={cue.start} onCommit={ms => controller.updateCue(cue.uid, { start: ms }, true)} />
+        <SubtitleTimestampInput valueMs={cue.start} onCommit={ms => controller.updateCue(cue.uid, { start: ms }, true)} />
         <Tooltip label="Set start to playhead ( [ )">
           <ActionIcon size="sm" variant="subtle" onClick={() => controller.setStartToPlayhead(cue.uid)}>
             <IconBracketsContainStart size="1em" />
           </ActionIcon>
         </Tooltip>
         <span className="subtitle-editor-cue-sep">-</span>
-        <TimestampInput valueMs={cue.end} onCommit={ms => controller.updateCue(cue.uid, { end: ms }, true)} />
+        <SubtitleTimestampInput valueMs={cue.end} onCommit={ms => controller.updateCue(cue.uid, { end: ms }, true)} />
         <Tooltip label="Set end to playhead ( ] )">
           <ActionIcon size="sm" variant="subtle" onClick={() => controller.setEndToPlayhead(cue.uid)}>
             <IconBracketsContainEnd size="1em" />

@@ -2,8 +2,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import "./SubtitleEditor.scss";
 import { ActionIcon, Button, Group, Popover, Select, Tooltip } from "@mantine/core";
 import {
-  IconArrowBackUp, IconArrowForwardUp, IconDeviceFloppy, IconDoorExit, IconPlayerPause,
-  IconPlayerPlay, IconPlayerSkipBack, IconPlus, IconSettings, IconTimeline
+  IconArrowBackUp, IconArrowForwardUp, IconClipboard, IconCopy, IconDeviceFloppy, IconDoorExit,
+  IconPalette, IconPlayerPause, IconPlayerPlay, IconPlayerSkipBack, IconPlus, IconScissors,
+  IconSettings, IconTimeline
 } from "@tabler/icons-react";
 import { useModals } from "@mantine/modals";
 import { Toxen } from "../../ToxenApp";
@@ -100,6 +101,16 @@ export default function SubtitleEditor(props: SubtitleEditorProps) {
     }
   }, [controller, modals]);
 
+  const copySelection = useCallback(() => {
+    const count = controller.copySelection();
+    if (count > 0) Toxen.log(`Copied ${count} ${count === 1 ? "cue" : "cues"}`, 1500);
+  }, [controller]);
+
+  const cutSelection = useCallback(() => {
+    const count = controller.cutSelection();
+    if (count > 0) Toxen.log(`Cut ${count} ${count === 1 ? "cue" : "cues"}`, 1500);
+  }, [controller]);
+
   const requestExit = useCallback(() => {
     if (controller.dirty) {
       modals.openConfirmModal({
@@ -146,17 +157,36 @@ export default function SubtitleEditor(props: SubtitleEditorProps) {
           break;
         case "KeyA":
           e.preventDefault();
-          controller.addCueAtPlayhead();
+          if (e.ctrlKey || e.metaKey) controller.selectAll();
+          else controller.addCueAtPlayhead();
+          break;
+        case "KeyC":
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            copySelection();
+          }
+          break;
+        case "KeyX":
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            cutSelection();
+          }
+          break;
+        case "KeyV":
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            controller.pasteAtPlayhead();
+          }
           break;
         case "BracketLeft":
-          if (controller.selectedUid !== null) controller.setStartToPlayhead(controller.selectedUid);
+          if (controller.primarySelectedUid !== null) controller.setStartToPlayhead(controller.primarySelectedUid);
           break;
         case "BracketRight":
-          if (controller.selectedUid !== null) controller.setEndToPlayhead(controller.selectedUid);
+          if (controller.primarySelectedUid !== null) controller.setEndToPlayhead(controller.primarySelectedUid);
           break;
         case "Delete":
         case "Backspace":
-          if (controller.selectedUid !== null) controller.removeCue(controller.selectedUid);
+          controller.removeSelectedCues();
           break;
         case "ArrowLeft":
           e.preventDefault();
@@ -168,13 +198,14 @@ export default function SubtitleEditor(props: SubtitleEditorProps) {
           break;
         case "Escape":
           e.preventDefault();
-          requestExit();
+          if (controller.selectedUids.length > 0) controller.clearSelection();
+          else requestExit();
           break;
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [controller, requestSave, requestExit]);
+  }, [controller, requestSave, requestExit, copySelection, cutSelection]);
 
   return (
     <div className="subtitle-editor" style={{ display: controller.started ? "" : "none" }}>
@@ -203,6 +234,26 @@ export default function SubtitleEditor(props: SubtitleEditorProps) {
           <Button size="xs" variant="light" leftSection={<IconPlus size="1em" />} onClick={() => controller.addCueAtPlayhead()}>
             Add cue
           </Button>
+          <Tooltip label="Add a style change at the playhead. Applies to all following lines until the next style change (.tst only).">
+            <Button size="xs" variant="light" leftSection={<IconPalette size="1em" />} onClick={() => controller.addStyleEventAtPlayhead()}>
+              Add style
+            </Button>
+          </Tooltip>
+          <Tooltip label="Copy selection (Ctrl+C)">
+            <ActionIcon variant="default" disabled={controller.selectedUids.length === 0} onClick={copySelection}>
+              <IconCopy size="1em" />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label="Cut selection (Ctrl+X)">
+            <ActionIcon variant="default" disabled={controller.selectedUids.length === 0} onClick={cutSelection}>
+              <IconScissors size="1em" />
+            </ActionIcon>
+          </Tooltip>
+          <Tooltip label="Paste at playhead (Ctrl+V)">
+            <ActionIcon variant="default" disabled={controller.clipboardSize === 0} onClick={() => controller.pasteAtPlayhead()}>
+              <IconClipboard size="1em" />
+            </ActionIcon>
+          </Tooltip>
         </Group>
         <Group gap="xs">
           <Select

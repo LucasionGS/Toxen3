@@ -7,9 +7,14 @@ This file contains the change logs for Toxen.
 
 ## New Features
 
-- **New Subtitle Editor** - The subtitle editor has been rebuilt from scratch as a fullscreen editor with a cue list, a zoomable timeline, live preview on the playing track, and undo/redo. Works on desktop, web, and mobile.
+- **New Subtitle Editor** - The subtitle editor has been rebuilt from scratch as a fullscreen editor with a cue list, a pannable and zoomable timeline, live preview on the playing track, and undo/redo. Drag on the timeline to select multiple lines, then move, copy, cut, and paste them together. Works on desktop, web, and mobile.
   - Open it from the `Subtitles` panel in the side menu.
 - **More Subtitle Styling** - Toxen subtitles (.tst) now support italic text, outline color, and vertical screen position, per line or for the whole file.
+- **Subtitle Style Changes** - Toxen subtitles (.tst) can now change their style partway through a track. Add a `Style` event in the subtitle editor and it applies to every line after it until the next style event, without touching the lines before it.
+
+## Changes
+
+- **Subtitle Styling No Longer Leaks Between Lines** - A style set on one subtitle line used to stick to every line after it. Per-line styling now only affects that line; use a style event or the global style for anything longer.
 
 ## Bug Fixes
 

@@ -424,7 +424,7 @@ addStoryboardComponent("name", {
 - **SRT** (SubRip): `1\n00:00:00,000 --> 00:00:05,000\nText`
 - **VTT** (WebVTT): `WEBVTT\n\n00:00.000 --> 00:05.000\nText`
 - **LRC** (Lyrics): `[00:00.00]Text`
-- **TST** (Toxen SubTitles): Custom format with `@option = value` directive lines. Directives before the first cue apply to the whole file; directives after a cue's `HH:MM:SS,mmm | HH:MM:SS,mmm` timestamp line apply to that cue. Supported options: `color`, `font`, `fontSize`, `bold`, `italic`, `outlineColor`, `verticalPosition` (percent from bottom).
+- **TST** (Toxen SubTitles): Custom format with `@option = value` directive lines. The block before the first cue is the file-wide global style. A block between cues is a timed style event: it applies to all following cues until changed by a later event (`@reset` in an event clears earlier events back to the globals). Directives after a cue's `HH:MM:SS,mmm | HH:MM:SS,mmm` timestamp line apply only to that cue and are never inherited. Resolution order: per-cue > style events > global > defaults. Supported options: `color`, `font`, `fontSize`, `bold`, `italic`, `outlineColor`, `verticalPosition` (percent from bottom).
 
 **Rendering:** Binary search for active subtitle at current time, animated fade transitions, `subtitleDelay` per-song offset for sync correction.
 

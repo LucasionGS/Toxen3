@@ -184,6 +184,37 @@
     }
   }
 
+  .subtitle-editor-style-row {
+    border: 1px dashed var(--accent-color-dim);
+    border-radius: 10px;
+    padding: 8px;
+    background: rgba(var(--accent-color-rgb), 0.06);
+
+    .subtitle-editor-style-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .subtitle-editor-style-icon {
+      color: var(--accent-color);
+    }
+
+    .subtitle-editor-style-label {
+      color: var(--accent-color);
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .subtitle-editor-style-actions {
+      margin-left: auto;
+    }
+  }
+
   .subtitle-editor-timeline {
     height: 150px;
     flex-shrink: 0;

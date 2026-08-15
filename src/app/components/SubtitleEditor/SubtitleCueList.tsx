@@ -4,8 +4,9 @@ import { Button, Checkbox } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
 import { Toxen } from "../../ToxenApp";
 import { useController } from "../../lib/useController";
-import SubtitleEditorController from "./SubtitleEditorController";
+import SubtitleEditorController, { EditorCue, EditorStyleEvent } from "./SubtitleEditorController";
 import SubtitleCueRow from "./SubtitleCueRow";
+import SubtitleStyleRow from "./SubtitleStyleRow";
 
 interface SubtitleCueListProps {
   controller: SubtitleEditorController;
@@ -51,10 +52,18 @@ export default function SubtitleCueList(props: SubtitleCueListProps) {
   }, [activeUid]);
 
   useEffect(() => {
-    if (controller.selectedUid !== null) scrollToCue(controller.selectedUid, false);
-  }, [controller.selectedUid]);
+    if (controller.primarySelectedUid !== null) scrollToCue(controller.primarySelectedUid, false);
+  }, [controller.primarySelectedUid]);
 
   const overlapping = controller.getOverlappingUids();
+
+  type ListEntry =
+    | { kind: "cue", time: number, cue: EditorCue }
+    | { kind: "style", time: number, event: EditorStyleEvent };
+  const entries: ListEntry[] = [
+    ...controller.cues.map(cue => ({ kind: "cue" as const, time: cue.start, cue })),
+    ...controller.styleEvents.map(event => ({ kind: "style" as const, time: event.time, event })),
+  ].sort((a, b) => a.time - b.time || (a.kind === b.kind ? 0 : a.kind === "style" ? -1 : 1));
 
   return (
     <div className="subtitle-editor-cue-list" ref={listRef}>
@@ -67,7 +76,7 @@ export default function SubtitleCueList(props: SubtitleCueListProps) {
           onChange={e => controller.setFollowPlayback(e.currentTarget.checked)}
         />
       </div>
-      {controller.cues.length === 0 ? (
+      {entries.length === 0 ? (
         <div className="subtitle-editor-empty">
           <p>No subtitles yet.</p>
           <p>Seek to where the first line starts and add a cue.</p>
@@ -75,16 +84,22 @@ export default function SubtitleCueList(props: SubtitleCueListProps) {
             Add first cue
           </Button>
         </div>
-      ) : controller.cues.map(cue => (
-        <div key={cue.uid} data-cue-uid={cue.uid}>
+      ) : entries.map(entry => entry.kind === "cue" ? (
+        <div key={entry.cue.uid} data-cue-uid={entry.cue.uid}>
           <RenderIfVisible defaultHeight={112} visibleOffset={600}>
             <SubtitleCueRow
               controller={controller}
-              cue={cue}
-              active={cue.uid === activeUid}
-              selected={cue.uid === controller.selectedUid}
-              overlapping={overlapping.has(cue.uid)}
+              cue={entry.cue}
+              active={entry.cue.uid === activeUid}
+              selected={controller.isSelected(entry.cue.uid)}
+              overlapping={overlapping.has(entry.cue.uid)}
             />
+          </RenderIfVisible>
+        </div>
+      ) : (
+        <div key={entry.event.uid} data-style-uid={entry.event.uid}>
+          <RenderIfVisible defaultHeight={120} visibleOffset={600}>
+            <SubtitleStyleRow controller={controller} event={entry.event} />
           </RenderIfVisible>
         </div>
       ))}

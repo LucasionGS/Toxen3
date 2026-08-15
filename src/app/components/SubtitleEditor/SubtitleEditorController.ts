@@ -12,6 +12,13 @@ export interface EditorCue {
   options: Partial<SubtitleParser.SubtitleOptions>;
 }
 
+export interface EditorStyleEvent {
+  uid: number;
+  time: number;
+  options: Partial<SubtitleParser.SubtitleOptions>;
+  reset: boolean;
+}
+
 export type SubtitleFormat = ".tst" | ".srt" | ".vtt" | ".lrc";
 
 const DEFAULT_CUE_DURATION = 2000;
@@ -26,10 +33,11 @@ export default class SubtitleEditorController extends Controller {
   public started = false;
   public song: Song = null;
   public cues: EditorCue[] = [];
+  public styleEvents: EditorStyleEvent[] = [];
   public globalOptions: Partial<SubtitleParser.SubtitleOptions> = {};
   public format: SubtitleFormat = ".tst";
   public fileName = "subtitles.tst";
-  public selectedUid: number = null;
+  public selectedUids: number[] = [];
   public dirty = false;
   public timelineVisible = true;
   public followPlayback = true;
@@ -38,6 +46,7 @@ export default class SubtitleEditorController extends Controller {
   private undoStack: string[] = [];
   private redoStack: string[] = [];
   private savedSnapshot = "";
+  private clipboard: { startOffset: number, duration: number, text: string, options: Partial<SubtitleParser.SubtitleOptions> }[] = [];
   private previewTimer: ReturnType<typeof setTimeout> = null;
   private snapshotTimer: ReturnType<typeof setTimeout> = null;
 
@@ -48,10 +57,11 @@ export default class SubtitleEditorController extends Controller {
   public async start(song: Song) {
     this.song = song;
     this.cues = [];
+    this.styleEvents = [];
     this.globalOptions = {};
     this.format = ".tst";
     this.fileName = "subtitles.tst";
-    this.selectedUid = null;
+    this.selectedUids = [];
     this.dirty = false;
     this.nextUid = 1;
     this.timelineVisible = !SubtitleEditorController.isMobile();
@@ -71,6 +81,12 @@ export default class SubtitleEditorController extends Controller {
               end: item.end.valueOf(),
               text: item.text ? item.text.replace(/<br\s*\/?>/g, "\n") : "",
               options: { ...item.options },
+            }));
+            this.styleEvents = (parsed.styleEvents ?? []).map(event => ({
+              uid: this.nextUid++,
+              time: event.time.valueOf(),
+              options: { ...event.options },
+              reset: !!event.reset,
             }));
             this.globalOptions = { ...parsed.options };
             this.format = ext as SubtitleFormat;
@@ -142,9 +158,44 @@ export default class SubtitleEditorController extends Controller {
     return overlapping;
   }
 
-  public selectCue(uid: number | null) {
-    if (this.selectedUid === uid) return;
-    this.selectedUid = uid;
+  public get primarySelectedUid() {
+    return this.selectedUids.length > 0 ? this.selectedUids[this.selectedUids.length - 1] : null;
+  }
+
+  public isSelected(uid: number) {
+    return this.selectedUids.includes(uid);
+  }
+
+  public selectCue(uid: number | null, additive = false) {
+    if (uid === null) {
+      this.clearSelection();
+      return;
+    }
+    if (!this.getCue(uid)) return;
+    if (additive) {
+      if (this.selectedUids.includes(uid)) this.selectedUids = this.selectedUids.filter(u => u !== uid);
+      else this.selectedUids = [...this.selectedUids, uid];
+    }
+    else {
+      if (this.selectedUids.length === 1 && this.selectedUids[0] === uid) return;
+      this.selectedUids = [uid];
+    }
+    this.notify();
+  }
+
+  public selectMany(uids: number[]) {
+    if (uids.length === this.selectedUids.length && uids.every((u, i) => this.selectedUids[i] === u)) return;
+    this.selectedUids = uids;
+    this.notify();
+  }
+
+  public selectAll() {
+    this.selectMany(this.cues.map(c => c.uid));
+  }
+
+  public clearSelection() {
+    if (this.selectedUids.length === 0) return;
+    this.selectedUids = [];
     this.notify();
   }
 
@@ -167,7 +218,7 @@ export default class SubtitleEditorController extends Controller {
     const cue: EditorCue = { uid: this.nextUid++, start, end, text: "", options: {} };
     this.cues.push(cue);
     this.sortCues();
-    this.selectedUid = cue.uid;
+    this.selectedUids = [cue.uid];
     this.markDirty();
     this.snapshot();
     return cue;
@@ -183,7 +234,16 @@ export default class SubtitleEditorController extends Controller {
     const index = this.cues.findIndex(c => c.uid === uid);
     if (index === -1) return;
     this.cues.splice(index, 1);
-    if (this.selectedUid === uid) this.selectedUid = null;
+    this.selectedUids = this.selectedUids.filter(u => u !== uid);
+    this.markDirty();
+    this.snapshot();
+  }
+
+  public removeSelectedCues() {
+    if (this.selectedUids.length === 0) return;
+    const selected = new Set(this.selectedUids);
+    this.cues = this.cues.filter(c => !selected.has(c.uid));
+    this.selectedUids = [];
     this.markDirty();
     this.snapshot();
   }
@@ -198,11 +258,114 @@ export default class SubtitleEditorController extends Controller {
     else this.scheduleSnapshot();
   }
 
+  /**
+   * Applies new times to several cues at once, e.g. when dragging a multi-selection on the timeline.
+   */
+  public setCueTimes(entries: { uid: number, start: number, end: number }[], commit = false) {
+    let changed = false;
+    for (const entry of entries) {
+      const cue = this.getCue(entry.uid);
+      if (!cue) continue;
+      cue.start = entry.start;
+      cue.end = entry.end;
+      changed = true;
+    }
+    if (!changed) return;
+    this.sortCues();
+    this.markDirty();
+    if (commit) this.snapshot();
+  }
+
+  public copySelection() {
+    const cues = this.cues.filter(c => this.selectedUids.includes(c.uid));
+    if (cues.length === 0) return 0;
+    const base = Math.min(...cues.map(c => c.start));
+    this.clipboard = cues.map(c => ({
+      startOffset: c.start - base,
+      duration: c.end - c.start,
+      text: c.text,
+      options: { ...c.options },
+    }));
+    this.notify();
+    return this.clipboard.length;
+  }
+
+  public cutSelection() {
+    const count = this.copySelection();
+    if (count > 0) this.removeSelectedCues();
+    return count;
+  }
+
+  public get clipboardSize() {
+    return this.clipboard.length;
+  }
+
+  public pasteAtPlayhead() {
+    if (this.clipboard.length === 0) return 0;
+    const base = this.playheadMs();
+    const pasted = this.clipboard.map(item => {
+      const cue: EditorCue = {
+        uid: this.nextUid++,
+        start: base + item.startOffset,
+        end: base + item.startOffset + item.duration,
+        text: item.text,
+        options: { ...item.options },
+      };
+      this.cues.push(cue);
+      return cue;
+    });
+    this.sortCues();
+    this.selectedUids = pasted.map(c => c.uid);
+    this.markDirty();
+    this.snapshot();
+    return pasted.length;
+  }
+
   public setCueOption(uid: number, key: keyof SubtitleParser.SubtitleOptions, value: string) {
     const cue = this.getCue(uid);
     if (!cue) return;
     if (value) cue.options[key] = value;
     else delete cue.options[key];
+    this.markDirty();
+    this.scheduleSnapshot();
+  }
+
+  public getStyleEvent(uid: number) {
+    return this.styleEvents.find(e => e.uid === uid) ?? null;
+  }
+
+  public addStyleEventAtPlayhead() {
+    const event: EditorStyleEvent = { uid: this.nextUid++, time: this.playheadMs(), options: {}, reset: false };
+    this.styleEvents.push(event);
+    this.sortStyleEvents();
+    this.markDirty();
+    this.snapshot();
+    return event;
+  }
+
+  public removeStyleEvent(uid: number) {
+    const index = this.styleEvents.findIndex(e => e.uid === uid);
+    if (index === -1) return;
+    this.styleEvents.splice(index, 1);
+    this.markDirty();
+    this.snapshot();
+  }
+
+  public updateStyleEvent(uid: number, patch: Partial<Pick<EditorStyleEvent, "time" | "reset">>, commit = false) {
+    const event = this.getStyleEvent(uid);
+    if (!event) return;
+    Object.assign(event, patch);
+    if (patch.time !== undefined) this.sortStyleEvents();
+    this.markDirty();
+    if (commit) this.snapshot();
+    else this.scheduleSnapshot();
+  }
+
+  public setStyleEventOption(uid: number, key: keyof SubtitleParser.SubtitleOptions, value: string) {
+    const event = this.getStyleEvent(uid);
+    if (!event) return;
+    if (value) event.options[key] = value;
+    else delete event.options[key];
     this.markDirty();
     this.scheduleSnapshot();
   }
@@ -248,6 +411,10 @@ export default class SubtitleEditorController extends Controller {
     this.cues.sort((a, b) => a.start - b.start || a.end - b.end);
   }
 
+  private sortStyleEvents() {
+    this.styleEvents.sort((a, b) => a.time - b.time);
+  }
+
   private markDirty() {
     this.dirty = true;
     this.schedulePreview();
@@ -255,7 +422,7 @@ export default class SubtitleEditorController extends Controller {
   }
 
   private serialize() {
-    return JSON.stringify({ cues: this.cues, globalOptions: this.globalOptions });
+    return JSON.stringify({ cues: this.cues, styleEvents: this.styleEvents, globalOptions: this.globalOptions });
   }
 
   public snapshot() {
@@ -280,11 +447,16 @@ export default class SubtitleEditorController extends Controller {
   }
 
   private restore(snap: string) {
-    const data = JSON.parse(snap) as { cues: EditorCue[], globalOptions: Partial<SubtitleParser.SubtitleOptions> };
+    const data = JSON.parse(snap) as {
+      cues: EditorCue[],
+      styleEvents: EditorStyleEvent[],
+      globalOptions: Partial<SubtitleParser.SubtitleOptions>,
+    };
     this.cues = data.cues;
+    this.styleEvents = data.styleEvents ?? [];
     this.globalOptions = data.globalOptions;
-    this.nextUid = this.cues.reduce((max, c) => Math.max(max, c.uid), 0) + 1;
-    if (this.selectedUid !== null && !this.getCue(this.selectedUid)) this.selectedUid = null;
+    this.nextUid = [...this.cues, ...this.styleEvents].reduce((max, c) => Math.max(max, c.uid), 0) + 1;
+    this.selectedUids = this.selectedUids.filter(uid => !!this.getCue(uid));
     this.dirty = snap !== this.savedSnapshot;
     this.schedulePreview();
     this.notify();
@@ -313,7 +485,9 @@ export default class SubtitleEditorController extends Controller {
   }
 
   public hasAnyOptions() {
-    return Object.keys(this.globalOptions).length > 0 || this.cues.some(c => Object.keys(c.options).length > 0);
+    return Object.keys(this.globalOptions).length > 0
+      || this.styleEvents.length > 0
+      || this.cues.some(c => Object.keys(c.options).length > 0);
   }
 
   public needsLossyWarning() {
@@ -324,6 +498,9 @@ export default class SubtitleEditorController extends Controller {
     const arr = new SubtitleParser.SubtitleArray();
     arr.type = this.format.slice(1);
     arr.options = { ...this.globalOptions };
+    arr.styleEvents = [...this.styleEvents]
+      .sort((a, b) => a.time - b.time)
+      .map(event => ({ time: new Time(event.time), options: { ...event.options }, reset: event.reset }));
     arr.song = this.song;
     this.cues.forEach((cue, i) => {
       arr.push({
