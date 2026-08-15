@@ -19,6 +19,7 @@ import Song from "./toxen/Song";
 import "./ToxenApp.scss";
 import "./tx.scss";
 import System from "./toxen/System";
+import { attachShortcuts } from "./toxen/Shortcuts";
 import SidepanelSectionHeader from "./components/Sidepanel/SidepanelSectionHeader";
 import SearchField from "./components/SongPanel/SearchField";
 import Stats from "./toxen/Statistics";
@@ -431,10 +432,23 @@ export class Toxen {
     if (song) song.scrollTo();
   }
 
+  /**
+   * Brings up the track list and puts the cursor in its search field, with any
+   * existing search selected so typing replaces it.
+   */
+  public static async focusSongSearch() {
+    if (!Toxen.sidePanel.isShowing()) await Toxen.sidePanel.show(true);
+    if (Toxen.sidePanel.state.sectionId !== "songPanel") await Toxen.sidePanel.setSectionId("songPanel");
+    Toxen.songSearchField?.focus();
+    Toxen.songSearchField?.select();
+  }
+
   // Objects
   public static sidePanel: Sidepanel;
   public static songPanel: ViewController;
   public static songQueuePanel: ViewController;
+  /** The track list's search input, registered by `SearchField` while mounted. */
+  public static songSearchField: HTMLInputElement;
   public static playlistPanel: PlaylistPanel;
   public static musicPlayer: MusicPlayerController;
   public static musicControls: MusicControlsController;
@@ -1050,10 +1064,18 @@ export const ToxenEvent = new ToxenEventEmitter();
 
 //#region ToxenApp Layout
 export default class ToxenAppRenderer extends React.Component {
+  private detachShortcuts: () => void = null;
+
+  componentWillUnmount() {
+    this.detachShortcuts?.();
+    this.detachShortcuts = null;
+  }
+
   componentDidMount() {
     // Set reference for force updates
     Toxen.appRenderer = this;
-    
+    this.detachShortcuts = attachShortcuts();
+
     Promise.resolve()
       .then(Settings.load) // Load settings and apply them.
       .then(Stats.load) // Load stats and apply them.
