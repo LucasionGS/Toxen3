@@ -132,8 +132,7 @@ src/
       # Editors
       StoryboardEditor/            # Canvas timeline overlay
       StoryboardEditorPanel/       # Storyboard event UI
-      SubtitleEditor/              # Subtitle timeline editor
-      SubtitleEditorPanel/         # Subtitle editing UI
+      SubtitleEditor/              # Fullscreen subtitle editor (cue list + timeline + launcher panel)
       ThemeEditorPanel/            # Live theme color editor
       ThemeContainer/              # CSS variable injection
 
@@ -163,9 +162,6 @@ src/
       ExtensionPanel/              # Extension management
       BackgroundFileSelector/      # Background image picker
       ScreenPositionSelector/      # XY position picker
-
-    windows/                       # Separate Electron windows
-      SubtitleCreator/             # Dedicated subtitle creation window
 
     sounds/                        # Audio assets
 
@@ -428,7 +424,7 @@ addStoryboardComponent("name", {
 - **SRT** (SubRip): `1\n00:00:00,000 --> 00:00:05,000\nText`
 - **VTT** (WebVTT): `WEBVTT\n\n00:00.000 --> 00:05.000\nText`
 - **LRC** (Lyrics): `[00:00.00]Text`
-- **TST** (Toxen SubTitles): Custom format with `[+option: value]` directives
+- **TST** (Toxen SubTitles): Custom format with `@option = value` directive lines. Directives before the first cue apply to the whole file; directives after a cue's `HH:MM:SS,mmm | HH:MM:SS,mmm` timestamp line apply to that cue. Supported options: `color`, `font`, `fontSize`, `bold`, `italic`, `outlineColor`, `verticalPosition` (percent from bottom).
 
 **Rendering:** Binary search for active subtitle at current time, animated fade transitions, `subtitleDelay` per-song offset for sync correction.
 

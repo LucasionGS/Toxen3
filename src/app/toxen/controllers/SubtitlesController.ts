@@ -14,6 +14,7 @@ interface TimeProvider {
 export default class SubtitlesController extends Controller {
   private _subtitles: SubtitleParser.SubtitleArray = new SubtitleParser.SubtitleArray();
   private _currentText: string = "";
+  private _currentVerticalPosition: string = null;
 
   private currentOptions: SubtitleParser.SubtitleItem["options"] = {};
   private lastSub: SubtitleParser.SubtitleItem = null;
@@ -26,11 +27,19 @@ export default class SubtitlesController extends Controller {
     return this._currentText;
   }
 
+  /**
+   * Vertical position in percent from the bottom, or null to use the default CSS position.
+   */
+  public get currentVerticalPosition() {
+    return this._currentVerticalPosition;
+  }
+
   public setSubtitles(subtitles: SubtitleParser.SubtitleArray) {
     this.lastSub = null;
     this.currentOptions = {};
     this._subtitles = subtitles;
     this._currentText = "";
+    this._currentVerticalPosition = null;
     this.notify();
   }
 
@@ -70,12 +79,19 @@ export default class SubtitlesController extends Controller {
       let font = getOption("font", "Arial");
       let fontSize = getOption("fontSize", 24);
       let bold = getOption("bold", "false");
+      let italic = getOption("italic", "false");
+      let outlineColor = getOption("outlineColor", null);
+      let verticalPosition = getOption("verticalPosition", null);
 
-      text = `<span style="color: ${color}; font-family: ${font}; font-size: ${fontSize + "px"};">${text}</span>`;
+      let style = `color: ${color}; font-family: ${font}; font-size: ${fontSize + "px"};`;
+      if (italic === "true") style += " font-style: italic;";
+      if (outlineColor) style += ` text-shadow: 0 0 10px ${outlineColor};`;
+      text = `<span style="${style}">${text}</span>`;
       if (bold === "true") {
         text = `<b>${text}</b>`;
       }
       this._currentText = text;
+      this._currentVerticalPosition = verticalPosition;
       this.notify();
     }
   }

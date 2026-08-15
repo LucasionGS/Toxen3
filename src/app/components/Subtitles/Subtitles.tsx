@@ -37,8 +37,9 @@ export default function Subtitles(props: SubtitlesProps) {
   }, [controller]);
 
   const floatingTitleAsSubtitles = Toxen.background?.storyboard?.getFloatingSubtitles();
+  const verticalPosition = controller.currentVerticalPosition;
   return (
-    <div className="subtitle-container">
+    <div className="subtitle-container" style={verticalPosition ? { bottom: verticalPosition + "%" } : undefined}>
       {(!floatingTitleAsSubtitles && controller.currentText) ? HTMLReactParser(controller.currentText) : null}
     </div>
   )

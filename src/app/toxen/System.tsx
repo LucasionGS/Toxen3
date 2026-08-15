@@ -227,28 +227,15 @@ export default class System {
               });
           }
           else if (file instanceof File) {
-            let reader = new FileReader();
-            reader.onload = async () => {
-              song.paths.subtitles = subName;
-
-              // Upload to server
-              let filetime = Date.now();
-              song.setFile(subName, "u", filetime);
-              await Toxen.fetch(`${song.subtitleFile()}`, {
-                method: "PUT",
-                body: file
-              }).then(() => {
-                Toxen.log("Uploaded subtitle file", 3000);
-              }).catch((reason) => {
-                Toxen.error("Unable to upload subtitle file");
-                Toxen.error(reason);
-              });
-
-              song.setFile(subName, "u");
-              await song.saveInfo();
+            try {
+              const content = await file.text();
+              await song.writeSubtitleFile(content, subName);
+              Toxen.log("Uploaded subtitle file", 3000);
               song.applySubtitles();
+            } catch (reason) {
+              Toxen.error("Unable to upload subtitle file");
+              Toxen.error(`${reason}`);
             }
-            reader.readAsDataURL(file);
           }
 
           break;

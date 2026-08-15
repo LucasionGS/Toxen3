@@ -1,335 +1,274 @@
 .subtitle-editor {
-  height: 100%;
+  height: var(--bodyHeight);
   display: flex;
   flex-direction: column;
-  background: var(--background-color);
-  color: var(--text-color);
+  gap: 12px;
+  padding: 12px 16px;
+  position: relative;
+  z-index: 5;
+  pointer-events: none;
 
-  .subtitle-editor-header {
-    padding: 1rem;
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: var(--header-background, rgba(0, 0, 0, 0.1));
-
-    h2 {
-      margin: 0;
-      font-size: 1.5rem;
-      font-weight: 600;
-    }
-
-    .subtitle-editor-info {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      font-size: 0.9rem;
-      color: var(--text-color-secondary);
-
-      .dirty-indicator {
-        color: var(--accent-color, #ffa500);
-        font-weight: 600;
-      }
-    }
+  .subtitle-editor-toolbar,
+  .subtitle-editor-cue-list,
+  .subtitle-editor-timeline {
+    pointer-events: auto;
   }
 
   .subtitle-editor-toolbar {
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--border-color);
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 1rem;
-    background: var(--toolbar-background, rgba(0, 0, 0, 0.05));
+    gap: 12px;
+    padding: 10px 16px;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 255, 255, 0.08) 0%,
+      rgba(255, 255, 255, 0.04) 100%
+    );
+    backdrop-filter: blur(15px);
+    border: 1px solid var(--accent-color-dim);
+    border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 
-    .toolbar-group {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-
-      &:not(:last-child) {
-        border-right: 1px solid var(--border-color);
-        padding-right: 1rem;
-      }
-
-      small {
-        max-width: 200px;
-        line-height: 1.2;
-      }
-    }
-  }
-
-  .subtitle-editor-content {
-    flex: 1;
-    display: flex;
-    overflow: hidden;
-
-    .subtitle-editor-main {
-      flex: 1;
+    .subtitle-editor-title {
       display: flex;
       flex-direction: column;
       min-width: 0;
-    }
+      max-width: 220px;
 
-    .subtitle-editor-sidebar {
-      width: 300px;
-      border-left: 1px solid var(--border-color);
-      background: var(--sidebar-background, rgba(0, 0, 0, 0.02));
-    }
-  }
-}
-
-.subtitle-timeline {
-  padding: 1rem;
-  border-bottom: 1px solid var(--border-color);
-  background: var(--timeline-background, rgba(0, 0, 0, 0.02));
-
-  .timeline-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-    font-size: 0.9rem;
-    font-weight: 600;
-  }
-
-  .timeline-track {
-    position: relative;
-    height: 60px;
-    background: var(--timeline-track-background, rgba(0, 0, 0, 0.1));
-    border-radius: 4px;
-    margin-bottom: 0.5rem;
-    overflow: hidden;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-
-    &:hover {
-      background: var(--timeline-track-hover-background, rgba(0, 0, 0, 0.15));
-    }
-
-    .timeline-cursor {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      width: 2px;
-      background: var(--accent-color, #ffa500);
-      z-index: 10;
-      pointer-events: none;
-
-      &::after {
-        content: '';
-        position: absolute;
-        top: -4px;
-        left: -4px;
-        width: 8px;
-        height: 8px;
-        background: var(--accent-color, #ffa500);
-        border-radius: 50%;
-      }
-    }
-
-    .timeline-item {
-      position: absolute;
-      top: 10px;
-      bottom: 10px;
-      background: var(--timeline-item-background, rgba(100, 150, 255, 0.8));
-      border-radius: 3px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      padding: 0 8px;
-      min-width: 20px;
-
-      &:hover {
-        background: var(--timeline-item-hover-background, rgba(100, 150, 255, 1));
-        transform: scaleY(1.1);
+      .subtitle-editor-song {
+        color: var(--text-primary);
+        font-weight: 600;
+        font-size: 13px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
-      &.selected {
-        background: var(--timeline-item-selected-background, var(--accent-color, #ffa500));
-        box-shadow: 0 0 0 2px var(--accent-color, #ffa500);
-      }
-
-      .timeline-item-content {
-        font-size: 0.8rem;
-        font-weight: 500;
-        color: white;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+      .subtitle-editor-file {
+        color: var(--text-muted);
+        font-family: 'JetBrains Mono', 'Consolas', monospace;
+        font-size: 11px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
       }
     }
-  }
 
-  .timeline-scale {
-    display: flex;
-    position: relative;
-    height: 20px;
-
-    .timeline-scale-mark {
-      position: absolute;
-      cursor: pointer;
-      font-size: 0.75rem;
-      color: var(--text-color-secondary);
-      transform: translateX(-50%);
-      padding: 2px 4px;
-      border-radius: 2px;
-      transition: all 0.2s ease;
-
-      &:hover {
-        color: var(--accent-color, #ffa500);
-        background: var(--timeline-scale-hover-background, rgba(255, 165, 0, 0.1));
-      }
+    .subtitle-editor-toolbar-end {
+      margin-left: auto;
     }
-  }
-}
 
-.subtitle-list {
-  flex: 1;
-  padding: 1rem;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+    .subtitle-editor-dirty-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--warning-color);
+    }
 
-  .subtitle-list-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-
-    h3 {
-      margin: 0;
-      font-size: 1.1rem;
+    .subtitle-editor-time {
+      color: var(--accent-color);
+      font-family: 'JetBrains Mono', 'Consolas', monospace;
       font-weight: 600;
-    }
-
-    .subtitle-list-actions {
-      display: flex;
-      gap: 0.5rem;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+      padding: 4px 10px;
+      border: 1px solid var(--accent-color-dim);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.35);
     }
   }
 
-  .subtitle-list-items {
+  .subtitle-editor-body {
+    display: flex;
     flex: 1;
+    min-height: 0;
+    gap: 12px;
+  }
+
+  .subtitle-editor-preview-space {
+    flex: 1;
+  }
+
+  .subtitle-editor-cue-list {
+    width: 440px;
+    max-width: 45%;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 8px;
+    padding: 10px;
+    background: linear-gradient(
+      135deg,
+      rgba(0, 0, 0, 0.4) 0%,
+      rgba(0, 0, 0, 0.3) 100%
+    );
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-primary);
+    border-radius: 10px;
 
-    .subtitle-list-item {
-      padding: 0.75rem;
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      background: var(--item-background, rgba(255, 255, 255, 0.02));
+    .subtitle-editor-cue-list-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--text-secondary);
+      font-size: 12px;
+      padding: 0 2px 4px 2px;
+      border-bottom: 1px solid var(--border-secondary);
+    }
 
-      &:hover {
-        background: var(--item-hover-background, rgba(255, 255, 255, 0.05));
-        border-color: var(--accent-color, #ffa500);
+    .subtitle-editor-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex: 1;
+      color: var(--text-muted);
+      text-align: center;
+
+      p {
+        margin: 0;
       }
+    }
+  }
 
-      &.selected {
-        background: var(--item-selected-background, rgba(255, 165, 0, 0.1));
-        border-color: var(--accent-color, #ffa500);
-        box-shadow: 0 0 0 1px var(--accent-color, #ffa500);
-      }
+  .subtitle-editor-cue {
+    border: 1px solid var(--border-primary);
+    border-radius: 10px;
+    padding: 8px;
+    background: var(--surface-bg);
+    transition: border-color var(--transition-normal), background var(--transition-normal);
 
-      .subtitle-item-time {
-        font-size: 0.8rem;
-        color: var(--text-color-secondary);
-        margin-bottom: 0.25rem;
-        font-family: monospace;
-      }
+    &.selected {
+      border-color: var(--accent-color);
+    }
 
-      .subtitle-item-text {
-        font-size: 0.9rem;
-        margin-bottom: 0.5rem;
-        line-height: 1.4;
+    &.active {
+      background: var(--surface-bg-active);
+      box-shadow: inset 3px 0 0 var(--accent-color);
+    }
 
-        span {
-          cursor: text;
+    .subtitle-editor-cue-times {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+    }
+
+    .subtitle-editor-cue-sep {
+      color: var(--text-muted);
+    }
+
+    .subtitle-editor-timestamp input {
+      font-family: 'JetBrains Mono', 'Consolas', monospace;
+      font-size: 11px;
+    }
+
+    .subtitle-editor-cue-warning {
+      color: var(--warning-color);
+    }
+
+    .subtitle-editor-cue-actions {
+      margin-left: auto;
+      display: flex;
+      gap: 2px;
+    }
+
+    .subtitle-editor-cue-options {
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border-secondary);
+    }
+  }
+
+  .subtitle-editor-timeline {
+    height: 150px;
+    flex-shrink: 0;
+    background: linear-gradient(
+      135deg,
+      var(--secondary-bg) 0%,
+      var(--tertiary-bg) 100%
+    );
+    border: 1px solid var(--border-primary);
+    border-radius: 10px;
+    overflow: hidden;
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+      touch-action: none;
+      user-select: none;
+    }
+  }
+}
+
+.subtitle-editor-options-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 220px;
+
+  &.compact {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    > * {
+      flex: 1 1 130px;
+    }
+
+    .subtitle-editor-options-toggles {
+      flex: 1 1 100%;
+    }
+  }
+}
+
+// Lift the live subtitle preview above the timeline strip while editing.
+body.subtitle-editing .subtitle-container {
+  bottom: 220px;
+}
+
+@if ToxenIsWeb() {
+  @media screen and ((max-width: 768px)) {
+    .subtitle-editor {
+      padding: 8px;
+      gap: 8px;
+
+      .subtitle-editor-toolbar {
+        padding: 8px;
+        gap: 8px;
+
+        .subtitle-editor-title {
+          display: none;
         }
       }
 
-      .subtitle-item-actions {
-        display: flex;
-        gap: 0.25rem;
-        justify-content: flex-end;
-        flex-wrap: wrap;
+      .subtitle-editor-body {
+        flex-direction: column;
+      }
+
+      .subtitle-editor-preview-space {
+        display: none;
+      }
+
+      .subtitle-editor-cue-list {
+        width: 100%;
+        max-width: 100%;
+        flex: 1;
+      }
+
+      .subtitle-editor-timeline {
+        height: 110px;
       }
     }
-  }
-}
 
-.subtitle-properties {
-  padding: 1rem;
-  overflow-y: auto;
-
-  h3 {
-    margin: 0 0 1rem 0;
-    font-size: 1.1rem;
-    font-weight: 600;
-  }
-
-  .property-group {
-    margin-bottom: 1rem;
-
-    label {
-      display: block;
-      margin-bottom: 0.5rem;
-      font-size: 0.9rem;
-      font-weight: 500;
-      color: var(--text-color);
+    body.subtitle-editing .subtitle-container {
+      bottom: calc(var(--mobile-tab-bar-height) + 40%);
     }
-  }
-}
-
-// Dark theme adjustments
-.dark {
-  .subtitle-editor {
-    --background-color: #1a1a1a;
-    --text-color: #ffffff;
-    --text-color-secondary: #cccccc;
-    --border-color: #333333;
-    --header-background: rgba(255, 255, 255, 0.05);
-    --toolbar-background: rgba(255, 255, 255, 0.02);
-    --sidebar-background: rgba(255, 255, 255, 0.02);
-    --timeline-background: rgba(255, 255, 255, 0.02);
-    --timeline-track-background: rgba(255, 255, 255, 0.1);
-    --timeline-track-hover-background: rgba(255, 255, 255, 0.15);
-    --timeline-scale-hover-background: rgba(255, 165, 0, 0.1);
-    --timeline-item-background: rgba(100, 150, 255, 0.8);
-    --timeline-item-hover-background: rgba(100, 150, 255, 1);
-    --timeline-item-selected-background: #ffa500;
-    --item-background: rgba(255, 255, 255, 0.02);
-    --item-hover-background: rgba(255, 255, 255, 0.05);
-    --item-selected-background: rgba(255, 165, 0, 0.1);
-    --accent-color: #ffa500;
-  }
-}
-
-// Light theme adjustments
-.light {
-  .subtitle-editor {
-    --background-color: #ffffff;
-    --text-color: #000000;
-    --text-color-secondary: #666666;
-    --border-color: #e0e0e0;
-    --header-background: rgba(0, 0, 0, 0.03);
-    --toolbar-background: rgba(0, 0, 0, 0.02);
-    --sidebar-background: rgba(0, 0, 0, 0.01);
-    --timeline-background: rgba(0, 0, 0, 0.02);
-    --timeline-track-background: rgba(0, 0, 0, 0.05);
-    --timeline-track-hover-background: rgba(0, 0, 0, 0.08);
-    --timeline-scale-hover-background: rgba(255, 140, 0, 0.1);
-    --timeline-item-background: rgba(100, 150, 255, 0.8);
-    --timeline-item-hover-background: rgba(100, 150, 255, 1);
-    --timeline-item-selected-background: #ff8c00;
-    --item-background: rgba(0, 0, 0, 0.01);
-    --item-hover-background: rgba(0, 0, 0, 0.03);
-    --item-selected-background: rgba(255, 140, 0, 0.1);
-    --accent-color: #ff8c00;
   }
 }

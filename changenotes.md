@@ -3,6 +3,18 @@
 This file contains the change logs for Toxen.
 
 <!-- UPCOMING: 2.10.1 -->
+## 2.10.1 - TBD
+
+## New Features
+
+- **New Subtitle Editor** - The subtitle editor has been rebuilt from scratch as a fullscreen editor with a cue list, a zoomable timeline, live preview on the playing track, and undo/redo. Works on desktop, web, and mobile.
+  - Open it from the `Subtitles` panel in the side menu.
+- **More Subtitle Styling** - Toxen subtitles (.tst) now support italic text, outline color, and vertical screen position, per line or for the whole file.
+
+## Bug Fixes
+
+- Saving subtitles now works in remote/web mode instead of silently losing the changes.
+- Exporting subtitles to the .lrc format no longer produces a broken file, and .lrc timestamps are now read correctly.
 
 <!-- VERSION: 2.10.0 -->
 ## 2.10.0 - 15-08-2026

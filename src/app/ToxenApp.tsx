@@ -24,7 +24,7 @@ import SidepanelSectionHeader from "./components/Sidepanel/SidepanelSectionHeade
 import SearchField from "./components/SongPanel/SearchField";
 import Stats from "./toxen/Statistics";
 import StoryboardEditorPanel from "./components/StoryboardEditorPanel/StoryboardEditorPanel";
-import SubtitleEditorPanel from "./components/SubtitleEditorPanel/SubtitleEditorPanel";
+import SubtitleEditorPanel from "./components/SubtitleEditor/SubtitleEditorPanel";
 import { MessageCardOptions } from "./components/MessageCard/MessageCards";
 import ExternalUrl from "./components/ExternalUrl/ExternalUrl";
 import showdown from "showdown";
@@ -49,7 +49,6 @@ import { Notifications, showNotification } from "@mantine/notifications";
 import SettingsPanel from "./components/Sidepanel/Panels/SettingsPanel/SettingsPanel";
 // import MigrationPanel from "./components/Sidepanel/Panels/MigrationPanel/MigrationPanel";
 import EditSong from "./components/Sidepanel/Panels/EditSong/EditSong";
-import InitialData from "./windows/SubtitleCreator/models/InitialData";
 import User from "./toxen/User";
 import { IconLayoutNavbarExpand, IconMenu2, IconMusic, IconRefresh, IconSearch, IconList, IconWand, IconFileImport, IconSettings, IconInfoCircle, IconMailOpened, IconBadgeCc } from "@tabler/icons-react";
 // import HueManager from "./toxen/philipshue/HueManager";
@@ -57,6 +56,7 @@ import ImportPanel from "./components/Sidepanel/Panels/ImportPanel/ImportPanel";
 // import YTDlpWrap from "yt-dlp-wrap";
 import StoryboardEditor, { StoryboardEditorController } from "./components/StoryboardEditor/StoryboardEditor";
 import SubtitleEditor from "./components/SubtitleEditor/SubtitleEditor";
+import SubtitleEditorController from "./components/SubtitleEditor/SubtitleEditorController";
 import { modals } from "@mantine/modals";
 import LoginForm from "./components/LoginForm/LoginForm";
 import ExtensionManager from "./toxen/extensions/ExtensionManager";
@@ -128,10 +128,7 @@ export class Toxen {
     switch (mode) {
       case ToxenInteractionMode.Player: {
         Toxen.sidePanel.setSectionId("songPanel");
-        if (Toxen.subtitleEditorOpen) {
-          Toxen.subtitleEditorOpen = false;
-          Toxen.appRenderer?.forceUpdate();
-        }
+        Toxen.subtitleEditor?.stop();
         break;
       }
 
@@ -144,14 +141,9 @@ export class Toxen {
       }
 
       case ToxenInteractionMode.SubtitlesEditor: {
-        Toxen.editingSong = data as Song;
-        if (Toxen.editingSong) {
-          Toxen.editingSong.play();
-        }
+        (Toxen.editingSong = data as Song).play();
         Toxen.sidePanel.setHidden(true);
-        Toxen.subtitleEditorOpen = true;
-        // Force re-render to show subtitle editor
-        Toxen.appRenderer?.forceUpdate();
+        Toxen.subtitleEditor.start(Toxen.editingSong);
         break;
       }
 
@@ -713,7 +705,7 @@ export class Toxen {
   public static loadingScreen: LoadingScreenController;
   public static background: BackgroundController;
   public static storyboardEditorController: StoryboardEditorController;
-  public static subtitleEditorOpen: boolean = false;
+  public static subtitleEditor: SubtitleEditorController;
   public static appRenderer: React.Component;
 
   public static songSearch = "";
@@ -1223,18 +1215,7 @@ export default class ToxenAppRenderer extends React.Component {
           <AppBar />
           <Background onReady={controller => Toxen.background = controller} />
           <StoryboardEditor controllerSetter={sec => Toxen.storyboardEditorController = sec} />
-          {Toxen.subtitleEditorOpen && (
-            <div className="subtitle-editor-overlay">
-              <SubtitleEditor 
-                song={Toxen.editingSong} 
-                onClose={() => {
-                  Toxen.subtitleEditorOpen = false;
-                  Toxen.setMode(ToxenInteractionMode.Player);
-                  Toxen.appRenderer?.forceUpdate();
-                }} 
-              />
-            </div>
-          )}
+          <SubtitleEditor onReady={controller => Toxen.subtitleEditor = controller} />
           <MusicControls onReady={controller => Toxen.musicControls = controller} />
           <LoadingScreen onReady={controller => Toxen.loadingScreen = controller} initialShow={true} />
           <div className="song-panel-toggle hide-on-inactive" onClick={() => Toxen.sidePanel.show()}>

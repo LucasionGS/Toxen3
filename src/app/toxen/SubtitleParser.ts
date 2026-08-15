@@ -9,6 +9,9 @@ namespace SubtitleParser {
     font: string;
     fontSize: string;
     bold: string;
+    italic: string;
+    outlineColor: string;
+    verticalPosition: string;
   }
 
   export interface SubtitleItem {
@@ -75,7 +78,7 @@ namespace SubtitleParser {
         content = exportVtt(data);
         break;
       case ".lrc":
-        // content = exportLrc(data);
+        content = exportLrc(data);
         break;
       default:
         throw new Error("Unsupported extension:" + extension);
@@ -231,7 +234,12 @@ namespace SubtitleParser {
           text += `@${key} = ${value}\n`;
         }
       }
-      text += `${item.text.replace(/<br\s*\/?>/g, "\n")}\n\n`;
+      const textLines = item.text.replace(/<br\s*\/?>/g, "\n").split("\n").map(line => {
+        line = line.replace(/\\/g, "\\\\");
+        if (line.startsWith("@")) line = "\\" + line;
+        return line;
+      });
+      text += `${textLines.join("\n")}\n\n`;
     }
 
     return text;
@@ -264,17 +272,26 @@ namespace SubtitleParser {
 
   function parseLrcTime(time: string): Time {
     let parts = time.split(/[.:]/g);
-    let hours = parseInt(parts[0]);
-    let minutes = parseInt(parts[1]);
-    let seconds = parseInt(parts[2]);
-    return new Time(hours * 3600000 + minutes * 60000 + seconds * 1000);
+    let minutes = parseInt(parts[0]);
+    let seconds = parseInt(parts[1]);
+    let fraction = parts[2] || "0";
+    let milliseconds = fraction.length === 3 ? parseInt(fraction) : parseInt(fraction) * 10;
+    return new Time(minutes * 60000 + seconds * 1000 + milliseconds);
   }
 
   function exportLrcTime(time: Time): string {
-    let hours = (time.getHours()).toString().padStart(2, "0");
-    let minutes = (time.getMinutes()).toString().padStart(2, "0");
-    let seconds = (time.getSeconds() + Math.round(time.getMilliseconds() / 1000)).toString().padStart(2, "0");
-    return `${hours}:${minutes}.${seconds}`;
+    let minutes = (time.getHours() * 60 + time.getMinutes()).toString().padStart(2, "0");
+    let seconds = (time.getSeconds()).toString().padStart(2, "0");
+    let hundredths = Math.min(99, Math.round(time.getMilliseconds() / 10)).toString().padStart(2, "0");
+    return `${minutes}:${seconds}.${hundredths}`;
+  }
+
+  export function exportLrc(items: SubtitleArray): string {
+    let text = "";
+    for (let item of items) {
+      text += `[${exportLrcTime(item.start)}]${item.text.replace(/<br\s*\/?>/g, " ")}\n`;
+    }
+    return text;
   }
 
   export function parseLrc(text: string): SubtitleArray {

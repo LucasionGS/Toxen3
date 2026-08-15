@@ -13,10 +13,6 @@ export interface MusicPlayerSourceOptions {
   crossOrigin?: "anonymous" | "use-credentials" | "";
 }
 
-export interface MusicPlayerControllerOptions {
-  subtitleEditorMode?: boolean;
-}
-
 /**
  * Controller for the {@link MusicPlayer} view. Owns the audio/video element and
  * all playback logic that previously lived inside the `MusicPlayer` class component.
@@ -25,13 +21,6 @@ export interface MusicPlayerControllerOptions {
  * controller via {@link start} on mount, and disposes it via {@link dispose} on unmount.
  */
 export default class MusicPlayerController extends Controller {
-  public readonly subtitleEditorMode: boolean;
-
-  constructor(options?: MusicPlayerControllerOptions) {
-    super();
-    this.subtitleEditorMode = !!options?.subtitleEditorMode;
-  }
-
   /** The underlying media element, bound by the view. */
   public media: HTMLMediaElement = null;
 
@@ -135,7 +124,7 @@ export default class MusicPlayerController extends Controller {
     options = options || {};
     this.media.currentTime = seconds;
     StoryboardParser.resetCurrentEvents();
-    if (!this.subtitleEditorMode && options.updateDiscord) Toxen.discord?.setPresence();
+    if (options.updateDiscord) Toxen.discord?.setPresence();
   }
 
   public setSource(src: MediaSourceInfo, playWhenReady: boolean = false, options?: MusicPlayerSourceOptions) {
@@ -151,7 +140,6 @@ export default class MusicPlayerController extends Controller {
    * This ensures there's overlap for the fade effect to work.
    */
   private checkCrossfadeTrigger() {
-    if (this.subtitleEditorMode) return;
     if (this.crossfadeTriggered) return; // Already triggered
     if (this.crossfadeInProgress) return; // Crossfade already happening
 
@@ -294,11 +282,9 @@ export default class MusicPlayerController extends Controller {
               this.crossfadeInProgress = false;
 
               // Update Discord presence and other integrations
-              if (!this.subtitleEditorMode) {
-                Toxen.discord?.setPresence();
-                if (toxenapi.isDesktop() && toxenapi.TaskbarControls) {
-                  toxenapi.TaskbarControls.onPlayStateChanged();
-                }
+              Toxen.discord?.setPresence();
+              if (toxenapi.isDesktop() && toxenapi.TaskbarControls) {
+                toxenapi.TaskbarControls.onPlayStateChanged();
               }
             }
           }, fadeInterval);
@@ -349,11 +335,9 @@ export default class MusicPlayerController extends Controller {
 
   public play() {
     this.media.play();
-    if (!this.subtitleEditorMode) {
-      Toxen.discord?.setPresence();
-      if (toxenapi.isDesktop() && toxenapi.TaskbarControls) {
-        toxenapi.TaskbarControls.onPlayStateChanged();
-      }
+    Toxen.discord?.setPresence();
+    if (toxenapi.isDesktop() && toxenapi.TaskbarControls) {
+      toxenapi.TaskbarControls.onPlayStateChanged();
     }
   }
 
@@ -363,11 +347,9 @@ export default class MusicPlayerController extends Controller {
 
   public pause() {
     this.media.pause();
-    if (!this.subtitleEditorMode) {
-      Toxen.discord?.setPresence();
-      if (toxenapi.isDesktop() && toxenapi.TaskbarControls) {
-        toxenapi.TaskbarControls.onPlayStateChanged();
-      }
+    Toxen.discord?.setPresence();
+    if (toxenapi.isDesktop() && toxenapi.TaskbarControls) {
+      toxenapi.TaskbarControls.onPlayStateChanged();
     }
   }
 
@@ -377,7 +359,6 @@ export default class MusicPlayerController extends Controller {
   }
 
   public playNext() {
-    if (this.subtitleEditorMode) return;
     let nextSongFromHistory = Song.historyForward();
     if (nextSongFromHistory) {
       return nextSongFromHistory.play({ disableHistory: true });
@@ -412,13 +393,11 @@ export default class MusicPlayerController extends Controller {
   }
 
   public playPrev() {
-    if (this.subtitleEditorMode) return;
     let prevSong = Song.historyBack();
     if (prevSong) prevSong.play({ disableHistory: true });
   }
 
   public playRandom() {
-    if (this.subtitleEditorMode) return;
     let songs = Toxen.getPlayableSongs();
     let songCount = songs.length;
     if (songCount === 0) {
@@ -443,8 +422,6 @@ export default class MusicPlayerController extends Controller {
   }
 
   public handleEnded() {
-    if (this.subtitleEditorMode) return;
-
     // If crossfade already triggered the next song, don't do anything
     if (this.crossfadeTriggered && Settings.get('crossfadeEnabled', false)) {
       // Reset for next song

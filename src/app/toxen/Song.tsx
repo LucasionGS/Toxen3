@@ -292,6 +292,33 @@ export default class Song implements ISong {
   }
 
   /**
+   * Write subtitle content to the song folder, locally or remotely, and update file tracking.
+   * @param fileName Relative file name. Defaults to the current subtitle file, or "subtitles.tst" if none.
+   */
+  public async writeSubtitleFile(content: string, fileName?: string) {
+    fileName = fileName || this.paths.subtitles || "subtitles.tst";
+    const filetime = Date.now();
+    if (Settings.isRemote()) {
+      const user = Settings.getUser();
+      if (!user) throw new Error("Cannot save subtitles. User is not logged in.");
+      const res = await Toxen.fetch(this.dirname(fileName), {
+        method: "PUT",
+        body: content,
+      });
+      if (!res.ok) throw new Error(`Failed to save subtitles. Status: ${res.status} ${res.statusText}`);
+    }
+    else if (toxenapi.isDesktop()) {
+      await toxenapi.fs.promises.writeFile(this.dirname(fileName), content);
+    }
+    else {
+      return toxenapi.throwDesktopOnly("writeSubtitleFile");
+    }
+    this.paths.subtitles = fileName;
+    this.setFile(fileName, "u", filetime);
+    await this.saveInfo();
+  }
+
+  /**
    * Return the full path of the storyboard file.
    */
   public storyboardFile() {

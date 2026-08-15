@@ -11,12 +11,11 @@ interface MusicPlayerProps {
   controller?: MusicPlayerController;
   /** Invoked once on mount with the controller, so parents can register it (e.g. `Toxen.musicPlayer`). */
   onReady?: (controller: MusicPlayerController) => void;
-  useSubtitleEditorMode?: boolean;
 }
 
 export default function MusicPlayer(props: MusicPlayerProps) {
   const controller = useMemo(
-    () => props.controller ?? new MusicPlayerController({ subtitleEditorMode: !!props.useSubtitleEditorMode }),
+    () => props.controller ?? new MusicPlayerController(),
     // Controller identity is fixed for the lifetime of this component.
     []
   );
@@ -34,7 +33,7 @@ export default function MusicPlayer(props: MusicPlayerProps) {
 
   // Keep volume in sync (mirrors the old componentDidUpdate behaviour).
   useEffect(() => {
-    controller.setVolume(props.useSubtitleEditorMode ? 50 : Settings.get("volume"));
+    controller.setVolume(Settings.get("volume"));
   });
 
   // Run any pending source callback once the new src/crossOrigin are committed.
@@ -43,7 +42,7 @@ export default function MusicPlayer(props: MusicPlayerProps) {
   }, [controller, controller.src, controller.crossOrigin]);
 
   const isVideo = controller.isVideo(controller.src);
-  const hidden = props.useSubtitleEditorMode || !isVideo;
+  const hidden = !isVideo;
 
   return (
     <video
