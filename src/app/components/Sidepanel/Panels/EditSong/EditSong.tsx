@@ -732,6 +732,21 @@ export default function EditSong(props: EditSongProps) {
           }}
         />
         <sup>Scale multiplier for the custom rainfall image. Only applies when a custom image is set.</sup>
+
+        <ColorInput
+          leftSection={<IconPalette size="1em" />}
+          label="Rainfall Color"
+          name="rainfallColor"
+          defaultValue={getValue('rainfallColor') ?? ""}
+          onChange={(v) => {
+            saveSettings('rainfallColor', v || null, false);
+          }}
+          onChangeEnd={(v) => {
+            saveSettings('rainfallColor', v || null);
+          }}
+          onBlur={() => Toxen.editingSong.saveInfo()}
+        />
+        <sup>Color of the rain drops for this song. Leave empty to use the color from settings.</sup>
         </Tabs.Panel>
 
         <Tabs.Panel value="floatingTitle" pt="md">

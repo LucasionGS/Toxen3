@@ -20,6 +20,7 @@ import User from "../../../../toxen/User";
 import { bytesToString } from "../../../AppBar/AppBar";
 import { Tab } from "react-bootstrap";
 import ProviderIntegrations from "./ProviderIntegrations";
+import { DEFAULT_RAINFALL_COLOR } from "../../../Background/visualizers/particles/Rainfall";
 
 interface SettingsPanelProps { }
 
@@ -880,6 +881,17 @@ export default function SettingsPanel(props: SettingsPanelProps) {
             />
             <sup>
               Scale multiplier for the custom rainfall image. Only applies when a custom image is set. 0.25x-5x.
+            </sup>
+
+            <ColorInput
+              onChange={(c) => Settings.apply({ rainfallColor: c }, true)}
+              defaultValue={Settings.get("rainfallColor") || DEFAULT_RAINFALL_COLOR}
+              name="rainfallColor"
+              label="Rainfall Color"
+            />
+            <sup>
+              Color of the rain drops if a song specific one isn't set.
+              Only applies to the default drops, a custom rainfall image keeps its own colors.
             </sup>
             </Tabs.Panel>
           </Tabs>

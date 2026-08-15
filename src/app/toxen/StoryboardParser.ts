@@ -792,6 +792,21 @@ namespace StoryboardParser {
     }
   });
 
+  addStoryboardComponent("rainfallColor", {
+    name: "Rainfall Color",
+    arguments: [
+      {
+        name: "Color",
+        identifier: "color",
+        type: "Color"
+      },
+    ],
+    action: (args) => {
+      const color = getAsType<"Color">(args.color);
+      if (color) Toxen.background.storyboard.data.rainfallColor = rgbArrayToHex(color);
+    }
+  });
+
   addStoryboardComponent("text", {
     name: "Text",
     arguments: [

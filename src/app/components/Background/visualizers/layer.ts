@@ -45,7 +45,7 @@ export interface FramePayload {
   logoKey: string | null;
 
   starRush: { intensity: number; visualizerIntensity: number } | null;
-  rainfall: { frequency: number; speed: number; imageScale: number; imageKey: string | null } | null;
+  rainfall: { frequency: number; speed: number; imageScale: number; imageKey: string | null; color: string } | null;
   /** Region the floating title needs punched out of the visualizer. */
   titleCutout: { x: number; y: number; width: number; height: number } | null;
 }
@@ -117,6 +117,7 @@ export default class VisualizerLayer {
           speed: payload.rainfall.speed,
           imageScale: payload.rainfall.imageScale,
           image: payload.rainfall.imageKey ? resolveImage(payload.rainfall.imageKey) : null,
+          color: payload.rainfall.color,
         });
       } else {
         this.rainfall.clear();

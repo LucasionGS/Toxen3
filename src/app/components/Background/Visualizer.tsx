@@ -208,6 +208,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
         speed: storyboard.getRainfallSpeed(),
         imageScale: storyboard.getRainfallImageScale(),
         imageKey: src ? this.registerImage(src, this.images.getElement(src)) : null,
+        color: storyboard.getRainfallColor(),
       };
     } else {
       payload.rainfall = null;

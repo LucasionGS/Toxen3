@@ -9,11 +9,18 @@ interface RainfallParticle {
   opacity: number;
 }
 
+/** Colour of the default drops when nothing else is configured. */
+export const DEFAULT_RAINFALL_COLOR = "#c8dcff";
+
+/** Drops are drawn slightly translucent on top of their own per-particle opacity. */
+const DROP_ALPHA = 0.8;
+
 export interface RainfallOptions {
   frequency: number;
   speed: number;
   image: ReadyImage | null;
   imageScale: number;
+  color: string;
 }
 
 export default class Rainfall {
@@ -46,7 +53,7 @@ export default class Rainfall {
       }
     }
 
-    this.render(ctx, options.image, imageScale);
+    this.render(ctx, options.image, imageScale, options.color || DEFAULT_RAINFALL_COLOR);
   }
 
   private spawn(vWidth: number) {
@@ -60,8 +67,9 @@ export default class Rainfall {
     });
   }
 
-  private render(ctx: Canvas2D, image: ReadyImage | null, imageScale: number) {
+  private render(ctx: Canvas2D, image: ReadyImage | null, imageScale: number, color: string) {
     ctx.save();
+    ctx.strokeStyle = color;
 
     for (const p of this.particles) {
       if (p.opacity <= 0) continue;
@@ -74,7 +82,7 @@ export default class Rainfall {
         const height = aspect > 0 ? width / aspect : width;
         ctx.drawImage(image.source, p.x - width / 2, p.y - height / 2, width, height);
       } else {
-        ctx.strokeStyle = 'rgba(200, 220, 255, 0.8)';
+        ctx.globalAlpha = p.opacity * DROP_ALPHA;
         ctx.lineWidth = p.size;
         ctx.beginPath();
         ctx.moveTo(p.x, p.y - p.length);

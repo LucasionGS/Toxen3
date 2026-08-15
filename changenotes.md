@@ -13,6 +13,8 @@ This file contains the change logs for Toxen.
   - Can be turned off in `Settings > Sidepanel > Drag To Scroll`.
 - **Shortcuts For Finding Tracks** - `Ctrl+F` jumps straight to the track list search box with your current search selected, ready to be typed over. `Ctrl+Shift+F` scrolls the list to the track that's playing.
   - Both bring up the side panel and the track list first if they aren't already open.
+- **Rainfall Color** - The rain drops can be set to any color you like, and a single track can use its own color. Storyboards can change it mid-song too.
+  - Set it in `Settings > Visuals > Visual Effects > Rainfall Color`, or per track under `Effects` when editing a track.
 
 ## Changes
 
@@ -21,6 +23,10 @@ This file contains the change logs for Toxen.
 - **Smoother Interface During Playback** - The background pulse and the progress bar colour no longer force the interface to redraw itself on every frame.
 - **More Visualizer Customization Options** - Added Y-Axis customization for `Waveform`
 - **No more Font Awesome** - Replaced all remaining Font Awesome icons with Tabler Icons.
+
+## Bug Fixes
+
+- **Track Settings Are Respected Again** - A track's own settings were being ignored while listening to a playlist that had the same option left on `<Default>`. Effects like Rainfall and Star Rush set on a single track now apply the way they should.
 
 ## Boring stuff
 
