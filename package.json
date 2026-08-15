@@ -15,7 +15,8 @@
     "startweb": "vite --config ./vite.web.config.ts",
     "setupdate": "node setupdate.js",
     "generate:srcinfo": "makepkg --printsrcinfo > .SRCINFO",
-    "clean:arch": "rm -rf pkg src/Toxen3-* src/toxen3-*.tar.gz toxen3-*.tar.gz *.pkg.tar.zst"
+    "arch:makepkg": "export TOXENTMP=$(mktemp -d); cp -r PKGBUILD $TOXENTMP/PKGBUILD && cd $TOXENTMP && makepkg -si --cleanbuild --skippgpcheck --noconfirm && cd - && rm -r $TOXENTMP",
+    "arch:clean": "rm -rf pkg src/Toxen3-* src/toxen3-*.tar.gz toxen3-*.tar.gz *.pkg.tar.zst"
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.4.0",
