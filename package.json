@@ -17,7 +17,7 @@
     "generate:srcinfo": "makepkg --printsrcinfo > .SRCINFO",
     "arch:makepkg": "export TOXENTMP=$(mktemp -d); cp -r PKGBUILD $TOXENTMP/PKGBUILD && cd $TOXENTMP && makepkg -si --cleanbuild --skippgpcheck --noconfirm && cd - && rm -r $TOXENTMP",
     "arch:clean": "rm -rf pkg src/Toxen3-* src/toxen3-*.tar.gz toxen3-*.tar.gz *.pkg.tar.zst",
-    "postinstall": "patch-package"
+    "postinstall": "node scripts/apply-patches.js"
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.11.2",
