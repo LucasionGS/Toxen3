@@ -204,7 +204,7 @@ export class Toxen {
   public static resetChangeLogs() {
     Toxen.changeLogs = undefined;
   }
-  private static changeLogs: string | JSX.Element | JSX.Element[];
+  private static changeLogs: string | React.JSX.Element | React.JSX.Element[];
 
   /**
    * Converts a http(s) URL to a tx(s) URL.

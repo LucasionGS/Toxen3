@@ -1324,7 +1324,7 @@ export default class Song implements ISong {
                 </Button>
               )
             }
-            {Settings.isAdvanced<JSX.Element>(
+            {Settings.isAdvanced<React.JSX.Element>(
               <>
                 <Button onClick={() => {
                   close();
