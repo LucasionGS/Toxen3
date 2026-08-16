@@ -1,13 +1,13 @@
 // const RPC: typeof import("discord-rpc") = require("../../modified_node_modules/discord-rpc");
 // import * as RPC from "../../modified_node_modules/discord-rpc/src";
-// Static import, not require(): forge no longer ships node_modules with the
-// packaged app, and a bare require() is not statically analyzable, so Rollup
-// would leave it external and it would fail to resolve at runtime.
-// The runtime is discord-rpc-electron; the types come from discord-rpc, which
-// ships @types but is not installed as a runtime dependency.
-// @ts-ignore - discord-rpc-electron ships no type declarations.
-import * as RPCElectron from "discord-rpc-electron";
-const RPC = RPCElectron as unknown as typeof import("discord-rpc");
+// Deliberately a runtime require(), not an import: discord-rpc-electron is a
+// Node-only CJS package whose transports extend EventEmitter. Letting Vite see
+// it means esbuild pre-bundles it for the browser, which turns require("events")
+// into a namespace object and throws "Class extends value #<Object> is not a
+// constructor" at load time. require() keeps it out of the bundle graph and
+// loads the real Node module. forge.config.ts ships it and its deps with the
+// packaged app, since forge no longer copies dependencies itself.
+const RPC: typeof import("discord-rpc") = require("discord-rpc-electron");
 // RPC: I had to modify the code itself for it to work.
 // It would only work if I added (error) after the catch on line 48 in the websocket code.
 // If anyone has any better solutions I am all ears.
