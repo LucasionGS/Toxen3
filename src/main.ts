@@ -1,6 +1,8 @@
 import { app, BrowserWindow, net, protocol } from 'electron';
 import Path from "path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+// @ts-ignore - electron-squirrel-startup ships no type declarations.
+import squirrelStartup from "electron-squirrel-startup";
 import { updateElectronApp} from "update-electron-app";
 import remote from '@electron/remote/main';
 remote.initialize();
@@ -15,7 +17,9 @@ declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (require('electron-squirrel-startup')) { // eslint-disable-line global-require
+// Static import rather than require(): forge no longer ships node_modules with
+// the packaged app, so a bare require() would resolve to nothing at runtime.
+if (squirrelStartup) {
   app.quit();
 }
 

@@ -31,9 +31,9 @@ export default defineConfig((env) => {
     mode,
     base: './',
     build: {
-      // Electron 30 renderer runs Chromium 124. Pinned explicitly because Vite 7
+      // Electron 43 renderer runs Chromium 150. Pinned explicitly because Vite 7
       // defaults to 'baseline-widely-available', which downlevels for stale browsers.
-      target: 'chrome124',
+      target: 'chrome150',
       outDir: `.vite/renderer/${name}`,
       chunkSizeWarningLimit: 4096,
     },

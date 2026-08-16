@@ -9,9 +9,9 @@ export default defineConfig((env) => {
   const define = getBuildDefine(forgeEnv);
   const config: UserConfig = {
     build: {
-      // Electron 30's main process runs Node 20. Pinned explicitly because Vite 7
+      // Electron 43's main process runs Node 24. Pinned explicitly because Vite 7
       // defaults to 'baseline-widely-available', a browser target, not a Node one.
-      target: 'node20',
+      target: 'node24',
       lib: {
         entry: forgeConfigSelf.entry!,
         fileName: () => '[name].js',

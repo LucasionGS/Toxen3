@@ -8,7 +8,7 @@ arch=('x86_64')
 url="https://github.com/LucasionGS/Toxen3"
 license=('MIT')
 depends=('gtk3' 'nss' 'alsa-lib')
-makedepends=('electron30-bin' 'nodejs>=22.12' 'npm')
+makedepends=('electron43-bin' 'nodejs>=22.12' 'npm')
 options=('!debug' '!strip')
 source=("$pkgname-$pkgver.tar.gz::https://github.com/LucasionGS/Toxen3/archive/v$pkgver.tar.gz")
 sha256sums=('SKIP')  # Replace with actual checksum
