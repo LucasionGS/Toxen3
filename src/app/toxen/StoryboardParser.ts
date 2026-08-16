@@ -2,7 +2,8 @@ import { hexToRgb, hexToRgbArray, rgbArrayToHex, rgbToHex } from "../components/
 import { Toxen } from "../ToxenApp";
 import Settings, { VisualizerStyle } from "./Settings";
 import Time from "./Time";
-import yaml from "js-yaml";
+// js-yaml 5 dropped its default export in favour of flat named exports.
+import * as yaml from "js-yaml";
 // import fsp from "fs/promises";
 import User from "./User";
 // import HueManager from "./philipshue/HueManager";
@@ -318,9 +319,12 @@ namespace StoryboardParser {
   }
 
   export function parseStoryboard(storyboardYaml: string, validateFields: boolean = true): StoryboardConfig {
+    // js-yaml 5 throws on empty input where v4 returned undefined. Keep the
+    // original, more useful error for an empty or whitespace-only storyboard.
+    if (!storyboardYaml?.trim()) throw new Error("Storyboard is missing `storyboard` property.");
     const storyboardConfig = yaml.load(storyboardYaml) as PreparseStoryboardConfig;
 
-    if (!storyboardConfig.storyboard) throw new Error("Storyboard is missing `storyboard` property.");
+    if (!storyboardConfig?.storyboard) throw new Error("Storyboard is missing `storyboard` property.");
     if (typeof storyboardConfig.version === "number" && storyboardConfig.version !== version) throw new Error(`Storyboard version is not supported. Expected ${version}, got ${storyboardConfig.version}`);
 
     try {
