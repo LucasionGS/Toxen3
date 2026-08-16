@@ -2,8 +2,10 @@
 
 This file contains the change logs for Toxen.
 
-<!-- UPCOMING: 2.10.1 -->
-## 2.10.1 - TBD
+<!-- UPCOMING: 2.11.1 -->
+
+<!-- VERSION: 2.11.0 -->
+## 2.11.0 - 16-08-2026
 
 ## New Features
 
