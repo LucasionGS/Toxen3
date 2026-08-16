@@ -20,6 +20,13 @@ This file contains the change logs for Toxen.
 
 - Saving subtitles now works in remote/web mode instead of silently losing the changes.
 - Exporting subtitles to the .lrc format no longer produces a broken file, and .lrc timestamps are now read correctly.
+- Backgrounds and media in folders with a `#` or `%` in the name now load properly instead of showing up blank.
+- Notification popups are styled correctly again.
+
+## Boring stuff
+
+- **Big under-the-hood update** - Toxen now runs on a much newer Electron, React and Mantine, along with an updated build toolchain. No visible changes intended, but it keeps Toxen on supported, patched versions.
+- Removed a dozen unused dependencies that were still being shipped with the app.
 
 <!-- VERSION: 2.10.0 -->
 ## 2.10.0 - 15-08-2026
