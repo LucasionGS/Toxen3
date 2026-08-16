@@ -71,7 +71,7 @@ export default class FormInputList extends Component<FormInputListProps, FormInp
           name={this.props.name} value={JSON.stringify(this.state.value)}
           readOnly
         />
-        <input ref={ref => inputRef = ref} className="tx-form-field" type="text" onKeyDown={e => {
+        <input ref={ref => { inputRef = ref; }} className="tx-form-field" type="text" onKeyDown={e => {
           if (e.key == "Enter") {
             e.preventDefault();
             if (e.currentTarget.value.trim()) {

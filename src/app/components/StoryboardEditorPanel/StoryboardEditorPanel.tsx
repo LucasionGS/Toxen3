@@ -250,7 +250,7 @@ function EventElement(props: { config: StoryboardParser.StoryboardConfig, event:
             Time.fromTimestamp(endTime, () => null)?.toTimestamp(Time.FORMATS.STANDARD_WITH_MS) ?? "INVALID"
           }</code>] {StoryboardParser.components[component]?.name ?? component}
       </span>
-      <Collapse in={opened}>
+      <Collapse expanded={opened}>
         <div className="sbevent-content">
           <Group>
             <TimeInput

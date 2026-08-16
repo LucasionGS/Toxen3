@@ -6,10 +6,14 @@ export default function toxenApi(type: string) {
     enforce: 'pre',
     transform(code, id) {
       if (id.endsWith('app.tsx')) {
-        return code.replace(
-          '/*REPLACED_BY_VITE*/import "./ToxenControllers/toxenapi";',
-          '/*REPLACED_BY_VITE*/import "./ToxenControllers/toxenapi_'+ type +'";'
-        );
+        return {
+          code: code.replace(
+            '/*REPLACED_BY_VITE*/import "./ToxenControllers/toxenapi";',
+            '/*REPLACED_BY_VITE*/import "./ToxenControllers/toxenapi_'+ type +'";'
+          ),
+          // Single-line, same-length replacement, so mappings are unchanged.
+          map: null,
+        };
       }
     }
   };

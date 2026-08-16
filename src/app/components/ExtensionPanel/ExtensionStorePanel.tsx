@@ -67,7 +67,7 @@ function ExtensionCard({ ext, onDownload, showStatus, installing }: {
             <Text size="xs" style={{ opacity: 0.5 }}>ID: {ext.extensionId}</Text>
           </Group>
           {ext.status === "rejected" && ext.rejectionReason && (
-            <Text size="sm" color="red" mt={4}>Rejection reason: {ext.rejectionReason}</Text>
+            <Text size="sm" c="red" mt={4}>Rejection reason: {ext.rejectionReason}</Text>
           )}
         </div>
         <Stack gap={4}>

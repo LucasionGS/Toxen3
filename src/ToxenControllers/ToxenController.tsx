@@ -8,6 +8,7 @@ import type Song from "../app/toxen/Song";
 import type { Toxen } from "../app/ToxenApp";
 import type User from "../app/toxen/User";
 import type { SongDiff, ISong } from "../app/toxen/Song";
+import type { ToxenFile } from "../app/toxen/System";
 import { showNotification } from "@mantine/notifications";
 
 /**
@@ -65,6 +66,19 @@ export default class ToxenController {
     return paths.join("/").replace(/\/+/g, "/");
   }
   
+  /**
+   * Resolves the on-disk path of a dropped or picked file.
+   *
+   * Electron 32 removed the non-standard `File.path` property, so native `File`
+   * objects must go through `webUtils.getPathForFile` instead (see
+   * DesktopController). Returns `""` for anything without a filesystem path,
+   * matching what both `File.path` and `webUtils.getPathForFile` used to yield
+   * for non-filesystem files — callers rely on that empty-string sentinel.
+   */
+  public getFilePath(file: File | ToxenFile): string {
+    return (file as ToxenFile)?.path ?? "";
+  }
+
   /**
    * Throws an error if the ToxenController isn't the desktop version.
    */

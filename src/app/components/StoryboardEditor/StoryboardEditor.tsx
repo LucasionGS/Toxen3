@@ -5,7 +5,7 @@ import { IconDeviceFloppy, IconPlayerStop, IconPlayerSkipBack, IconAlignCenter }
 import { Toxen } from "../../ToxenApp";
 import StoryboardParser from "../../toxen/StoryboardParser";
 import { useModals } from "@mantine/modals";
-import { ModalsContextProps } from "@mantine/modals/lib/context";
+import type { ModalsContextProps } from "../../../types/mantine-modals";
 import SelectAsync from "../SelectAsync/SelectAsync";
 import BackgroundFileSelector from "../BackgroundFileSelector/BackgroundFileSelector";
 import { VisualizerStyle } from "../../toxen/Settings";

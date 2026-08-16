@@ -576,7 +576,7 @@ function VideoCard(props: { video: VideoInfo }) {
               placeholder="Select subtitle language..."
               data={subtitleOptions}
               value={selectedSubtitle}
-              onChange={setSelectedSubtitle}
+              onChange={(value) => setSelectedSubtitle(value ?? "")}
               disabled={importing || imported}
               clearable={false}
               searchable

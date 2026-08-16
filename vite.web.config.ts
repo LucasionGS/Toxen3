@@ -1,7 +1,6 @@
 import type { UserConfig } from 'vite';
 import { defineConfig } from 'vite';
 import react from "@vitejs/plugin-react-swc";
-import path from "path";
 import toxenApi from './vite_toxen_plugin';
 import sass from "sass";
 import { VitePWA } from "vite-plugin-pwa";
@@ -11,14 +10,18 @@ export default defineConfig({
   css: {
     preprocessorOptions: {
       scss: {
+        // Modern sass API. The legacy JS API (sass.types.*) was removed in Vite 7
+        // and is deprecated in Dart Sass; custom functions must return sass.Value.
+        api: 'modern-compiler',
         functions: {
-          "ToxenIsWeb()": () => sass.types.Boolean.TRUE
+          "ToxenIsWeb()": () => sass.sassTrue
         }
       },
     }
   },
   base: './',
   build: {
+    target: 'baseline-widely-available',
     outDir: 'buildweb',
     chunkSizeWarningLimit: 4096,
   },
@@ -70,9 +73,6 @@ export default defineConfig({
   ],
   resolve: {
     preserveSymlinks: true,
-    // alias: {
-    //   'node-aead-crypto': path.resolve(__dirname, './emptyModule.js'),
-    // }
   },
   clearScreen: false,
 } as UserConfig);

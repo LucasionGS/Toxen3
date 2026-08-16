@@ -6,7 +6,27 @@ import { MakerRpm } from '@electron-forge/maker-rpm';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
-import { AutoUnpackNativesPlugin, AutoUnpackNativesConfig } from "@electron-forge/plugin-auto-unpack-natives";
+
+/**
+ * Packages that are loaded with a runtime `require()` instead of being bundled,
+ * so Vite never sees them and cannot inline them into the renderer.
+ * Currently just the Discord Rich Presence client and its transitive deps —
+ * it is a Node-only CJS package that breaks when pre-bundled for the browser.
+ *
+ * Forge's Vite plugin ignores everything outside `/.vite` when packaging, and
+ * since 7.5 it no longer copies dependencies into the app either, so without
+ * this list the require() resolves to nothing in a packaged build and takes the
+ * whole renderer down with it. Keep in sync with the dependency tree of
+ * discord-rpc-electron (node-fetch and ws, plus whatwg-url's chain).
+ */
+const runtimeRequiredModules = [
+  'discord-rpc-electron',
+  'node-fetch',
+  'ws',
+  'whatwg-url',
+  'tr46',
+  'webidl-conversions',
+];
 
 const config: ForgeConfig = {
   publishers: [
@@ -25,7 +45,18 @@ const config: ForgeConfig = {
   packagerConfig: {
     asar: true,
     icon: './src/icons/sizes/icon.ico',
-    executableName: 'toxen3'
+    executableName: 'toxen3',
+    // Defining this ourselves stops the Vite plugin installing its own filter,
+    // which keeps only `/.vite`. Same behaviour, plus the runtime-require'd
+    // modules above. Paths always start with '/'.
+    ignore: (file: string) => {
+      if (!file) return false;
+      if (file.startsWith('/.vite')) return false;
+      if (file === '/node_modules') return false;
+      return !runtimeRequiredModules.some(
+        (m) => file === `/node_modules/${m}` || file.startsWith(`/node_modules/${m}/`)
+      );
+    },
   },
   rebuildConfig: {},
   makers: [new MakerSquirrel({

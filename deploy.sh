@@ -11,7 +11,7 @@ git pull
 # The server submodule is private - Not meant to be publicly accessible
 git submodule update --recursive
 # Build the web app before building the server, since Docker will create a root-owned folder otherwise
-yarn buildweb
+npm run buildweb
 
 # Build and start the server with Docker
 cd server

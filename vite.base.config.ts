@@ -1,11 +1,20 @@
 import { builtinModules } from 'node:module';
 import type { AddressInfo } from 'node:net';
 import type { ConfigEnv, Plugin, UserConfig } from 'vite';
-import pkg from './package.json';
 
 export const builtins = ['electron', ...builtinModules.map((m) => [m, `node:${m}`]).flat()];
 
-export const external = [...builtins, ...Object.keys('dependencies' in pkg ? (pkg.dependencies as Record<string, unknown>) : {})];
+/**
+ * Only Electron itself and Node core may be left external.
+ *
+ * Forge's Vite plugin packages nothing outside `/.vite`, and as of 7.5 its
+ * packageAfterCopy hook only writes a package.json — it no longer copies flat
+ * dependencies into the build like 7.4 did. Anything the main or preload
+ * process imports must therefore be bundled into the output, or it resolves to
+ * a missing module at runtime in a packaged build (dev still works, because
+ * node_modules is right there).
+ */
+export const external = [...builtins];
 
 export function getBuildConfig(env: ConfigEnv<'build'>): UserConfig {
   const { root, mode, command } = env;
@@ -80,8 +89,8 @@ export function pluginHotRestart(command: 'reload' | 'restart'): Plugin {
     closeBundle() {
       if (command === 'reload') {
         for (const server of Object.values(process.viteDevServers)) {
-          // Preload scripts hot reload.
-          server.ws.send({ type: 'full-reload' });
+          // Preload scripts hot reload. `server.ws` is deprecated as of Vite 6.
+          server.hot.send({ type: 'full-reload' });
         }
       } else {
         // Main process hot restart.

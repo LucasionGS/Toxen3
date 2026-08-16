@@ -1,5 +1,8 @@
-import { app, BrowserWindow, nativeImage, protocol } from 'electron';
+import { app, BrowserWindow, net, protocol } from 'electron';
 import Path from "path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+// @ts-ignore - electron-squirrel-startup ships no type declarations.
+import squirrelStartup from "electron-squirrel-startup";
 import { updateElectronApp} from "update-electron-app";
 import remote from '@electron/remote/main';
 remote.initialize();
@@ -14,7 +17,9 @@ declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (require('electron-squirrel-startup')) { // eslint-disable-line global-require
+// Static import rather than require(): forge no longer ships node_modules with
+// the packaged app, so a bare require() would resolve to nothing at runtime.
+if (squirrelStartup) {
   app.quit();
 }
 
@@ -97,15 +102,26 @@ const createWindow = (): void => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', () => {
-  createWindow();
-
-  // Register file protocol to access system files.
-  protocol.registerFileProtocol('file', (request, callback) => {
-    request.url = request.url.replace('tx://', 'http://');
-    request.url = request.url.replace('txs://', 'https://');
-    request.url = request.url.replace('file:///', '');
-    callback(decodeURI(request.url));
+  // Serve local files. Replaces protocol.registerFileProtocol, which has been
+  // deprecated since Electron 25 and mishandles Windows paths since Electron 33.
+  //
+  // Registered before the first window so the renderer's own assets (which are
+  // loaded over file:// in packaged builds) never race the handler.
+  protocol.handle('file', (request) => {
+    const url = new URL(request.url);
+    // Backgrounds and media carry a ?h=<hash> cache-buster that is not part of
+    // the filename. fileURLToPath ignores it, but strip it so that is explicit.
+    url.search = '';
+    url.hash = '';
+    // fileURLToPath decodes percent-escapes properly, including %23 (#) and
+    // %25 (%), which the previous decodeURI() call left mangled.
+    return net.fetch(pathToFileURL(fileURLToPath(url)).toString(), {
+      // Mandatory: without it net.fetch re-enters this handler and recurses.
+      bypassCustomProtocolHandlers: true,
+    });
   });
+
+  createWindow();
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common

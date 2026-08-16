@@ -22,7 +22,7 @@ export default function FormInputColorPicker(props: Props) {
           position: "absolute",
           top: 0,
           left: 0
-        }} ref={ref => colorPicker = ref} type="color" onChange={e => {
+        }} ref={ref => { colorPicker = ref; }} type="color" onChange={e => {
           setValue(e.currentTarget.value);
           if (typeof props.onChange === "function") props.onChange(e.currentTarget.value);
         }}

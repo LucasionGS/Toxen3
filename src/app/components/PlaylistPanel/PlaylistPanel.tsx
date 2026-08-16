@@ -42,7 +42,7 @@ import Playlist from '../../toxen/Playlist';
 import { Toxen } from '../../ToxenApp';
 import SidepanelSectionHeader from '../Sidepanel/SidepanelSectionHeader';
 import "./PlaylistPanel.scss";
-import { ModalsContextProps } from '@mantine/modals/lib/context';
+import type { ModalsContextProps } from '../../../types/mantine-modals';
 // import Path from 'path';
 // import fs from 'fs';
 import Settings from '../../toxen/Settings';

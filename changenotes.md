@@ -2,7 +2,33 @@
 
 This file contains the change logs for Toxen.
 
-<!-- UPCOMING: 2.10.1 -->
+<!-- UPCOMING: 2.11.1 -->
+
+<!-- VERSION: 2.11.0 -->
+## 2.11.0 - 16-08-2026
+
+## New Features
+
+- **New Subtitle Editor** - The subtitle editor has been rebuilt from scratch as a fullscreen editor with a cue list, a pannable and zoomable timeline, live preview on the playing track, and undo/redo. Drag on the timeline to select multiple lines, then move, copy, cut, and paste them together. Works on desktop, web, and mobile.
+  - Open it from the `Subtitles` panel in the side menu.
+- **More Subtitle Styling** - Toxen subtitles (.tst) now support italic text, outline color, and vertical screen position, per line or for the whole file.
+- **Subtitle Style Changes** - Toxen subtitles (.tst) can now change their style partway through a track. Add a `Style` event in the subtitle editor and it applies to every line after it until the next style event, without touching the lines before it.
+
+## Changes
+
+- **Subtitle Styling No Longer Leaks Between Lines** - A style set on one subtitle line used to stick to every line after it. Per-line styling now only affects that line; use a style event or the global style for anything longer.
+
+## Bug Fixes
+
+- Saving subtitles now works in remote/web mode instead of silently losing the changes.
+- Exporting subtitles to the .lrc format no longer produces a broken file, and .lrc timestamps are now read correctly.
+- Backgrounds and media in folders with a `#` or `%` in the name now load properly instead of showing up blank.
+
+## Boring stuff
+
+- **Big under-the-hood update** - Toxen now runs on a much newer Electron, React and Mantine, along with an updated build toolchain. No visible changes intended, but it keeps Toxen on supported, patched versions.
+- Removed a dozen unused dependencies that were still being shipped with the app.
+- Please report any bugs you find.
 
 <!-- VERSION: 2.10.0 -->
 ## 2.10.0 - 15-08-2026

@@ -9,6 +9,9 @@ namespace SubtitleParser {
     font: string;
     fontSize: string;
     bold: string;
+    italic: string;
+    outlineColor: string;
+    verticalPosition: string;
   }
 
   export interface SubtitleItem {
@@ -17,6 +20,16 @@ namespace SubtitleParser {
     end: Time,
     text: string,
     options: Partial<SubtitleOptions>,
+  }
+
+  /**
+   * A timed style change (TST only). Applies to all subtitles starting at or after `time`,
+   * until modified by a later event. `reset` clears earlier style events back to the global options.
+   */
+  export interface SubtitleStyleEvent {
+    time: Time;
+    options: Partial<SubtitleOptions>;
+    reset?: boolean;
   }
 
   export class SubtitleArray extends Array<SubtitleItem>{
@@ -32,6 +45,9 @@ namespace SubtitleParser {
 
     // Options
     public options: Partial<SubtitleOptions> = { }
+
+    // Timed style changes (TST only)
+    public styleEvents: SubtitleStyleEvent[] = [];
 
     public getById(id: number): SubtitleItem {
       return this.find(item => item.id === id);
@@ -75,7 +91,7 @@ namespace SubtitleParser {
         content = exportVtt(data);
         break;
       case ".lrc":
-        // content = exportLrc(data);
+        content = exportLrc(data);
         break;
       default:
         throw new Error("Unsupported extension:" + extension);
@@ -192,13 +208,32 @@ namespace SubtitleParser {
         }
         return options;
       }
-      applyOptions(items, getOptions());
+      const preOptions = getOptions();
+      let preReset = false;
+      if ("reset" in preOptions) {
+        preReset = true;
+        delete (preOptions as any).reset;
+      }
       while (!line && index < lines.length) { line = getNextLine(); }
-      if (index >= lines.length) { break; }
+      if (index >= lines.length) {
+        if (items.length === 0) {
+          applyOptions(items, preOptions);
+        }
+        else if (preReset || Object.keys(preOptions).length > 0) {
+          items.styleEvents.push({ time: new Time(items[items.length - 1].end.valueOf()), options: preOptions, reset: preReset });
+        }
+        break;
+      }
       item.id = items.length + 1;
       if (/\d+:\d+:\d+,\d+\s+\|\s+\d+:\d+:\d+,\d+/.test(line)) {
         [item.start, item.end] = line.split(/\s+\|\s+/).map(parseSrtTime);
         line = getNextLine();
+      }
+      if (items.length === 0 && !preReset) {
+        applyOptions(items, preOptions);
+      }
+      else if (preReset || Object.keys(preOptions).length > 0) {
+        items.styleEvents.push({ time: new Time(item.start ? item.start.valueOf() : 0), options: preOptions, reset: preReset });
       }
       applyOptions(item, getOptions());
       let textLines: string[] = [];
@@ -214,6 +249,17 @@ namespace SubtitleParser {
     return items;
   }
 
+  function exportTstStyleEvent(event: SubtitleStyleEvent): string {
+    let text = "";
+    if (event.reset) text += "@reset\n";
+    for (const key in event.options) {
+      if (Object.prototype.hasOwnProperty.call(event.options, key)) {
+        text += `@${key} = ${(event.options as any)[key]}\n`;
+      }
+    }
+    return text + "\n";
+  }
+
   export function exportTst(items: SubtitleArray): string {
     let text = "";
     for (const key in items.options) {
@@ -223,7 +269,12 @@ namespace SubtitleParser {
       }
     }
     text += "\n";
+    const events = [...(items.styleEvents ?? [])].sort((a, b) => a.time.valueOf() - b.time.valueOf());
+    let eventIndex = 0;
     for (let item of items) {
+      while (eventIndex < events.length && events[eventIndex].time.valueOf() <= item.start.valueOf()) {
+        text += exportTstStyleEvent(events[eventIndex++]);
+      }
       text += `${exportSrtTime(item.start)} | ${exportSrtTime(item.end)}\n`;
       for (const key in item.options) {
         if (Object.prototype.hasOwnProperty.call(item.options, key)) {
@@ -231,7 +282,15 @@ namespace SubtitleParser {
           text += `@${key} = ${value}\n`;
         }
       }
-      text += `${item.text.replace(/<br\s*\/?>/g, "\n")}\n\n`;
+      const textLines = item.text.replace(/<br\s*\/?>/g, "\n").split("\n").map(line => {
+        line = line.replace(/\\/g, "\\\\");
+        if (line.startsWith("@")) line = "\\" + line;
+        return line;
+      });
+      text += `${textLines.join("\n")}\n\n`;
+    }
+    while (eventIndex < events.length) {
+      text += exportTstStyleEvent(events[eventIndex++]);
     }
 
     return text;
@@ -263,18 +322,27 @@ namespace SubtitleParser {
   }
 
   function parseLrcTime(time: string): Time {
-    let parts = time.split(/[.:]/g);
-    let hours = parseInt(parts[0]);
-    let minutes = parseInt(parts[1]);
-    let seconds = parseInt(parts[2]);
-    return new Time(hours * 3600000 + minutes * 60000 + seconds * 1000);
+    const parts = time.split(/[.:]/g);
+    const minutes = parseInt(parts[0]);
+    const seconds = parseInt(parts[1]);
+    const fraction = parts[2] || "0";
+    const milliseconds = fraction.length === 3 ? parseInt(fraction) : parseInt(fraction) * 10;
+    return new Time(minutes * 60000 + seconds * 1000 + milliseconds);
   }
 
   function exportLrcTime(time: Time): string {
-    let hours = (time.getHours()).toString().padStart(2, "0");
-    let minutes = (time.getMinutes()).toString().padStart(2, "0");
-    let seconds = (time.getSeconds() + Math.round(time.getMilliseconds() / 1000)).toString().padStart(2, "0");
-    return `${hours}:${minutes}.${seconds}`;
+    const minutes = (time.getHours() * 60 + time.getMinutes()).toString().padStart(2, "0");
+    const seconds = (time.getSeconds()).toString().padStart(2, "0");
+    const hundredths = Math.min(99, Math.round(time.getMilliseconds() / 10)).toString().padStart(2, "0");
+    return `${minutes}:${seconds}.${hundredths}`;
+  }
+
+  export function exportLrc(items: SubtitleArray): string {
+    let text = "";
+    for (const item of items) {
+      text += `[${exportLrcTime(item.start)}]${item.text.replace(/<br\s*\/?>/g, " ")}\n`;
+    }
+    return text;
   }
 
   export function parseLrc(text: string): SubtitleArray {

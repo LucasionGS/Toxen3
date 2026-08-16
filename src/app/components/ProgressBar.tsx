@@ -154,7 +154,7 @@ export default class ProgressBar extends Component<ProgressBarProps, ProgressBar
     return (
       <>
         <div className="toxen-progress-bar-container">
-          <div ref={ref => this.progressBarObject = ref}
+          <div ref={ref => { this.progressBarObject = ref; }}
             className="toxen-progress-bar"
             style={borderStyle}
             onMouseDown={e => {
@@ -191,7 +191,7 @@ export default class ProgressBar extends Component<ProgressBarProps, ProgressBar
             }}
           >
             <div className="toxen-progress-bar-fill toxen-progress-bar-fill-main" style={fillStyle}>
-              <Tooltip text="" ref={ref => this.toolTip = ref} />
+              <Tooltip text="" ref={ref => { this.toolTip = ref; }} />
             </div>
             <div className="toxen-progress-bar-fill toxen-progress-bar-fill-buffered" style={fillStyleBuffered}></div>
           </div>

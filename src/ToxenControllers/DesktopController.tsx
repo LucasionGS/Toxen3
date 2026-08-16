@@ -6,6 +6,7 @@ import fsp from "fs/promises";
 //@ts-ignore
 import os from "os";
 import * as remote from "@electron/remote";
+import { webUtils } from "electron";
 import CrossPlatform from "../app/toxen/desktop/CrossPlatform";
 import type Settings from "../app/toxen/Settings";
 import { ISettings } from "../app/toxen/Settings";
@@ -24,7 +25,7 @@ import { hashElement } from "folder-hash";
 import { } from "buffer";
 import packageJson from "../../package.json";
 import { ISong } from "../app/toxen/Song";
-import System from "../app/toxen/System";
+import System, { type ToxenFile } from "../app/toxen/System";
 import { Checkbox, Menu, RangeSlider, Button, Progress, Group, Stack } from "@mantine/core";
 import { hideNotification, updateNotification } from "@mantine/notifications";
 import Discord from "../app/toxen/desktop/Discord";
@@ -47,6 +48,22 @@ export default class DesktopController extends ToxenController {
 
   public joinPath(...paths: string[]) {
     return Path.join(...paths);
+  }
+
+  /**
+   * Electron 32 removed `File.path`; `webUtils.getPathForFile` replaces it and
+   * returns `""` for files that have no filesystem path, which is the same
+   * sentinel the old property produced.
+   *
+   * This must not go through `@electron/remote` — passing a File across the
+   * remote bridge loses its identity and always yields `""`. The renderer runs
+   * with nodeIntegration, so importing `electron` directly here is correct.
+   */
+  public getFilePath(file: File | ToxenFile): string {
+    if (typeof File !== "undefined" && file instanceof File) {
+      return webUtils.getPathForFile(file);
+    }
+    return (file as ToxenFile)?.path ?? "";
   }
 
   public fs = fs;

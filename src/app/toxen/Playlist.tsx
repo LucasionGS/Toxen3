@@ -4,7 +4,7 @@ import Song from "./Song";
 // import fs from "fs";
 import { Toxen } from "../ToxenApp";
 // import Path from "path";
-import { ModalsContextProps } from "@mantine/modals/lib/context";
+import type { ModalsContextProps } from "../../types/mantine-modals";
 import React from "react";
 import { Button, Stack } from "@mantine/core";
 import { IconFileImport, IconTrash } from "@tabler/icons-react";
@@ -318,7 +318,8 @@ export default class Playlist {
           randomizedName = System.randomString(16) + toxenapi.path.extname(files[0].name);
         } while (toxenapi.fs.existsSync(toxenapi.path.join(playlistBackgroundsDir, randomizedName)));
         
-        toxenapi.fs.copyFileSync(files[0].path, toxenapi.path.join(playlistBackgroundsDir, randomizedName));
+        // Electron 32 removed File.path — resolve through the controller instead.
+        toxenapi.fs.copyFileSync(toxenapi.getFilePath(files[0]), toxenapi.path.join(playlistBackgroundsDir, randomizedName));
   
         if (song) {
           if (!this.songBackground) this.songBackground = {};

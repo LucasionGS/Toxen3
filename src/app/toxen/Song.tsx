@@ -16,7 +16,7 @@ import SubtitleParser from "./SubtitleParser";
 //@ts-expect-error 
 import ToxenMax from "../../icons/skull_max.png";
 import { useModals } from "@mantine/modals";
-import { ModalsContextProps, ModalSettings } from "@mantine/modals/lib/context";
+import type { ModalsContextProps, ModalSettings } from "../../types/mantine-modals";
 import { Checkbox, Menu, RangeSlider, Button, Progress, Group, Stack } from "@mantine/core";
 import Playlist from "./Playlist";
 import StoryboardParser from "./StoryboardParser";
@@ -289,6 +289,33 @@ export default class Song implements ISong {
         }
       }
     });
+  }
+
+  /**
+   * Write subtitle content to the song folder, locally or remotely, and update file tracking.
+   * @param fileName Relative file name. Defaults to the current subtitle file, or "subtitles.tst" if none.
+   */
+  public async writeSubtitleFile(content: string, fileName?: string) {
+    fileName = fileName || this.paths.subtitles || "subtitles.tst";
+    const filetime = Date.now();
+    if (Settings.isRemote()) {
+      const user = Settings.getUser();
+      if (!user) throw new Error("Cannot save subtitles. User is not logged in.");
+      const res = await Toxen.fetch(this.dirname(fileName), {
+        method: "PUT",
+        body: content,
+      });
+      if (!res.ok) throw new Error(`Failed to save subtitles. Status: ${res.status} ${res.statusText}`);
+    }
+    else if (toxenapi.isDesktop()) {
+      await toxenapi.fs.promises.writeFile(this.dirname(fileName), content);
+    }
+    else {
+      return toxenapi.throwDesktopOnly("writeSubtitleFile");
+    }
+    this.paths.subtitles = fileName;
+    this.setFile(fileName, "u", filetime);
+    await this.saveInfo();
   }
 
   /**
@@ -1297,7 +1324,7 @@ export default class Song implements ISong {
                 </Button>
               )
             }
-            {Settings.isAdvanced<JSX.Element>(
+            {Settings.isAdvanced<React.JSX.Element>(
               <>
                 <Button onClick={() => {
                   close();
@@ -1822,7 +1849,8 @@ export default class Song implements ISong {
       }
 
       await toxenapi.fs.promises.mkdir(newFolder, { recursive: true });
-      await toxenapi.fs.promises.copyFile(file.path, ensureValidName(toxenapi.path.resolve(newFolder, file.name)));
+      // Electron 32 removed File.path — resolve through the controller instead.
+      await toxenapi.fs.promises.copyFile(toxenapi.getFilePath(file), ensureValidName(toxenapi.path.resolve(newFolder, file.name)));
 
       // Build info
       const info = await Song.buildInfo(newFolder);
@@ -1851,7 +1879,7 @@ export default class Song implements ISong {
     } else {
       // ToxenFile with a path (desktop calling remote import) — read it
       if (!toxenapi.isDesktop()) return new Failure("Cannot read file path on web");
-      const buf = await toxenapi.fs.promises.readFile(file.path);
+      const buf = await toxenapi.fs.promises.readFile(toxenapi.getFilePath(file));
       body = new Uint8Array(buf);
     }
 

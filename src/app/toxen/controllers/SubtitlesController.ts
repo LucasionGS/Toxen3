@@ -14,8 +14,8 @@ interface TimeProvider {
 export default class SubtitlesController extends Controller {
   private _subtitles: SubtitleParser.SubtitleArray = new SubtitleParser.SubtitleArray();
   private _currentText: string = "";
+  private _currentVerticalPosition: string = null;
 
-  private currentOptions: SubtitleParser.SubtitleItem["options"] = {};
   private lastSub: SubtitleParser.SubtitleItem = null;
 
   public get subtitles() {
@@ -26,11 +26,18 @@ export default class SubtitlesController extends Controller {
     return this._currentText;
   }
 
+  /**
+   * Vertical position in percent from the bottom, or null to use the default CSS position.
+   */
+  public get currentVerticalPosition() {
+    return this._currentVerticalPosition;
+  }
+
   public setSubtitles(subtitles: SubtitleParser.SubtitleArray) {
     this.lastSub = null;
-    this.currentOptions = {};
     this._subtitles = subtitles;
     this._currentText = "";
+    this._currentVerticalPosition = null;
     this.notify();
   }
 
@@ -39,7 +46,6 @@ export default class SubtitlesController extends Controller {
    * animation frame by the view. Only notifies when the active subtitle changes.
    */
   public tick(mp: TimeProvider | null) {
-    const self = this;
     if (!mp) return;
     const currentTime = mp.getTime();
     if (!currentTime) return;
@@ -47,9 +53,6 @@ export default class SubtitlesController extends Controller {
     if (subtitles && subtitles.song && subtitles.song.subtitleDelay) currentTime.addMilliseconds(-subtitles.song.subtitleDelay);
     const sub = subtitles?.getByTime(currentTime);
     if (sub !== this.lastSub) {
-      if (sub) {
-        Object.assign(this.currentOptions, sub.options);
-      }
       this.lastSub = sub;
       if (!sub) {
         this._currentText = null;
@@ -58,10 +61,22 @@ export default class SubtitlesController extends Controller {
       }
 
       let text = sub.text || "";
+      // TST style events accumulate up to this subtitle's start; a reset event clears back to the globals.
+      const baseOptions: Partial<SubtitleParser.SubtitleOptions> = {};
+      if (subtitles.type === "tst" && subtitles.styleEvents?.length > 0) {
+        const events = [...subtitles.styleEvents].sort((a, b) => a.time.valueOf() - b.time.valueOf());
+        for (const event of events) {
+          if (event.time.valueOf() > sub.start.valueOf()) break;
+          if (event.reset) {
+            for (const key in baseOptions) delete (baseOptions as any)[key];
+          }
+          Object.assign(baseOptions, event.options);
+        }
+      }
       function getOption<T>(key: keyof SubtitleParser.SubtitleOptions, defaultValue: T = null) {
         switch (subtitles.type) {
           case "tst":
-            return (sub.options[key] ?? subtitles.options[key]) || (self.currentOptions ? self.currentOptions[key] : null) || defaultValue;
+            return (sub.options[key] ?? baseOptions[key] ?? subtitles.options[key]) || defaultValue;
           default:
             return (sub.options[key] ?? subtitles.options[key]) || defaultValue;
         }
@@ -70,12 +85,19 @@ export default class SubtitlesController extends Controller {
       let font = getOption("font", "Arial");
       let fontSize = getOption("fontSize", 24);
       let bold = getOption("bold", "false");
+      let italic = getOption("italic", "false");
+      let outlineColor = getOption("outlineColor", null);
+      let verticalPosition = getOption("verticalPosition", null);
 
-      text = `<span style="color: ${color}; font-family: ${font}; font-size: ${fontSize + "px"};">${text}</span>`;
+      let style = `color: ${color}; font-family: ${font}; font-size: ${fontSize + "px"};`;
+      if (italic === "true") style += " font-style: italic;";
+      if (outlineColor) style += ` text-shadow: 0 0 10px ${outlineColor};`;
+      text = `<span style="${style}">${text}</span>`;
       if (bold === "true") {
         text = `<b>${text}</b>`;
       }
       this._currentText = text;
+      this._currentVerticalPosition = verticalPosition;
       this.notify();
     }
   }
