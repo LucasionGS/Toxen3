@@ -26,6 +26,7 @@ This file contains the change logs for Toxen.
 
 - **Big under-the-hood update** - Toxen now runs on a much newer Electron, React and Mantine, along with an updated build toolchain. No visible changes intended, but it keeps Toxen on supported, patched versions.
 - Removed a dozen unused dependencies that were still being shipped with the app.
+- Please report any bugs you find.
 
 <!-- VERSION: 2.10.0 -->
 ## 2.10.0 - 15-08-2026
