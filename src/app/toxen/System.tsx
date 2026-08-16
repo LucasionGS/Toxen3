@@ -66,16 +66,19 @@ export default class System {
       var i = 0; // Not entirely sure why this is here??? Was I silly? im keeping it
       for (i = 0; i < files.length; i++) {
         const file = files[i];
+        // Electron 32 removed File.path; resolve it through the controller once
+        // per file. Empty string means "no filesystem path" (a browser File).
+        const filePath = toxenapi.getFilePath(file);
 
         // If directory - Only on desktop
         if (toxenapi.isDesktop() && !Settings.isRemote()) {
-          const stat: import("fs").Stats | null = await toxenapi.fs.promises.stat(file.path).then(a => a).catch(() => null as any);
+          const stat: import("fs").Stats | null = await toxenapi.fs.promises.stat(filePath).then(a => a).catch(() => null as any);
           if (stat?.isDirectory()) {
             mediaPack = true;
-            let dirFiles = await System.recursive(file.path);
-  
+            let dirFiles = await System.recursive(filePath);
+
             await System.handleImportedFiles(dirFiles.map(f => ({
-              path: toxenapi.path.resolve(file.path, toxenapi.path.basename(f.name)),
+              path: toxenapi.path.resolve(filePath, toxenapi.path.basename(f.name)),
               name: toxenapi.path.basename(f.name)
             })), false, false, i, files.length);
   
@@ -153,11 +156,11 @@ export default class System {
               Toxen.background.setBackground(dest + "?h=" + song.hash);
             };
 
-            if (file.path == "" && file instanceof File) { // Likely a web file
+            if (!filePath && file instanceof File) { // Likely a web file
               await toxenapi.fs.promises.writeFile(dest, file.stream()).then(postProcess)
             }
             else {
-              await toxenapi.fs.promises.copyFile(file.path, dest).then(postProcess)
+              await toxenapi.fs.promises.copyFile(filePath, dest).then(postProcess)
               .catch((reason) => {
                 Toxen.error("Unable to change background");
                 Toxen.error(reason);
@@ -215,7 +218,7 @@ export default class System {
 
           if (toxenapi.isLocal(Settings)) {
             let dest = song.dirname(subName);
-            await toxenapi.fs.promises.copyFile(file.path, dest).then(async () => {
+            await toxenapi.fs.promises.copyFile(filePath, dest).then(async () => {
               song.paths.subtitles = toxenapi.getBasename(dest);
               song.setFile(subName, "u");
               await song.saveInfo();
@@ -253,7 +256,7 @@ export default class System {
 
           if (toxenapi.isLocal(Settings)) {
             let dest = song.dirname(sbName);
-            await toxenapi.fs.promises.copyFile(file.path, dest).then(async () => {
+            await toxenapi.fs.promises.copyFile(filePath, dest).then(async () => {
               song.paths.storyboard = toxenapi.getBasename(dest);
               song.setFile(sbName, "u");
               await song.saveInfo();
@@ -296,9 +299,9 @@ export default class System {
           try {
             let themeData: string;
             
-            if (toxenapi.isDesktop() && file.path) {
+            if (toxenapi.isDesktop() && filePath) {
               // Desktop: read from file path
-              themeData = await toxenapi.fs.promises.readFile(file.path, 'utf8');
+              themeData = await toxenapi.fs.promises.readFile(filePath, 'utf8');
             } else if (file instanceof File) {
               // Web or dropped file: read from File object
               themeData = await file.text();
@@ -361,7 +364,7 @@ export default class System {
           );
 
           try {
-            const theme = await toxenapi.importThemeArchive(file.path, Theme);
+            const theme = await toxenapi.importThemeArchive(filePath, Theme);
 
             const existingIndex = Toxen.themes.findIndex(t => t.name === theme.name);
             if (existingIndex === -1) {
@@ -403,7 +406,7 @@ export default class System {
             if (toxenapi.isDesktop() && !Settings.isRemote()) {
               // Desktop local import
               const libDir = Settings.get("libraryDirectory");
-              const info = await toxenapi.importTxzPackage(file.path, libDir);
+              const info = await toxenapi.importTxzPackage(filePath, libDir);
               const song = Song.create(info);
               Toxen.songList.push(song);
 
@@ -430,8 +433,8 @@ export default class System {
               let fileBlob: Blob;
               if (file instanceof File) {
                 fileBlob = file;
-              } else if (toxenapi.isDesktop() && file.path) {
-                const buf = await toxenapi.fs.promises.readFile(file.path);
+              } else if (toxenapi.isDesktop() && filePath) {
+                const buf = await toxenapi.fs.promises.readFile(filePath);
                 fileBlob = new Blob([new Uint8Array(buf)]);
               } else {
                 throw new Error("Unable to read .txz file");
