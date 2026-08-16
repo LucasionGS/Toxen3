@@ -18,7 +18,6 @@ import { useForceUpdate } from "@mantine/hooks";
 import LoginForm from "../../../LoginForm/LoginForm";
 import User from "../../../../toxen/User";
 import { bytesToString } from "../../../AppBar/AppBar";
-import { Tab } from "react-bootstrap";
 import ProviderIntegrations from "./ProviderIntegrations";
 import { DEFAULT_RAINFALL_COLOR } from "../../../Background/visualizers/particles/Rainfall";
 

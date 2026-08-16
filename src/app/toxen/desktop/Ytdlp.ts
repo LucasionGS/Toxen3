@@ -5,7 +5,6 @@ import os from "os";
 import { spawn } from "child_process";
 import { Toxen } from "../../ToxenApp";
 import System, { ToxenFile } from "../System";
-import {  } from "@mantine/modals";
 import { useModals } from "@mantine/modals";
 import type Song from "../Song";
 

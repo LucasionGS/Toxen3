@@ -2,7 +2,6 @@ import type { ConfigEnv, UserConfig } from 'vite';
 import { defineConfig } from 'vite';
 import { pluginExposeRenderer } from './vite.base.config';
 import react from "@vitejs/plugin-react-swc";
-import path from "path";
 import renderer from "vite-plugin-electron-renderer";
 import toxenApi from './vite_toxen_plugin';
 import sass from "sass";
@@ -46,9 +45,6 @@ export default defineConfig((env) => {
     ],
     resolve: {
       preserveSymlinks: true,
-      alias: {
-        'node-aead-crypto': path.resolve(__dirname, './emptyModule.js'),
-      }
     },
     clearScreen: false,
   } as UserConfig;

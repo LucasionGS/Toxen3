@@ -1,7 +1,6 @@
 import type { UserConfig } from 'vite';
 import { defineConfig } from 'vite';
 import react from "@vitejs/plugin-react-swc";
-import path from "path";
 import toxenApi from './vite_toxen_plugin';
 import sass from "sass";
 import { VitePWA } from "vite-plugin-pwa";
@@ -74,9 +73,6 @@ export default defineConfig({
   ],
   resolve: {
     preserveSymlinks: true,
-    // alias: {
-    //   'node-aead-crypto': path.resolve(__dirname, './emptyModule.js'),
-    // }
   },
   clearScreen: false,
 } as UserConfig);
