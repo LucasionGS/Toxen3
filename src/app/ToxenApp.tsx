@@ -760,7 +760,7 @@ export class Toxen {
         <>
           <p>Loading songs...<br />{++songCount}/{totalSongCount}</p>
           <div>
-            <ProgressBar ref={_ref => ref = _ref} min={0} max={totalSongCount} />
+            <ProgressBar ref={_ref => { ref = _ref; }} min={0} max={totalSongCount} />
           </div>
         </>
       );
@@ -1228,7 +1228,7 @@ export default class ToxenAppRenderer extends React.Component {
           sectionId="songPanel" // Default panel
           direction="right"
           show={false}
-          ref={sidePanel => Toxen.sidePanel = sidePanel}
+          ref={sidePanel => { Toxen.sidePanel = sidePanel; }}
           onClose={() => Toxen.sidePanel.show()}
 
           onResizeFinished={w => {
@@ -1336,7 +1336,7 @@ export default class ToxenAppRenderer extends React.Component {
 
           {/* Playlist Management Panel */}
           <SidepanelSection key="playlist" id="playlist" title="Playlist" icon={<IconList size="1em" />}>
-            <PlaylistPanel ref={ref => Toxen.playlistPanel = ref} />
+            <PlaylistPanel ref={ref => { Toxen.playlistPanel = ref; }} />
           </SidepanelSection>
 
           {/* Playlist Management Panel */}

@@ -28,7 +28,7 @@ const SearchField = () => {
       </Button>
       <TextInput
         // leftSection={<IconSearch />}
-        ref={ref => Toxen.songSearchField = ref}
+        ref={ref => { Toxen.songSearchField = ref; }}
         placeholder="Search..."
         spellCheck={false}
         type="search"

@@ -83,7 +83,7 @@ export default class Tooltip extends Component<TooltipProps, TooltipState> {
   render() {
     // if (!this.state.visible) return <></>;
     return (
-      <div ref={ref => this.divElement = ref} className="tooltip" style={{
+      <div ref={ref => { this.divElement = ref; }} className="tooltip" style={{
         left: this.state.x,
         top: this.state.y,
         display: this.state.visible ? "" : "none"

@@ -4,7 +4,7 @@ import Song from "./Song";
 // import fs from "fs";
 import { Toxen } from "../ToxenApp";
 // import Path from "path";
-import { ModalsContextProps } from "@mantine/modals/lib/context";
+import type { ModalsContextProps } from "../../types/mantine-modals";
 import React from "react";
 import { Button, Stack } from "@mantine/core";
 import { IconFileImport, IconTrash } from "@tabler/icons-react";

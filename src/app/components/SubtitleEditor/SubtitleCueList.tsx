@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import RenderIfVisible from "react-render-if-visible";
+import RenderIfVisible from "../RenderIfVisible/RenderIfVisible";
 import { Button, Checkbox } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
 import { Toxen } from "../../ToxenApp";

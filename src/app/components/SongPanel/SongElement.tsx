@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
 import Song from '../../toxen/Song';
 import "./SongElement.scss";
-import RenderIfVisible from "react-render-if-visible";
+import RenderIfVisible from "../RenderIfVisible/RenderIfVisible";
 import { useModals } from '@mantine/modals';
 import Settings from '../../toxen/Settings';
 import User from '../../toxen/User';
@@ -114,7 +114,7 @@ function SongElementDiv(props: { controller: SongElementController }) {
   return (
     <div className="song-element-container">
       <div
-        ref={ref => controller.divElement = ref}
+        ref={ref => { controller.divElement = ref; }}
         className={classes.join(" ")}
         onClick={e => {
           if (e.ctrlKey) return;
@@ -201,7 +201,7 @@ export default function SongElement({ song }: SongElementProps) {
   const virtualize = Settings.isRemote() || Settings.get("hideOffScreenSongElements");
 
   return (
-    <div className="song-element-permadiv" ref={ref => controller.divPermanentElement = ref}>
+    <div className="song-element-permadiv" ref={ref => { controller.divPermanentElement = ref; }}>
       {virtualize ? (
         <RenderIfVisible defaultHeight={64} visibleOffset={500}>
           <SongElementDiv controller={controller} />

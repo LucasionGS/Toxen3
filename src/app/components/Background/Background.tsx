@@ -72,8 +72,8 @@ export default function Background(props: BackgroundProps) {
                 }, 100);
               }} />
               <Subtitles onReady={controller => Toxen.subtitles = controller} musicPlayer={musicPlayer} />
-              <Storyboard ref={ref => controller.storyboard = ref} />
-              <Visualizer ref={ref => controller.visualizer = ref} />
+              <Storyboard ref={ref => { controller.storyboard = ref; }} />
+              <Visualizer ref={ref => { controller.visualizer = ref; }} />
             </>)
           })()
         }

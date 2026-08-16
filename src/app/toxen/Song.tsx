@@ -16,7 +16,7 @@ import SubtitleParser from "./SubtitleParser";
 //@ts-expect-error 
 import ToxenMax from "../../icons/skull_max.png";
 import { useModals } from "@mantine/modals";
-import { ModalsContextProps, ModalSettings } from "@mantine/modals/lib/context";
+import type { ModalsContextProps, ModalSettings } from "../../types/mantine-modals";
 import { Checkbox, Menu, RangeSlider, Button, Progress, Group, Stack } from "@mantine/core";
 import Playlist from "./Playlist";
 import StoryboardParser from "./StoryboardParser";
