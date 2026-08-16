@@ -21,7 +21,6 @@ This file contains the change logs for Toxen.
 - Saving subtitles now works in remote/web mode instead of silently losing the changes.
 - Exporting subtitles to the .lrc format no longer produces a broken file, and .lrc timestamps are now read correctly.
 - Backgrounds and media in folders with a `#` or `%` in the name now load properly instead of showing up blank.
-- Notification popups are styled correctly again.
 
 ## Boring stuff
 
