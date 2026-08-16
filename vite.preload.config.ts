@@ -8,6 +8,8 @@ export default defineConfig((env) => {
   const { forgeConfigSelf } = forgeEnv;
   const config: UserConfig = {
     build: {
+      // Matches the main process: Electron 30 ships Node 20.
+      target: 'node20',
       rollupOptions: {
         external,
         // Preload scripts may contain Web assets, so use the `build.rollupOptions.input` instead `build.lib.entry`.

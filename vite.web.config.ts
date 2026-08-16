@@ -11,14 +11,18 @@ export default defineConfig({
   css: {
     preprocessorOptions: {
       scss: {
+        // Modern sass API. The legacy JS API (sass.types.*) was removed in Vite 7
+        // and is deprecated in Dart Sass; custom functions must return sass.Value.
+        api: 'modern-compiler',
         functions: {
-          "ToxenIsWeb()": () => sass.types.Boolean.TRUE
+          "ToxenIsWeb()": () => sass.sassTrue
         }
       },
     }
   },
   base: './',
   build: {
+    target: 'baseline-widely-available',
     outDir: 'buildweb',
     chunkSizeWarningLimit: 4096,
   },

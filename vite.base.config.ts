@@ -80,8 +80,8 @@ export function pluginHotRestart(command: 'reload' | 'restart'): Plugin {
     closeBundle() {
       if (command === 'reload') {
         for (const server of Object.values(process.viteDevServers)) {
-          // Preload scripts hot reload.
-          server.ws.send({ type: 'full-reload' });
+          // Preload scripts hot reload. `server.ws` is deprecated as of Vite 6.
+          server.hot.send({ type: 'full-reload' });
         }
       } else {
         // Main process hot restart.

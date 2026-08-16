@@ -9,8 +9,18 @@
     "sourceMap": true,
     // "baseUrl": ".",
     "outDir": "dist",
-    "moduleResolution": "node",
+    "moduleResolution": "node10",
+    // node10 is deprecated and goes away in TS 7. Moving to "bundler" requires
+    // module: esnext/preserve, which would break ts-node loading forge.config.ts.
+    "ignoreDeprecations": "6.0",
     "resolveJsonModule": true,
     "jsx": "react"
+  },
+  // electron-forge loads forge.config.ts through ts-node/register, which type-checks
+  // it on every `start`/`package`/`make`. Transpile-only keeps the build decoupled
+  // from type errors in that graph — node10 resolution cannot see "exports"-only
+  // packages, so those would otherwise become startup failures rather than warnings.
+  "ts-node": {
+    "transpileOnly": true
   }
 }

@@ -5,7 +5,7 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import renderer from "vite-plugin-electron-renderer";
 import toxenApi from './vite_toxen_plugin';
-import sass, { SassString } from "sass";
+import sass from "sass";
 
 // https://vitejs.dev/config
 export default defineConfig((env) => {
@@ -17,11 +17,12 @@ export default defineConfig((env) => {
     css: {
       preprocessorOptions: {
         scss: {
+          // Modern sass API. The legacy JS API (sass.types.*) was removed in Vite 7
+          // and is deprecated in Dart Sass; custom functions must return sass.Value.
+          api: 'modern-compiler',
           functions: {
             "ToxenIsWeb()": () => {
-              const val = process.env["TOXEN_IS_WEB"] === "true" ? sass.types.Boolean.TRUE : sass.types.Boolean.FALSE;
-              // const val = sass.types.Boolean.TRUE;
-              return val;
+              return process.env["TOXEN_IS_WEB"] === "true" ? sass.sassTrue : sass.sassFalse;
             }
           }
         },
@@ -31,6 +32,9 @@ export default defineConfig((env) => {
     mode,
     base: './',
     build: {
+      // Electron 30 renderer runs Chromium 124. Pinned explicitly because Vite 7
+      // defaults to 'baseline-widely-available', which downlevels for stale browsers.
+      target: 'chrome124',
       outDir: `.vite/renderer/${name}`,
       chunkSizeWarningLimit: 4096,
     },
