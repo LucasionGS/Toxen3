@@ -15,7 +15,8 @@
     "startweb": "vite --config ./vite.web.config.ts",
     "setupdate": "node setupdate.js",
     "generate:srcinfo": "makepkg --printsrcinfo > .SRCINFO",
-    "clean:arch": "rm -rf pkg src/Toxen3-* src/toxen3-*.tar.gz toxen3-*.tar.gz *.pkg.tar.zst"
+    "clean:arch": "rm -rf pkg src/Toxen3-* src/toxen3-*.tar.gz toxen3-*.tar.gz *.pkg.tar.zst",
+    "postinstall": "patch-package"
   },
   "devDependencies": {
     "@electron-forge/cli": "^7.11.2",
@@ -41,6 +42,7 @@
     "electron": "43.4.0",
     "eslint": "^8.57.1",
     "eslint-plugin-import": "^2.32.0",
+    "patch-package": "^8.0.1",
     "ts-node": "^10.9.2",
     "typescript": "~5.9.3",
     "vite": "^7.3.6",
