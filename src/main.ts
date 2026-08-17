@@ -7,7 +7,9 @@ import { updateElectronApp} from "update-electron-app";
 import remote from '@electron/remote/main';
 remote.initialize();
 
-// process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; // Hue bullshit
+// Hue bridges (and other LAN devices) serve their HTTPS API with a self-signed
+// certificate; without this switch every renderer fetch() to https://<bridge-ip>
+// fails the TLS check.
 app.commandLine.appendSwitch('ignore-certificate-errors');
 
 updateElectronApp({
@@ -67,6 +69,10 @@ const createWindow = (): void => {
       nodeIntegration: true,
       contextIsolation: false,
       webSecurity: false,
+      // Music (and the Hue Entertainment stream keeping pace with it) must keep
+      // running at full rate while the window is hidden; rAF still pauses, so
+      // this does not resurrect rendering cost.
+      backgroundThrottling: false,
       additionalArguments: isDevServer ? ['--dev'] : [],
     },
     autoHideMenuBar: true,

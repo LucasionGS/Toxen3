@@ -336,6 +336,7 @@ export default class MusicPlayerController extends Controller {
   public play() {
     this.media.play();
     Toxen.discord?.setPresence();
+    Toxen.hue?.reconcile();
     if (toxenapi.isDesktop() && toxenapi.TaskbarControls) {
       toxenapi.TaskbarControls.onPlayStateChanged();
     }
@@ -348,6 +349,7 @@ export default class MusicPlayerController extends Controller {
   public pause() {
     this.media.pause();
     Toxen.discord?.setPresence();
+    Toxen.hue?.reconcile();
     if (toxenapi.isDesktop() && toxenapi.TaskbarControls) {
       toxenapi.TaskbarControls.onPlayStateChanged();
     }

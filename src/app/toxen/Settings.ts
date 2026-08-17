@@ -104,6 +104,13 @@ export default class Settings {
       enableThumbnailCache: false,
       // Integrations
       providers: {},
+      // Hue
+      hueEnabled: false,
+      hueBrightness: 100,
+      hueSyncMode: "uniform",
+      hueSyncIntensity: 1,
+      hueUpdateRate: 50,
+      hueDebug: false,
       // Change notes
       lastShownChangeNotesVersion: "",
     };
@@ -381,9 +388,20 @@ export interface ISettings {
   // Hue settings
   hueEnabled: boolean;
   hueBridgeIp: string;
+  hueBridgeId: string;
   hueUsername: string;
   hueClientkey: string;
   hueEntertainmentAreaId: string;
+  /** Master brightness for Hue light sync, 0-100. */
+  hueBrightness: number;
+  /** How auto-sync maps audio to the lights. */
+  hueSyncMode: "uniform" | "spectrum";
+  /** Multiplier on the audio-reactive brightness, 0.1-2. */
+  hueSyncIntensity: number;
+  /** Entertainment stream update rate in Hz, 10-60. */
+  hueUpdateRate: number;
+  /** Verbose DTLS/handshake logging to the developer console. */
+  hueDebug: boolean;
 
   // Media downloader
   acceptedResponsibility: boolean;

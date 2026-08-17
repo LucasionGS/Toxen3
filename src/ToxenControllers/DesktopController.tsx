@@ -29,6 +29,7 @@ import System, { type ToxenFile } from "../app/toxen/System";
 import { Checkbox, Menu, RangeSlider, Button, Progress, Group, Stack } from "@mantine/core";
 import { hideNotification, updateNotification } from "@mantine/notifications";
 import Discord from "../app/toxen/desktop/Discord";
+import HueManager from "../app/toxen/desktop/hue/HueManager";
 import TaskbarControls from "../app/toxen/desktop/TaskbarControls";
 
 /**
@@ -37,7 +38,6 @@ import TaskbarControls from "../app/toxen/desktop/TaskbarControls";
 export default class DesktopController extends ToxenController {
   constructor() {
     super();
-    // process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; // Hue bullshit
   }
   
   public packageJson = packageJson;
@@ -871,9 +871,15 @@ export default class DesktopController extends ToxenController {
   }
 
   private _discord: Discord;
-  
+
   public getDiscordInstance() {
     return this._discord ??= new Discord("647178364511191061"); // Toxen's Discord Application ID
+  }
+
+  private _hue: HueManager;
+
+  public getHueInstance() {
+    return this._hue ??= new HueManager();
   }
 
   public async compareLocalSongsAgainstRemote($toxen: typeof Toxen, user: User, data: any): Promise<{

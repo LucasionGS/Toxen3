@@ -6,7 +6,6 @@ import Time from "./Time";
 import * as yaml from "js-yaml";
 // import fsp from "fs/promises";
 import User from "./User";
-// import HueManager from "./philipshue/HueManager";
 import MathX from "./MathX";
 import Song from "./Song";
 
@@ -1195,29 +1194,24 @@ namespace StoryboardParser {
     },
   })
 
-  // Hue specific
+  // Philips Hue components. All Hue access goes through `Toxen.hue`, which is
+  // null on web — these components are then harmless no-ops. Light writes live
+  // in the returned (post-dim) callback, where the frame's audio values are
+  // fresh; actual network sends are exclusively the HueManager loop's job.
   addStoryboardComponent("hueVisualizerSync", {
-    name: "Philips Hue: Visualizer Sync (Broken)",
+    name: "Philips Hue: Visualizer Sync",
     arguments: [],
-    action: (args, info, sm) => {
+    action: () => {
       return () => {
-        // const [r, g, b] = hexToRgbArray(Toxen.background.storyboard.data.visualizerColor ?? Toxen.background.storyboard.getVisualizerColor());
-        // const brightness = MathX.clamp(
-        //   MathX.clamp(Toxen.background.visualizer.getDynamicDim(), 0, 1) * 2,
-        //   0,
-        //   1
-        // );
-        // if (HueManager.instance) {
-        //   HueManager.setLightNodes(
-        //     HueManager.currentLightNodes.map(() => [r * brightness, g * brightness, b * brightness])
-        //   );
-        // }
+        // Forces the built-in audio sync for the duration of the event, even if
+        // the user has toggled sync off.
+        Toxen.hue?.requestAutoFrame();
       }
     }
   });
 
   addStoryboardComponent("huePulse", {
-    name: "Philips Hue: Pulse (Broken)",
+    name: "Philips Hue: Pulse",
     arguments: [
       {
         name: "Color",
@@ -1252,71 +1246,128 @@ namespace StoryboardParser {
         required: true
       }
     ],
-    action: (args, { currentSongTime, eventStartTime, bpm: songBpm }, { setState, getState }, ctx) => {
-      // Draw a pulse on the visualizer
-      // let state = getState<{ lastPulse: number }>() ?? { lastPulse: null };
-      // let color = getAsType<"Color">(args.color);
-      // let intensity = getAsType<"Number">(args.intensity) / 0.5;
-      // let bpm = getAsType<"Number">(args.bpm || songBpm);
-      // let beatScale = getAsType<"Select">(args.beatScale);
+    action: (args, { currentSongTime, eventStartTime, bpm: songBpm }, { setState, getState }) => {
+      let state = getState<{ lastPulse: number }>() ?? { lastPulse: null };
+      let color = getAsType<"Color">(args.color);
+      let intensity = getAsType<"Number">(args.intensity) / 0.5;
+      let bpm = getAsType<"Number">(args.bpm || songBpm);
+      let beatScale = getAsType<"Select">(args.beatScale);
 
-      // switch (beatScale) {
-      //   case "4/1":
-      //     bpm /= 4;
-      //     break;
-      //   case "2/1":
-      //     bpm /= 2;
-      //     break;
-      //   case "1/1":
-      //     // @default
-      //     bpm *= 1;
-      //     break;
-      //   case "1/2":
-      //     bpm *= 2;
-      //     break;
-      //   case "1/4":
-      //     bpm *= 4;
-      //     break;
-      //   case "1/8":
-      //     bpm *= 8;
-      //     break;
-      // }
+      switch (beatScale) {
+        case "4/1":
+          bpm /= 4;
+          break;
+        case "2/1":
+          bpm /= 2;
+          break;
+        case "1/1":
+          // @default
+          bpm *= 1;
+          break;
+        case "1/2":
+          bpm *= 2;
+          break;
+        case "1/4":
+          bpm *= 4;
+          break;
+        case "1/8":
+          bpm *= 8;
+          break;
+      }
 
-      // const currentSongTimeMs = Math.round(currentSongTime * 1000);
-      // let recurring = bpm > 0 ? Math.round(60 / bpm * 1000) : 0;
-      // const animateInTime = (recurring * 0.1) / 1000;
-      // const animateOutTime = (recurring * 0.3) / 1000;
+      const currentSongTimeMs = Math.round(currentSongTime * 1000);
+      let recurring = bpm > 0 ? Math.round(60 / bpm * 1000) : 0;
+      const animateInTime = (recurring * 0.1) / 1000;
+      const animateOutTime = (recurring * 0.3) / 1000;
 
-      // if (state.lastPulse === null) {
+      if (state.lastPulse === null) {
+        state.lastPulse = (eventStartTime * 1000) - (animateInTime * 1000);
+      }
+      else if (currentSongTimeMs - state.lastPulse >= recurring) {
+        if (recurring > 0) {
+          state.lastPulse = currentSongTimeMs;
+        }
+        return;
+      }
 
-      //   state.lastPulse = (eventStartTime * 1000) - (animateInTime * 1000);
-      // }
-      // else if (currentSongTimeMs - state.lastPulse >= recurring) {
-      //   if (recurring > 0) {
-      //     state.lastPulse = currentSongTimeMs;
-      //   }
-      //   return;
-      // }
+      let progress = (currentSongTimeMs - state.lastPulse) / recurring;
+      if (progress < animateInTime) {
+        intensity *= progress / animateInTime;
+      }
+      else if (progress > animateOutTime) {
+        intensity *= (1 - progress) / (1 - animateOutTime);
+      }
 
-      // let progress = (currentSongTimeMs - state.lastPulse) / recurring;
-      // if (progress < animateInTime) {
-      //   intensity *= progress / animateInTime;
-      // }
-      // else if (progress > animateOutTime) {
-      //   intensity *= (1 - progress) / (1 - animateOutTime);
-      // }
+      setState(state);
 
-      // setState(state);
+      return () => {
+        intensity = MathX.clamp(intensity, 0, 1);
+        const [r, g, b] = color.map(x => x * intensity);
+        Toxen.hue?.setAllChannels([r, g, b]);
+      }
+    }
+  });
 
-      // return () => {
-      //   intensity = MathX.clamp(intensity, 0, 1);
-      //   const [r, g, b] = color.map(x => x * intensity);
-      //   HueManager.setLightNodes(
-      //     HueManager.currentLightNodes.map(() => {
-      //       return [r, g, b] as any;
-      //     })
-      //   );
-      // }
+  addStoryboardComponent("hueColor", {
+    name: "Philips Hue: Set Color",
+    arguments: [
+      {
+        name: "Color",
+        identifier: "color",
+        type: "Color",
+        required: true
+      },
+      {
+        name: "Brightness (0-100)",
+        identifier: "brightness",
+        type: "Number",
+        placeholder: "100"
+      }
+    ],
+    action: (args) => {
+      return () => {
+        const color = getAsType<"Color">(args.color) || [255, 255, 255];
+        const brightness = MathX.clamp((getAsType<"Number">(args.brightness) ?? 100) / 100, 0, 1);
+        Toxen.hue?.setAllChannels([color[0] * brightness, color[1] * brightness, color[2] * brightness]);
+      }
+    }
+  });
+
+  addStoryboardComponent("hueColorTransition", {
+    name: "Philips Hue: Color Transition",
+    arguments: [
+      {
+        name: "From Color",
+        identifier: "fromColor",
+        type: "Color",
+        required: true
+      },
+      {
+        name: "To Color",
+        identifier: "toColor",
+        type: "Color",
+        required: true
+      },
+      {
+        name: "Duration for transition in seconds",
+        identifier: "duration",
+        type: "Number",
+        placeholder: "Defaults to the event's length"
+      }
+    ],
+    action: (args, { currentSongTime, eventStartTime, eventEndTime }) => {
+      return () => {
+        const fromColor = getAsType<"Color">(args.fromColor) || [255, 255, 255];
+        const toColor = getAsType<"Color">(args.toColor) || [255, 255, 255];
+        let duration = getAsType<"Number">(args.duration);
+        if (!duration || duration <= 0) duration = eventEndTime - eventStartTime;
+        const fadeProgress = duration > 0 ? MathX.clamp((currentSongTime - eventStartTime) / duration, 0, 1) : 1;
+        Toxen.hue?.setAllChannels([
+          fromColor[0] + (toColor[0] - fromColor[0]) * fadeProgress,
+          fromColor[1] + (toColor[1] - fromColor[1]) * fadeProgress,
+          fromColor[2] + (toColor[2] - fromColor[2]) * fadeProgress,
+        ]);
+      }
     }
   });
 }

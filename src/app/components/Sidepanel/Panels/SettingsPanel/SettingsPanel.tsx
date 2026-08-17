@@ -1,10 +1,8 @@
 import { Checkbox, Tabs, TextInput, NumberInput, Select, Button, ColorInput, RangeSlider, Slider, Text, Alert } from "@mantine/core";
 import { IconFolder, IconFolderOpen, IconRefresh, IconPalette, IconPhoto, IconWaveSquare, IconWand, IconBrush, IconDownload, IconTrash, IconX } from "@tabler/icons-react";
 // import * as remote from "@electron/remote";
-// import type { EntertainmentArea } from "hue-sync";
 import React, { useEffect } from "react";
 import Converter from "../../../../toxen/Converter";
-// import HueManager from "../../../../toxen/philipshue/HueManager";
 import Settings, { ISettings, VisualizerStyle, visualizerStyleOptions } from "../../../../toxen/Settings";
 import ExtensionManager from "../../../../toxen/extensions/ExtensionManager";
 import ExtensionStorePanel from "../../../ExtensionPanel/ExtensionStorePanel";
@@ -19,6 +17,7 @@ import LoginForm from "../../../LoginForm/LoginForm";
 import User from "../../../../toxen/User";
 import { bytesToString } from "../../../AppBar/AppBar";
 import ProviderIntegrations from "./ProviderIntegrations";
+import HueSettings from "./HueSettings";
 import { DEFAULT_RAINFALL_COLOR } from "../../../Background/visualizers/particles/Rainfall";
 
 interface SettingsPanelProps { }
@@ -59,6 +58,11 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           <Tabs.Tab value="Advanced">
             Advanced
           </Tabs.Tab>
+          {toxenapi.isDesktop() && (
+            <Tabs.Tab value="Hue">
+              Hue
+            </Tabs.Tab>
+          )}
           {toxenapi.isDesktop() && (
             <Tabs.Tab value="Extensions">
               Extensions
@@ -1035,9 +1039,13 @@ export default function SettingsPanel(props: SettingsPanelProps) {
 
 
           <br />
-          {/* Hue Settings */}
-          {/* <HueSettings /> */}
         </Tabs.Panel>
+
+        {toxenapi.isDesktop() && (
+          <Tabs.Panel value="Hue">
+            <HueSettings />
+          </Tabs.Panel>
+        )}
 
         {toxenapi.isDesktop() && (
           <Tabs.Panel value="Extensions">
@@ -1204,98 +1212,3 @@ export function VisualizerStyleOptions(props: {
   });
 }
 
-/**
- * Hue settings
- * DISABLED FOR NOW
- */
-// function HueSettings() {
-//   const [areas, setAreas] = React.useState<EntertainmentArea[]>(null);
-//   const [selectedArea, _setSelectedArea] = React.useState<EntertainmentArea>(HueManager.currentArea ?? null);
-//   function setSelectedArea(area: EntertainmentArea) {
-//     _setSelectedArea(area);
-//     HueManager.setCurrentArea(area);
-//     Settings.apply({ hueEntertainmentAreaId: area.id }, true);
-//   }
-
-//   function fetchAreas() {
-//     if (HueManager.instance) {
-//       HueManager.instance?.getEntertainmentAreas().then((areas) => {
-//         setAreas(areas);
-//         const selectedArea = areas.find(a => a.id === Settings.get("hueEntertainmentAreaId"));
-//         if (selectedArea) setSelectedArea(selectedArea);
-//       });
-//     }
-//     else {
-//       // Give a popup idk
-//     }
-//   }
-
-//   useEffect(() => {
-//     if (HueManager.instance) {
-//       fetchAreas();
-//     }
-//   }, []);
-
-//   return (
-//     <>
-//       <h2>Philip Hue Settings</h2>
-//       <Checkbox onClick={(e) => {
-//         Settings.apply({ hueEnabled: e.currentTarget.checked }, true);
-//         if (e.currentTarget.checked) {
-//           HueManager.init({
-//             ip: Settings.get("hueIp"),
-//             username: Settings.get("hueUsername"),
-//             clientkey: Settings.get("hueClientkey")
-//           });
-//           HueManager.start().then(() => Toxen.log("Hue connected", 1000)).catch((error) => Toxen.error(error.message));
-//         } else {
-//           HueManager.dispose();
-//         }
-//       }} defaultChecked={Settings.get("hueEnabled")} name="hueEnabled" label="Enable Hue" />
-//       <br />
-//       <sup>
-//         Enables Hue integration. This will allow you to control your Hue lights with Toxen storyboards.
-//         <code>⚠ Experimental, stability is <b>not</b> guaranteed ⚠</code>
-//       </sup>
-      
-
-//       {/* hueBridgeIp */}
-//       <TextInput onChange={(e) => Settings.apply({ hueBridgeIp: e.currentTarget.value }, true)} defaultValue={Settings.get("hueBridgeIp")} name="hueBridgeIp" label="Hue Bridge IP" />
-//       <br />
-//       <sup>Set the IP address of your Hue bridge.</sup>
-
-//       {/* hueUsername */}
-//       <TextInput onChange={(e) => Settings.apply({ hueUsername: e.currentTarget.value }, true)} defaultValue={Settings.get("hueUsername")} name="hueUsername" label="Hue Username" />
-//       <br />
-//       <sup>Set the username of your Hue bridge.</sup>
-
-//       {/* hueClientkey */}
-//       <TextInput onChange={(e) => Settings.apply({ hueClientkey: e.currentTarget.value }, true)} defaultValue={Settings.get("hueClientkey")} name="hueClientkey" label="Hue Client Key" />
-//       <br />
-//       <sup>Set the client key of your Hue bridge.</sup>
-
-//       {/* Light entertainment areas */}
-//       {/* <Carousel slideSize="70%" height={200} slideGap="md">
-        
-//       </Carousel> */}
-//       <div>
-//         {
-//           areas?.map((area) => (
-//             <Button onClick={() => setSelectedArea(area)} color={selectedArea?.id === area.id ? "green" : "gray"}>
-//               {area.name}
-//             </Button>
-//           ))
-//         }
-//       </div>
-//       <br />
-//       <Button onClick={() => {
-//         fetchAreas();
-//       }} color="green">
-//         Fetch lights
-//       </Button>
-//       <br />
-//       <br />
-//       <sup>Fetches the lights from your Hue bridge. This should be done automatically when Toxen starts.</sup>
-//     </>
-//   );
-// }

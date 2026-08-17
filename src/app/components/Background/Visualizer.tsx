@@ -73,6 +73,25 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     return this.dynamicDim;
   }
 
+  /** On-demand audio band energies; independent of the render loop (used by Hue sync). */
+  public getAudioLevels() {
+    return this.analyser.getAudioLevels();
+  }
+
+  private lastRenderedColor: string = null;
+  private lastRenderedColorAt = 0;
+
+  /**
+   * The effective visualizer color of the most recent rendered frame —
+   * including live storyboard overrides, which only exist inside the rAF frame
+   * and are wiped again at its end. For consumers outside the render loop
+   * (Hue sync). Returns null when no frame rendered recently (hidden window),
+   * so callers can fall back to the settings chain.
+   */
+  public getRenderedVisualizerColor(): string | null {
+    return Date.now() - this.lastRenderedColorAt < 2000 ? this.lastRenderedColor : null;
+  }
+
   private loop(time: number) {
     if (!this.stopped) requestAnimationFrame(this.boundLoop);
     if (!this.overlayCtx) return;
@@ -99,6 +118,10 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     });
 
     const storedColor = storyboard.getVisualizerColor();
+    if (storedColor) {
+      this.lastRenderedColor = storedColor;
+      this.lastRenderedColorAt = Date.now();
+    }
     const baseBackgroundDim = (storyboard.getBackgroundDim() ?? 50) / 100;
     let usedDimColor: string;
 

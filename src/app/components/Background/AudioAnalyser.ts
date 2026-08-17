@@ -79,6 +79,37 @@ export default class AudioAnalyser {
     return out;
   }
 
+  /**
+   * On-demand band energies for consumers outside the rAF loop (Hue light sync).
+   * Reads the analyser directly, so it works while rendering is paused. Passing
+   * 0 to `read` keeps the current fftSize, and only scalars are returned so the
+   * reused buffer never escapes. The processed spectrum is reversed — LOW
+   * frequencies live at the END of the array.
+   */
+  public getAudioLevels(): { level: number; bass: number; mid: number; treble: number } | null {
+    if (!this.initialized) return null;
+    const spectrum = this.read(0);
+    const len = spectrum.length;
+    if (!len) return null;
+
+    const trebleEnd = Math.floor(len * 0.40);
+    const midEnd = Math.floor(len * 0.85);
+    let treble = 0, mid = 0, bass = 0;
+    for (let i = 0; i < trebleEnd; i++) treble += spectrum[i];
+    for (let i = trebleEnd; i < midEnd; i++) mid += spectrum[i];
+    for (let i = midEnd; i < len; i++) bass += spectrum[i];
+    treble /= (trebleEnd || 1) * 255;
+    mid /= ((midEnd - trebleEnd) || 1) * 255;
+    bass /= ((len - midEnd) || 1) * 255;
+
+    return {
+      level: 0.5 * bass + 0.35 * mid + 0.15 * treble,
+      bass,
+      mid,
+      treble,
+    };
+  }
+
   public dispose() {
     this.analyser = null;
     this.buffer = null;

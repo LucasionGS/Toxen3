@@ -25,6 +25,30 @@ export const shortcuts: Shortcut[] = [
     description: "Scroll to the playing track",
     action: () => Toxen.showCurrentSong(),
   },
+  {
+    key: "h",
+    ctrl: true,
+    description: "Toggle Philips Hue sync",
+    action: () => {
+      const hue = Toxen.hue;
+      if (!hue) return;
+      Toxen.log(`Hue sync ${hue.toggleSync() ? "enabled" : "disabled"}`, 2000);
+    },
+  },
+  {
+    key: "arrowup",
+    ctrl: true,
+    shift: true,
+    description: "Hue brightness +10%",
+    action: () => Toxen.hue?.nudgeBrightness(10),
+  },
+  {
+    key: "arrowdown",
+    ctrl: true,
+    shift: true,
+    description: "Hue brightness -10%",
+    action: () => Toxen.hue?.nudgeBrightness(-10),
+  },
 ];
 
 /**

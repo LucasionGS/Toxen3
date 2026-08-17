@@ -51,7 +51,7 @@ import SettingsPanel from "./components/Sidepanel/Panels/SettingsPanel/SettingsP
 import EditSong from "./components/Sidepanel/Panels/EditSong/EditSong";
 import User from "./toxen/User";
 import { IconLayoutNavbarExpand, IconMenu2, IconMusic, IconRefresh, IconSearch, IconList, IconWand, IconFileImport, IconSettings, IconInfoCircle, IconMailOpened, IconBadgeCc } from "@tabler/icons-react";
-// import HueManager from "./toxen/philipshue/HueManager";
+import type HueManager from "./toxen/desktop/hue/HueManager";
 import ImportPanel from "./components/Sidepanel/Panels/ImportPanel/ImportPanel";
 // import YTDlpWrap from "yt-dlp-wrap";
 import StoryboardEditor, { StoryboardEditorController } from "./components/StoryboardEditor/StoryboardEditor";
@@ -507,27 +507,7 @@ export class Toxen {
     );
     document.body.style.setProperty("--wheel-intensity", String(Settings.get("songWheelIntensity") ?? 1));
 
-    // Disable hueEnabled while its still broken.
-    // if (Settings.get("hueEnabled")) Settings.set("hueEnabled", false);
-    
-    // if (toxenapi.isDesktop() && Settings.get("hueEnabled") && !HueManager.instance) {
-    //   HueManager.init({
-    //     ip: Settings.get("hueBridgeIp"),
-    //     username: Settings.get("hueUsername"),
-    //     clientkey: Settings.get("hueClientkey"),
-    //   });
-
-    //   if (Settings.get("hueEntertainmentAreaId")) {
-    //     HueManager.instance.getEntertainmentArea(
-    //       Settings.get("hueEntertainmentAreaId")
-    //     ).then(area => {
-    //       HueManager.setCurrentArea(area);
-    //     }).catch(err => {
-    //       HueManager.setCurrentArea(null);
-    //       Toxen.error(err);
-    //     });
-    //   }
-    // }
+    Toxen.hue?.reconcile();
 
     Toxen.discord?.setPresence();
   }
@@ -935,6 +915,10 @@ export class Toxen {
 
   public static get discord(): Discord | null {
     return toxenapi.isDesktop() ? toxenapi.getDiscordInstance() : null;
+  }
+
+  public static get hue(): HueManager | null {
+    return toxenapi.isDesktop() ? toxenapi.getHueInstance() : null;
   }
 
   public static async syncSongs(songs?: Song[]) {

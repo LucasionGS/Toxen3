@@ -26,7 +26,6 @@ import PlaylistManager from "../components/PlaylistManager/PlaylistManager";
 import { friendSocket } from "./FriendSocket";
 import ProviderManager from "./providers/ProviderManager";
 import type { ProviderAudioSource, ProviderSongReference } from "./providers/Provider";
-// import HueManager from "./philipshue/HueManager";
 
 export default class Song implements ISong {
   public uid: string;
@@ -587,12 +586,6 @@ export default class Song implements ISong {
 
     let src = sourceInfo.url;
     if (Toxen.musicPlayer.src === src) return;
-    // if (HueManager.isEnabled()) {
-    //   HueManager.start().catch((error) => Toxen.error(error.message));
-    // }
-    // else {
-    //   HueManager.stop();
-    // }
     if (Settings.isRemote() && this.isVideo()) Toxen.log("Streaming a video can take some time to load... Using audio files is much faster.", 3000);
     if (this.lastProviderAudioSource?.revoke) this.lastProviderAudioSource.revoke();
     this.lastProviderAudioSource = this.usesProvider() ? sourceInfo : null;

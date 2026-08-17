@@ -17,7 +17,8 @@ import { FuseV1Options, FuseVersion } from '@electron/fuses';
  * since 7.5 it no longer copies dependencies into the app either, so without
  * this list the require() resolves to nothing in a packaged build and takes the
  * whole renderer down with it. Keep in sync with the dependency tree of
- * discord-rpc-electron (node-fetch and ws, plus whatwg-url's chain).
+ * discord-rpc-electron (node-fetch and ws, plus whatwg-url's chain) and of
+ * node-dtls-client (debug -> ms, semver), used for Hue Entertainment streaming.
  */
 const runtimeRequiredModules = [
   'discord-rpc-electron',
@@ -26,6 +27,10 @@ const runtimeRequiredModules = [
   'whatwg-url',
   'tr46',
   'webidl-conversions',
+  'node-dtls-client',
+  'debug',
+  'ms',
+  'semver',
 ];
 
 const config: ForgeConfig = {
