@@ -289,6 +289,19 @@ export default function HueSettings() {
             onChangeEnd={(value) => Settings.apply({ hueSyncIntensity: value }, true)}
           />
           <sup>How strongly the lights react to the audio.</sup>
+          <br />
+
+          <Checkbox
+            onClick={(e) => Settings.apply({ hueRainbowSpread: e.currentTarget.checked }, true)}
+            defaultChecked={Settings.get("hueRainbowSpread", true)}
+            name="hueRainbowSpread"
+            label="Rainbow spread across lights"
+          />
+          <sup>
+            When the visualizer's rainbow mode is active, each light takes its own part of the color
+            wheel — spread across the room by light position — all cycling at the visualizer's pace.
+            When off, all lights share one color and cycle through the wheel together.
+          </sup>
 
           {Settings.isAdvanced() && (
             <>

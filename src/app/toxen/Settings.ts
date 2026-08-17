@@ -109,6 +109,7 @@ export default class Settings {
       hueBrightness: 100,
       hueSyncMode: "uniform",
       hueSyncIntensity: 1,
+      hueRainbowSpread: true,
       hueUpdateRate: 50,
       hueDebug: false,
       // Change notes
@@ -398,6 +399,12 @@ export interface ISettings {
   hueSyncMode: "uniform" | "spectrum";
   /** Multiplier on the audio-reactive brightness, 0.1-2. */
   hueSyncIntensity: number;
+  /**
+   * When the visualizer's rainbow mode is active: true = each light takes its
+   * own part of the color wheel (spread across the room by position); false =
+   * all lights share one color cycling through the wheel.
+   */
+  hueRainbowSpread: boolean;
   /** Entertainment stream update rate in Hz, 10-60. */
   hueUpdateRate: number;
   /** Verbose DTLS/handshake logging to the developer console. */

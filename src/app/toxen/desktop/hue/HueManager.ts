@@ -34,6 +34,20 @@ function hexToRgb(hex: string): HueRGB {
   return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
 }
 
+/** Full-saturation color wheel — RGB of the visualizer's `hsl(deg, 100%, 50%)`. */
+function hueWheelRgb(hueDeg: number): HueRGB {
+  const h = (((hueDeg % 360) + 360) % 360) / 60;
+  const x = Math.round(255 * (1 - Math.abs((h % 2) - 1)));
+  switch (Math.floor(h)) {
+    case 0: return [255, x, 0];
+    case 1: return [x, 255, 0];
+    case 2: return [0, 255, x];
+    case 3: return [0, x, 255];
+    case 4: return [x, 0, 255];
+    default: return [255, 0, x];
+  }
+}
+
 /**
  * Drives Philips Hue Entertainment areas in sync with Toxen's playback.
  *
@@ -55,6 +69,8 @@ export default class HueManager {
   private channelIds: number[] = [];
   /** Per-channel band assignment for spectrum mode: 0 = bass, 1 = mid, 2 = treble. */
   private channelBands: number[] = [];
+  /** Per-channel 0..1 rank by x position — the rainbow spread offset. */
+  private channelRankFractions: number[] = [];
 
   private sendTimer: ReturnType<typeof setInterval> | null = null;
   private sendTimerRate = 0;
@@ -157,6 +173,7 @@ export default class HueManager {
     this.channels = [];
     this.channelIds = [];
     this.channelBands = [];
+    this.channelRankFractions = [];
     this.connectedKey = nextStatus === "connecting" ? this.connectedKey : "";
     this._status = nextStatus;
   }
@@ -224,24 +241,27 @@ export default class HueManager {
     this.area = area;
     this.channels = area.channels ?? [];
     this.channelIds = this.channels.map(c => c.channel_id);
-    this.channelBands = this.computeChannelBands();
+    this.computeChannelLayout();
   }
 
   /**
-   * Assigns each channel to a frequency band for spectrum mode: channels sorted
-   * by x position, leftmost third = bass, middle = mid, rightmost = treble.
+   * Derives the spatial layout from channel positions (sorted by x):
+   * frequency band per channel for spectrum mode (leftmost third = bass,
+   * middle = mid, rightmost = treble) and the 0..1 rank fraction used to
+   * spread the rainbow across the room.
    */
-  private computeChannelBands(): number[] {
+  private computeChannelLayout(): void {
     const count = this.channels.length;
-    if (!count) return [];
+    this.channelBands = new Array<number>(count).fill(0);
+    this.channelRankFractions = new Array<number>(count).fill(0);
+    if (!count) return;
     const order = this.channels
       .map((c, i) => ({ i, x: c.position?.x ?? 0 }))
       .sort((a, b) => a.x - b.x);
-    const bands = new Array<number>(count).fill(0);
     order.forEach(({ i }, rank) => {
-      bands[i] = Math.min(2, Math.floor((rank / count) * 3));
+      this.channelBands[i] = Math.min(2, Math.floor((rank / count) * 3));
+      this.channelRankFractions[i] = count > 1 ? rank / count : 0;
     });
-    return bands;
   }
 
   private scheduleReconnect(error: any, silent = false): void {
@@ -309,8 +329,7 @@ export default class HueManager {
     } else {
       // Paused or sync toggled off: hold a dim idle color. This frame is also
       // the keepalive that stops the bridge from timing the stream out.
-      const base = this.getBaseColor();
-      colors = [base.map(v => v * IDLE_LEVEL) as HueRGB];
+      colors = this.computeBaseColors().map(c => c.map(v => v * IDLE_LEVEL) as HueRGB);
     }
 
     const master = clamp(Settings.get("hueBrightness", 100) / 100, 0, 1);
@@ -352,11 +371,43 @@ export default class HueManager {
     return hexToRgb(hex);
   }
 
+  /**
+   * Whether rainbow mode is effective right now — the rendered frame's value
+   * (storyboard override included), falling back to the settings chain when
+   * rendering is idle.
+   */
+  private isRainbowActive(): boolean {
+    return Toxen.background?.visualizer?.getRenderedVisualizerRainbow?.()
+      ?? Toxen.background?.storyboard?.getVisualizerRainbow?.()
+      ?? Settings.get("visualizerRainbowMode")
+      ?? false;
+  }
+
+  /**
+   * Per-channel full-brightness colors before audio modulation. In rainbow
+   * mode the wheel turns with the visualizer's own phase — hue = songTime × 50°
+   * (the exact formula the bars use), so it stays in step on screen, across
+   * seeks, and freezes together with it on pause. With rainbow spread each
+   * channel is offset around the wheel by its position in the room; otherwise
+   * all channels share the cycling color.
+   */
+  private computeBaseColors(): HueRGB[] {
+    if (this.isRainbowActive()) {
+      const phase = (Toxen.musicPlayer?.media?.currentTime ?? 0) * 50;
+      if (Settings.get("hueRainbowSpread", true) && this.channelRankFractions.length > 1) {
+        return this.channelRankFractions.map(f => hueWheelRgb(phase + f * 360));
+      }
+      return [hueWheelRgb(phase)];
+    }
+    return [this.getBaseColor()];
+  }
+
   private computeAutoColors(): HueRGB[] {
-    const base = this.getBaseColor();
+    const bases = this.computeBaseColors();
+    const colorAt = (i: number) => bases[i] ?? bases[0];
     const levels = Toxen.background?.visualizer?.getAudioLevels?.();
     if (!levels) {
-      return [base.map(v => v * 0.3) as HueRGB];
+      return this.channelIds.map((_, i) => colorAt(i).map(v => v * 0.3) as HueRGB);
     }
 
     const intensity = clamp(Settings.get("hueSyncIntensity", 1), 0.1, 2);
@@ -368,13 +419,13 @@ export default class HueManager {
         this.bandEnvelopes[b] += (raw[b] - this.bandEnvelopes[b]) * factor;
       }
       const bandLevels = this.bandEnvelopes.map(env => clamp(env * intensity * 1.5, SYNC_FLOOR, 1));
-      return this.channelBands.map(band => base.map(v => v * bandLevels[band]) as HueRGB);
+      return this.channelBands.map((band, i) => colorAt(i).map(v => v * bandLevels[band]) as HueRGB);
     }
 
     const raw = 0.55 * levels.level + 0.45 * levels.bass;
     this.envelope += (raw - this.envelope) * (raw > this.envelope ? ATTACK : RELEASE);
-    const v = clamp(this.envelope * intensity * 1.5, SYNC_FLOOR, 1);
-    return [base.map(c => c * v) as HueRGB];
+    const level = clamp(this.envelope * intensity * 1.5, SYNC_FLOOR, 1);
+    return this.channelIds.map((_, i) => colorAt(i).map(c => c * level) as HueRGB);
   }
 
   // #endregion

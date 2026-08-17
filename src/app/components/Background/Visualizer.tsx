@@ -80,6 +80,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
 
   private lastRenderedColor: string = null;
   private lastRenderedColorAt = 0;
+  private lastRenderedIsRainbow = false;
 
   /**
    * The effective visualizer color of the most recent rendered frame —
@@ -90,6 +91,15 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
    */
   public getRenderedVisualizerColor(): string | null {
     return Date.now() - this.lastRenderedColorAt < 2000 ? this.lastRenderedColor : null;
+  }
+
+  /**
+   * Whether the most recent rendered frame used rainbow mode (storyboard
+   * override included). Null when no frame rendered recently — callers fall
+   * back to the settings chain.
+   */
+  public getRenderedVisualizerRainbow(): boolean | null {
+    return Date.now() - this.lastRenderedColorAt < 2000 ? this.lastRenderedIsRainbow : null;
   }
 
   private loop(time: number) {
@@ -136,6 +146,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     }
 
     const isRainbow = storyboard.getVisualizerRainbow();
+    this.lastRenderedIsRainbow = !!isRainbow;
     // setFillColor is a setState, so it must only run when the colour actually changes.
     const fillColor = isRainbow ? RAINBOW_GRADIENT : storedColor;
     if (this.lastFillColor !== fillColor) {
