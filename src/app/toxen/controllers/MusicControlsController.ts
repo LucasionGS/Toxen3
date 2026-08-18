@@ -19,8 +19,16 @@ export default class MusicControlsController extends Controller {
   /** Bound by the view. The progress bar widget is still a class component. */
   public progressBar: ProgressBar = null;
 
-  /** Bound by the view's volume slider so {@link setVolume} can reflect changes. */
-  public setVolumeSlider: React.Dispatch<React.SetStateAction<number>> = () => void 0;
+  /** Bound by volume slider views so {@link setVolume} can reflect changes in all of them. */
+  private volumeSliders = new Set<React.Dispatch<React.SetStateAction<number>>>();
+
+  /** Registers a volume slider's state setter. Returns an unsubscribe function. */
+  public addVolumeSlider(setter: React.Dispatch<React.SetStateAction<number>>): () => void {
+    this.volumeSliders.add(setter);
+    return () => {
+      this.volumeSliders.delete(setter);
+    };
+  }
 
   public attachProgressBar(progressBar: ProgressBar | null) {
     this.progressBar = progressBar;
@@ -47,6 +55,6 @@ export default class MusicControlsController extends Controller {
 
   public setVolume(vol: number) {
     Toxen.musicPlayer.setVolume(vol);
-    this.setVolumeSlider(vol);
+    this.volumeSliders.forEach(setter => setter(vol));
   }
 }

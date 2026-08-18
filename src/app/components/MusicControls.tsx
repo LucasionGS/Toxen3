@@ -142,11 +142,12 @@ function VolumeIcon(props: { level: number }) {
   );
 }
 
-function VolumeSlider(props: { controller: MusicControlsController }) {
+export function VolumeSlider(props: { controller: MusicControlsController }) {
   const { controller } = props;
   const [volume, setVolume] = React.useState(Settings.get("volume") ?? 50);
 
-  controller.setVolumeSlider = (n) => setVolume(n);
+  // addVolumeSlider returns its unsubscribe, which doubles as the effect cleanup.
+  React.useEffect(() => controller.addVolumeSlider(setVolume), [controller]);
 
   return (
     <div className="toxen-volume-slider">

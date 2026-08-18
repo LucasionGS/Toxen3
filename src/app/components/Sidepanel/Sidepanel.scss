@@ -787,7 +787,8 @@ body[miniplayer] .sidepanel {
 @if ToxenIsWeb() {
   // Mobile display - native app-like experience
   @media screen and ((max-width: 768px)) { // Mobile view
-    // Sidepanel transforms into bottom tab bar + full-screen overlay
+    // The MobileNavBar component replaces the icon strip; the sidepanel itself
+    // only serves as the full-screen section overlay.
     .sidepanel {
       position: fixed !important;
       bottom: 0 !important;
@@ -795,78 +796,25 @@ body[miniplayer] .sidepanel {
       right: 0 !important;
       width: 100vw !important;
       border: none !important;
-      border-top: 1px solid var(--accent-color-dim) !important;
       z-index: 50;
 
-      // Default state: just the tab bar
+      // Default state: collapsed and invisible
       height: auto !important;
       opacity: 1 !important;
-      flex-direction: column-reverse;
-      background: rgba(32, 33, 36, 0.92) !important;
-      backdrop-filter: blur(24px) saturate(1.3) !important;
-      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4) !important;
+      background: transparent !important;
+      box-shadow: none !important;
+      backdrop-filter: none !important;
+
+      &::before {
+        display: none;
+      }
 
       .sidepanel-backdrop {
         display: none;
       }
 
-      // Bottom tab bar - always visible
+      // The icon strip is replaced by the mobile bottom nav
       .sidepanel-icons {
-        display: flex !important;
-        flex-direction: row;
-        height: var(--mobile-tab-bar-height) !important;
-        width: 100% !important;
-        justify-content: space-around;
-        align-items: center;
-        flex-shrink: 0;
-        padding: 0 4px;
-        padding-bottom: env(safe-area-inset-bottom, 0);
-        margin: 0;
-        box-sizing: border-box;
-        border: none !important;
-        border-top: 1px solid var(--accent-color-dim) !important;
-        background: transparent;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none;
-        &::-webkit-scrollbar { display: none; }
-
-        .sidepanel-icon {
-          width: auto !important;
-          min-width: 48px;
-          min-height: 48px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 6px 10px !important;
-          border-radius: 12px;
-          transition: all 0.2s ease;
-          flex-shrink: 0;
-
-          &.active {
-            background: var(--accent-color-dim);
-            color: var(--accent-color);
-          }
-
-          // Remove hover effects on touch
-          &:hover {
-            transform: none !important;
-          }
-        }
-
-        // Hide separator hrs
-        hr {
-          display: none;
-        }
-      }
-
-      // Hide toggle button on mobile
-      .sidepanel-icon-toggle {
-        display: none !important;
-      }
-
-      // Hide icon titles in tab bar
-      .sidepanel-icon-title {
         display: none !important;
       }
 
@@ -888,16 +836,23 @@ body[miniplayer] .sidepanel {
         display: none;
       }
 
-      // When panel content is shown - full-screen overlay
+      // When panel content is shown - full-screen overlay above the nav bar
       &.show {
         height: calc(100vh - var(--appbar-height)) !important;
+        background: color-mix(in srgb, var(--primary-bg) 92%, transparent) !important;
+        backdrop-filter: blur(24px) saturate(1.3) !important;
+
+        &::before {
+          display: block;
+        }
 
         .sidepanel-content {
           height: auto !important;
           max-height: none !important;
           flex: 1 1 auto;
           min-height: 0 !important;
-          padding: 16px !important;
+          // Bottom padding clears the docked mini-player and tab bar
+          padding: 16px 16px calc(var(--mobile-tab-bar-height) + var(--mobile-mini-player-height) + 16px) !important;
           opacity: 1;
           overflow-y: auto;
           overflow-x: hidden;

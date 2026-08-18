@@ -11,6 +11,12 @@ This file contains the change logs for Toxen.
   - Set it up in `Settings > Hue` (desktop only): discover your bridge, press its link button to pair, and pick an entertainment area.
   - Toggle the sync with `Ctrl+H`, and adjust light brightness with `Ctrl+Shift+↑` / `Ctrl+Shift+↓`.
 - **Hue Storyboard Events** - Storyboards can script the lights per track: set a color, fade between colors, pulse to the beat, or hand control to the audio sync for a section.
+- **Mobile Now Playing Screen** - On phones, tap the new mini-player above the tab bar to open a full-screen player over the song's background, with a big seek bar, playback controls and a volume slider. Swipe-friendly and out of the way when you're browsing.
+
+## Changes
+
+- **New Mobile Navigation** - The mobile web player's cramped icon strip is gone. Phones now get a proper bottom bar with labelled Music, Playlist, Effects and More tabs — More opens a sheet with Import, Settings, Friends, About, Changes and Subtitles.
+- **Mobile Notifications Moved Up** - Notifications on phones now appear above the player bar instead of covering it.
 
 <!-- VERSION: 2.11.0 -->
 ## 2.11.0 - 16-08-2026

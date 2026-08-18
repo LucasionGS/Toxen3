@@ -7,6 +7,7 @@ import LoadingScreen from "./components/LoadingScreen";
 import LoadingScreenController from "./toxen/controllers/LoadingScreenController";
 import MusicControls from "./components/MusicControls";
 import MusicControlsController from "./toxen/controllers/MusicControlsController";
+import MobilePlayer from "./components/MobileUI/MobilePlayer";
 import MusicPlayerController from "./toxen/controllers/MusicPlayerController";
 import ViewController from "./toxen/controllers/ViewController";
 import ProgressBar from "./components/ProgressBar";
@@ -1041,6 +1042,8 @@ export const ToxenEvent = new ToxenEventEmitter();
 //#region ToxenApp Layout
 export default class ToxenAppRenderer extends React.Component {
   private detachShortcuts: () => void = null;
+  /** Shared between the desktop MusicControls and the mobile web player. */
+  private musicControlsController = new MusicControlsController();
 
   componentWillUnmount() {
     this.detachShortcuts?.();
@@ -1200,7 +1203,7 @@ export default class ToxenAppRenderer extends React.Component {
           <Background onReady={controller => Toxen.background = controller} />
           <StoryboardEditor controllerSetter={sec => Toxen.storyboardEditorController = sec} />
           <SubtitleEditor onReady={controller => Toxen.subtitleEditor = controller} />
-          <MusicControls onReady={controller => Toxen.musicControls = controller} />
+          <MusicControls controller={this.musicControlsController} onReady={controller => Toxen.musicControls = controller} />
           <LoadingScreen onReady={controller => Toxen.loadingScreen = controller} initialShow={true} />
           <div className="song-panel-toggle hide-on-inactive" onClick={() => Toxen.sidePanel.show()}>
             &nbsp;
@@ -1390,6 +1393,13 @@ export default class ToxenAppRenderer extends React.Component {
           </SidepanelSection>
 
         </Sidepanel>
+        {
+          // Mobile web playback UI (mini-player + expanding hero player).
+          // Hidden by CSS above phone widths.
+          !toxenapi.isDesktop() && (
+            <MobilePlayer controller={this.musicControlsController} />
+          )
+        }
         <Notifications
           style={{
             position: "fixed",

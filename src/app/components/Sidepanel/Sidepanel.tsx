@@ -7,6 +7,7 @@ import { Toxen } from '../../ToxenApp';
 import "./Sidepanel.scss";
 import SidepanelSection from './SidepanelSection';
 import { attachDragScroll } from '../../lib/dragScroll';
+import MobileNavBar from '../MobileUI/MobileNavBar';
 
 export type PanelDirection = "left" | "right";
 
@@ -32,6 +33,7 @@ interface State {
   direction: PanelDirection;
   exposeIcons: boolean;
   width: number;
+  hidden: boolean;
 }
 
 export default class Sidepanel extends React.Component<Props, State> {
@@ -44,6 +46,7 @@ export default class Sidepanel extends React.Component<Props, State> {
       direction: (this.props.direction ?? "left"),
       exposeIcons: (this.props.exposeIcons ?? false),
       width: this.getWidth(),
+      hidden: false,
     }
   }
 
@@ -84,6 +87,7 @@ export default class Sidepanel extends React.Component<Props, State> {
    */
   public setHidden(hidden: boolean) {
     this.containerRef.current.style.display = hidden ? "none" : "";
+    this.setState({ hidden });
   }
 
   private getWidth() {
@@ -162,6 +166,22 @@ export default class Sidepanel extends React.Component<Props, State> {
 
   public scrollStorage: { [sectionId: string]: number } = {};
 
+  /** Section selection from the mobile bottom nav; mirrors the icon strip's click logic. */
+  private handleMobileSectionSelect = (sectionId: string) => {
+    if (!Toxen.isMode("Player")) {
+      Toxen.sendModeError(Toxen.getMode());
+      this.show(true);
+      return;
+    }
+    // Tapping the active tab toggles the panel closed
+    if (this.state.sectionId === sectionId && this.state.show) {
+      this.show(false);
+      return;
+    }
+    this.setSectionId(sectionId);
+    if (!this.state.show) this.show(true);
+  };
+
   render() {
     const classList: string[] = [
       "sidepanel",
@@ -193,6 +213,7 @@ export default class Sidepanel extends React.Component<Props, State> {
     const themeSidepanelBg = Toxen.theme?.getSidepanelImageUrl?.();
     const sidepanelBackground = userSidepanelBg || themeSidepanelBg || null;
     return (
+      <>
       <div ref={this.containerRef} className={classList.join(" ")}
         style={{
           width: panelWidth,
@@ -309,6 +330,20 @@ export default class Sidepanel extends React.Component<Props, State> {
           })()
         }
       </div >
+      {
+        // Mobile web bottom navigation replaces the icon strip at phone widths.
+        // Rendered outside the panel container: its translateZ(0) would trap
+        // the nav bar's fixed positioning.
+        !toxenapi.isDesktop() && !this.state.hidden && (
+          <MobileNavBar
+            sections={sections}
+            activeId={this.state.sectionId}
+            panelOpen={this.state.show}
+            onSelect={this.handleMobileSectionSelect}
+          />
+        )
+      }
+      </>
     )
   }
 }

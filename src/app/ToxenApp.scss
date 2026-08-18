@@ -89,5 +89,10 @@ body[miniplayer] .miniplayer-overlay {
       width: 100vw;
       height: calc(100vh - var(--appbar-height) - var(--mobile-tab-bar-height));
     }
+
+    // The bottom tab bar replaces the Menu toggle
+    .song-panel-toggle {
+      display: none;
+    }
   }
 }
