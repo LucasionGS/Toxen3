@@ -2,12 +2,13 @@
 
 This file contains the change logs for Toxen.
 
-<!-- UPCOMING: 2.11.1 -->
-## 2.11.1 - TBD
+<!-- UPCOMING: 2.12.1 -->
+<!-- VERSION: 2.12.0 -->
+## 2.12.0 - 19-08-2026
 
 ## New Features
 
-- **Philips Hue Light Sync** - Toxen can now stream your music to Philips Hue lights in real time using the low-latency Hue Entertainment system. Lights follow the visualizer color live — including storyboard color changes and rainbow mode — and pulse with the audio, with a spectrum mode that spreads bass, mids and treble across the room based on where your lights are placed. In rainbow mode, each light can take its own part of the color wheel, sweeping through the room in step with the visualizer.
+- **Philips Hue Light Sync** - Toxen can now stream your music to Philips Hue lights in real time using the low-latency Hue Entertainment system. Lights follow the visualizer color live - including storyboard color changes and rainbow mode - and pulse with the audio, with a spectrum mode that spreads bass, mids and treble across the room based on where your lights are placed. In rainbow mode, each light can take its own part of the color wheel, sweeping through the room in step with the visualizer.
   - Set it up in `Settings > Hue` (desktop only): discover your bridge, press its link button to pair, and pick an entertainment area.
   - Toggle the sync with `Ctrl+H`, and adjust light brightness with `Ctrl+Shift+↑` / `Ctrl+Shift+↓`.
 - **Hue Storyboard Events** - Storyboards can script the lights per track: set a color, fade between colors, pulse to the beat, or hand control to the audio sync for a section.
@@ -15,7 +16,7 @@ This file contains the change logs for Toxen.
 
 ## Changes
 
-- **New Mobile Navigation** - The mobile web player's cramped icon strip is gone. Phones now get a proper bottom bar with labelled Music, Playlist, Effects and More tabs — More opens a sheet with Import, Settings, Friends, About, Changes and Subtitles.
+- **New Mobile Navigation** - The mobile web player's cramped icon strip is gone. Phones now get a proper bottom bar with labelled Music, Playlist, Effects and More tabs - More opens a sheet with Import, Settings, Friends, About, Changes and Subtitles.
 - **Mobile Notifications Moved Up** - Notifications on phones now appear above the player bar instead of covering it.
 
 <!-- VERSION: 2.11.0 -->
