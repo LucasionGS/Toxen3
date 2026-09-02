@@ -2,7 +2,14 @@
 
 This file contains the change logs for Toxen.
 
-<!-- UPCOMING: 2.12.1 -->
+<!-- UPCOMING: 2.12.2 -->
+<!-- VERSION: 2.12.1 -->
+## 2.12.1 - 03-09-2026
+
+## Bug Fixes
+
+- **Local songs not playing** - Fixed local songs failing to play (and seeking not working) on desktop after the 2.12.0 update. Backgrounds loaded fine, but the player never received any audio data.
+
 <!-- VERSION: 2.12.0 -->
 ## 2.12.0 - 19-08-2026
 

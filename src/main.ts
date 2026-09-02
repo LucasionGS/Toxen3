@@ -1,5 +1,7 @@
 import { app, BrowserWindow, net, protocol } from 'electron';
 import Path from "path";
+import fs from "node:fs";
+import { Readable } from "node:stream";
 import { fileURLToPath, pathToFileURL } from "node:url";
 // @ts-ignore - electron-squirrel-startup ships no type declarations.
 import squirrelStartup from "electron-squirrel-startup";
@@ -104,6 +106,80 @@ const createWindow = (): void => {
   });
 };
 
+// MIME types for the file kinds the renderer streams with Range requests. Only
+// media reaches serveFileRange in practice; everything else goes via net.fetch,
+// which resolves content types itself. Chromium sniffs media containers anyway,
+// so an unknown extension falling back to octet-stream still plays.
+const rangeMimeTypes: Record<string, string> = {
+  ".mp3": "audio/mpeg",
+  ".m4a": "audio/mp4",
+  ".aac": "audio/aac",
+  ".ogg": "audio/ogg",
+  ".oga": "audio/ogg",
+  ".opus": "audio/ogg",
+  ".wav": "audio/wav",
+  ".flac": "audio/flac",
+  ".weba": "audio/webm",
+  ".mp4": "video/mp4",
+  ".m4v": "video/mp4",
+  ".webm": "video/webm",
+  ".mkv": "video/x-matroska",
+  ".mov": "video/quicktime",
+  ".ogv": "video/ogg",
+  ".avi": "video/x-msvideo",
+};
+
+/**
+ * Serve a byte range of a local file as a 206 Partial Content response,
+ * the way a static file server would. Handles "bytes=a-b", "bytes=a-" and
+ * "bytes=-n"; anything else, or a range past the end of the file, gets 416.
+ */
+async function serveFileRange(filePath: string, rangeHeader: string, headOnly: boolean): Promise<Response> {
+  let size: number;
+  try {
+    const stat = await fs.promises.stat(filePath);
+    if (!stat.isFile()) return new Response(null, { status: 404 });
+    size = stat.size;
+  } catch {
+    return new Response(null, { status: 404 });
+  }
+
+  const contentType = rangeMimeTypes[Path.extname(filePath).toLowerCase()] ?? "application/octet-stream";
+  const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader.trim());
+  if (!match || (match[1] === "" && match[2] === "")) {
+    return new Response(null, { status: 416, headers: { "Content-Range": `bytes */${size}` } });
+  }
+
+  let start: number;
+  let end: number;
+  if (match[1] === "") {
+    // Suffix range: the last N bytes.
+    const suffix = Number(match[2]);
+    start = Math.max(0, size - suffix);
+    end = size - 1;
+  } else {
+    start = Number(match[1]);
+    end = match[2] === "" ? size - 1 : Math.min(Number(match[2]), size - 1);
+  }
+
+  if (size === 0 || start >= size || start > end) {
+    return new Response(null, { status: 416, headers: { "Content-Range": `bytes */${size}` } });
+  }
+
+  const headers = {
+    "Content-Type": contentType,
+    "Content-Length": String(end - start + 1),
+    "Content-Range": `bytes ${start}-${end}/${size}`,
+    "Accept-Ranges": "bytes",
+  };
+  if (headOnly) return new Response(null, { status: 206, headers });
+
+  const stream = fs.createReadStream(filePath, { start, end });
+  // Readable.toWeb propagates cancellation (the media element aborts ranges
+  // constantly while seeking) back to the file stream, so handles don't leak.
+  return new Response(Readable.toWeb(stream) as ReadableStream, { status: 206, headers });
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -121,7 +197,20 @@ app.on('ready', () => {
     url.hash = '';
     // fileURLToPath decodes percent-escapes properly, including %23 (#) and
     // %25 (%), which the previous decodeURI() call left mangled.
-    return net.fetch(pathToFileURL(fileURLToPath(url)).toString(), {
+    const filePath = fileURLToPath(url);
+
+    // <audio>/<video> always request media with a Range header (initially
+    // "bytes=0-", then arbitrary offsets while seeking). net.fetch has no way to
+    // forward that header to the file:// backend, so it answers with a plain
+    // 200 and no Content-Range, which Chromium's media pipeline rejects as
+    // MEDIA_ERR_SRC_NOT_SUPPORTED (a 200 with "zero data" from the renderer's
+    // point of view). Serve those straight from disk with a proper 206.
+    const range = request.headers.get('range');
+    if (range) {
+      return serveFileRange(filePath, range, request.method === 'HEAD');
+    }
+
+    return net.fetch(pathToFileURL(filePath).toString(), {
       // Mandatory: without it net.fetch re-enters this handler and recurses.
       bypassCustomProtocolHandlers: true,
     });
