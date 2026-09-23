@@ -50,6 +50,11 @@
     margin-bottom: 8px;
   }
 
+  // The side panel sets nowrap for its own layout, which would clip the notice to one line.
+  .mantine-Alert-root {
+    white-space: normal;
+  }
+
   // Button styling
   .tx-button {
     background: var(--accent-color);

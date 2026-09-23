@@ -2,7 +2,17 @@
 
 This file contains the change logs for Toxen.
 
-<!-- UPCOMING: 2.12.2 -->
+<!-- UPCOMING: 2.12.3 -->
+
+<!-- VERSION: 2.12.2 -->
+## 2.12.2 - 23-09-2026
+
+## New Features
+
+- **Raw Audio Mode** - Plays your music exactly as it is, with no audio processing. Turn it on if music stutters, glitches or stops when Toxen plays in the background on your phone or tablet.
+  - This can be found in `Settings > Advanced > Raw Audio Mode`.
+  - While it's on, the visualizer, everything that reacts to the music, audio effects and crossfade are turned off.
+
 <!-- VERSION: 2.12.1 -->
 ## 2.12.1 - 03-09-2026
 

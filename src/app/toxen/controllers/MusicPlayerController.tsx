@@ -45,6 +45,14 @@ export default class MusicPlayerController extends Controller {
   }
 
   /**
+   * Crossfade fades a second element's volume from a timer. Mobile browsers throttle that timer in
+   * the background and iOS ignores `volume` entirely, so raw audio mode switches it off.
+   */
+  public get crossfadeEnabled() {
+    return Settings.get('crossfadeEnabled', false) && !Settings.get('rawAudioMode');
+  }
+
+  /**
    * Binds the media element rendered by the view. Passing `null` (on unmount)
    * clears the reference.
    */
@@ -143,8 +151,7 @@ export default class MusicPlayerController extends Controller {
     if (this.crossfadeTriggered) return; // Already triggered
     if (this.crossfadeInProgress) return; // Crossfade already happening
 
-    const crossfadeEnabled = Settings.get('crossfadeEnabled', false);
-    if (!crossfadeEnabled) return;
+    if (!this.crossfadeEnabled) return;
 
     const duration = this.media.duration;
     const currentTime = this.media.currentTime;
@@ -425,7 +432,7 @@ export default class MusicPlayerController extends Controller {
 
   public handleEnded() {
     // If crossfade already triggered the next song, don't do anything
-    if (this.crossfadeTriggered && Settings.get('crossfadeEnabled', false)) {
+    if (this.crossfadeTriggered && this.crossfadeEnabled) {
       // Reset for next song
       this.crossfadeTriggered = false;
       return;

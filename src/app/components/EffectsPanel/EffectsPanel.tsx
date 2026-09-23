@@ -1,7 +1,8 @@
 import React, { Component } from "react";
 import { Toxen } from "../../ToxenApp";
 import Button from "../Button/Button";
-import { Checkbox, Slider, Text, Stack, Divider } from "@mantine/core";
+import { Checkbox, Slider, Text, Stack, Divider, Alert } from "@mantine/core";
+import { IconInfoCircle } from "@tabler/icons-react";
 import Settings from "../../toxen/Settings";
 import "./EffectsPanel.scss";
 
@@ -37,17 +38,27 @@ export default class EffectsPanel extends Component<EffectsPanelProps, EffectsPa
   };
 
   render() {
-    const { audioEffectsEnabled } = this.state;
+    const rawAudio = Settings.get('rawAudioMode') ?? false;
+    const audioEffectsEnabled = this.state.audioEffectsEnabled && !rawAudio;
+    const crossfadeEnabled = Settings.get('crossfadeEnabled', false) && !rawAudio;
     
     return (
       <div className="adjust-panel">
         <h1>Audio Effects</h1>
+
+        {rawAudio && (
+          <Alert color="yellow" icon={<IconInfoCircle size="1em" />} mb="md">
+            Raw Audio Mode is on, so audio effects and crossfade are unavailable.
+            You can turn it off in <b>Settings &gt; Advanced</b>.
+          </Alert>
+        )}
         
         <Stack gap="md">
           <div>
             <Checkbox
               label="Enable Audio Effects"
-              defaultChecked={audioEffectsEnabled}
+              defaultChecked={this.state.audioEffectsEnabled}
+              disabled={rawAudio}
               onChange={(e) => this.handleAudioEffectsToggle(e.currentTarget.checked)}
               mb="md"
             />
@@ -114,6 +125,7 @@ export default class EffectsPanel extends Component<EffectsPanelProps, EffectsPa
             <Checkbox
               label="Enable Crossfade"
               defaultChecked={Settings.get('crossfadeEnabled', false)}
+              disabled={rawAudio}
               onChange={(e) => {
                 Settings.set('crossfadeEnabled', e.currentTarget.checked);
                 Settings.save({ suppressNotification: true });
@@ -122,7 +134,7 @@ export default class EffectsPanel extends Component<EffectsPanelProps, EffectsPa
               mb="md"
             />
 
-            <div style={{ opacity: Settings.get('crossfadeEnabled', false) ? 1 : 0.5 }}>
+            <div style={{ opacity: crossfadeEnabled ? 1 : 0.5 }}>
               <Text size="sm" mb={5}>Crossfade Duration</Text>
               <Slider
                 defaultValue={Settings.get('crossfadeDuration', 3)}
@@ -134,7 +146,7 @@ export default class EffectsPanel extends Component<EffectsPanelProps, EffectsPa
                 max={10}
                 step={0.5}
                 label={(value) => `${value}s`}
-                disabled={!Settings.get('crossfadeEnabled', false)}
+                disabled={!crossfadeEnabled}
                 marks={[
                   { value: 0.5, label: '0.5s' },
                   { value: 3, label: '3s' },

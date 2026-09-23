@@ -99,6 +99,7 @@ export default class Settings {
       // Crossfade
       crossfadeEnabled: false,
       crossfadeDuration: 3, // 3 seconds default
+      rawAudioMode: false,
       
       // Performance
       enableThumbnailCache: false,
@@ -485,6 +486,15 @@ export interface ISettings {
   // Crossfade
   crossfadeEnabled: boolean;
   crossfadeDuration: number; // Duration in seconds
+
+  /**
+   * Play the media element's audio untouched: no Web Audio graph is ever attached to it. Mobile
+   * browsers suspend an AudioContext in the background, and once an element is routed through one
+   * its audio stops or stutters with it. Turning this on disables everything that needs the graph
+   * (visualizer, dynamic lighting, audio effects, audio-synced lights) plus crossfade.
+   * Only takes full effect after a reload if the graph was already created this session.
+   */
+  rawAudioMode: boolean;
 
   // Meta
   /** Last app version for which the change notes modal was shown/acknowledged */

@@ -120,6 +120,9 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     // Low performance mode skips every additional rendering effect: storyboard, dynamic
     // lighting, visualizer, particles and floating title.
     const lowPerformanceMode = Settings.get("lowPerformanceMode") ?? false;
+    // Without the audio graph (raw audio mode) there is no spectrum, so everything that reacts to
+    // the music stays still. Time-based storyboard events, backgrounds and rainfall still run.
+    const audioReactive = this.analyser.initialized;
 
     const storyboardCallbacks = lowPerformanceMode ? [] : StoryboardParser.drawStoryboard(overlayCtx, {
       currentSongTime: media.currentTime,
@@ -135,7 +138,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     const baseBackgroundDim = (storyboard.getBackgroundDim() ?? 50) / 100;
     let usedDimColor: string;
 
-    if (!lowPerformanceMode && storyboard.getDynamicLighting()) {
+    if (!lowPerformanceMode && audioReactive && storyboard.getDynamicLighting()) {
       const rgb = hexToRgb(storedColor);
       usedDimColor = this.dynamicDim >= 0
         ? `rgba(0,0,0,${this.dynamicDim})`
@@ -194,18 +197,18 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
     const intensityMultiplier = storyboard.getVisualizerIntensity();
     const power = (1 / (Settings.get("volume") / 100));
 
-    const spectrum = this.readSpectrum(storyboard);
+    const spectrum = audioReactive ? this.readSpectrum(storyboard) : this.emptySpectrum;
     const len = spectrum.length;
-    const dynLight = this.getDynamicLight(spectrum, len, intensityMultiplier, power);
+    const dynLight = audioReactive ? this.getDynamicLight(spectrum, len, intensityMultiplier, power) : 0;
 
     this.dynamicDim = baseBackgroundDim - dynLight;
 
-    const pulseEnabled = storyboard.getVisualizerPulseBackground();
+    const pulseEnabled = audioReactive && storyboard.getVisualizerPulseBackground();
     Toxen.background.updateDimScale(pulseEnabled ? dynLight : 0);
 
     const extensionRenderer = this.resolveExtension(style);
     const builtIn = extensionRenderer ? null : (getBuiltInVisualizer(style as string) ?? fallbackVisualizer);
-    const drawsBuiltIn = style !== VisualizerStyle.None && builtIn !== null;
+    const drawsBuiltIn = audioReactive && style !== VisualizerStyle.None && builtIn !== null;
 
     payload.len = len;
     payload.dynLight = dynLight;
@@ -228,7 +231,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
 
     this.collectStyleOptions(storyboard, style, payload);
 
-    payload.starRush = storyboard.getStarRushEffect()
+    payload.starRush = audioReactive && storyboard.getStarRushEffect()
       ? { intensity: storyboard.getStarRushIntensity(), visualizerIntensity: intensityMultiplier }
       : null;
 
@@ -261,7 +264,7 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
 
     FrameProfiler.mark("draw");
 
-    if (extensionRenderer && style !== VisualizerStyle.None) {
+    if (audioReactive && extensionRenderer && style !== VisualizerStyle.None) {
       this.drawExtensionStyle(style, extensionRenderer, overlayCtx, payload, spectrum);
     }
 
@@ -537,9 +540,25 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
 
   public start() {
     this.update();
-    if (!this.analyser.initialized) this.analyser.initialize(Toxen.musicPlayer.media);
+    this.initializeAudio();
     this.stopped = false;
     this.loop(0);
+  }
+
+  /**
+   * Routes the player through the Web Audio graph, unless raw audio mode is on. An element can
+   * never be detached from the graph again, so once this has run the audio stays processed until
+   * a reload. Call it from a user gesture where possible, or the AudioContext starts suspended.
+   */
+  public initializeAudio() {
+    if (this.analyser.initialized || Settings.get("rawAudioMode")) return;
+    if (!Toxen.musicPlayer?.media) return;
+    this.analyser.initialize(Toxen.musicPlayer.media);
+  }
+
+  /** Whether the player's audio currently passes through the Web Audio graph. */
+  public isAudioProcessed() {
+    return this.analyser.initialized;
   }
 
   public static DEFAULT_COLOR(): string {

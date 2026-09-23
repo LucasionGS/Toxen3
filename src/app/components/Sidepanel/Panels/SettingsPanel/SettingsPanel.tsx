@@ -13,6 +13,7 @@ import TButton from "../../../Button/Button";
 import { PanelDirection } from "../../Sidepanel";
 import "./SettingsPanel.scss";
 import { useForceUpdate } from "@mantine/hooks";
+import { modals } from "@mantine/modals";
 import LoginForm from "../../../LoginForm/LoginForm";
 import User from "../../../../toxen/User";
 import { bytesToString } from "../../../AppBar/AppBar";
@@ -1002,6 +1003,43 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           <sup>
             Enables the viewing of advanced settings and UI elements. This will display a few more buttons around in Toxen,
             along with more technical settings that users usually don't have to worry about.
+          </sup>
+
+          <Checkbox onClick={(e) => {
+            const enabled = e.currentTarget.checked;
+            Settings.apply({ rawAudioMode: enabled }, true);
+            const visualizer = Toxen.background?.visualizer;
+            if (!visualizer) return;
+
+            if (!enabled) {
+              // Runs inside the click so the new AudioContext is allowed to start playing.
+              if (!visualizer.isStopped()) visualizer.initializeAudio();
+              return;
+            }
+
+            // A media element can't be detached from Web Audio, so raw playback needs a fresh page.
+            if (visualizer.isAudioProcessed()) {
+              modals.openConfirmModal({
+                title: "Reload required",
+                children: (
+                  <Text size="sm">
+                    Audio is already being processed, and that can't be undone while Toxen is running.
+                    Reload now to switch to raw audio? Playback will stop.
+                  </Text>
+                ),
+                labels: { confirm: "Reload now", cancel: "Later" },
+                onConfirm: async () => {
+                  await Settings.save({ suppressNotification: true });
+                  window.location.reload();
+                },
+              });
+            }
+          }} defaultChecked={Settings.get("rawAudioMode")} name="rawAudioMode" label="Raw Audio Mode" />
+          <sup>
+            Plays audio exactly as it is, without any processing. Turn this on if music stutters, glitches or stops
+            when Toxen plays in the background on a phone or tablet.
+            This disables the visualizer and everything else that reacts to the music (dynamic lighting, pulsing background,
+            star rush, audio-synced lights), along with audio effects and crossfade.
           </sup>
 
           <Checkbox onClick={(e) => Settings.apply({ progressBarShowMs: e.currentTarget.checked }, true)} defaultChecked={Settings.get("progressBarShowMs")} name="progressBarShowMs" label="Progress Bar: Show milliseconds" />

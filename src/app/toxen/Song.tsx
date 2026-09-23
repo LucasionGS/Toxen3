@@ -631,7 +631,7 @@ export default class Song implements ISong {
     if (!options.disableHistory) Song.historyAdd(this);
   
     // Use crossfade if enabled and there's a current song playing
-    const crossfadeEnabled = Settings.get("crossfadeEnabled", false);
+    const crossfadeEnabled = Toxen.musicPlayer.crossfadeEnabled;
     const crossfadeDuration = Settings.get("crossfadeDuration", 3);
     const currentSong = Song.getCurrent();
     
