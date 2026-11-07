@@ -3,6 +3,22 @@
 This file contains the change logs for Toxen.
 
 <!-- UPCOMING: 2.12.3 -->
+## 2.12.3 - TBD
+
+## Bug Fixes
+
+- **Playlists no longer wiped when offline** - If the server can't be reached, your cloud playlists are left untouched instead of being replaced with an empty list.
+- **Deleting a local song** - Deleting a song in Local mode no longer also removes its cloud copy.
+- **Settings no longer get corrupted** - Settings and statistics are now saved safely, and Toxen falls back to defaults if the settings file is damaged.
+- **Starting Toxen offline** - Toxen now finishes starting up even when there's no internet connection.
+- **Faster typing in Edit Song** - Text fields are saved when you finish editing instead of on every keystroke.
+- **Audio effect sliders** - Moving the effect and crossfade sliders no longer writes your settings on every tick.
+- **Convert All Necessary** - A song that fails to convert no longer makes the batch hang forever.
+- **Lyrics and storyboards from the server** - Losing connection while loading them no longer stops a song from playing.
+- **Song loading** - Songs with uppercase file extensions (like `.MP3`) are now recognized, and no more false "missing media file" warnings for songs that were found.
+- **Memory usage** - Converted audio and artwork from previous songs are released properly.
+- **Safer imports** - Safer handling of imported themes, song packages and extensions.
+- **Whisper transcription** - Fixed transcription failing on files with special characters in their names.
 
 <!-- VERSION: 2.12.2 -->
 ## 2.12.2 - 23-09-2026
