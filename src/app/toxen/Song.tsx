@@ -262,14 +262,19 @@ export default class Song implements ISong {
       }
 
       if (Settings.isRemote()) {
-        Toxen.fetch(this.subtitleFile()).then(res => {
-          if (res.status === 200) {
-            resolve(res.text());
-          } else {
+        (async () => {
+          try {
+            const res = await Toxen.fetch(this.subtitleFile());
+            if (!res.ok) {
+              Toxen.error("Failed to fetch subtitles from server.");
+              return resolve(null);
+            }
+            resolve(await res.text());
+          } catch (error) {
             Toxen.error("Failed to fetch subtitles from server.");
             resolve(null);
           }
-        });
+        })();
       }
       else {
         if (toxenapi.isDesktop()) {
@@ -333,14 +338,19 @@ export default class Song implements ISong {
       }
 
       if (Settings.isRemote()) {
-        Toxen.fetch(this.storyboardFile()).then(async res => {
-          if (res.status === 200) {
+        (async () => {
+          try {
+            const res = await Toxen.fetch(this.storyboardFile());
+            if (!res.ok) {
+              Toxen.error("Failed to fetch storyboard from server.");
+              return resolve(null);
+            }
             resolve(StoryboardParser.parseStoryboard(await res.text(), validateFields));
-          } else {
+          } catch (error) {
             Toxen.error("Failed to fetch storyboard from server.");
             resolve(null);
           }
-        });
+        })();
       }
       else {
         if (toxenapi.isDesktop()) {
@@ -551,7 +561,14 @@ export default class Song implements ISong {
     return !!(this.playlistSettings && this.playlistSettings[playlistId]);
   }
 
-  private lastBlobUrl: string;
+  /**
+   * Blob URL of the transcoded audio of the song that is currently playing. Revoked when another song starts.
+   */
+  private static _playingAudioBlobUrl: string = null;
+  /**
+   * Blob URL of the media session artwork of the song that is currently playing. Revoked when another song starts.
+   */
+  private static _playingArtworkBlobUrl: string = null;
   private lastProviderAudioSource: ProviderAudioSource;
 
   public async play(options?: {
@@ -589,7 +606,7 @@ export default class Song implements ISong {
     if (Settings.isRemote() && this.isVideo()) Toxen.log("Streaming a video can take some time to load... Using audio files is much faster.", 3000);
     if (this.lastProviderAudioSource?.revoke) this.lastProviderAudioSource.revoke();
     this.lastProviderAudioSource = this.usesProvider() ? sourceInfo : null;
-    if (this.lastBlobUrl) URL.revokeObjectURL(this.lastBlobUrl);
+    let audioBlobUrl: string = null; // Transcoded audio for this play, if any
     let bg = this.backgroundFile();
 
     if (!this.usesProvider() && !Settings.isRemote() && toxenapi.isDesktop()) {
@@ -613,9 +630,7 @@ export default class Song implements ISong {
             });
           });
           updateNotification({ id: notifId, message: "Done", autoClose: 500 });
-          // Revoke previous blob URL and store the new one for cleanup on next song
-          if (this.lastBlobUrl) URL.revokeObjectURL(this.lastBlobUrl);
-          this.lastBlobUrl = blobUrl;
+          audioBlobUrl = blobUrl;
           src = blobUrl;
         } catch (err) {
           updateNotification({ id: notifId, message: "Transcoding failed", autoClose: 3000 });
@@ -642,6 +657,12 @@ export default class Song implements ISong {
       // Normal transition without crossfade
       Toxen.musicPlayer.setSource(src, true, { crossOrigin: sourceInfo.crossOrigin });
     }
+
+    // The previous song's blob URLs are no longer playing, so they can be released now
+    if (Song._playingAudioBlobUrl) URL.revokeObjectURL(Song._playingAudioBlobUrl);
+    if (Song._playingArtworkBlobUrl) URL.revokeObjectURL(Song._playingArtworkBlobUrl);
+    Song._playingAudioBlobUrl = audioBlobUrl;
+    Song._playingArtworkBlobUrl = null;
   
   // If song has a background, force it. Otherwise, let Background component resolve defaults/shuffle
   await Toxen.background.setBackground(bg ? (bg + "?h=" + this.hash) : null);
@@ -681,12 +702,15 @@ export default class Song implements ISong {
         uid: this.uid,
         duration: this.duration,
       });
+      const artworkUrl = blob ? URL.createObjectURL(blob) : null;
+      if (Song._playingArtworkBlobUrl) URL.revokeObjectURL(Song._playingArtworkBlobUrl);
+      Song._playingArtworkBlobUrl = artworkUrl;
       navigator.mediaSession.metadata = new MediaMetadata({
         title: this.title ?? "Unknown Title",
         artist: this.artist ?? "Unknown Artist",
         album: this.album ?? "",
         artwork: blob ? [
-          { src: (this.lastBlobUrl = URL.createObjectURL(blob)), sizes: `${img.naturalWidth}x${img.naturalHeight}`, type: "image/png" }
+          { src: artworkUrl, sizes: `${img.naturalWidth}x${img.naturalHeight}`, type: "image/png" }
         ] : undefined
       });
     }
@@ -787,9 +811,11 @@ export default class Song implements ISong {
         if (active < 3) {
           i++;
           active++;
-          convertSong(song).then(() => {
-            active--;
-          });
+          convertSong(song)
+            .catch(error => Toxen.error(`Failed to convert "${song.getDisplayName()}": ${error?.message ?? error}`))
+            .finally(() => {
+              active--;
+            });
         }
         if (active >= 3) await new Promise(r => setTimeout(r, 1000));
       }
@@ -1708,8 +1734,8 @@ export default class Song implements ISong {
       await Toxen.musicPlayer.playNext();
     }
 
-    // Delete from remote if user is logged in
-    const user = Settings.getUser();
+    // Delete from remote only in remote mode; local mode only touches the disk
+    const user = Settings.isRemote() ? Settings.getUser() : null;
     if (user) {
       try {
         const res = await Toxen.fetch(`${user.getCollectionPath()}/${this.uid}`, {
