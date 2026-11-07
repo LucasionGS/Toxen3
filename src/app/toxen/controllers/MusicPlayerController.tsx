@@ -6,6 +6,8 @@ import Time from '../Time';
 import PulsingLogo from '../../components/PulsingLogo/PulsingLogo';
 import StoryboardParser from '../StoryboardParser';
 import Controller from './Controller';
+import { SongStorage } from "../storage/SongStorage";
+import { StorageSelector } from "../storage/StorageSelector";
 
 export type MediaSourceInfo = string;
 
@@ -455,8 +457,15 @@ export default class MusicPlayerController extends Controller {
     }
   }
 
+  /**
+   * Whether the current song streams from the cloud, so seeking past the buffered range has to wait for the network.
+   */
+  private isStreaming(): boolean {
+    return (Song.getCurrent()?.storage ?? StorageSelector.forLibrary()).kind === SongStorage.Kind.Cloud;
+  }
+
   public handleSeeking() {
-    if (!Settings.isRemote()) return;
+    if (!this.isStreaming()) return;
     if (
       this.isSeeking == false
       && (this.media.currentTime < Toxen.musicControls.progressBar.state.bufferedRange[0]
@@ -473,7 +482,7 @@ export default class MusicPlayerController extends Controller {
   }
 
   public handleSeeked() {
-    if (!Settings.isRemote()) return;
+    if (!this.isStreaming()) return;
     if (this.isSeeking) {
       Toxen.loadingScreen.hide();
       this.isSeeking = false;

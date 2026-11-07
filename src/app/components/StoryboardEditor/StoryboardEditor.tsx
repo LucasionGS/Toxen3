@@ -78,6 +78,19 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
 
   const song = Toxen.editingSong;
 
+  const saveStoryboard = async () => {
+    try {
+      await StoryboardParser.save(song, song.paths.storyboard || "storyboard.tsb", config);
+      Toxen.notify({
+        content: "Storyboard saved",
+        expiresIn: 2000
+      });
+    } catch (error) {
+      console.error(error);
+      Toxen.error(`Failed to save storyboard: ${error?.message ?? error}`);
+    }
+  };
+
   const mouseEventHandler = React.useCallback((e: MouseEvent) => {
     if (!isStarted) return false;
     // Mouse position is relative to the canvas
@@ -147,12 +160,7 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
       case "KeyS":
         if (e.ctrlKey || e.metaKey) {
           e.preventDefault();
-          const saveLocation = song.storyboardFile() || song.dirname("storyboard.tsb");
-          StoryboardParser.save(saveLocation, config, song);
-          Toxen.notify({
-            content: "Storyboard saved",
-            expiresIn: 2000
-          });
+          saveStoryboard();
         }
         break;
 
@@ -406,14 +414,7 @@ export default function StoryboardEditor(props: StoryboardEditorProps) {
         <div className="control-group primary-controls">
           <Button
             leftSection={<IconDeviceFloppy size="1em" />}
-            onClick={() => {
-              const saveLocation = song.storyboardFile() || song.dirname("storyboard.tsb");
-              StoryboardParser.save(saveLocation, config, song);
-              Toxen.notify({
-                content: "Storyboard saved",
-                expiresIn: 2000
-              });
-            }}
+            onClick={() => saveStoryboard()}
           >
             Save
           </Button>
@@ -1518,7 +1519,7 @@ function ComponentButton(props: { event: StoryboardParser.SBEvent, component: St
           <BackgroundFileSelector
             label={dataName + (required ? " *" : "")}
             defaultValue={value as string}
-            sourceDir={Toxen.editingSong?.dirname()}
+            song={Toxen.editingSong}
             description={description}
             onChange={(selectedValue) => {
               setValue(event.data[dataId] = selectedValue as string);

@@ -7,8 +7,6 @@ import { Toxen } from "../ToxenApp";
 // import Path from "path";
 import type SongElementController from "./controllers/SongElementController";
 // import Legacy, { Toxen2SongDetails } from "./Legacy";
-import { Failure, Result, Success } from "./Result";
-import System, { ToxenFile } from "./System";
 import Converter from "./Converter";
 import Stats from "./Statistics";
 // import navigator, { MediaMetadata } from "../../navigator";
@@ -26,6 +24,11 @@ import PlaylistManager from "../components/PlaylistManager/PlaylistManager";
 import { friendSocket } from "./FriendSocket";
 import ProviderManager from "./providers/ProviderManager";
 import type { ProviderAudioSource, ProviderSongReference } from "./providers/Provider";
+import { SongStorage } from "./storage/SongStorage";
+import { StorageSelector } from "./storage/StorageSelector";
+import { LocalSongStorage } from "./storage/LocalSongStorage";
+import { CloudSongStorage } from "./storage/CloudSongStorage";
+import { SongLibrary } from "./SongLibrary";
 
 export default class Song implements ISong {
   public uid: string;
@@ -158,30 +161,31 @@ export default class Song implements ISong {
   // }
 
   /**
-   * Return the full local path of the song folder.
+   * Where this song's files are stored and how to reach them. Use this instead of checking `Settings.isRemote()`.
    */
-  public dirnameLocal(relativePath?: string) {
-    if (toxenapi.isDesktop()) return (this.paths && this.paths.dirname) ? toxenapi.path.resolve(Settings.get("libraryDirectory"), this.paths.dirname, relativePath ?? ".") : null;
-    toxenapi.throwDesktopOnly("Unable to get song directory name.");
+  public get storage(): SongStorage {
+    return StorageSelector.forSong(this);
   }
 
   /**
-   * Return the full path of the song folder.
+   * Return the full local path of the song folder, whatever storage the song uses. Desktop only.
+   */
+  public dirnameLocal(relativePath?: string) {
+    return LocalSongStorage.instance.fileLocation(this, relativePath);
+  }
+
+  /**
+   * Return the full path (local) or URL without authentication (cloud) of the song folder, or of a file in it.
    */
   public dirname(relativePath?: string) {
-    let user = Settings.getUser();
-    if (Settings.isRemote() && !user) return null;
-    if (Settings.isRemote()) return `${user.getCollectionPath()}/${this.uid}${relativePath ? "/" + relativePath : ""}`;
-    return this.dirnameLocal(relativePath);
+    return this.storage.fileLocation(this, relativePath);
   }
 
   /**
    * Return the full path of the media file.
    */
   public mediaFile() {
-    if (Settings.isRemote()) return this.paths.media ? `${this.dirname()}/${this.paths.media}` : "";
-    else if (toxenapi.isDesktop()) return (this.paths && this.paths.media) ? toxenapi.path.resolve(this.dirname(), this.paths.media || "") : "";
-    toxenapi.throwDesktopOnly("Unable to get media file.");
+    return this.paths?.media ? this.storage.fileLocation(this, this.paths.media) : "";
   }
 
   public usesProvider() {
@@ -197,9 +201,7 @@ export default class Song implements ISong {
       return await ProviderManager.getAudioSource(this);
     }
 
-    let url = this.mediaFile();
-    if (Settings.isRemote()) url = User.appendAuth(url);
-    return { url };
+    return { url: this.storage.fileUrl(this, this.paths?.media) };
   }
 
   /**
@@ -213,11 +215,7 @@ export default class Song implements ISong {
       const playlistSettings = this.getPlaylistSettings(currentPlaylist.name);
       if (playlistSettings?.paths?.background) {
         // Use playlist-specific background path
-        if (Settings.isRemote()) {
-          return playlistSettings.paths.background ? `${this.dirname(playlistSettings.paths.background)}` : "";
-        } else if (toxenapi.isDesktop()) {
-          return this.dirname(playlistSettings.paths.background || "");
-        }
+        return this.dirname(playlistSettings.paths.background);
       }
     }
     
@@ -229,9 +227,7 @@ export default class Song implements ISong {
     // }
     
     // Fall back to song's default background
-    if (Settings.isRemote()) return this.paths.background ? `${this.dirname()}/${this.paths.background}` : "";
-    else if (toxenapi.isDesktop()) return (this.paths && this.paths.background) ? toxenapi.path.resolve(this.dirname(), this.paths.background || "") : "";
-    toxenapi.throwDesktopOnly("Unable to get background file.");
+    return this.paths?.background ? this.storage.fileLocation(this, this.paths.background) : "";
   }
 
   /**
@@ -239,86 +235,46 @@ export default class Song implements ISong {
    * The stored value (`rainfallImage`) is a filename relative to the song directory.
    */
   public rainfallImageFile() {
-    if (!this.rainfallImage) return null;
-    if (Settings.isRemote()) return `${this.dirname()}/${this.rainfallImage}`;
-    else if (toxenapi.isDesktop()) return toxenapi.path.resolve(this.dirname(), this.rainfallImage);
-    return null;
+    return this.rainfallImage ? this.storage.fileLocation(this, this.rainfallImage) : null;
   }
 
   /**
    * Return the full path of the subtitle file.
    */
   public subtitleFile() {
-    if (Settings.isRemote()) return this.paths.subtitles ? `${this.dirname()}/${this.paths.subtitles}` : "";
-    else if (toxenapi.isDesktop()) return (this.paths && this.paths.subtitles) ? toxenapi.path.resolve(this.dirname(), this.paths.subtitles || "") : "";
-    toxenapi.throwDesktopOnly("Unable to get subtitle file.");
-  }
-
-  public readSubtitleFile() {
-    return new Promise<string>((resolve, reject) => {
-      if (!this.subtitleFile()) {
-        resolve(null);
-        return;
-      }
-
-      if (Settings.isRemote()) {
-        (async () => {
-          try {
-            const res = await Toxen.fetch(this.subtitleFile());
-            if (!res.ok) {
-              Toxen.error("Failed to fetch subtitles from server.");
-              return resolve(null);
-            }
-            resolve(await res.text());
-          } catch (error) {
-            Toxen.error("Failed to fetch subtitles from server.");
-            resolve(null);
-          }
-        })();
-      }
-      else {
-        if (toxenapi.isDesktop()) {
-          toxenapi.fs.promises.readFile(this.subtitleFile(), "utf8").then(data => {
-            // Replace dumb characters
-            data = data
-              .replace(/\r\n/g, "\n")
-              .replace(/‚/g, ",") // Why the fuck are these two characters different?
-              ;
-  
-            resolve(data);
-          }).catch(err => {
-            Toxen.error("Failed to load subtitles from storage.");
-            resolve(null);
-          });
-        }
-      }
-    });
+    return this.paths?.subtitles ? this.storage.fileLocation(this, this.paths.subtitles) : "";
   }
 
   /**
-   * Write subtitle content to the song folder, locally or remotely, and update file tracking.
+   * Read the song's subtitle file.
+   * @returns The text with Windows line endings and look-alike commas normalised, or `null` if there is none or it
+   * couldn't be read (the user is notified).
+   */
+  public async readSubtitleFile(): Promise<string> {
+    if (!this.paths?.subtitles) return null;
+    const data = await this.storage.readText(this, this.paths.subtitles).catch((error): null => {
+      console.error(error);
+      return null;
+    });
+    if (data === null) {
+      Toxen.error("Failed to load subtitles.");
+      return null;
+    }
+
+    // Replace dumb characters
+    return data
+      .replace(/\r\n/g, "\n")
+      .replace(/‚/g, ","); // Why the fuck are these two characters different?
+  }
+
+  /**
+   * Write subtitle content to the song folder through the song's storage, then save the info.
    * @param fileName Relative file name. Defaults to the current subtitle file, or "subtitles.tst" if none.
    */
   public async writeSubtitleFile(content: string, fileName?: string) {
     fileName = fileName || this.paths.subtitles || "subtitles.tst";
-    const filetime = Date.now();
-    if (Settings.isRemote()) {
-      const user = Settings.getUser();
-      if (!user) throw new Error("Cannot save subtitles. User is not logged in.");
-      const res = await Toxen.fetch(this.dirname(fileName), {
-        method: "PUT",
-        body: content,
-      });
-      if (!res.ok) throw new Error(`Failed to save subtitles. Status: ${res.status} ${res.statusText}`);
-    }
-    else if (toxenapi.isDesktop()) {
-      await toxenapi.fs.promises.writeFile(this.dirname(fileName), content);
-    }
-    else {
-      return toxenapi.throwDesktopOnly("writeSubtitleFile");
-    }
+    await this.storage.writeFile(this, fileName, content);
     this.paths.subtitles = fileName;
-    this.setFile(fileName, "u", filetime);
     await this.saveInfo();
   }
 
@@ -326,43 +282,36 @@ export default class Song implements ISong {
    * Return the full path of the storyboard file.
    */
   public storyboardFile() {
-    if (Settings.isRemote()) return (this.paths && this.paths.storyboard) ? `${this.dirname()}/${this.paths.storyboard}` : "";
-    else return (this.paths && this.paths.storyboard && toxenapi.isDesktop()) ? toxenapi.path.resolve(this.dirname(), this.paths.storyboard) : "";
+    return this.paths?.storyboard ? this.storage.fileLocation(this, this.paths.storyboard) : "";
   }
 
-  public readStoryboardFile(validateFields: boolean = true) {
-    return new Promise<StoryboardParser.StoryboardConfig>((resolve, reject) => {
-      if (!this.storyboardFile()) {
-        resolve(null);
-        return;
-      }
+  /**
+   * Relative paths (with `/`) of the song's files, except `info.json`.
+   * @param supported Only keep files with one of these extensions (with the dot, for example
+   * `Toxen.getSupportedImageFiles()`). Matched case-insensitively.
+   */
+  public async listFiles(supported?: string[]): Promise<string[]> {
+    const files = await this.storage.list(this);
+    return files
+      .map(file => file.relPath)
+      .filter(relPath => !supported || supported.includes(toxenapi.getFileExtension(relPath).toLowerCase()));
+  }
 
-      if (Settings.isRemote()) {
-        (async () => {
-          try {
-            const res = await Toxen.fetch(this.storyboardFile());
-            if (!res.ok) {
-              Toxen.error("Failed to fetch storyboard from server.");
-              return resolve(null);
-            }
-            resolve(StoryboardParser.parseStoryboard(await res.text(), validateFields));
-          } catch (error) {
-            Toxen.error("Failed to fetch storyboard from server.");
-            resolve(null);
-          }
-        })();
-      }
-      else {
-        if (toxenapi.isDesktop()) {
-          toxenapi.fs.promises.readFile(this.storyboardFile(), "utf8").then(data => {
-            resolve(StoryboardParser.parseStoryboard(data, validateFields));
-          }).catch(err => {
-            Toxen.error("Failed to load storyboard from storage.");
-            resolve(null);
-          });
-        }
-      }
-    });
+  /**
+   * Read and parse the song's storyboard file.
+   * @returns The storyboard, or `null` if there is none or it couldn't be read or parsed (the user is notified).
+   */
+  public async readStoryboardFile(validateFields: boolean = true): Promise<StoryboardParser.StoryboardConfig> {
+    if (!this.paths?.storyboard) return null;
+    try {
+      const data = await this.storage.readText(this, this.paths.storyboard);
+      if (data === null) throw new Error(`Storyboard file "${this.paths.storyboard}" not found.`);
+      return StoryboardParser.parseStoryboard(data, validateFields);
+    } catch (error) {
+      console.error(error);
+      Toxen.error("Failed to load storyboard.");
+      return null;
+    }
   }
 
   public async applyStoryboard() {
@@ -603,13 +552,13 @@ export default class Song implements ISong {
 
     let src = sourceInfo.url;
     if (Toxen.musicPlayer.src === src) return;
-    if (Settings.isRemote() && this.isVideo()) Toxen.log("Streaming a video can take some time to load... Using audio files is much faster.", 3000);
+    if (this.storage.kind === SongStorage.Kind.Cloud && this.isVideo()) Toxen.log("Streaming a video can take some time to load... Using audio files is much faster.", 3000);
     if (this.lastProviderAudioSource?.revoke) this.lastProviderAudioSource.revoke();
     this.lastProviderAudioSource = this.usesProvider() ? sourceInfo : null;
     let audioBlobUrl: string = null; // Transcoded audio for this play, if any
     let bg = this.backgroundFile();
 
-    if (!this.usesProvider() && !Settings.isRemote() && toxenapi.isDesktop()) {
+    if (!this.usesProvider() && StorageSelector.isLocal(this) && toxenapi.isDesktop()) {
       // For formats not natively supported by Chromium, transcode to a Blob URL
       // in memory using FFmpeg before handing the source to the audio element.
       // Seeking works natively since the full data is in memory.
@@ -753,7 +702,8 @@ export default class Song implements ISong {
   }
 
   public static async convertAllNecessary(songs: Song[]) {
-    if (!Settings.isRemote() && toxenapi.isDesktop()) {
+    songs = songs.filter(s => StorageSelector.isLocal(s));
+    if (songs.length > 0 && toxenapi.isDesktop()) {
       // Check if needs conversion
 
       const globalId = Toxen.notify({
@@ -952,9 +902,8 @@ export default class Song implements ISong {
   }
 
   /**
-   * Physically copy an image file from one song directory to another.
-   * Handles both local (fs copy) and remote (fetch → PUT) modes.
-   * Returns the filename on success, or null if there is nothing to copy.
+   * Copy an image file from one song's folder to another's, through each song's storage (the write records the change).
+   * Returns the filename on success, or null if there is nothing to copy or the copy failed.
    */
   private static async copyImageFile(
     sourceSong: Song,
@@ -962,39 +911,17 @@ export default class Song implements ISong {
     targetSong: Song,
   ): Promise<string | null> {
     if (!filename) return null;
+    if (sourceSong.uid === targetSong.uid) return filename; // same song, nothing to do
 
-    if (Settings.isRemote()) {
-      // ── Remote ──────────────────────────────────────────────────────────────
-      const srcUrl  = sourceSong.dirname(filename);
-      const destUrl = targetSong.dirname(filename);
-      if (!srcUrl || !destUrl) return null;
-      try {
-        const fetchRes = await Toxen.fetch(srcUrl);
-        if (!fetchRes.ok) return null;
-        const blob = await fetchRes.blob();
-        const putRes = await Toxen.fetch(destUrl, { method: "PUT", body: blob });
-        if (!putRes.ok) return null;
-        return filename;
-      } catch {
-        return null;
-      }
+    try {
+      const blob = await sourceSong.storage.readBlob(sourceSong, filename);
+      if (!blob) return null;
+      await targetSong.storage.writeFile(targetSong, filename, blob);
+      return filename;
+    } catch (error) {
+      console.error(error);
+      return null;
     }
-
-    if (toxenapi.isDesktop()) {
-      // ── Local desktop ────────────────────────────────────────────────────────
-      try {
-        const srcPath  = sourceSong.dirnameLocal(filename);
-        const destPath = targetSong.dirnameLocal(filename);
-        if (!srcPath || !destPath) return null;
-        if (srcPath === destPath) return filename; // same song, nothing to do
-        await toxenapi.fs.promises.copyFile(srcPath, destPath);
-        return filename;
-      } catch {
-        return null;
-      }
-    }
-
-    return null;
   }
 
   /** Copy this song's visual/audio settings (NOT metadata) to the clipboard. */
@@ -1108,9 +1035,7 @@ export default class Song implements ISong {
         const bgFile = pathsPayload?.background;
         if (bgFile) {
           const copied = await Song.copyImageFile(sourceSong, bgFile, target);
-          if (copied) {
-            target.setFile(copied, "u");
-          } else if (settings["paths"]) {
+          if (!copied && settings["paths"]) {
             // Clear the background reference if the file copy failed
             (settings["paths"] as { background?: string }).background = null;
           }
@@ -1131,9 +1056,7 @@ export default class Song implements ISong {
               const imgFile = styleOpts[optKey] as string | undefined;
               if (!imgFile) continue;
               const copied = await Song.copyImageFile(sourceSong, imgFile, target);
-              if (copied) {
-                target.setFile(copied, "u");
-              } else {
+              if (!copied) {
                 // File copy failed — clear the reference to avoid broken paths
                 if (settingsVso[styleKey]) {
                   settingsVso[styleKey][optKey] = null;
@@ -1248,7 +1171,7 @@ export default class Song implements ISong {
                 children: `Are you sure you want to delete "${this.title}"?`,
                 onConfirm: async () => {
                   try {
-                    await this.delete();
+                    await SongLibrary.delete(this);
                   } catch (error) {
                     Toxen.error(error);
                   }
@@ -1264,7 +1187,7 @@ export default class Song implements ISong {
             }}>
               Delete
             </Button>
-            {!Settings.isRemote() && (
+            {StorageSelector.isLocal(this) && (
                 <Button onClick={() => {
                   close();
                   modals.openModal(this.createTrimSongModal());
@@ -1432,7 +1355,7 @@ export default class Song implements ISong {
                 children: `Are you sure you want to delete ${selectedSongs.length} songs?`,
                 onConfirm: async () => {
                   try {
-                    await Promise.all(selectedSongs.map(s => s.delete()));
+                    await Promise.all(selectedSongs.map(s => SongLibrary.delete(s)));
                   } catch (error) {
                     Toxen.error(error);
                   }
@@ -1662,61 +1585,49 @@ export default class Song implements ISong {
 
   private _isPlaying = false;
 
+  /**
+   * @deprecated Use `SongLibrary.count()`.
+   */
   public static async getSongCount() {
-    let dirName = Settings.get("libraryDirectory");
-    if (!dirName) {
-      return 0;
-    }
-    if (Settings.isRemote()) {
-      let user = Settings.getUser();
-      if (!user) {
-        return 0;
-      }
-      let iSongs: ISong[] = await Toxen.fetch(user.getCollectionPath()).then(res => res.json()).catch(() => [] as any);
-      return iSongs.length;
-    }
-    else {
-      if (toxenapi.isDesktop()) {
-        return toxenapi.fs.promises.readdir(dirName, { withFileTypes: true }).then(files => files.filter(ent => ent.isDirectory()).length).catch(() => 0);
-      }
-    }
+    return SongLibrary.count();
   }
 
+  /**
+   * @deprecated Use `SongLibrary.load(onEach)`. `reload` is ignored: songs are always read again.
+   */
   public static async getSongs(reload?: boolean, forEach?: (song: Song) => void): Promise<Song[]> {
-    if (Settings.isRemote()) {
-      return Song.loadRemoteSongs(reload, forEach);
-    }
-    else return Song.loadLocalSongs(reload, forEach);
+    return SongLibrary.load(forEach);
   }
 
+  /**
+   * The songs of the local library, even while browsing the cloud. Returns `Toxen.songList` when the local library
+   * is the one loaded, unless `reload` is `true`.
+   * @deprecated Only for the old sync, removed with it in Phase 4. Use `SongLibrary.load`.
+   */
   public static async loadLocalSongs(reload?: boolean, forEach?: (song: Song) => void) {
-    if (toxenapi.isDesktop()) {
-      return toxenapi.loadLocalSongs(Toxen, Song, Settings, reload, forEach);
+    if (reload !== true && StorageSelector.forLibrary().kind === SongStorage.Kind.Local && Toxen.songList) {
+      return Toxen.songList;
     }
-    else {
-      toxenapi.throwDesktopOnly("Unable to load local songs on web version.");
-    }
+    return SongLibrary.loadFrom(LocalSongStorage.instance, forEach);
   }
 
+  /**
+   * The songs of the cloud library, even while browsing the local one.
+   * @deprecated Only for the old sync, removed with it in Phase 4. Use `SongLibrary.load`.
+   */
   public static async loadRemoteSongs(reload?: boolean, forEach?: (song: Song) => void) {
-    let user = Settings.getUser();
-    if (!user) {
-      return [];
-    }
-    let iSongs: ISong[] = await Toxen.fetch(user.getCollectionPath()).then(res => res.json());
-    const songs: Song[] = iSongs.map(iSong => Song.create(iSong)).filter(s => s.paths && s.hasPlayableMedia());
-    if (forEach) {
-      songs.forEach(forEach);
-    }
-    return Song.sortSongs(songs);
+    return SongLibrary.loadFrom(CloudSongStorage.instance, forEach);
   }
 
+  /**
+   * Re-read this song's info from its local `info.json`. Does nothing for songs that aren't stored locally.
+   */
   public async reload() {
-    if (Settings.isRemote() || !toxenapi.isDesktop()) {
+    if (!StorageSelector.isLocal(this)) {
       return;
     }
-    
-    let data = await toxenapi.fs.promises.readFile(toxenapi.path.resolve(this.dirname(), "info.json"), "utf8").then(data => JSON.parse(data)).catch(() => null as any);
+
+    const data = await this.storage.readText(this, SongStorage.INFO_FILE).then(text => text && JSON.parse(text)).catch(() => null as any);
     for (const key in data) {
       if (key in data) {
         const v = (data as any)[key];
@@ -1725,46 +1636,6 @@ export default class Song implements ISong {
     }
 
     return this;
-  }
-
-  public async delete(force?: boolean) {
-    // Play the next song if this is the current song
-    const cur = Song.getCurrent();
-    if (cur && cur.uid === this.uid) {
-      await Toxen.musicPlayer.playNext();
-    }
-
-    // Delete from remote only in remote mode; local mode only touches the disk
-    const user = Settings.isRemote() ? Settings.getUser() : null;
-    if (user) {
-      try {
-        const res = await Toxen.fetch(`${user.getCollectionPath()}/${this.uid}`, {
-          method: "DELETE",
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({ error: "Delete failed" }));
-          console.error("Remote delete failed:", err.error);
-        }
-      } catch (error) {
-        console.error("Failed to delete song from remote:", error);
-      }
-    }
-
-    // Delete from local disk if on desktop and not remote-only
-    if (toxenapi.isDesktop() && !Settings.isRemote()) {
-      try {
-        await toxenapi.fs.promises.rm(this.dirname(), { recursive: true });
-      } catch (error) {
-        try {
-          await toxenapi.fs.promises.rm(this.dirname(), { recursive: true }); // Try again
-        } catch (error) {
-          Toxen.error("Failed to delete song: " + this.dirname());
-        }
-      }
-    }
-
-    Toxen.songList = Toxen.songList.filter(s => s !== this);
-    Toxen.songPanel.update();
   }
 
   public async saveInfo(opts?: {
@@ -1783,56 +1654,16 @@ export default class Song implements ISong {
     if (curSong === this) {
       curSong.setAppTitle();
     }
-    if (Settings.isRemote() && !opts.forceLocal) {
-      let info = this.toISong();
-      let user = Settings.getUser();
-      if (!user) {
-        return;
-      }
-      return await Toxen.fetch(`${user.getCollectionPath()}/${this.uid}/info.json`, {
-        method: "PUT",
-        body: JSON.stringify(info),
-        headers: {
-          "Content-Type": "application/json"
-        }
-      }).then(() => {
-        // Toxen.notify({
-        //   title: "Song saved",
-        //   content: this.getDisplayName(),
-        //   expiresIn: 3000
-        // });
-      }).catch(error => {
-        console.error(error);
-        Toxen.notify({
-          title: "Failed to save Song",
-          content: this.getDisplayName(),
-          expiresIn: 5000,
-          type: "error"
-        });
-      });
-    }
 
-    if (!toxenapi.isDesktop()) {
-      toxenapi.throwDesktopOnly("Unable to save song info on web version.");
-    }
-    
-    if (!this.paths || !this.paths.dirname) return;
+    // `forceLocal` is the old sync writing a downloaded song to disk while browsing the cloud
+    const storage = opts.forceLocal ? LocalSongStorage.instance : this.storage;
     try {
-      const localPath = (this.paths && this.paths.dirname) ? toxenapi.path.resolve(Settings.get("libraryDirectory"), this.paths.dirname) : null;
-      if (!localPath) {
-        Toxen.error("Failed to save song info: " + this.getDisplayName());
-        return;
-      }
-      await toxenapi.fs.promises.writeFile(toxenapi.path.resolve(localPath, "info.json"), JSON.stringify(this.toISong()));
-      if ((opts.callSync ?? true) && Settings.get("remoteSyncOnSongEdit") && User.getCurrentUser()?.premium) {
+      await storage.saveInfo(this);
+      if (storage.kind === SongStorage.Kind.Local && (opts.callSync ?? true) && Settings.get("remoteSyncOnSongEdit") && User.getCurrentUser()?.premium) {
         await this.sync(null, { silenceValidated: true });
       }
-      // Toxen.notify({
-      //   title: "Song saved",
-      //   content: this.getDisplayName(),
-      //   expiresIn: 3000
-      // });
     } catch (error) {
+      console.error(error);
       Toxen.notify({
         title: "Failed to save Song",
         content: this.getDisplayName(),
@@ -1840,97 +1671,6 @@ export default class Song implements ISong {
         type: "error"
       });
     }
-  }
-
-  public static async importSong(file: File | ToxenFile): Promise<Result<Song>> {
-    const ext = toxenapi.getFileExtension(file.name);
-    const supported = Toxen.getSupportedMediaFiles();
-    if (!supported.some(s => ext === s)) return new Failure(file.name + " isn't a valid file");
-
-    if (Settings.isRemote() || !toxenapi.isDesktop()) {
-      // Web / remote import: upload file to server
-      return Song.importSongRemote(file);
-    }
-
-    const ensureValidName = (path: string) => path.replace(/[^:\\\/a-z0-9\(\)\[\]\{\}\.\-\_\s]/gi, "_");
-    return Promise.resolve().then(async () => {
-      if (!toxenapi.isDesktop()) throw toxenapi.throwDesktopOnly();
-      let libDir = Settings.get("libraryDirectory");
-      let nameNoExt = Converter.trimChar(toxenapi.path.basename(file.name, toxenapi.path.extname(file.name)), ".");
-      let newFolder = toxenapi.path.resolve(libDir, nameNoExt);
-
-      // Validate folder name
-      newFolder = ensureValidName(newFolder);
-
-      let increment = 0;
-      while (await System.pathExists(newFolder)) {
-        newFolder = toxenapi.path.resolve(libDir, nameNoExt + ` (${++increment})`);
-      }
-
-      await toxenapi.fs.promises.mkdir(newFolder, { recursive: true });
-      // Electron 32 removed File.path — resolve through the controller instead.
-      await toxenapi.fs.promises.copyFile(toxenapi.getFilePath(file), ensureValidName(toxenapi.path.resolve(newFolder, file.name)));
-
-      // Build info
-      const info = await Song.buildInfo(newFolder);
-      let s = Song.create(info);
-      await s.saveInfo();
-
-      return new Success(s);
-    });
-  }
-
-  /**
-   * Import a song via remote upload to the server.
-   */
-  private static async importSongRemote(file: File | ToxenFile): Promise<Result<Song>> {
-    const user = Settings.getUser();
-    if (!user) return new Failure("Not logged in");
-
-    const uid = Song.generateUID();
-    const fileName = file.name;
-    const nameNoExt = fileName.substring(0, fileName.lastIndexOf(".")) || fileName;
-
-    // Determine the file body to upload
-    let body: BodyInit;
-    if (file instanceof File) {
-      body = file;
-    } else {
-      // ToxenFile with a path (desktop calling remote import) — read it
-      if (!toxenapi.isDesktop()) return new Failure("Cannot read file path on web");
-      const buf = await toxenapi.fs.promises.readFile(toxenapi.getFilePath(file));
-      body = new Uint8Array(buf);
-    }
-
-    // Upload the media file
-    const uploadRes = await Toxen.fetch(`${user.getCollectionPath()}/${uid}/${fileName}`, {
-      method: "PUT",
-      body,
-    });
-
-    if (!uploadRes.ok) {
-      const err = await uploadRes.json().catch(() => ({ error: "Upload failed" }));
-      return new Failure(err.error || "Upload failed");
-    }
-
-    // Build a song object and save its metadata
-    const song = Song.create({
-      uid,
-      title: nameNoExt,
-      paths: {
-        dirname: uid,
-        media: fileName,
-        background: "",
-        subtitles: "",
-        storyboard: "",
-      },
-    });
-
-    song.setFile(fileName, "u");
-    song.setFile("info.json", "u");
-    await song.saveInfo();
-
-    return new Success(song);
   }
 
   /**
@@ -1959,8 +1699,7 @@ export default class Song implements ISong {
   }
 
   public static async export(...songs: Song[]) {
-    if (Settings.isRemote()) {
-      // TODO: Implement
+    if (songs.some(song => !StorageSelector.isLocal(song))) {
       Toxen.notify({
         title: "Export not implemented",
         content: "This feature is not yet implemented for remote users.",

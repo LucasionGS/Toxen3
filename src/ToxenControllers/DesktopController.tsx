@@ -1,7 +1,6 @@
 import ToxenController from "./ToxenController";
-import React from "react";
 import Path from "path";
-import fs, { Dir, Dirent } from "fs";
+import fs, { Dirent } from "fs";
 import fsp from "fs/promises";
 //@ts-ignore
 import os from "os";
@@ -26,11 +25,12 @@ import { } from "buffer";
 import packageJson from "../../package.json";
 import { ISong } from "../app/toxen/Song";
 import System, { type ToxenFile } from "../app/toxen/System";
-import { Checkbox, Menu, RangeSlider, Button, Progress, Group, Stack } from "@mantine/core";
-import { hideNotification, updateNotification } from "@mantine/notifications";
+import { Checkbox, Menu, RangeSlider, Progress, Stack } from "@mantine/core";
+import { updateNotification } from "@mantine/notifications";
 import Discord from "../app/toxen/desktop/Discord";
 import HueManager from "../app/toxen/desktop/hue/HueManager";
 import TaskbarControls from "../app/toxen/desktop/TaskbarControls";
+import type { DesktopIO } from "./DesktopIO";
 
 /**
  * DesktopController is a controller for desktop-specific functions. Overwrites the web version of the controller.
@@ -112,6 +112,53 @@ export default class DesktopController extends ToxenController {
       return this.writeFileAtomic(filePath, getContent);
     });
     return st.pending;
+  }
+
+  /**
+   * Running `atomicWriteFile` calls by path, so writes to the same file land in call order.
+   */
+  private readonly _atomicWrites = new Map<string, Promise<void>>();
+
+  public atomicWriteFile(filePath: string, data: string | Uint8Array): Promise<void> {
+    const previous = this._atomicWrites.get(filePath) ?? Promise.resolve();
+    const write = previous.catch(() => { }).then(async () => {
+      const tmpPath = `${filePath}.tmp-${Math.random().toString(36).slice(2, 10)}`;
+      try {
+        await fsp.writeFile(tmpPath, data);
+        await fsp.rename(tmpPath, filePath);
+      } catch (error) {
+        await fsp.rm(tmpPath, { force: true }).catch(() => { });
+        throw error;
+      }
+    });
+    this._atomicWrites.set(filePath, write);
+    write.catch(() => { }).finally(() => {
+      if (this._atomicWrites.get(filePath) === write) this._atomicWrites.delete(filePath);
+    });
+    return write;
+  }
+
+  public async listFilesRecursive(dir: string): Promise<DesktopIO.FileStat[]> {
+    const files: DesktopIO.FileStat[] = [];
+    const walk = async (current: string) => {
+      for (const ent of await fsp.readdir(current, { withFileTypes: true })) {
+        const fullPath = Path.join(current, ent.name);
+        if (ent.isDirectory()) {
+          if (ent.name !== ".toxen") await walk(fullPath);
+          continue;
+        }
+        // Follows symlinks to files; symlinked folders are skipped so a link loop can't recurse forever
+        const stat = await fsp.stat(fullPath).catch((): null => null);
+        if (!stat?.isFile()) continue;
+        files.push({
+          relPath: Path.relative(dir, fullPath).split(Path.sep).join("/"),
+          size: stat.size,
+          mtimeMs: stat.mtimeMs,
+        });
+      }
+    };
+    await walk(dir);
+    return files;
   }
 
   /**
@@ -833,95 +880,6 @@ export default class DesktopController extends ToxenController {
 
       await dir.close();
       return info as ISong;
-    });
-  }
-
-  public async loadLocalSongs($toxen: typeof Toxen, $song: typeof Song, $settings: typeof Settings, reload?: boolean, forEach?: (song: Song) => void) {
-    return Promise.resolve().then(async () => {
-      if (reload !== true && !$settings.isRemote() && $toxen.songList) {
-        return $toxen.songList;
-      }
-
-      let songs: Song[] = [];
-      let dirName = $settings.get("libraryDirectory");
-      if (!dirName) {
-        return [];
-      }
-      let dir: Dir;
-      try {
-        dir = await fsp.opendir(dirName);
-      } catch (error) {
-        $toxen.error(error);
-
-        return [];
-      }
-      let ent: Dirent;
-      while (ent = await dir.read()) {
-        if (ent.isDirectory() && !ent.name.startsWith(".")) { // Is music folder
-          let songFolder = Path.resolve(dirName, ent.name);
-
-          try {
-            var info: ISong = JSON.parse(await fsp.readFile(Path.resolve(songFolder, "info.json"), "utf8"));
-          } catch (error) {
-            console.error("Failed to load info.json file in song: " + songFolder);
-            info = await $song.buildInfo(songFolder);
-            let s = $song.create(info);
-            await s.saveInfo();
-          }
-
-          info.paths ?? ((info.paths as any) = {})
-          let isDifferent = info.paths.dirname !== ent.name;
-          if (isDifferent) info.paths.dirname = ent.name;
-
-
-          if (info.paths.media || info.provider?.id) {
-            let song = $song.create(info);
-            songs.push(song);
-            if (isDifferent) song.saveInfo();
-            if (typeof forEach === "function") forEach(song);
-          }
-          else {
-            // Attempt Locate media file
-            const files = await System.recursive(songFolder);
-            const sMedia = $toxen.getSupportedAudioFiles();
-            let mediaFile = files.find(f => sMedia.includes(Path.extname(f.name).toLowerCase()))?.name;
-
-            let song = $song.create(info);
-            if (mediaFile) {
-              song.paths.media = mediaFile;
-              songs.push(song);
-              song.saveInfo();
-              if (typeof forEach === "function") forEach(song);
-              continue;
-            }
-
-            if (typeof forEach === "function") forEach(null);
-            console.warn(`Song "${songFolder}" is missing a media file. Excluding from song list.`);
-            const nId = $toxen.notify({
-              title: "Song missing media file",
-              content: <div>
-                <p>The song <b>{song.getDisplayName()}</b> is missing a media file. </p>
-                <p>Do you want to remove it from the library?</p>
-                <Group>
-                  <Button color="red" onClick={() => {
-                    hideNotification(nId);
-                    song.delete();
-                  }}>Delete</Button>
-                  <Button color="green" onClick={() => hideNotification(nId)}>Ask later</Button>
-                  {toxenapi.isDesktop() && (
-                    <Button color="blue" onClick={() => {
-                      toxenapi.remote.shell.openPath(song.dirname());
-                    }}>Show Folder</Button>
-                  )}
-                </Group>
-              </div>,
-              type: "warning",
-            })
-          }
-        }
-      }
-      await dir.close();
-      return $song.sortSongs(songs);
     });
   }
 

@@ -5,14 +5,17 @@ import { useModals } from '@mantine/modals';
 import { Toxen } from '../../ToxenApp';
 import User from '../../toxen/User';
 import './BackgroundFileSelector.scss';
-import Settings from '../../toxen/Settings';
+import type Song from "../../toxen/Song";
+import { SongStorage } from "../../toxen/storage/SongStorage";
 
 interface BackgroundFileSelectorProps {
   label?: string;
   defaultValue?: string;
   onChange?: (value: string | null) => void;
   onDelete?: (fileName: string) => Promise<boolean>; // Returns true if deletion was successful
-  // Directory source - provide either sourceDir OR getSourceDir function
+  // Song whose folder to use. Lists, adds and deletes through the song's storage, so prefer it over sourceDir for songs
+  song?: Song;
+  // Directory source - provide song, sourceDir OR getSourceDir function
   sourceDir?: string;
   getSourceDir?: () => string;
   // Custom copy destination logic (for playlist backgrounds)
@@ -32,6 +35,7 @@ export default function BackgroundFileSelector({
   defaultValue, 
   onChange, 
   onDelete,
+  song,
   sourceDir,
   getSourceDir,
   onCopyFile,
@@ -44,9 +48,16 @@ export default function BackgroundFileSelector({
 
   // Get the directory to work with
   const getWorkingDir = () => {
+    if (song) return song.dirname();
     if (sourceDir) return sourceDir;
     if (getSourceDir) return getSourceDir();
-    throw new Error('BackgroundFileSelector: Must provide sourceDir or getSourceDir');
+    throw new Error('BackgroundFileSelector: Must provide song, sourceDir or getSourceDir');
+  };
+
+  // Without a custom onCopyFile/onDelete, files are added and removed through the song's storage
+  const requireSong = () => {
+    if (!song) throw new Error('BackgroundFileSelector: Pass the song prop, or onCopyFile and onDelete for other folders');
+    return song;
   };
 
   useEffect(() => {
@@ -71,7 +82,7 @@ export default function BackgroundFileSelector({
       setDataList([{ value: "<Empty>", label: "None" }]);
       setIsLoading(false);
     }
-  }, [sourceDir]);
+  }, [sourceDir, song]);
 
   // Update current value when defaultValue changes
   useEffect(() => {
@@ -110,20 +121,8 @@ export default function BackgroundFileSelector({
         confirmProps: { color: 'red', leftSection: <IconTrash size={16} /> },
         onConfirm: async () => {
           try {
-            const workingDir = getWorkingDir();
-            if (toxenapi.isDesktop() && !workingDir.startsWith('http://') && !workingDir.startsWith('https://')) {
-              // Local desktop delete
-              const filePath = toxenapi.joinPath(workingDir, fileName);
-              toxenapi.fs.unlinkSync(filePath);
-            } else {
-              // Remote delete
-              const deleteUrl = `${workingDir}/${fileName}`;
-              const res = await Toxen.fetch(deleteUrl, { method: 'DELETE' });
-              if (!res.ok) {
-                const err = await res.json().catch(() => ({ error: 'Delete failed' }));
-                throw new Error(err.error || 'Failed to delete background image');
-              }
-            }
+            const owner = requireSong();
+            await owner.storage.deleteFile(owner, fileName);
             Toxen.log(`Background image deleted: ${fileName}`, 3000);
             
             await reloadFileList();
@@ -144,7 +143,7 @@ export default function BackgroundFileSelector({
     try {
       const workingDir = getWorkingDir();
       const supported = Toxen.getSupportedImageFiles();
-      const files = await Toxen.filterSupportedFiles(workingDir, supported);
+      const files = song ? await song.listFiles(supported) : await Toxen.filterSupportedFiles(workingDir, supported);
       
       const backgroundFiles: BackgroundFileItem[] = [
         { value: "<Empty>", label: "None" }
@@ -152,8 +151,12 @@ export default function BackgroundFileSelector({
 
       for (const file of files) {
         let imagePath: string | null;
-        if (workingDir.startsWith("http://") || workingDir.startsWith("https://")) {
-          imagePath = User.appendAuth(`${workingDir}/${file}`) + `?h=${Math.random()}`; // Append random query to prevent caching
+        if (song?.storage.kind === SongStorage.Kind.Cloud) {
+          const url = song.storage.fileUrl(song, file);
+          imagePath = `${url}${url.includes("?") ? "&" : "?"}h=${Math.random()}`; // Append random query to prevent caching
+        } else if (workingDir.startsWith("http://") || workingDir.startsWith("https://")) {
+          const url = User.appendAuth(`${workingDir}/${file}`);
+          imagePath = `${url}${url.includes("?") ? "&" : "?"}h=${Math.random()}`; // Append random query to prevent caching
         } else if (toxenapi.isDesktop()) {
           imagePath = `file://${toxenapi.path.resolve(workingDir, file).replace(/\\/g, "/")}`;
         } else {
@@ -201,49 +204,16 @@ export default function BackgroundFileSelector({
             if (onCopyFile) {
               copySuccess = await onCopyFile(selectedFile, fileName);
             } else {
-              const workingDir = getWorkingDir();
-              // const isRemoteDir = workingDir.startsWith('http://') || workingDir.startsWith('https://');
-
-              if (Settings.isRemote()) {
-                // Desktop + remote: read local file and upload to server
-                try {
-                  const fileBuffer = toxenapi.fs.readFileSync(selectedFile);
-                  const uploadUrl = `${workingDir}/${fileName}`;
-                  const res = await Toxen.fetch(uploadUrl, {
-                    method: 'PUT',
-                    body: new Blob([fileBuffer]),
-                  });
-                  if (!res.ok) {
-                    const err = await res.json().catch(() => ({ error: 'Upload failed' }));
-                    throw new Error(err.error || 'Failed to upload background image');
-                  }
-                  Toxen.log(`Background image uploaded: ${fileName}`, 3000);
-                  copySuccess = true;
-                } catch (error) {
-                  Toxen.error(`Failed to upload background image: ${error.message}`, 5000);
-                  return;
-                }
-              } else {
-                // Local desktop copy
-                if (!toxenapi.isDesktop()) {
-                  Toxen.error('File operations are only available in desktop version', 3000);
-                  return;
-                }
-                
-                const targetPath = toxenapi.joinPath(workingDir, fileName);
-
-                if (selectedFile !== targetPath) {
-                  try {
-                    toxenapi.fs.copyFileSync(selectedFile, targetPath);
-                    Toxen.log(`Background image copied: ${fileName}`, 3000);
-                    copySuccess = true;
-                  } catch (error) {
-                    Toxen.error(`Failed to copy background image: ${error.message}`, 5000);
-                    return;
-                  }
-                } else {
-                  copySuccess = true;
-                }
+              // Copies into a local song folder, uploads for a cloud song
+              const owner = requireSong();
+              const isCloud = owner.storage.kind === SongStorage.Kind.Cloud;
+              try {
+                await owner.storage.writeFile(owner, fileName, { diskPath: selectedFile });
+                Toxen.log(`Background image ${isCloud ? "uploaded" : "copied"}: ${fileName}`, 3000);
+                copySuccess = true;
+              } catch (error) {
+                Toxen.error(`Failed to ${isCloud ? "upload" : "copy"} background image: ${error.message}`, 5000);
+                return;
               }
             }
 
@@ -278,19 +248,9 @@ export default function BackgroundFileSelector({
               copySuccess = await onCopyFile(objectUrl, fileName);
               URL.revokeObjectURL(objectUrl);
             } else {
-              // Upload to remote server
-              const workingDir = getWorkingDir();
-              const uploadUrl = `${workingDir}/${fileName}`;
-              const res = await Toxen.fetch(uploadUrl, {
-                method: 'PUT',
-                body: file,
-              });
-
-              if (!res.ok) {
-                const err = await res.json().catch(() => ({ error: 'Upload failed' }));
-                throw new Error(err.error || 'Failed to upload background image');
-              }
-
+              // Upload through the song's storage
+              const owner = requireSong();
+              await owner.storage.writeFile(owner, fileName, file);
               Toxen.log(`Background image uploaded: ${fileName}`, 3000);
               copySuccess = true;
             }

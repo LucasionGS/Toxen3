@@ -5,6 +5,8 @@ import { Toxen } from "../../ToxenApp";
 import Provider from "./Provider";
 import type { ProviderAudioSource, ProviderSearchResult } from "./Provider";
 import SoundcloudProvider from "./SoundcloudProvider";
+import { SongStorage } from "../storage/SongStorage";
+import { StorageSelector } from "../storage/StorageSelector";
 
 export default class ProviderManager {
   private static providers = new Map<string, Provider>();
@@ -43,7 +45,7 @@ export default class ProviderManager {
     const provider = ProviderManager.get(providerId);
     if (!provider) throw new Error(`Unknown provider: ${providerId}`);
     if (!provider.isEnabled()) throw new Error(`${provider.displayName} integration is disabled.`);
-    if (Settings.isRemote() && !Settings.getUser()) throw new Error("Log in before adding provider songs to the remote library.");
+    if (StorageSelector.forLibrary().kind === SongStorage.Kind.Cloud && !Settings.getUser()) throw new Error("Log in before adding provider songs to the remote library.");
 
     const uid = Song.generateUID();
     const dirname = await ProviderManager.createSongDirectory(uid, provider, result);
@@ -85,7 +87,7 @@ export default class ProviderManager {
   }
 
   private static async createSongDirectory(uid: string, provider: Provider, result: ProviderSearchResult): Promise<string> {
-    if (!toxenapi.isDesktop() || Settings.isRemote()) return uid;
+    if (!toxenapi.isDesktop() || StorageSelector.forLibrary().kind !== SongStorage.Kind.Local) return uid;
 
     const libraryDirectory = Settings.get("libraryDirectory");
     if (!libraryDirectory) throw new Error("No music library folder is configured.");
@@ -129,22 +131,8 @@ export default class ProviderManager {
       const ext = ProviderManager.getArtworkExtension(artworkUrl);
       const fileName = `provider-artwork${ext}`;
 
-      if (toxenapi.isDesktop() && !Settings.isRemote()) {
-        const data = new Uint8Array(await blob.arrayBuffer());
-        await toxenapi.fs.promises.writeFile(song.dirname(fileName), data);
-      }
-      else {
-        const url = song.dirname(fileName);
-        if (!url) return;
-        const uploadResponse = await Toxen.fetch(url, {
-          method: "PUT",
-          body: blob,
-        });
-        if (!uploadResponse.ok) return;
-      }
-
+      await song.storage.writeFile(song, fileName, blob);
       song.paths.background = fileName;
-      song.setFile(fileName, "u");
     } catch (error) {
       console.warn("Unable to save provider artwork", error);
     }

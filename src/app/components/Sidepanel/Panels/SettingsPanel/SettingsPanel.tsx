@@ -1237,7 +1237,7 @@ export function VisualizerStyleOptions(props: {
             key={option.key}
             label={option.name}
             defaultValue={options[option.key] ?? option.defaultValue}
-            getSourceDir={() => sourceSong?.dirname()}
+            song={sourceSong}
             onChange={(value) => {
               options[option.key] = value ?? "";
               allOptions[style] = options;

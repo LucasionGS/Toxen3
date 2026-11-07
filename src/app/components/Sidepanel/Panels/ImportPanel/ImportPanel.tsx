@@ -6,6 +6,8 @@ import System, { ToxenFile } from '../../../../toxen/System';
 import { Toxen } from '../../../../ToxenApp';
 import { VideoInfo } from '../../../../toxen/desktop/Ytdlp';
 import Settings from '../../../../toxen/Settings';
+import { SongStorage } from "../../../../toxen/storage/SongStorage";
+import { StorageSelector } from "../../../../toxen/storage/StorageSelector";
 import Playlist from '../../../../toxen/Playlist';
 import ExternalUrl from '../../../ExternalUrl/ExternalUrl';
 import './ImportPanel.scss';
@@ -63,7 +65,7 @@ export default function ImportPanel() {
         leftSection={<IconMusic size={16} />}
         variant="light"
         onClick={() => {
-          if (toxenapi.isDesktop() && !Settings.isRemote()) {
+          if (toxenapi.isDesktop() && StorageSelector.forLibrary().kind === SongStorage.Kind.Local) {
             let paths = toxenapi.remote.dialog.showOpenDialogSync(toxenapi.remote.getCurrentWindow(), {
               properties: [
                 "multiSelections",

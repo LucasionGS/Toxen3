@@ -4,6 +4,9 @@ import Theme from "./Theme";
 import { Toxen } from "../ToxenApp";
 import { Progress } from "@mantine/core";
 import Settings from "./Settings";
+import { SongLibrary } from "./SongLibrary";
+import { SongStorage } from "./storage/SongStorage";
+import { StorageSelector } from "./storage/StorageSelector";
 
 export default class System {
   public static async recursive(path: string): Promise<{ name: string }[]>;
@@ -70,8 +73,8 @@ export default class System {
         // per file. Empty string means "no filesystem path" (a browser File).
         const filePath = toxenapi.getFilePath(file);
 
-        // If directory - Only on desktop
-        if (toxenapi.isDesktop() && !Settings.isRemote()) {
+        // If directory - Only on desktop, into a local library
+        if (toxenapi.isDesktop() && StorageSelector.forLibrary().kind === SongStorage.Kind.Local) {
           const stat: import("fs").Stats | null = await toxenapi.fs.promises.stat(filePath).then(a => a).catch(() => null as any);
           if (stat?.isDirectory()) {
             mediaPack = true;
@@ -94,7 +97,7 @@ export default class System {
               Importing {file.name}...
             </Content>
           );
-          await Song.importSong(file).then(res => {
+          await SongLibrary.importMedia(file).then(res => {
             if (res.isSuccess()) {
               Toxen.songList.push(res.data);
               if (verbose) Toxen.log(file.name + " imported successfully.", 500);
@@ -126,83 +129,31 @@ export default class System {
           // Always use the new file name to avoid overwriting existing backgrounds
           // since users can now delete backgrounds if they want to remove them
           let imageName = file.name; // name with extension
-          
-          if (toxenapi.isLocal(Settings)) {
-            let dest = song.dirname(imageName);
-            
-            // Check if file already exists and generate unique name if needed
-            if (await toxenapi.fs.promises.stat(dest).then(() => true).catch(() => false)) {
-              const ext = toxenapi.path.extname(imageName);
-              const baseName = toxenapi.path.basename(imageName, ext);
-              let counter = 1;
-              
-              do {
-                imageName = `${baseName}_${counter}${ext}`;
-                dest = song.dirname(imageName);
-                counter++;
-              } while (await toxenapi.fs.promises.stat(dest).then(() => true).catch(() => false));
-            }
-            
-            let prePic = song.backgroundFile() || null;
-            const postProcess = async () => {
-              // Invalidate cache for old background before changing
-              Toxen.invalidateSongBackgroundCache(song);
-              
-              // Set the new background file without deleting the old one
-              // since users can now manually delete backgrounds if they want to
-              song.paths.background = toxenapi.getBasename(dest);
-              song.setFile(song.paths.background, "u");
-              await song.saveInfo();
-              Toxen.background.setBackground(dest + "?h=" + song.hash);
-            };
-
-            if (!filePath && file instanceof File) { // Likely a web file
-              await toxenapi.fs.promises.writeFile(dest, file.stream()).then(postProcess)
-            }
-            else {
-              await toxenapi.fs.promises.copyFile(filePath, dest).then(postProcess)
-              .catch((reason) => {
-                Toxen.error("Unable to change background");
-                Toxen.error(reason);
-              });
-            }
-
-          }
-          else if (file instanceof File) {
-            // For remote/web version, also ensure we don't overwrite existing backgrounds
-            // Check if current song already has this background name and generate unique name if needed
-            if (song.paths.background === imageName) {
-              const ext = imageName.substring(imageName.lastIndexOf('.'));
-              const baseName = imageName.substring(0, imageName.lastIndexOf('.'));
-              let counter = 1;
-              
-              // Generate unique name - we can't easily check server files, so just increment
+          const existing = await song.listFiles().catch((): string[] => []);
+          if (existing.includes(imageName)) {
+            const ext = toxenapi.getFileExtension(imageName);
+            const baseName = imageName.slice(0, imageName.length - ext.length);
+            let counter = 1;
+            do {
               imageName = `${baseName}_${counter}${ext}`;
-            }
-            
+              counter++;
+            } while (existing.includes(imageName));
+          }
+
+          try {
+            await song.storage.writeFile(song, imageName, System.toWriteData(file, filePath));
             // Invalidate cache for old background before changing
             Toxen.invalidateSongBackgroundCache(song);
-            
-            song.paths.background = imageName;
 
-            // Upload to server
-            let filetime = Date.now();
-            song.setFile(imageName, "u", filetime);
-            await Toxen.fetch(`${song.backgroundFile()}`, {
-              method: "PUT",
-              body: file
-            }).then(() => {
-              Toxen.log("Uploaded background image", 3000);
-            }).catch((reason) => {
-              Toxen.error("Unable to upload background image");
-              Toxen.error(reason);
-            });
-            
+            // Set the new background file without deleting the old one
+            // since users can now manually delete backgrounds if they want to
+            song.paths.background = imageName;
             await song.saveInfo();
+            if (song.storage.kind === SongStorage.Kind.Cloud) Toxen.log("Uploaded background image", 3000);
             Toxen.background.setBackground(song.backgroundFile() + "?h=" + song.hash);
-            // reader.onload = async () => {
-            // }
-            // reader.readAsDataURL(file);
+          } catch (reason) {
+            Toxen.error("Unable to change background");
+            Toxen.error(`${reason}`);
           }
           break;
         }
@@ -216,29 +167,15 @@ export default class System {
           if (!song) break;
           let subName = file.name; // name with extension
 
-          if (toxenapi.isLocal(Settings)) {
-            let dest = song.dirname(subName);
-            await toxenapi.fs.promises.copyFile(filePath, dest).then(async () => {
-              song.paths.subtitles = toxenapi.getBasename(dest);
-              song.setFile(subName, "u");
-              await song.saveInfo();
-              song.applySubtitles();
-            })
-              .catch((reason) => {
-                Toxen.error("Unable to change subtitles");
-                Toxen.error(reason);
-              });
-          }
-          else if (file instanceof File) {
-            try {
-              const content = await file.text();
-              await song.writeSubtitleFile(content, subName);
-              Toxen.log("Uploaded subtitle file", 3000);
-              song.applySubtitles();
-            } catch (reason) {
-              Toxen.error("Unable to upload subtitle file");
-              Toxen.error(`${reason}`);
-            }
+          try {
+            await song.storage.writeFile(song, subName, System.toWriteData(file, filePath));
+            song.paths.subtitles = subName;
+            await song.saveInfo();
+            if (song.storage.kind === SongStorage.Kind.Cloud) Toxen.log("Uploaded subtitle file", 3000);
+            song.applySubtitles();
+          } catch (reason) {
+            Toxen.error("Unable to change subtitles");
+            Toxen.error(`${reason}`);
           }
 
           break;
@@ -254,36 +191,15 @@ export default class System {
           if (!song) break;
           let sbName = file.name;
 
-          if (toxenapi.isLocal(Settings)) {
-            let dest = song.dirname(sbName);
-            await toxenapi.fs.promises.copyFile(filePath, dest).then(async () => {
-              song.paths.storyboard = toxenapi.getBasename(dest);
-              song.setFile(sbName, "u");
-              await song.saveInfo();
-              await song.applyStoryboard();
-            })
-              .catch((reason) => {
-                Toxen.error("Unable to change storyboard");
-                Toxen.error(reason);
-              });
-          }
-          else if (file instanceof File) {
+          try {
+            await song.storage.writeFile(song, sbName, System.toWriteData(file, filePath));
             song.paths.storyboard = sbName;
-
-            let filetime = Date.now();
-            song.setFile(sbName, "u", filetime);
-            await Toxen.fetch(`${song.storyboardFile()}`, {
-              method: "PUT",
-              body: file
-            }).then(() => {
-              Toxen.log("Uploaded storyboard file", 3000);
-            }).catch((reason) => {
-              Toxen.error("Unable to upload storyboard file");
-              Toxen.error(reason);
-            });
-
             await song.saveInfo();
+            if (song.storage.kind === SongStorage.Kind.Cloud) Toxen.log("Uploaded storyboard file", 3000);
             await song.applyStoryboard();
+          } catch (reason) {
+            Toxen.error("Unable to change storyboard");
+            Toxen.error(`${reason}`);
           }
 
           break;
@@ -403,7 +319,7 @@ export default class System {
           );
 
           try {
-            if (toxenapi.isDesktop() && !Settings.isRemote()) {
+            if (toxenapi.isDesktop() && StorageSelector.forLibrary().kind === SongStorage.Kind.Local) {
               // Desktop local import
               const libDir = Settings.get("libraryDirectory");
               const info = await toxenapi.importTxzPackage(filePath, libDir);
@@ -497,6 +413,15 @@ export default class System {
 
       return Promise.resolve();
     });
+  }
+
+  /**
+   * What to hand `SongStorage.writeFile` for an imported file: its path on disk when it has one, otherwise its bytes.
+   */
+  public static toWriteData(file: File | ToxenFile, filePath: string): SongStorage.WriteData {
+    if (filePath) return { diskPath: filePath };
+    if (typeof File !== "undefined" && file instanceof File) return file;
+    throw new Error(`Unable to read ${file.name}: it has no file path.`);
   }
 
   public static async pathExists(path: string) {

@@ -24,6 +24,16 @@ export interface SongStorage {
   fileUrl(song: Song, relPath: string): string;
 
   /**
+   * Where a file lives, without authentication: the absolute disk path (local) or the plain server URL (cloud).
+   * This is what `Song.dirname()`, `mediaFile()`, `backgroundFile()` and friends return, so it is safe to compare,
+   * append `?h=` to and read extensions from. Load files through `fileUrl` instead.
+   * @param relPath Relative path, or nothing for the song folder itself. Not checked for containment (playlist backgrounds
+   * may be absolute paths).
+   * @returns `null` if the song has no folder (local song without `paths.dirname`).
+   */
+  fileLocation(song: Song, relPath?: string): string | null;
+
+  /**
    * Read a text file (subtitles, storyboard).
    * @returns The text, or `null` if the file doesn't exist. Never hangs: network and disk errors reject.
    */
@@ -68,8 +78,8 @@ export interface SongStorage {
 
   /**
    * Every song info in this storage. Local: the library directory (today `toxenapi.loadLocalSongs`). Cloud: the
-   * server's track list.
-   * @param onEach Called per song as it loads, for the loading screen.
+   * server's track list. Infos without playable media are included; `SongLibrary` decides what to do with them.
+   * @param onEach Called exactly once for every info in the result, as it loads (loading screen progress).
    */
   listSongs(onEach?: (info: ISong) => void): Promise<ISong[]>;
 
@@ -98,11 +108,11 @@ export namespace SongStorage {
      */
     relPath: string;
     /**
-     * Unit is in bytes.
+     * Unit is in bytes. `0` when unknown (the v1 server listing only has names).
      */
     size: number;
     /**
-     * Local: file mtime. Cloud: server `receivedAt`. Unix ms.
+     * Local: file mtime. Cloud: server `receivedAt`. Unix ms. `0` when unknown.
      */
     mtimeMs: number;
     /**
@@ -148,7 +158,11 @@ export namespace SongStorage {
    * Type guard for `DiskFile`.
    */
   export function isDiskFile(data: WriteData): data is DiskFile {
-    throw new Error("Not implemented.");
+    return typeof data === "object"
+      && data !== null
+      && !(data instanceof Uint8Array)
+      && !(typeof Blob !== "undefined" && data instanceof Blob)
+      && typeof (data as DiskFile).diskPath === "string";
   }
 }
 

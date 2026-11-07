@@ -9,7 +9,7 @@ import SidepanelSectionHeader from "../Sidepanel/SidepanelSectionHeader";
 import { IconArrowDownCircle, IconArrowLeftBar, IconArrowRightBar, IconArrowUpCircle, IconPlayerPause, IconPlayerPlay, IconSearch, IconStar } from "@tabler/icons-react";
 import { useClipboard, useForceUpdate } from "@mantine/hooks";
 import { hexToRgbArray, rgbArrayToHex } from "../Form/FormInputFields/FormInputColorPicker";
-import Settings, { VisualizerStyle } from "../../toxen/Settings";
+import { VisualizerStyle } from "../../toxen/Settings";
 // import Path from "path";
 import "./StoryboardEditorPanel.scss";
 import BPMFinder from "../BPMFinder/BPMFinder";
@@ -72,29 +72,13 @@ export default function StoryboardEditorPanel() {
         <Group wrap="nowrap" grow>
           <div>
             <Button color="green" onClick={async () => {
-              const saveLocation = song.storyboardFile() || song.dirname("storyboard.tsb");
-              StoryboardParser.save(saveLocation, config, song);
-              if (saveLocation !== song.storyboardFile()) {
-                if (Settings.isRemote()) {
-                  song.paths.storyboard = saveLocation.replace(song.dirname(), "");
-                  while (song.paths.storyboard.startsWith("/")) {
-                    song.paths.storyboard = song.paths.storyboard.substring(1);
-                  }
-                  while (song.paths.storyboard.endsWith("/")) {
-                    song.paths.storyboard = song.paths.storyboard.substring(0, song.paths.storyboard.length - 1);
-                  }
-                }
-                else {
-                  if (toxenapi.isDesktop()) {
-                    song.paths.storyboard = toxenapi.path.relative(song.dirname(), saveLocation);
-                  }
-                  else {
-                    toxenapi.throwDesktopOnly("Unable to save storyboard file location on web version.");
-                  }
-                }
-                song.saveInfo();
+              try {
+                await StoryboardParser.save(song, song.paths.storyboard || "storyboard.tsb", config);
+                Toxen.log("Saved storyboard", 2000);
+              } catch (error) {
+                console.error(error);
+                Toxen.error(`Failed to save storyboard: ${error?.message ?? error}`);
               }
-              Toxen.log("Saved storyboard", 2000);
             }}>Save</Button>
             <Button color="red" onClick={() => {
               // Check if there are unsaved changes and confirm the exit.
@@ -481,10 +465,8 @@ function ComponentButton(props: { event: StoryboardParser.SBEvent, component: St
             const song = Toxen.editingSong;
             if (!song)
               return [];
-            const path = song.dirname();
 
-            const supported = Toxen.getSupportedImageFiles();
-            return await Toxen.filterSupportedFiles(path, supported);
+            return await song.listFiles(Toxen.getSupportedImageFiles());
           })}
           value={value as string}
           onChange={(value) => {
