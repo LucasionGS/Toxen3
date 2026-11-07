@@ -5,13 +5,13 @@ import { Checkbox, RangeSlider, Button, Progress, Stack } from "@mantine/core";
 import { Toxen } from "../../ToxenApp";
 import Song from "../../toxen/Song";
 import Settings from "../../toxen/Settings";
-import User from "../../toxen/User";
 import Converter from "../../toxen/Converter";
 import { PlayQueue } from "../../toxen/PlayQueue";
 import { SongSettingsClipboard } from "../../toxen/SongSettingsClipboard";
-import { SongLibrary } from "../../toxen/SongLibrary";
 import { StorageSelector } from "../../toxen/storage/StorageSelector";
 import PlaylistManager from "../PlaylistManager/PlaylistManager";
+import { downloadable, removable, uploadable, makeAvailableOffline, removeDownload, uploadToCloud } from "../Sync/songSyncActions";
+import { openDeleteSongDialog } from "./DeleteSongDialog";
 
 /**
  * Open the context menu for a song. If several songs are selected and this one is one of them, the menu
@@ -89,28 +89,12 @@ export function openSongContextMenu(song: Song, modals: ModalsContextProps) {
           }}>
             {song.inQueue ? "Remove from queue" : "Add to queue"}
           </Button>
-          <Button onClick={() => {
+          <CloudActions songs={[song]} close={close} />
+          <Button color="red" variant="light" onClick={() => {
             close();
-            modals.openConfirmModal({
-              title: "Delete song",
-              children: `Are you sure you want to delete "${song.title}"?`,
-              onConfirm: async () => {
-                try {
-                  await SongLibrary.delete(song);
-                } catch (error) {
-                  Toxen.error(error);
-                }
-              },
-              labels: {
-                confirm: "Delete",
-                cancel: "Cancel"
-              },
-              confirmProps: {
-                color: "red"
-              }
-            });
+            openDeleteSongDialog([song]);
           }}>
-            Delete
+            Delete…
           </Button>
           {StorageSelector.isLocal(song) && (
             <Button onClick={() => {
@@ -120,74 +104,6 @@ export function openSongContextMenu(song: Song, modals: ModalsContextProps) {
               Trim
             </Button>
           )}
-          {
-            User.getCurrentUser()?.premium && !Settings.isRemote() && (
-              <Button onClick={() => {
-                close();
-                song.sync();
-              }}>
-                Sync with remote
-              </Button>
-            )
-          }
-          {
-            User.getCurrentUser()?.premium && Settings.isRemote() && toxenapi.isDesktop() && (
-              <Button onClick={async () => {
-                close();
-                // Create the song on local with the info, then sync it
-
-                // Check if sone already exists locally
-                const localSongs = await Song.loadLocalSongs();
-
-                const existingSong = localSongs.find(s => s.uid === song.uid);
-
-                // Create the song locally
-                const localDir = existingSong
-                  ? existingSong.dirnameLocal()
-                  : toxenapi.path.resolve(Settings.get("libraryDirectory"), song.uid);
-
-                const download = () => song.downloadRemoteToLocal(localDir).then(() => {
-                  Toxen.log("Song downloaded to local.", 2000);
-                }).catch(error => {
-                  Toxen.error("Failed to download song to local: " + error.message);
-                });
-
-                if ((await toxenapi.fs.promises.stat(localDir).catch(() => false))) {
-                  const id = modals.openConfirmModal({
-                    title: "Song already exists locally",
-                    children: (
-                      <Stack>
-                        <p>
-                          If you continue, the existing song will be deleted and replaced with the remote version. All unsynced local changes will be lost.
-                          <br />
-                          If you meant to sync the song differences, change to local mode and sync the song.
-                        </p>
-                      </Stack>
-                    ),
-                    labels: {
-                      confirm: "Delete and redownload song",
-                      cancel: "Cancel"
-                    },
-                    confirmProps: {
-                      color: "red"
-                    },
-                    onConfirm: () => {
-                      modals.closeModal(id);
-                      download();
-                    },
-                    onCancel: () => {
-                      modals.closeModal(id);
-                    }
-                  });
-                }
-                else {
-                  download();
-                }
-              }}>
-                Download to local
-              </Button>
-            )
-          }
           {Settings.isAdvanced<React.JSX.Element>(
             <>
               <Button onClick={() => {
@@ -269,53 +185,51 @@ export function openSongContextMenu(song: Song, modals: ModalsContextProps) {
           }}>
             Remove all from queue
           </Button>
-          <Button onClick={() => {
+          <CloudActions songs={selectedSongs} close={close} />
+          <Button color="red" variant="light" onClick={() => {
             close();
-            modals.openConfirmModal({
-              title: "Delete songs",
-              children: `Are you sure you want to delete ${selectedSongs.length} songs?`,
-              onConfirm: async () => {
-                try {
-                  await Promise.all(selectedSongs.map(s => SongLibrary.delete(s)));
-                } catch (error) {
-                  Toxen.error(error);
-                }
-              },
-              labels: {
-                confirm: "Delete",
-                cancel: "Cancel"
-              },
-              confirmProps: {
-                color: "red"
-              }
-            });
+            openDeleteSongDialog(selectedSongs);
           }}>
-            Delete all
+            Delete all…
           </Button>
-          {
-            User.getCurrentUser()?.premium && Settings.isRemote() && toxenapi.isDesktop() && (
-              <Button onClick={() => {
-                close();
-                Song.downloadAllMissingRemoteToLocal(selectedSongs);
-              }}>
-                Download all missing to local
-              </Button>
-            )
-          }
-          {
-            User.getCurrentUser()?.premium && !Settings.isRemote() && toxenapi.isDesktop() && (
-              <Button onClick={() => {
-                close();
-                Toxen.syncSongs(selectedSongs);
-              }}>
-                Sync selected with remote
-              </Button>
-            )
-          }
         </Stack>
       )
     });
   }
+}
+
+interface CloudActionsProps {
+  songs: Song[];
+  close: () => void;
+}
+
+/**
+ * Cloud buttons for the songs the menu acts on. Only the ones that apply to at least one song are shown.
+ */
+function CloudActions({ songs, close }: CloudActionsProps) {
+  const toDownload = downloadable(songs);
+  const toRemove = removable(songs);
+  const toUpload = uploadable(songs);
+  const suffix = (list: Song[]) => songs.length > 1 ? ` (${list.length})` : "";
+  return (
+    <>
+      {toDownload.length > 0 && (
+        <Button onClick={() => { close(); makeAvailableOffline(toDownload); }}>
+          Make available offline{suffix(toDownload)}
+        </Button>
+      )}
+      {toRemove.length > 0 && (
+        <Button onClick={() => { close(); removeDownload(toRemove); }}>
+          Remove download{suffix(toRemove)}
+        </Button>
+      )}
+      {toUpload.length > 0 && (
+        <Button onClick={() => { close(); uploadToCloud(toUpload); }}>
+          Upload to cloud{suffix(toUpload)}
+        </Button>
+      )}
+    </>
+  );
 }
 
 /**

@@ -1,0 +1,22 @@
+.delete-song-dialog {
+  &__option {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border-secondary);
+    transition: border-color var(--transition-normal), background-color var(--transition-normal);
+
+    &:hover {
+      background: var(--surface-bg-hover);
+    }
+
+    &[data-checked] {
+      border-color: var(--accent-color);
+      background: rgba(var(--accent-color-rgb), 0.08);
+    }
+
+    &--danger[data-checked] {
+      border-color: var(--error-color);
+      background: color-mix(in srgb, var(--error-color) 10%, transparent);
+    }
+  }
+}
