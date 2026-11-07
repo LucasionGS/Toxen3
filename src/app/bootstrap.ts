@@ -233,8 +233,14 @@ const STEPS: [name: string, run: () => Promise<void>][] = [
 ];
 
 /**
- * Runs the app startup sequence. Every step is caught and logged on its own, so a failing step never
- * stops the ones after it. `Toxen.whenReady()` always resolves once the sequence ends.
+ * Steps that later steps depend on for user data. If one of these fails, startup stops instead of continuing,
+ * because later steps save settings and statistics and would overwrite the user's files with defaults.
+ */
+const CRITICAL_STEPS = new Set(["load settings", "load statistics"]);
+
+/**
+ * Runs the app startup sequence. Every step is caught and logged on its own, so a failing step doesn't stop
+ * the ones after it, except for `CRITICAL_STEPS`. `Toxen.whenReady()` always resolves once the sequence ends.
  */
 export function bootstrap(): Promise<void> {
   return (async () => {
@@ -244,6 +250,7 @@ export function bootstrap(): Promise<void> {
       } catch (error) {
         console.error(error);
         Toxen.error(`Startup step "${name}" failed: ${error?.message ?? error}`);
+        if (CRITICAL_STEPS.has(name)) return;
       }
     }
   })()
