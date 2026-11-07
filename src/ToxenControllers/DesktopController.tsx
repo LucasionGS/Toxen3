@@ -76,26 +76,65 @@ export default class DesktopController extends ToxenController {
   private readonly settingsFilePath = CrossPlatform.getToxenDataPath("settings.json");
 
   /**
+   * Per-file write state used by `writeFileAtomic`.
+   */
+  private readonly _writeStates = new Map<string, { inflight: Promise<void> | null, pending: Promise<void> | null }>();
+
+  /**
+   * Write a file atomically (temporary file + rename). If a write to the same file is already running, only one more write is scheduled after it instead of running in parallel.
+   * @param filePath File to write.
+   * @param getContent Called right before each write, so a coalesced write always saves the newest content.
+   */
+  private writeFileAtomic(filePath: string, getContent: () => string): Promise<void> {
+    let state = this._writeStates.get(filePath);
+    if (!state) {
+      state = { inflight: null, pending: null };
+      this._writeStates.set(filePath, state);
+    }
+    const st = state;
+
+    if (!st.inflight) {
+      const tmpPath = filePath + ".tmp";
+      st.inflight = (async () => {
+        try {
+          await fsp.writeFile(tmpPath, getContent());
+          await fsp.rename(tmpPath, filePath);
+        } catch (error) {
+          await fsp.rm(tmpPath, { force: true }).catch(() => { });
+          throw error;
+        }
+      })().finally(() => { st.inflight = null; });
+      return st.inflight;
+    }
+
+    st.pending ??= st.inflight.catch(() => { }).then(() => {
+      st.pending = null;
+      return this.writeFileAtomic(filePath, getContent);
+    });
+    return st.pending;
+  }
+
+  /**
+   * Make sure Toxen's data folder exists.
+   */
+  private async ensureDataFolder() {
+    await fsp.mkdir(CrossPlatform.getToxenDataPath(), { recursive: true });
+  }
+
+  /**
    * Save Toxen's current settings.
    */
   public async saveSettings($settings: typeof Settings) {
-    if (!(await fsp.stat(this.CrossPlatform.getToxenDataPath()).then(() => true).catch(() => false))) {
-      await fsp.mkdir(this.CrossPlatform.getToxenDataPath(), { recursive: true });
-    }
-    
-    return new Promise<void>((resolve, reject) => {
-      let ws = fs.createWriteStream(this.settingsFilePath);
-      ws.write(Buffer.from($settings.toString()));
-      ws.close(() => resolve());
-    })
+    await this.ensureDataFolder();
+    await this.writeFileAtomic(this.settingsFilePath, () => $settings.toString());
   }
 
   /**
    * Load Toxen's settings from the settings's filepath.
    */
   public async loadSettings($settings: typeof Settings): Promise<ISettings> {
+    const musicPath = Path.resolve(os.homedir(), "Music", "ToxenMusic");
     if (!(await fsp.stat(this.settingsFilePath).then(() => true).catch(() => false))) {
-      const musicPath = Path.resolve(os.homedir(), "Music", "ToxenMusic");
       if (await fsp.stat(musicPath).then(() => false).catch(() => true)) {
         await fsp.mkdir(musicPath, { recursive: true });
       }
@@ -110,7 +149,14 @@ export default class DesktopController extends ToxenController {
       await $settings.applyDefaultSettings();
       return $settings.data;
     } catch (error) {
-      throw "Unable to parse settings file";
+      // Keep the broken file for inspection and continue with defaults
+      console.error("Unable to parse settings file. Falling back to default settings.", error);
+      await fsp.copyFile(this.settingsFilePath, this.settingsFilePath + ".corrupt").catch(() => { });
+      $settings.data = {} as ISettings;
+      await $settings.applyDefaultSettings({
+        libraryDirectory: musicPath
+      });
+      return $settings.data;
     }
   }
 
@@ -120,14 +166,8 @@ export default class DesktopController extends ToxenController {
    * Save Toxen's current statistics.
    */
   public async saveStats($stats: typeof Stats) {
-    if (!(await fsp.stat(CrossPlatform.getToxenDataPath()).then(() => true).catch(() => false))) {
-      await fsp.mkdir(CrossPlatform.getToxenDataPath(), { recursive: true });
-    }
-    return new Promise<void>((resolve, reject) => {
-      let ws = fs.createWriteStream(this.statisticsFilePath);
-      ws.write(Buffer.from($stats.toString()));
-      ws.close(() => resolve());
-    })
+    await this.ensureDataFolder();
+    await this.writeFileAtomic(this.statisticsFilePath, () => $stats.toString());
   }
 
   /**
@@ -143,6 +183,22 @@ export default class DesktopController extends ToxenController {
     } catch (error) {
       throw "Unable to parse statistics file";
     }
+  }
+
+  /**
+   * Resolve an archive entry name inside `baseDir` and make sure the result can't escape it (zip-slip protection).
+   * @param baseDir Folder the archive is extracted into.
+   * @param entryName File name of the archive entry.
+   * @returns The absolute path to write the entry to.
+   * @throws If the entry points outside `baseDir`.
+   */
+  public safeJoinInside(baseDir: string, entryName: string): string {
+    const base = Path.resolve(baseDir);
+    const outPath = Path.resolve(base, entryName);
+    if (!outPath.startsWith(base + Path.sep)) {
+      throw new Error(`Archive entry "${entryName}" points outside the target folder. The archive may be malicious.`);
+    }
+    return outPath;
   }
 
   public readonly themeFolderPath = CrossPlatform.getToxenDataPath("themes");
@@ -336,7 +392,7 @@ export default class DesktopController extends ToxenController {
             await fsp.mkdir(themeDir, { recursive: true });
 
             for (const entry of fileEntries) {
-              const outPath = Path.resolve(themeDir, entry.fileName);
+              const outPath = this.safeJoinInside(themeDir, entry.fileName);
               const outDir = Path.dirname(outPath);
               await fsp.mkdir(outDir, { recursive: true });
               await fsp.writeFile(outPath, Buffer.concat(entry.chunks));
@@ -420,14 +476,12 @@ export default class DesktopController extends ToxenController {
     $toxen.log("Starting Whisper transcription... This may take a few minutes.", 0);
     
     // Import child_process dynamically
-    const { exec } = await import('child_process');
+    const { execFile } = await import('child_process');
     const { promisify } = await import('util');
-    const execAsync = promisify(exec);
+    const execFileAsync = promisify(execFile);
     
-    // Run whisper command
-    const command = `whisper "${audioPath}" -f srt -o "${song.dirname("_whisper")}"`;
-    
-    await execAsync(command, {
+    // Run whisper command (arguments are passed as an array so the file path is never interpreted by a shell)
+    await execFileAsync("whisper", [audioPath, "-f", "srt", "-o", song.dirname("_whisper")], {
       cwd: song.dirname(),
       timeout: 600000, // 10 minutes timeout
     });
@@ -830,7 +884,7 @@ export default class DesktopController extends ToxenController {
             // Attempt Locate media file
             const files = await System.recursive(songFolder);
             const sMedia = $toxen.getSupportedAudioFiles();
-            let mediaFile = files.find(f => sMedia.includes(Path.extname(f.name)))?.name;
+            let mediaFile = files.find(f => sMedia.includes(Path.extname(f.name).toLowerCase()))?.name;
 
             let song = $song.create(info);
             if (mediaFile) {
@@ -838,6 +892,7 @@ export default class DesktopController extends ToxenController {
               songs.push(song);
               song.saveInfo();
               if (typeof forEach === "function") forEach(song);
+              continue;
             }
 
             if (typeof forEach === "function") forEach(null);
@@ -1098,7 +1153,7 @@ export default class DesktopController extends ToxenController {
 
             // Extract all files
             for (const entry of fileEntries) {
-              const outPath = Path.resolve(targetDir, entry.fileName);
+              const outPath = this.safeJoinInside(targetDir, entry.fileName);
               const outDir = Path.dirname(outPath);
               await fsp.mkdir(outDir, { recursive: true });
               await fsp.writeFile(outPath, Buffer.concat(entry.chunks));
