@@ -1,0 +1,74 @@
+.sync-badge {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  font-size: 15px;
+  color: var(--text-secondary);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.8));
+
+  &--cloud {
+    opacity: 0.75;
+  }
+
+  &--synced {
+    color: var(--success-color);
+    opacity: 0.85;
+  }
+
+  &--queued {
+    opacity: 0.6;
+  }
+
+  &--transfer {
+    color: var(--accent-color);
+  }
+
+  &--conflict {
+    color: var(--success-color);
+  }
+
+  &--error {
+    color: var(--error-color);
+  }
+
+  &--clickable {
+    cursor: pointer;
+    transition: transform var(--transition-normal);
+
+    &:hover {
+      transform: scale(1.15);
+    }
+  }
+
+  &__ring {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+    pointer-events: none;
+  }
+
+  &__ring-bar {
+    fill: none;
+    stroke: var(--accent-color);
+    stroke-width: 2;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.25s linear;
+  }
+
+  &__dot {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--warning-color);
+    box-shadow: 0 0 0 1.5px var(--primary-bg);
+  }
+}

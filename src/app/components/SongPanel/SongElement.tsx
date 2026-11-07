@@ -12,6 +12,7 @@ import { useController } from '../../lib/useController';
 import { SongStorage } from "../../toxen/storage/SongStorage";
 import { StorageSelector } from "../../toxen/storage/StorageSelector";
 import { openSongContextMenu } from "./SongContextMenu";
+import SyncBadge from "./SyncBadge";
 
 /**
  * Loads the cached thumbnail for a song's background, if thumbnail caching is
@@ -159,6 +160,7 @@ function SongElementDiv(props: { controller: SongElementController }) {
                 <path fill="currentColor" d="M0 128C0 92.7 28.7 64 64 64H320c35.3 0 64 28.7 64 64V384c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V128zM559.1 99.8c10.4 5.6 16.9 16.4 16.9 28.2V384c0 11.8-6.5 22.6-16.9 28.2s-23 5-32.9-1.6l-96-64L416 337.1V320 192 174.9l14.2-9.5 96-64c9.8-6.5 22.4-7.2 32.9-1.6z" />
               </svg>
             )}
+            <SyncBadge song={song} />
             {durationLabel && <span className="song-element-duration">{durationLabel}</span>}
           </div>
         </div>
