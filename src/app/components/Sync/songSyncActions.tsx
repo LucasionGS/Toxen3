@@ -113,7 +113,7 @@ export async function removeDownload(songs: Song[]): Promise<void> {
       </p>
     ),
     labels: { confirm: "Remove anyway", cancel: "Cancel" },
-    confirmProps: { color: "red" },
+    confirmProps: { className: "sync-danger-button" },
     onConfirm: () => runForSongs(unsynced, song => SongLibrary.delete(song, "device"), "remove the download of"),
   });
 }

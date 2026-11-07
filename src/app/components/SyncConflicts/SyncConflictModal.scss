@@ -1,3 +1,10 @@
+.sync-conflict-modal {
+  // Scroll inside the modal, so the title bar never overlaps the content
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-right: 6px;
+}
+
 .sync-conflict {
   padding: 14px;
   border-radius: 10px;

@@ -112,7 +112,7 @@ function SyncStatus() {
     <div>
       <h3>Status</h3>
       <Group justify="space-between" align="flex-start" wrap="nowrap">
-        <Stack gap={2}>
+        <Stack gap={2} className="sync-settings__status-text">
           <Text size="sm" fw={600}>{STATE_TEXT[summary.state]}</Text>
           <Text size="xs" c="dimmed">
             Last sync: {summary.lastSyncAt === null ? "never" : formatAgo(summary.lastSyncAt)}
@@ -128,6 +128,7 @@ function SyncStatus() {
         </Stack>
         <Button
           size="xs"
+          className="sync-settings__sync-now"
           leftSection={<IconRefresh size="1em" />}
           loading={syncing || summary.state === "syncing"}
           disabled={summary.state === "disabled"}

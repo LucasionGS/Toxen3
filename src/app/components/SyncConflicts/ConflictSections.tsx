@@ -4,6 +4,7 @@ import { IconPlayerPlay, IconPlayerStop } from "@tabler/icons-react";
 import { Toxen } from "../../ToxenApp";
 import type Song from "../../toxen/Song";
 import type { Merge } from "../../toxen/sync/Merge";
+import { toLoadableUrl } from "../Sync/fileUrl";
 import { formatBytes, formatDateTime, formatDuration } from "../Sync/format";
 import LineDiff from "./lineDiff";
 
@@ -288,7 +289,7 @@ function ImageCompare({ song, item, paths }: FileViewProps) {
       {(["local", "remote"] as const).map(side => (
         <SideCard key={side} side={side} item={item}>
           {song
-            ? <img className="sync-conflict__image" src={song.storage.fileUrl(song, paths[side])} alt={`${SIDE_LABEL[side]} version`} />
+            ? <img className="sync-conflict__image" src={toLoadableUrl(song.storage.fileUrl(song, paths[side]))} alt={`${SIDE_LABEL[side]} version`} />
             : <Text size="sm" c="dimmed">No preview.</Text>}
         </SideCard>
       ))}
@@ -355,7 +356,7 @@ function useMediaDuration(url: string | null): number | null {
 
 function MediaSide(props: { side: Merge.Side; item: Merge.FileConflict; song: Song | undefined; path: string; playing: boolean; onToggle: (url: string) => void }) {
   const { side, item, song, path, playing, onToggle } = props;
-  const url = song ? song.storage.fileUrl(song, path) : null;
+  const url = song ? toLoadableUrl(song.storage.fileUrl(song, path)) : null;
   const duration = useMediaDuration(url);
   const name = path.split("/").pop() ?? path;
   return (

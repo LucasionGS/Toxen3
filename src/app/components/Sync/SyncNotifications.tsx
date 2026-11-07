@@ -38,7 +38,7 @@ export function notifyConflict(record: Merge.ConflictRecord): void {
       <div>
         <p>{count === 1 ? "1 sync conflict" : `${count} sync conflicts`} in '{record.songName}'</p>
         <Group>
-          <Button size="xs" onClick={() => {
+          <Button size="xs" color="green" onClick={() => {
             hideNotification(id);
             openSyncConflictModal(record.uid);
           }}>
