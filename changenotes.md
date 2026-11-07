@@ -19,6 +19,9 @@ This file contains the change logs for Toxen.
   - This can be found in `Settings > Sync > Automatically download new cloud songs on this device`.
 - **Choose where to delete** - Deleting a song now asks if it should be removed from this device, from the cloud, or everywhere.
 - **Live updates between devices** - Changes you make on one device show up on your other devices within seconds while Toxen is open.
+- **Playlists sync live** - Playlists, their songs and backgrounds now sync between your devices as you change them. Songs added on two devices at once are all kept.
+- **Settings, themes and extensions sync** - Your look, visualizer and effect settings, custom themes and installed extensions follow you to your other devices. Device-specific settings like the window size and library folder stay on each device.
+  - This can be turned off per device in `Settings > Sync > Sync settings, themes and extensions between devices`.
 - **Safer syncing** - If many synced songs suddenly go missing from your library folder (a drive that isn't connected, a moved folder), Toxen asks before deleting them from the cloud. If a song was deleted on one device but edited on another, the edited copy is kept and you're told about it. `Remove download` warns you before it throws away changes that haven't been uploaded yet.
 - **Reset to global** - Visualizer style options you've set for a song or a playlist now have a reset button that makes them follow the global setting again.
   - This can be found next to each option in `Edit Song > Visualizer`.
