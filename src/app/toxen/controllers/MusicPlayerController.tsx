@@ -8,8 +8,22 @@ import StoryboardParser from '../StoryboardParser';
 import Controller from './Controller';
 import { SongStorage } from "../storage/SongStorage";
 import { StorageSelector } from "../storage/StorageSelector";
+import { PlayQueue } from "../PlayQueue";
+import Stats from "../Statistics";
+import { friendSocket } from "../FriendSocket";
+import type { ProviderAudioSource } from "../providers/Provider";
+import { updateNotification } from "@mantine/notifications";
+//@ts-expect-error PNG imports have no type declaration
+import ToxenMax from "../../../icons/skull_max.png";
 
 export type MediaSourceInfo = string;
+
+export interface PlaySongOptions {
+  /**
+   * Prevent this play from being added to the history
+   */
+  disableHistory?: boolean;
+}
 
 export interface MusicPlayerSourceOptions {
   crossOrigin?: "anonymous" | "use-credentials" | "";
@@ -37,6 +51,25 @@ export default class MusicPlayerController extends Controller {
   private isSeeking = false;
 
   private _pendingSourceCallback: (() => void) | null = null;
+
+  /**
+   * Incremented by every {@link playSong} and {@link crossfade} call. A call that finds its token is no longer the
+   * latest after an `await` has been superseded and must not touch the player, the subtitles or the background.
+   */
+  private _playToken = 0;
+  private _crossfadeToken = 0;
+  /**
+   * Blob URL of the transcoded audio of the song that is currently playing. Revoked when another song starts.
+   */
+  private _playingAudioBlobUrl: string = null;
+  /**
+   * Blob URL of the media session artwork of the song that is currently playing. Revoked when another song starts.
+   */
+  private _playingArtworkBlobUrl: string = null;
+  /**
+   * The last provider audio source handed out for each song, released when the song is played again.
+   */
+  private _providerSources = new WeakMap<Song, ProviderAudioSource>();
 
   public get src() {
     return this._src;
@@ -209,6 +242,8 @@ export default class MusicPlayerController extends Controller {
    * @param duration The duration of the crossfade in seconds
    */
   public async crossfade(newSrc: MediaSourceInfo, duration: number = 3, options?: MusicPlayerSourceOptions): Promise<void> {
+    // A newer crossfade or source switch makes this one obsolete once it has awaited
+    const crossfadeToken = ++this._crossfadeToken;
     // Cancel any existing crossfade before starting a new one
     if (this.crossfadeInProgress) {
       console.log('Canceling previous crossfade to start new one');
@@ -239,6 +274,7 @@ export default class MusicPlayerController extends Controller {
 
       // Start playing the temporary element (continuing the old song)
       await this.tempCrossfadeElement.play();
+      if (crossfadeToken !== this._crossfadeToken) return;
 
       // Load the new song into the main player
       this.media.volume = 0; // Start new song at 0 volume
@@ -312,6 +348,7 @@ export default class MusicPlayerController extends Controller {
       });
 
     } catch (error) {
+      if (crossfadeToken !== this._crossfadeToken) return;
       console.error('Error starting crossfade:', error);
 
       // Clean up and fall back to normal transition
@@ -369,8 +406,204 @@ export default class MusicPlayerController extends Controller {
     else this.pause();
   }
 
+  /**
+   * Start playing a song: load its media (transcoding it first when the format needs it), subtitles, storyboard and
+   * background, then update the visuals, media session and integrations.
+   *
+   * Every call takes a new play token. Loading takes several `await`s, so when songs are switched quickly an older call
+   * can finish after a newer one started. Each call checks its token after every `await` and stops once superseded,
+   * releasing any blob URL it created, so one song's audio is never mixed with another song's subtitles or background.
+   */
+  public async playSong(song: Song, options?: PlaySongOptions): Promise<void> {
+    if (Toxen.isMode("StoryboardEditor") && Toxen.editingSong && Toxen.editingSong.uid !== song.uid) {
+      Toxen.sendError("CURRENTLY_EDITING_SONG");
+      return;
+    }
+
+    if (Toxen.isMode("SubtitlesEditor") && Toxen.editingSong && Toxen.editingSong.uid !== song.uid) {
+      Toxen.sendError("CURRENTLY_EDITING_SUBTITLES");
+      return;
+    }
+
+    options ??= {};
+    const token = ++this._playToken;
+    const isStale = () => token !== this._playToken;
+
+    const sourceInfo = await song.getMediaSource().catch(error => {
+      console.error(error);
+      Toxen.error(error?.message ?? "Unable to load media source.");
+      return null as ProviderAudioSource;
+    });
+    if (!sourceInfo?.url) return;
+
+    let src = sourceInfo.url;
+    let audioBlobUrl: string = null; // Transcoded audio for this play, if any
+    // Release what this call created when it ends before its source has been handed to the player
+    const release = () => {
+      if (audioBlobUrl) URL.revokeObjectURL(audioBlobUrl);
+      if (sourceInfo.url !== this._src) sourceInfo.revoke?.();
+    };
+    if (isStale()) return release();
+    if (this._src === src) return;
+    if (song.storage.kind === SongStorage.Kind.Cloud && song.isVideo()) Toxen.log("Streaming a video can take some time to load... Using audio files is much faster.", 3000);
+    const bg = song.backgroundFile();
+
+    if (!song.usesProvider() && StorageSelector.isLocal(song) && toxenapi.isDesktop()) {
+      // For formats not natively supported by Chromium, transcode to a Blob URL
+      // in memory using FFmpeg before handing the source to the audio element.
+      // Seeking works natively since the full data is in memory.
+      const ext = toxenapi.path.extname(src).toLowerCase();
+      const isNativeAudio = Toxen.getWebNativeAudioFiles().includes(ext);
+      const isNativeVideo = Toxen.getWebNativeVideoFiles().includes(ext);
+      if (!isNativeAudio && !isNativeVideo) {
+        const notifId = Toxen.notify({
+          title: "Transcoding " + song.getDisplayName(),
+          content: "0% complete",
+        });
+        try {
+          const blobUrl = await toxenapi.ffmpeg.transcodeToBlob(src, (percent) => {
+            updateNotification({
+              id: notifId,
+              message: `${Math.round(percent)}% complete`,
+              autoClose: false,
+            });
+          });
+          updateNotification({ id: notifId, message: "Done", autoClose: 500 });
+          audioBlobUrl = blobUrl;
+          src = blobUrl;
+        } catch (err) {
+          updateNotification({ id: notifId, message: "Transcoding failed", autoClose: 3000 });
+          console.error(err);
+          Toxen.error("Could not transcode: " + song.getDisplayName());
+          return;
+        }
+        if (isStale()) return release();
+      }
+    }
+
+    await song.applySubtitles(isStale);
+    if (isStale()) return release();
+    await song.applyStoryboard(isStale);
+    if (isStale()) return release();
+    if (!options.disableHistory) PlayQueue.historyAdd(song);
+
+    this._providerSources.get(song)?.revoke?.();
+    this._providerSources.set(song, song.usesProvider() ? sourceInfo : null);
+
+    // Use crossfade if enabled and there's a current song playing
+    const crossfadeDuration = Settings.get("crossfadeDuration", 3);
+    const currentSong = Song.getCurrent();
+
+    if (this.crossfadeEnabled && currentSong && !this.media.paused) {
+      // Use crossfade for smooth transition
+      await this.crossfade(src, crossfadeDuration, { crossOrigin: sourceInfo.crossOrigin });
+    }
+    else {
+      // Normal transition without crossfade
+      this.setSource(src, true, { crossOrigin: sourceInfo.crossOrigin });
+    }
+
+    // Superseded while crossfading and the source never reached the player (or was already replaced)
+    if (isStale() && this._src !== src) return release();
+
+    // The previous song's blob URLs are no longer playing, so they can be released now
+    if (this._playingAudioBlobUrl) URL.revokeObjectURL(this._playingAudioBlobUrl);
+    if (this._playingArtworkBlobUrl) URL.revokeObjectURL(this._playingArtworkBlobUrl);
+    this._playingAudioBlobUrl = audioBlobUrl;
+    this._playingArtworkBlobUrl = null;
+    if (isStale()) return;
+
+    // If song has a background, force it. Otherwise, let Background component resolve defaults/shuffle
+    await Toxen.background.setBackground(bg ? (bg + "?h=" + song.hash) : null);
+    if (isStale()) return;
+    Stats.set("songsPlayed", (Stats.get("songsPlayed") ?? 0) + 1);
+
+    // Apply playlist-specific settings if playing from a playlist
+    const currentPlaylist = Toxen.playlist;
+    const effectiveSettings = song.getEffectiveSettings(currentPlaylist?.name);
+
+    Toxen.setAllVisualColors(effectiveSettings.visualizerColor);
+    Toxen.background.storyboard.setSong(song);
+    Toxen.background.visualizer.update();
+
+    // Apply autogenerated theme if enabled - do this after storyboard is set up
+    // Use setTimeout to ensure storyboard has fully updated
+    setTimeout(() => {
+      Toxen.applyAutogeneratedThemeIfEnabled();
+    }, 0);
+
+    const img = new Image();
+    img.src = (Toxen.background.getBackground() || ToxenMax);
+    song.setCurrent();
+    // Reset progress bar when starting a new song
+    song.setProgressBar(0);
+    song.setAppTitle();
+    const addToMetadata = (blob?: Blob) => {
+      if (song !== Song.getCurrent() || isStale()) {
+        return;
+      }
+
+      Toxen.discord?.setPresence(song);
+      // Broadcast now-playing to friends via WebSocket
+      friendSocket.sendNowPlaying({
+        title: song.title,
+        artist: song.artist,
+        album: song.album,
+        uid: song.uid,
+        duration: song.duration,
+      });
+      const artworkUrl = blob ? URL.createObjectURL(blob) : null;
+      if (this._playingArtworkBlobUrl) URL.revokeObjectURL(this._playingArtworkBlobUrl);
+      this._playingArtworkBlobUrl = artworkUrl;
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: song.title ?? "Unknown Title",
+        artist: song.artist ?? "Unknown Artist",
+        album: song.album ?? "",
+        artwork: blob ? [
+          { src: artworkUrl, sizes: `${img.naturalWidth}x${img.naturalHeight}`, type: "image/png" }
+        ] : undefined
+      });
+    };
+
+    if (Toxen.getSupportedImageFiles().includes(toxenapi.getFileExtension(bg).toLowerCase())) {
+      const onLoad = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        try { ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight); } catch (error) {
+          console.error(error);
+          return addToMetadata();
+        }
+
+        try {
+          canvas.toBlob(addToMetadata);
+        } catch (error) {
+          console.error("Failed to convert canvas to blob:", error);
+          // Fallback to using the image directly
+          addToMetadata();
+        }
+      };
+      img.addEventListener("load", onLoad);
+    }
+    addToMetadata();
+
+    if (Toxen.background.visualizer.isStopped())
+      Toxen.background.visualizer.start();
+
+    if (!song.duration || isNaN(song.duration)) {
+      song.duration = await song.calculateDuration();
+      song.saveInfo();
+    }
+
+    // Update taskbar controls when a new song plays
+    if (toxenapi.isDesktop() && toxenapi.TaskbarControls) {
+      toxenapi.TaskbarControls.onSongChanged(song);
+    }
+  }
+
   public playNext() {
-    let nextSongFromHistory = Song.historyForward();
+    let nextSongFromHistory = PlayQueue.historyForward();
     if (nextSongFromHistory) {
       return nextSongFromHistory.play({ disableHistory: true });
     }
@@ -404,7 +637,7 @@ export default class MusicPlayerController extends Controller {
   }
 
   public playPrev() {
-    let prevSong = Song.historyBack();
+    let prevSong = PlayQueue.historyBack();
     if (prevSong) prevSong.play({ disableHistory: true });
   }
 

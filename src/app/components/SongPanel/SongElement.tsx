@@ -11,6 +11,7 @@ import SongElementController from '../../toxen/controllers/SongElementController
 import { useController } from '../../lib/useController';
 import { SongStorage } from "../../toxen/storage/SongStorage";
 import { StorageSelector } from "../../toxen/storage/StorageSelector";
+import { openSongContextMenu } from "./SongContextMenu";
 
 /**
  * Loads the cached thumbnail for a song's background, if thumbnail caching is
@@ -124,7 +125,7 @@ function SongElementDiv(props: { controller: SongElementController }) {
         }}
         onContextMenu={e => {
           e.preventDefault();
-          song.contextMenuModal(modals);
+          openSongContextMenu(song, modals);
         }}
         onMouseDownCapture={e => {
           if (e.ctrlKey && e.buttons === 1) return controller.select();

@@ -1,6 +1,6 @@
 import Settings from '../Settings';
 import User from '../User';
-import Song from '../Song';
+import PlayQueue from '../PlayQueue';
 import { Toxen } from '../../ToxenApp';
 import Controller from './Controller';
 import type MusicPlayerController from './MusicPlayerController';
@@ -56,7 +56,7 @@ export default class BackgroundController extends Controller {
         const curSong = Toxen.background?.storyboard?.getSong();
         const seedStr = curSong?.uid || "global";
         let hash = 0;
-        for (let i = 0; i < seedStr.length; i++) hash = ((hash << 5) - hash) + (seedStr.charCodeAt(i) + Song.getHistoryIndex());
+        for (let i = 0; i < seedStr.length; i++) hash = ((hash << 5) - hash) + (seedStr.charCodeAt(i) + PlayQueue.getHistoryIndex());
         const idx = Math.abs(hash) % list.length;
         bg = list[idx];
       } else {

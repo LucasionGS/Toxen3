@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useRef } from 'react'
 import { Toxen } from '../../ToxenApp';
-import Song from '../../toxen/Song';
 import { Button } from '@mantine/core';
 import ViewController from '../../toxen/controllers/ViewController';
 import { useController } from '../../lib/useController';
 import SongElement from './SongElement';
+import { PlayQueue } from '../../toxen/PlayQueue';
 
 interface SongQueuePanelProps {
   controller?: ViewController;
@@ -42,7 +42,7 @@ export default function SongQueuePanel(props: SongQueuePanelProps) {
   return (
     <>
       <h2>Current Queue</h2>
-      <Button title="Remove all songs from the queue." color="red" onClick={() => Song.clearQueue()}>Clear Queue</Button>
+      <Button title="Remove all songs from the queue." color="red" onClick={() => PlayQueue.clearQueue()}>Clear Queue</Button>
       {songs.map(s => <SongElement key={s.uid} song={s} />)}
       <hr />
     </>
