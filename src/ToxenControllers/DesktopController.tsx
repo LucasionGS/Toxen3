@@ -31,6 +31,7 @@ import { hideNotification, updateNotification } from "@mantine/notifications";
 import Discord from "../app/toxen/desktop/Discord";
 import HueManager from "../app/toxen/desktop/hue/HueManager";
 import TaskbarControls from "../app/toxen/desktop/TaskbarControls";
+import type { ExecFileOptions } from "child_process";
 
 /**
  * DesktopController is a controller for desktop-specific functions. Overwrites the web version of the controller.
@@ -463,6 +464,70 @@ export default class DesktopController extends ToxenController {
   }
 
   /**
+   * Run a command found on `PATH` with arguments that are never interpreted by a shell.  
+   * On Windows, `execFile` can only start real executables, so the command is looked up with `PATHEXT`: an `.exe` or
+   * `.com` runs directly, a `.cmd` or `.bat` shim (as pip and npm install them) runs through `cmd.exe` with every
+   * argument quoted and its shell characters escaped. Elsewhere this is a plain `execFile`.
+   * @throws If the command isn't found on Windows, or it fails or exits with an error.
+   */
+  private async _execCommand(command: string, args: string[], options: ExecFileOptions): Promise<{ stdout: string, stderr: string }> {
+    const { execFile } = await import("child_process");
+    const { promisify } = await import("util");
+    const execFileAsync = promisify(execFile);
+    const run = async (file: string, fileArgs: string[], fileOptions: ExecFileOptions) => {
+      const { stdout, stderr } = await execFileAsync(file, fileArgs, { ...fileOptions, encoding: "utf8" });
+      return { stdout: String(stdout), stderr: String(stderr) };
+    };
+    if (os.platform() !== "win32") return run(command, args, options);
+
+    const resolved = await DesktopController._findOnWindowsPath(command);
+    if (!resolved) {
+      throw new Error(`"${command}" wasn't found. Install it and make sure its folder is on your PATH, then restart Toxen.`);
+    }
+    if (!/\.(cmd|bat)$/i.test(resolved)) return run(resolved, args, options);
+
+    // cmd.exe /d /s /c "<command line>": /s strips the outer quotes and runs the rest as is, so every part is escaped for
+    // cmd (`^` before its special characters) and each argument is quoted for the program's own argument parser
+    const commandLine = [DesktopController._escapeCmdMeta(resolved), ...args.map(DesktopController._quoteCmdArgument)].join(" ");
+    return run(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", `"${commandLine}"`], { ...options, windowsVerbatimArguments: true });
+  }
+
+  /**
+   * Find a command on the Windows `PATH`, trying each `PATHEXT` extension unless it already has one.
+   * @returns The full path, or `null` if it isn't found.
+   */
+  private static async _findOnWindowsPath(command: string): Promise<string | null> {
+    const extensions = (process.env.PATHEXT || ".COM;.EXE;.BAT;.CMD").split(";").filter(Boolean);
+    const candidates = Path.extname(command) ? [command] : extensions.map(ext => command + ext.toLowerCase());
+    const dirs = Path.isAbsolute(command) ? [""] : (process.env.PATH || process.env.Path || "").split(";").filter(Boolean);
+    for (const dir of dirs) {
+      for (const candidate of candidates) {
+        const full = dir ? Path.join(dir.replace(/^"(.*)"$/, "$1"), candidate) : candidate;
+        if (await fsp.stat(full).then(stat => stat.isFile()).catch(() => false)) return full;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Characters `cmd.exe` treats specially on a command line. Escaped with `^` so they're passed on literally.
+   */
+  private static readonly CMD_META_CHARS = /([()\][%!^"`<>&|;, *?])/g;
+
+  private static _escapeCmdMeta(value: string): string {
+    return value.replace(DesktopController.CMD_META_CHARS, "^$1");
+  }
+
+  /**
+   * Quote one argument for the Windows argument parser (`CommandLineToArgvW` rules), then escape it for `cmd.exe`.
+   */
+  private static _quoteCmdArgument(arg: string): string {
+    // Backslashes before a quote are doubled and the quote is escaped; trailing backslashes are doubled before the closing quote
+    const quoted = `"${arg.replace(/(\\*)"/g, '$1$1\\"').replace(/(\\+)$/, "$1$1")}"`;
+    return DesktopController._escapeCmdMeta(quoted);
+  }
+
+  /**
    * Transcribe audio using OpenAI Whisper
    */
   public async transcribeWithWhisper($toxen: typeof Toxen, $song: typeof Song, song: Song): Promise<void> {
@@ -475,13 +540,8 @@ export default class DesktopController extends ToxenController {
     // Show loading notification
     $toxen.log("Starting Whisper transcription... This may take a few minutes.", 0);
     
-    // Import child_process dynamically
-    const { execFile } = await import('child_process');
-    const { promisify } = await import('util');
-    const execFileAsync = promisify(execFile);
-    
     // Run whisper command (arguments are passed as an array so the file path is never interpreted by a shell)
-    await execFileAsync("whisper", [audioPath, "-f", "srt", "-o", song.dirname("_whisper")], {
+    await this._execCommand("whisper", [audioPath, "-f", "srt", "-o", song.dirname("_whisper")], {
       cwd: song.dirname(),
       timeout: 600000, // 10 minutes timeout
     });
