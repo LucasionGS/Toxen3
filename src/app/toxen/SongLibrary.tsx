@@ -51,6 +51,11 @@ export class SongLibrary {
    * @throws If the cloud library can't be loaded, so `Toxen.loadSongs` can fall back to the local library.
    */
   public static async load(onEach?: (song: Song | null) => void): Promise<Song[]> {
+    // Another library folder has its own sync state; the engine restarts for it once the songs are listed
+    const restartSync = await SyncEngine.prepareLibrary().catch(error => {
+      console.error("Unable to load the sync state of the library.", error);
+      return false;
+    });
     const storage = StorageSelector.forLibrary();
     const result = await SongLibrary._load(storage, onEach);
     SongLibrary.lastLoadIncomplete = result.incomplete;
@@ -68,6 +73,7 @@ export class SongLibrary {
       // Not awaited: until the tokens arrive, cloud files load with the session token
       CloudSongStorage.instance.ensureMediaTokens(cloudUids).catch(error => console.warn("Unable to get media tokens.", error));
     }
+    if (restartSync) setTimeout(() => SyncEngine.init().catch(error => console.error("Unable to restart sync.", error)), 0);
     return songs;
   }
 

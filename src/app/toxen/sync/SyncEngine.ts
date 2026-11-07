@@ -157,7 +157,7 @@ export class SyncEngine {
   //#region State
 
   private static _library: SyncEngine.Library | null = null;
-  private static _prepared: { userId: number; server: string } | null = null;
+  private static _prepared: { userId: number; server: string; library: string } | null = null;
   private static _running = false;
   /**
    * `init` ran at least once (bootstrap got to it), so user changes may start the engine.
@@ -232,10 +232,29 @@ export class SyncEngine {
       return false;
     }
     const server = Settings.getServer();
-    if (SyncEngine._prepared?.userId === user.id && SyncEngine._prepared.server === server && SyncState.isLoaded()) return true;
+    const library = toxenapi.isDesktop() ? Settings.get("libraryDirectory") ?? "" : "";
+    const prepared = SyncEngine._prepared;
+    if (prepared?.userId === user.id && prepared.server === server && prepared.library === library && SyncState.isLoaded()) return true;
     await SyncState.load(user.id, server);
-    SyncEngine._prepared = { userId: user.id, server };
+    SyncEngine._prepared = { userId: user.id, server, library };
     return true;
+  }
+
+  /**
+   * Before the library (re)loads: when the library folder changed (or the account), stop the engine and load the new
+   * library's sync state. `SongLibrary.load` calls it first and starts the engine again with `init` once it has loaded.
+   * @returns Whether the engine was stopped and has to be started again.
+   */
+  public static async prepareLibrary(): Promise<boolean> {
+    const user = User.getCurrentUser();
+    const library = toxenapi.isDesktop() ? Settings.get("libraryDirectory") ?? "" : "";
+    const prepared = SyncEngine._prepared;
+    const changed = !prepared || prepared.userId !== user?.id || prepared.server !== Settings.getServer() || prepared.library !== library;
+    if (!changed) return false;
+    const wasRunning = SyncEngine._running;
+    await SyncEngine.stop();
+    await SyncEngine.prepare();
+    return wasRunning;
   }
 
   /**
