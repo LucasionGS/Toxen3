@@ -64,7 +64,8 @@ export default class Settings {
     const hasLegacy = ["isRemote", "remoteSyncOnStartup", "remoteSyncOnSongEdit"].some(key => Object.prototype.hasOwnProperty.call(data, key));
     if (!hasLegacy) return false;
 
-    if (data.isRemote === true && toxenapi.isDesktop() && data.libraryFilter === undefined) data.libraryFilter = "cloud";
+    // The legacy key is still there, so the `libraryFilter` default was only just applied: the old mode decides
+    if (data.isRemote === true && toxenapi.isDesktop()) data.libraryFilter = "cloud";
     data.autoSync ??= true;
     delete data.isRemote;
     delete data.remoteSyncOnStartup;
