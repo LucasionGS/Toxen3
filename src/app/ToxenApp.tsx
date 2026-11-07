@@ -554,8 +554,10 @@ export class Toxen {
     Toxen.setSongList(songList);
 
     try {
+      // A partial or empty load must not drop the missing songs from every playlist when they're saved next
+      Playlist.keepMissingSongs = SongLibrary.lastLoadIncomplete || songList.length === 0;
       Toxen.setPlaylists(await Playlist.load());
-      await Playlist.save();
+      if (!Playlist.keepMissingSongs) await Playlist.save();
 
       if (Toxen.playlist) {
         Toxen.playlist = Toxen.playlists.find(p => p.name === Toxen.playlist.name); // Recover last playlist

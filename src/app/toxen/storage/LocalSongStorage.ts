@@ -145,10 +145,13 @@ export class LocalSongStorage extends EventEmitter implements SongStorage {
    * - no readable `info.json`: a new info is built (`LibraryRules.buildInfo`),
    * - `paths.dirname` differs from the folder name (folder renamed or copied): it is corrected,
    * - no media and no provider: the first audio file found anywhere in the folder becomes the media.
+   *
+   * A folder that can't be read (permissions, or an `info.json` that can't be rebuilt) is left out and reported to
+   * `onSkip`; it never fails the rest of the library.
    * @returns `[]` if no library directory is set.
    * @throws If the library directory can't be read.
    */
-  public async listSongs(onEach?: (info: ISong) => void): Promise<ISong[]> {
+  public async listSongs(onEach?: (info: ISong) => void, onSkip?: (skipped: SongStorage.SkippedEntry) => void): Promise<ISong[]> {
     const api = LocalSongStorage._api("listSongs");
     const libraryDirectory = Settings.get("libraryDirectory");
     if (!libraryDirectory) return [];
@@ -158,11 +161,19 @@ export class LocalSongStorage extends EventEmitter implements SongStorage {
     for await (const ent of await api.fs.promises.opendir(libraryDirectory)) {
       if (ent.isDirectory() && !ent.name.startsWith(".")) folders.push(ent.name);
     }
-    return LocalSongStorage._mapLimit(folders, LIST_CONCURRENCY, async folder => {
-      const info = await this._loadFolder(libraryDirectory, folder);
+    const infos = await LocalSongStorage._mapLimit(folders, LIST_CONCURRENCY, async (folder): Promise<ISong | null> => {
+      let info: ISong;
+      try {
+        info = await this._loadFolder(libraryDirectory, folder);
+      } catch (error) {
+        console.error(`Skipped the song folder "${folder}" because it can't be read.`, error);
+        onSkip?.({ name: folder, error: error instanceof Error ? error : new Error(String(error)) });
+        return null;
+      }
       onEach?.(info);
       return info;
     });
+    return infos.filter((info): info is ISong => info !== null);
   }
 
   /**
@@ -178,6 +189,7 @@ export class LocalSongStorage extends EventEmitter implements SongStorage {
 
   /**
    * Read (and if needed repair) the info of one song folder.
+   * @throws If the folder can't be read or its info can't be rebuilt.
    */
   private async _loadFolder(libraryDirectory: string, folder: string): Promise<ISong> {
     const api = LocalSongStorage._api("listSongs");
@@ -186,17 +198,22 @@ export class LocalSongStorage extends EventEmitter implements SongStorage {
 
     const dir = api.path.resolve(libraryDirectory, folder);
     const infoPath = api.path.resolve(dir, SongStorage.INFO_FILE);
-    let info: ISong;
+    let info: ISong | null = null;
     let changed = false;
     try {
-      info = JSON.parse(await api.fs.promises.readFile(infoPath, "utf8"));
+      const parsed: unknown = JSON.parse(await api.fs.promises.readFile(infoPath, "utf8"));
+      // Valid JSON that isn't an info object (`null`, a number, an array) is as broken as invalid JSON
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) info = parsed as ISong;
     } catch {
+      // Handled below like a missing info
+    }
+    if (!info) {
       console.error("Failed to load info.json file in song: " + dir);
       info = await rules.buildInfo(dir);
       changed = true;
     }
 
-    info.paths ??= {} as ISong["paths"];
+    if (!info.paths || typeof info.paths !== "object") info.paths = {} as ISong["paths"];
     if (info.paths.dirname !== folder) {
       info.paths.dirname = folder;
       changed = true;

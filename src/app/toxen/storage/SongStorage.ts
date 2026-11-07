@@ -80,8 +80,11 @@ export interface SongStorage {
    * Every song info in this storage. Local: the library directory (today `toxenapi.loadLocalSongs`). Cloud: the
    * server's track list. Infos without playable media are included; `SongLibrary` decides what to do with them.
    * @param onEach Called exactly once for every info in the result, as it loads (loading screen progress).
+   * @param onSkip Called once for every entry that couldn't be read and is left out of the result (local: an
+   * unreadable song folder or a broken `info.json` that can't be rebuilt). One bad entry never fails the whole listing.
+   * @throws If the library itself can't be listed.
    */
-  listSongs(onEach?: (info: ISong) => void): Promise<ISong[]>;
+  listSongs(onEach?: (info: ISong) => void, onSkip?: (skipped: SongStorage.SkippedEntry) => void): Promise<ISong[]>;
 
   /**
    * Number of songs, cheaper than `listSongs` where possible (loading screen total).
@@ -126,6 +129,17 @@ export namespace SongStorage {
    */
   export interface DiskFile {
     diskPath: string;
+  }
+
+  /**
+   * A library entry `listSongs` left out because it couldn't be read.
+   */
+  export interface SkippedEntry {
+    /**
+     * Local: the song folder name. Cloud: the track uid.
+     */
+    name: string;
+    error: Error;
   }
 
   /**

@@ -38,8 +38,31 @@ export default class Playlist {
     else {
       pl.songList = data.songList.map(uid => Toxen.songList.find(s => s.uid === uid)).filter(a => a);
     }
+    if (Playlist.keepMissingSongs) {
+      const loaded = new Set(pl.songList.map(s => s.uid));
+      pl._missingSongUids = data.songList.filter(uid => uid && !loaded.has(uid));
+    }
 
     return pl;
+  }
+
+  /**
+   * When `true`, playlists created from stored data keep the uids of songs that aren't in `Toxen.songList`, and save
+   * them back. Set by `Toxen.loadSongs` when the library loaded incompletely (unreadable folders, a failed listing or no
+   * songs at all), so a broken load can't empty `playlists.json`. When `false`, unknown uids are dropped as before.
+   */
+  public static keepMissingSongs = false;
+
+  /**
+   * Uids from the stored playlist whose songs weren't loaded (see `keepMissingSongs`).
+   */
+  private _missingSongUids: string[] = [];
+
+  /**
+   * Uids of every song in the playlist, including songs that are kept but not loaded (see `keepMissingSongs`).
+   */
+  public getSongUids(): string[] {
+    return [...new Set([...this.songList.map(s => s.uid), ...this._missingSongUids])];
   }
 
   /**
@@ -96,7 +119,7 @@ export default class Playlist {
         background: pl.background,
         applyBackground: pl.applyBackground,
         songBackground: pl.songBackground,
-        songList: [...new Set(pl.songList.map(s => s.uid))],
+        songList: pl.getSongUids(),
         lastModified: pl.lastModified,
       }));
 
@@ -293,7 +316,7 @@ export default class Playlist {
         background: pl.background,
         applyBackground: pl.applyBackground,
         songBackground: pl.songBackground,
-        songList: [... new Set(pl.songList.map(s => s.uid))],
+        songList: pl.getSongUids(),
         lastModified: pl.lastModified,
       }
     });

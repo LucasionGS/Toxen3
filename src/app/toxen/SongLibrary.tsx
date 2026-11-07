@@ -25,13 +25,22 @@ export class SongLibrary {
   private constructor() { }
 
   /**
-   * Load every song, sorted as `Song.sortSongs` does today.
+   * `true` when the last `load()` left songs out: the library couldn't be listed, a song folder couldn't be read, or a
+   * song has no playable media. `Toxen.loadSongs` hands it to `Playlist.load` so playlists keep the uids of songs that
+   * aren't loaded instead of dropping them on the next save.
+   */
+  public static lastLoadIncomplete = false;
+
+  /**
+   * Load every song, sorted as `Song.sortSongs` does today. Sets `lastLoadIncomplete`.
    * @param onEach Called once per song folder or track as it loads (loading screen), with `null` for entries that are
    * skipped because they have no playable media. Throttle UI updates on the caller side (plan P5).
    * @throws If the cloud library can't be loaded, so `Toxen.loadSongs` can fall back to the local library.
    */
   public static async load(onEach?: (song: Song | null) => void): Promise<Song[]> {
-    return SongLibrary.loadFrom(StorageSelector.forLibrary(), onEach);
+    const result = await SongLibrary._load(StorageSelector.forLibrary(), onEach);
+    SongLibrary.lastLoadIncomplete = result.incomplete;
+    return result.songs;
   }
 
   /**
@@ -40,28 +49,39 @@ export class SongLibrary {
    * @param onEach See `load`.
    */
   public static async loadFrom(storage: SongStorage, onEach?: (song: Song | null) => void): Promise<Song[]> {
+    return (await SongLibrary._load(storage, onEach)).songs;
+  }
+
+  private static async _load(storage: SongStorage, onEach?: (song: Song | null) => void): Promise<{ songs: Song[], incomplete: boolean }> {
     const created = new Map<ISong, Song>();
+    const skipped: SongStorage.SkippedEntry[] = [];
     let infos: ISong[];
     try {
       infos = await storage.listSongs(info => {
         const song = Song.create(info);
         created.set(info, song);
         onEach?.(SongLibrary._isPlayable(song) ? song : null);
-      });
+      }, entry => skipped.push(entry));
     } catch (error) {
       // Cloud errors go up so `Toxen.loadSongs` can fall back to the local library
       if (storage.kind === SongStorage.Kind.Cloud) throw error;
-      Toxen.error(error?.message ?? String(error));
-      return [];
+      console.error(error);
+      Toxen.error(`Unable to load the song library: ${error?.message ?? error}. Playlists keep their songs until the library loads again.`);
+      return { songs: [], incomplete: true };
     }
+    if (skipped.length > 0) SongLibrary._notifySkipped(skipped);
 
     const songs: Song[] = [];
+    let unplayable = 0;
     for (const info of infos) {
       const song = created.get(info) ?? Song.create(info);
       if (SongLibrary._isPlayable(song)) songs.push(song);
-      else if (storage.kind === SongStorage.Kind.Local) SongLibrary._notifyMissingMedia(song);
+      else {
+        unplayable++;
+        if (storage.kind === SongStorage.Kind.Local) SongLibrary._notifyMissingMedia(song);
+      }
     }
-    return Song.sortSongs(songs);
+    return { songs: Song.sortSongs(songs), incomplete: skipped.length > 0 || unplayable > 0 };
   }
 
   /**
@@ -118,6 +138,32 @@ export class SongLibrary {
 
   private static _isPlayable(song: Song): boolean {
     return Boolean(song.paths) && song.hasPlayableMedia();
+  }
+
+  /**
+   * Tell the user once which song folders couldn't be read and were left out of the library.
+   */
+  private static _notifySkipped(skipped: SongStorage.SkippedEntry[]): void {
+    const SHOWN = 8;
+    const nId = Toxen.notify({
+      title: skipped.length === 1 ? "1 song couldn't be loaded" : `${skipped.length} songs couldn't be loaded`,
+      content: <div>
+        <p>These song folders couldn't be read and were left out. Check that Toxen can read them, then reload the library. Your playlists keep these songs in the meantime.</p>
+        <ul>
+          {skipped.slice(0, SHOWN).map(entry => <li key={entry.name}><code>{entry.name}</code>: {entry.error.message}</li>)}
+          {skipped.length > SHOWN && <li>…and {skipped.length - SHOWN} more</li>}
+        </ul>
+        <Group>
+          <Button color="green" onClick={() => hideNotification(nId)}>OK</Button>
+          {toxenapi.isDesktop() && (
+            <Button color="blue" onClick={() => {
+              if (toxenapi.isDesktop()) toxenapi.remote.shell.openPath(Settings.get("libraryDirectory"));
+            }}>Show Library Folder</Button>
+          )}
+        </Group>
+      </div>,
+      type: "error",
+    });
   }
 
   /**
