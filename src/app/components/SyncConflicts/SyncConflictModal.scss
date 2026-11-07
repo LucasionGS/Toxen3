@@ -28,11 +28,6 @@
     min-width: 0;
   }
 
-  &__absent {
-    color: var(--text-muted);
-    font-style: italic;
-  }
-
   &__table {
     td {
       word-break: break-word;

@@ -6,6 +6,7 @@ import type Song from "../../toxen/Song";
 import type { Merge } from "../../toxen/sync/Merge";
 import { toLoadableUrl } from "../Sync/fileUrl";
 import { formatBytes, formatDateTime, formatDuration } from "../Sync/format";
+import { InfoValue, getFieldLabel } from "../Sync/infoFields";
 import LineDiff from "./lineDiff";
 
 //#region Choices
@@ -62,18 +63,6 @@ export default function ConflictSection(props: ConflictSectionProps) {
 
 const SIDE_LABEL: Record<Merge.Side, string> = { local: "This device", remote: "Cloud" };
 
-/**
- * Readable one-line form of an info value. An absent key is not the same as `null`.
- */
-export function formatInfoValue(value: unknown, present: boolean): React.ReactNode {
-  if (!present) return <span className="sync-conflict__absent">not set</span>;
-  if (value === null) return <span className="sync-conflict__absent">empty</span>;
-  if (typeof value === "string") return value === "" ? <span className="sync-conflict__absent">empty text</span> : value;
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
-  const json = JSON.stringify(value);
-  return json.length > 140 ? `${json.slice(0, 140)}…` : json;
-}
-
 function InfoSection(props: ConflictSectionProps<Merge.InfoConflict>) {
   const { item, choices, onChoose } = props;
   return (
@@ -94,12 +83,12 @@ function InfoSection(props: ConflictSectionProps<Merge.InfoConflict>) {
             const keep = choice?.type === "info" ? choice.keep : field.winner;
             return (
               <Table.Tr key={field.field}>
-                <Table.Td><code>{field.field}</code></Table.Td>
+                <Table.Td>{getFieldLabel(field.field)}</Table.Td>
                 <Table.Td className={field.winner === "local" ? "sync-conflict__winner" : undefined}>
-                  {formatInfoValue(field.local, field.local !== undefined)}
+                  <InfoValue field={field.field} value={field.local} present={field.local !== undefined} />
                 </Table.Td>
                 <Table.Td className={field.winner === "remote" ? "sync-conflict__winner" : undefined}>
-                  {formatInfoValue(field.remote, field.remote !== undefined)}
+                  <InfoValue field={field.field} value={field.remote} present={field.remote !== undefined} />
                 </Table.Td>
                 <Table.Td>
                   <SegmentedControl
