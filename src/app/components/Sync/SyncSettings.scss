@@ -1,0 +1,16 @@
+.sync-settings {
+  h3 {
+    margin: 0 0 6px;
+  }
+
+  &__conflict {
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border-secondary);
+    background: var(--surface-bg);
+  }
+
+  &__conflict-name {
+    min-width: 0;
+  }
+}
