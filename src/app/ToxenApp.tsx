@@ -1165,10 +1165,12 @@ export default class ToxenAppRenderer extends React.Component {
         }
 
         if (toxenapi.isDesktop()) {
+          // Not awaited: this needs the network and must never block startup
           const ytdlp = toxenapi.getYtdlp();
           if (ytdlp.isYtdlpInstalled()) {
-            const ytd = await ytdlp.getYtdlpWrap();
-            await ytd.getVersion().then(async (version) => {
+            (async () => {
+              const ytd = await ytdlp.getYtdlpWrap();
+              const version = await ytd.getVersion();
               console.log("ytdlp version:", version);
               const latest = (await ytdlp.getGithubReleases()).pop()?.tag_name;
               console.log("ytdlp latest:", latest);
@@ -1177,11 +1179,16 @@ export default class ToxenAppRenderer extends React.Component {
                 await ytdlp.installYtdlp(true);
                 Toxen.log("Media Downloader updated.", 2500);
               }
-            });
+            })().catch(error => console.warn("Unable to check for Media Downloader updates:", error));
           }
         }
 
-      }).then(() => Toxen._resolveWhenReady());
+      })
+      .catch(error => {
+        console.error(error);
+        Toxen.error(`Toxen failed to finish starting up: ${error?.message ?? error}`);
+      })
+      .finally(() => Toxen._resolveWhenReady());
   }
 
   render = () => {
