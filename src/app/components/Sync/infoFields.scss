@@ -1,0 +1,23 @@
+.info-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  word-break: break-word;
+
+  code {
+    white-space: nowrap;
+  }
+
+  &--muted {
+    color: var(--text-muted);
+    font-style: italic;
+  }
+
+  &__swatch {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 1px solid var(--border-primary);
+  }
+}

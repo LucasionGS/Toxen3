@@ -15,6 +15,7 @@ import "./SettingsPanel.scss";
 import { useForceUpdate } from "@mantine/hooks";
 import { modals } from "@mantine/modals";
 import LoginForm from "../../../LoginForm/LoginForm";
+import SyncSettings from "../../../Sync/SyncSettings";
 import User from "../../../../toxen/User";
 import { bytesToString } from "../../../AppBar/AppBar";
 import ProviderIntegrations from "./ProviderIntegrations";
@@ -53,6 +54,9 @@ export default function SettingsPanel(props: SettingsPanelProps) {
           <Tabs.Tab value="Account">
             Account
           </Tabs.Tab>
+          <Tabs.Tab value="Sync">
+            Sync
+          </Tabs.Tab>
           <Tabs.Tab value="Integrations">
             Integrations
           </Tabs.Tab>
@@ -83,23 +87,6 @@ export default function SettingsPanel(props: SettingsPanelProps) {
             
             return (
               <>
-                <Select
-                  allowDeselect={false}
-                  onChange={(value) => Settings.apply({ isRemote: value === "local" ? false : true }, true)}
-                  defaultValue={Settings.get("isRemote") ? "remote" : "local"}
-                  name="isRemote"
-                  label="Music Library"
-                  data={[
-                    {
-                      value: "local",
-                      label: Settings.get("libraryDirectory")
-                    },
-                    Settings.getUser()?.premium ? {
-                      value: "remote",
-                      label: "Remote Library"
-                    } : null
-                  ].filter(x => x)}
-                />
                 <Button
                   leftSection={<IconFolder size="1em" />}
                   onClick={() => {
@@ -965,28 +952,16 @@ export default function SettingsPanel(props: SettingsPanelProps) {
                 <>
                   <p>Expires <code>{user.premium_expire?.toDateString() ?? "Never"}</code></p>
                   <p>Remote Library Quota: <b>{usedQuota}</b></p>
-                  {
-                    toxenapi.isDesktop() && (
-                      <>
-                        <Checkbox onClick={(e) => Settings.apply({ remoteSyncOnStartup: e.currentTarget.checked }, true)} defaultChecked={Settings.get("remoteSyncOnStartup")} name="remoteSyncOnStartup" label="Sync on startup" />
-                        <sup>
-                          Syncs your local library with the remote library on startup.
-                          <br />
-                          Uploads new songs and updates existing ones. Update is two-way.
-                        </sup>
-                        <Checkbox onClick={(e) => Settings.apply({ remoteSyncOnSongEdit: e.currentTarget.checked }, true)} defaultChecked={Settings.get("remoteSyncOnSongEdit")} name="remoteSyncOnSongEdit" label="Sync on edit" />
-                        <sup>
-                          Syncs individual songs when you edit them automatically.
-                        </sup>
-                      </>
-                    )
-                  }
                 </>
               ) : (
                 <p>You are not a premium user.</p>
               )}
             </>)
           })()}
+        </Tabs.Panel>
+
+        <Tabs.Panel value="Sync">
+          <SyncSettings />
         </Tabs.Panel>
 
         <Tabs.Panel value="Integrations">

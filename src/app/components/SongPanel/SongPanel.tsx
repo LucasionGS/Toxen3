@@ -4,6 +4,8 @@ import ViewController from '../../toxen/controllers/ViewController';
 import { useController } from '../../lib/useController';
 import SongElement from './SongElement';
 import './SongPanel.scss';
+import LibraryFilter from './LibraryFilter';
+import { matchesLibraryFilter, useLibraryFilter } from '../Sync/libraryFilter';
 
 interface SongPanelProps {
   controller?: ViewController;
@@ -16,6 +18,7 @@ export default function SongPanel(props: SongPanelProps) {
     []
   );
   useController(controller);
+  const libraryFilter = useLibraryFilter();
 
   const onReadyRef = useRef(props.onReady);
   onReadyRef.current = props.onReady;
@@ -24,7 +27,7 @@ export default function SongPanel(props: SongPanelProps) {
   }, [controller]);
 
   let songList = Toxen.playlist && Toxen.playlist.songList ? Toxen.playlist.songList : Toxen.songList;
-  let songs = (songList ?? []).map(s => s);
+  let songs = (songList ?? []).filter(s => matchesLibraryFilter(s, libraryFilter));
   if (Toxen.songQueue.length > 0)
     songs = songs.filter(s => !Toxen.songQueue.some(s2 => s2.uid === s.uid)); // Remove queued items from the main list
 
@@ -47,6 +50,7 @@ export default function SongPanel(props: SongPanelProps) {
   Toxen.searchedSongList = songs;
   return (
     <div className="song-panel">
+      <LibraryFilter />
       {/* {Toxen.playlist ? <>Playlist: <code>{Toxen.playlist.name}</code><br /></> : ""} */}
       {songs.map(s => <SongElement key={s.dirname()} song={s} />)}
     </div>

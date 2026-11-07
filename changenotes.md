@@ -2,6 +2,28 @@
 
 This file contains the change logs for Toxen.
 
+<!-- UPCOMING: 2.14.0 -->
+## 2.14.0 - TBD
+
+## New Features
+
+- **Cloud library** - Your songs now live in one library. Songs on this device and songs in your cloud show up together, and you can switch between **All**, **On this device** and **Cloud only** above the song list.
+- **Song statuses** - Every song shows where it is: a cloud icon for songs that are only in the cloud, a checked cloud once a song is in sync, arrows while it uploads or downloads, and a warning if something went wrong. Hover a status for details.
+- **Offline downloads** - Right-click a cloud song and pick `Make available offline` to keep a copy on this device, or `Remove download` to free up space while keeping it in the cloud. `Upload to cloud` sends a song that only exists on this device.
+- **Automatic sync** - Changes to your songs sync in the background, so there's no more syncing by hand. Edits you make while offline are sent once you're back online.
+  - This can be turned off in `Settings > Sync > Auto-sync`, and you can sync right away with `Sync now`.
+- **Conflict review** - If a song changed on two devices at once, Toxen keeps the newest version, saves the other as a copy and lets you know. Open the review to compare the two side by side and keep either one, or both.
+  - Unresolved conflicts are listed in `Settings > Sync`.
+- **Free 1 GB cloud storage** - Everyone with an account gets 1 GB of cloud storage. `Settings > Sync` shows how much you've used and lets you upgrade for more.
+- **Per-device auto-download** - Choose whether new cloud songs are downloaded automatically on each computer, so a laptop can stay light while your desktop keeps everything.
+  - This can be found in `Settings > Sync > Automatically download new cloud songs on this device`.
+- **Choose where to delete** - Deleting a song now asks if it should be removed from this device, from the cloud, or everywhere.
+
+## Changes
+
+- **One library instead of Local and Remote** - The Local/Remote switch is gone. Your local and cloud songs now show in one library.
+- **Sync settings moved** - `Sync on startup` and `Sync on edit` are replaced by the new `Settings > Sync` tab.
+
 <!-- UPCOMING: 2.13.0 -->
 ## 2.13.0 - TBD
 

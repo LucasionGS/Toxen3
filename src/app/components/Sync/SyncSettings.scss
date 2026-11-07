@@ -1,0 +1,30 @@
+.sync-settings {
+  // The long per-device label has to wrap inside the narrow side panel
+  .mantine-Checkbox-label {
+    white-space: normal;
+  }
+
+  &__status-text {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__sync-now {
+    flex-shrink: 0;
+  }
+
+  h3 {
+    margin: 0 0 6px;
+  }
+
+  &__conflict {
+    padding: 8px 10px;
+    border-radius: 10px;
+    border: 1px solid var(--border-secondary);
+    background: var(--surface-bg);
+  }
+
+  &__conflict-name {
+    min-width: 0;
+  }
+}
