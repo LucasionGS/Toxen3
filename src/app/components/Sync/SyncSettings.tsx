@@ -3,12 +3,11 @@ import { Alert, Button, Checkbox, Group, Menu, Progress, Stack, Text } from "@ma
 import { IconAlertTriangle, IconArrowUpCircle, IconChevronDown, IconRefresh } from "@tabler/icons-react";
 import { Toxen } from "../../ToxenApp";
 import SyncEngine from "../../toxen/sync/SyncEngine";
-import type { Merge } from "../../toxen/sync/Merge";
 import User from "../../toxen/User";
 import { openSyncConflictModal } from "../SyncConflicts/SyncConflictModal";
 import { STORAGE_TIERS, openUpgradeCheckout } from "./billing";
 import { formatAgo, formatBytes } from "./format";
-import { getSyncAuto, readAutoDownload, setSyncAuto, useSyncConflicts, useSyncSummary } from "./useSync";
+import { countConflictItems, getSyncAuto, readAutoDownload, setSyncAuto, useSyncConflicts, useSyncSummary } from "./useSync";
 import "./SyncSettings.scss";
 
 /**
@@ -194,13 +193,6 @@ function SyncStorage() {
       )}
     </div>
   );
-}
-
-/**
- * How many things in a record the user can review.
- */
-export function countConflictItems(record: Merge.ConflictRecord): number {
-  return record.items.reduce((total, item) => total + (item.type === "info" ? item.fields.length : 1), 0);
 }
 
 function SyncConflictList() {

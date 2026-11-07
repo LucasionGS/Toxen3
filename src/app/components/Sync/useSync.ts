@@ -112,6 +112,13 @@ export function useSongSyncStatus(song: Song): SyncEngine.SongStatus {
 
 //#region Engine-wide state
 
+/**
+ * How many things in a record the user can review.
+ */
+export function countConflictItems(record: Merge.ConflictRecord): number {
+  return record.items.reduce((total, item) => total + (item.type === "info" ? item.fields.length : 1), 0);
+}
+
 const EMPTY_SUMMARY: SyncEngine.Summary = {
   state: "disabled",
   pending: 0,
