@@ -3,6 +3,7 @@ import { Button, Group } from "@mantine/core";
 import { hideNotification } from "@mantine/notifications";
 import Song from "./Song";
 import type { ISong } from "./Song";
+import System from "./System";
 import type { ToxenFile } from "./System";
 import { Failure, Result, Success } from "./Result";
 import Settings from "./Settings";
@@ -163,8 +164,7 @@ export class SongLibrary {
 
     // A placeholder song gives the storage a folder to write into; the real info is built from the copied file
     const draft = Song.create({ paths: { dirname, media: null, background: null, subtitles: null, storyboard: null } });
-    const diskPath = toxenapi.getFilePath(file);
-    await LocalSongStorage.instance.writeFile(draft, ensureValidName(file.name), diskPath ? { diskPath } : file as File);
+    await LocalSongStorage.instance.writeFile(draft, ensureValidName(file.name), System.toWriteData(file, toxenapi.getFilePath(file)));
 
     const info = await Song.buildInfo(LocalSongStorage.instance.songDir(draft));
     const song = Song.create({ ...info, files: draft.files });
