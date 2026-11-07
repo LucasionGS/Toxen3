@@ -99,7 +99,7 @@ export namespace Manifest {
   export function isSyncablePath(relPath: string): boolean {
     if (relPath.length === 0 || relPath.length > SyncV2.PATH_MAX_LENGTH) return false;
     if (relPath.includes("\\") || relPath.includes("\0")) return false;
-    if (relPath.split("/").some(segment => segment === "" || segment === "." || segment === "..")) return false;
+    if (relPath.split("/").some(segment => segment === "" || segment === "." || segment === ".." || segment === "__proto__" || segment === "constructor" || segment === "prototype")) return false;
     const lower = relPath.toLowerCase();
     if ((SyncV2.RESERVED_PATHS as readonly string[]).includes(lower)) return false;
     if (SyncV2.RESERVED_PREFIXES.some(prefix => lower.startsWith(prefix))) return false;

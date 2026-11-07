@@ -369,7 +369,7 @@ export class CloudSongStorage implements SongStorage {
 
   private static _requireSyncablePath(relPath: string): void {
     const lower = relPath.toLowerCase();
-    if (!relPath || relPath.length > SyncV2.PATH_MAX_LENGTH || relPath.includes("\\") || relPath.split("/").some(s => s === "" || s === "." || s === "..")
+    if (!relPath || relPath.length > SyncV2.PATH_MAX_LENGTH || relPath.includes("\\") || relPath.split("/").some(s => s === "" || s === "." || s === ".." || s === "__proto__" || s === "constructor" || s === "prototype")
       || (SyncV2.RESERVED_PATHS as readonly string[]).includes(lower) || SyncV2.RESERVED_PREFIXES.some(prefix => lower.startsWith(prefix))) {
       throw new Error(`"${relPath}" can't be stored in the cloud. Use a relative path with "/" separators, at most ${SyncV2.PATH_MAX_LENGTH} characters.`);
     }

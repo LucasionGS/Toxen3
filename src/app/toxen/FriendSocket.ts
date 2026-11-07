@@ -57,7 +57,9 @@ class FriendSocket {
 
   /** Connect to the realtime socket server using the current user's token. */
   public connect() {
-    if (this.socket?.connected) return;
+    // Connected or still (re)connecting: a second call must not open a second socket
+    if (this.socket?.active) return;
+    this.socket?.disconnect();
 
     // Read token directly from localStorage (avoids circular import with User)
     let token: string | null = null;
