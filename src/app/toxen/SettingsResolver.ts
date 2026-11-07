@@ -313,6 +313,11 @@ export namespace SettingsResolver {
       song: "visualizerForceRainbowMode",
       global: "visualizerRainbowMode",
       default: false,
+      // The song and playlist checkbox can only force rainbow on: unchecked (`false`) means "follow the global setting".
+      // A storyboard can still switch it off.
+      coerce: (raw, level) => level === Level.Song || level === Level.Playlist
+        ? (raw === true ? true : null)
+        : (raw as boolean | null | undefined) ?? null,
     },
     visualizerStyle: {
       storyboard: "visualizerStyle",
