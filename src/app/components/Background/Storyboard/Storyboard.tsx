@@ -1,10 +1,9 @@
 import React, { Component } from 'react'
-import Settings, { VisualizerStyle, visualizerStyleOptions, visualizerStyleOptionsMap } from '../../../toxen/Settings';
-import ExtensionManager from '../../../toxen/extensions/ExtensionManager';
+import { VisualizerStyle } from '../../../toxen/Settings';
+import SettingsResolver from '../../../toxen/SettingsResolver';
 import Song, { ISong } from '../../../toxen/Song';
 import { Toxen } from '../../../ToxenApp';
 import Visualizer from '../Visualizer';
-import { DEFAULT_RAINFALL_COLOR } from '../visualizers/particles/Rainfall';
 import "./Storyboard.scss";
 
 interface StoryboardProps { }
@@ -20,6 +19,10 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
     this.state = {
       song: null
     }
+    SettingsResolver.configure({
+      context: () => this.getContext(),
+      defaultColor: () => Visualizer.DEFAULT_COLOR(),
+    });
   }
 
   public setSong(song: Song) {
@@ -32,32 +35,33 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
     return this.state.song;
   };
 
-  private frameSettings: ISong = null;
+  private frameContext: SettingsResolver.Context = null;
 
   /**
-   * Resolves the effective song settings once for the frame about to be drawn. Every `get*`
-   * getter below reaches for them, and resolving rebuilds the full ISong each time.
+   * Captures the song, playlist and storyboard overrides once for the frame about to be drawn,
+   * so the `get*` getters below don't each look them up again.
    */
   public beginFrame() {
-    this.frameSettings = this.state.song
-      ? this.state.song.getEffectiveSettings(Toxen.playlist?.name)
-      : ({} as ISong);
+    this.frameContext = this.buildContext();
   }
 
   public endFrame() {
-    this.frameSettings = null;
+    this.frameContext = null;
   }
 
   /**
-   * Gets the effective settings for the current song, considering playlist-specific overrides
+   * The inputs every setting is resolved against: this storyboard's overrides, the current playlist and song.
    */
-  public getEffectiveSongSettings(): ISong {
-    if (this.frameSettings) return this.frameSettings;
-    if (!this.state.song) return {} as ISong;
+  public getContext(): SettingsResolver.Context {
+    return this.frameContext ?? this.buildContext();
+  }
 
-    // Get the current playlist and use it to get effective settings
-    const currentPlaylist = Toxen.playlist;
-    return this.state.song.getEffectiveSettings(currentPlaylist?.name);
+  private buildContext(): SettingsResolver.Context {
+    return {
+      song: this.state.song,
+      playlist: Toxen.playlist ?? null,
+      storyboard: this.data as unknown as Record<string, unknown>,
+    };
   }
 
   render() {
@@ -105,229 +109,123 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
   // Storyboard settings
   // VisualizerColor
   public getVisualizerColor() {
-    return this.data.visualizerColor
-      || (this.state.song && this.getEffectiveSongSettings().visualizerColor)
-      || Settings.get("visualizerColor")
-      || Visualizer.DEFAULT_COLOR();
+    return SettingsResolver.resolve("visualizerColor", this.getContext());
   }
   // Visualizer Rainbow Mode
   public getVisualizerRainbow() {
-    return this.data.visualizerForceRainbowMode
-      || (this.state.song && this.getEffectiveSongSettings().visualizerForceRainbowMode)
-      || Settings.get("visualizerRainbowMode")
-      || false;
+    return SettingsResolver.resolve("visualizerRainbowMode", this.getContext());
   }
 
   // VisualizerStyle
   public getVisualizerStyle() {
-    return this.data.visualizerStyle
-      ?? (
-        (this.state.song && this.getEffectiveSongSettings().visualizerStyle)
-        || Settings.get("visualizerStyle")
-        || VisualizerStyle.ProgressBar
-      );
+    return SettingsResolver.resolve("visualizerStyle", this.getContext());
   }
 
   // Visualizer options
+  /**
+   * The explicitly configured value of a style option, or `null` when none is set and the option's default applies.
+   */
   public getVisualizerOption(vs: VisualizerStyle | string, key: string) {
-    const global = Settings.get("visualizerStyleOptions", {})[vs];
-    const song = this.getEffectiveSongSettings()?.visualizerStyleOptions?.[vs];
-
-    // Look up default value: built-in first, then extension
-    let defaultValue: any;
-    const builtInOption = visualizerStyleOptionsMap?.[vs]?.[key];
-    if (builtInOption) {
-      defaultValue = builtInOption.defaultValue;
-    } else {
-      const extOptions = ExtensionManager.getVisualizerOptions(vs);
-      defaultValue = extOptions?.find(o => o.key === key)?.defaultValue;
-    }
-
-    if (song && song[key] !== undefined && song[key] !== defaultValue) return song[key];
-    if (global && global[key] !== undefined && global[key] !== defaultValue) return global[key];
-    return null;
+    const option = SettingsResolver.explainVisualizerOption(vs, key, this.getContext());
+    return option.level === SettingsResolver.Level.Default ? null : option.value;
   }
   
   // VisualizerIntensity
   public getVisualizerIntensity() {
-    return this.data.visualizerIntensity
-      ?? (
-        (this.state.song && this.getEffectiveSongSettings().visualizerIntensity)
-        || Settings.get("visualizerIntensity")
-        || 1
-      );
+    return SettingsResolver.resolve("visualizerIntensity", this.getContext());
   }
 
   public getVisualizerShuffle() {
-    return this.data.visualizerShuffle
-      ?? (
-        (this.state.song && this.getEffectiveSongSettings().visualizerShuffle)
-        || Settings.get("visualizerShuffle")
-        || false
-      );
+    return SettingsResolver.resolve("visualizerShuffle", this.getContext());
   }
 
   // VisualizerNormalizer
   public getVisualizerNormalize() {
-    return this.data.visualizerNormalize
-      ?? (
-        (this.state.song && this.getEffectiveSongSettings().visualizerNormalize)
-        || Settings.get("visualizerNormalize")
-        || false
-      );
+    return SettingsResolver.resolve("visualizerNormalize", this.getContext());
   }
 
   public getVisualizerPulseBackground() {
-    if (typeof this.data.visualizerPulseBackground === "boolean") return this.data.visualizerPulseBackground;
-    
-    let result: boolean = null;
-    if (this.state.song) {
-      const effectiveSettings = this.getEffectiveSongSettings();
-      result = effectiveSettings.visualizerPulseBackground === "pulse" ? true : effectiveSettings.visualizerPulseBackground === "pulse-off" ? false : null;
-    }
-
-    if (result === null) {
-      result = Settings.get("visualizerPulseBackground") ?? false
-    }
-
-    return result;
+    return SettingsResolver.resolve("visualizerPulseBackground", this.getContext());
   }
 
   public getVisualizerGlow() {
-    return this.data.visualizerGlow
-      ?? (
-        (this.state.song && this.getEffectiveSongSettings().visualizerGlow)
-        ?? (
-          Settings.get("visualizerGlow")
-          || false
-        )
-      );
+    return SettingsResolver.resolve("visualizerGlow", this.getContext());
   }
 
   public getBackgroundDim() {
-    return this.data.backgroundDim
-      ?? (
-        (
-          (
-            this.state.song
-            && typeof this.getEffectiveSongSettings().backgroundDim === "number"
-              ? this.getEffectiveSongSettings().backgroundDim : null
-          )
-        ) ??
-        (Settings.get("backgroundDim") || 0)
-      );
+    return SettingsResolver.resolve("backgroundDim", this.getContext());
   }
 
   public getDynamicLighting() {
-    return this.data.backgroundDynamicLighting
-      ?? (
-        // (this.state.song && this.state.song.backgroundDynamicLighting) || // TODO: Add support for this
-        Settings.get("backgroundDynamicLighting")
-        || false
-      );
+    return SettingsResolver.resolve("backgroundDynamicLighting", this.getContext());
   }
 
   public getFloatingSubtitles() {
-    return !!Toxen.subtitles.subtitles && (this.data.useFloatingTitleSubtitles
-      ?? (
-        (this.state.song && this.getEffectiveSongSettings().useFloatingTitleSubtitles)
-        ?? false
-      ));
+    return !!Toxen.subtitles.subtitles && SettingsResolver.resolve("useFloatingTitleSubtitles", this.getContext());
   }
 
   /**
-   * @param full Whether to return the full path or just relative file path @default false
-   * @returns 
+   * Order: storyboard, the song's settings for the current playlist, the playlist's own background, the song's background.
+   * @param full Whether to return the full path/URL (without the auth token) or the relative file name @default false
+   * @returns `null` when there is no background.
    */
   public getBackground(full: boolean = false) {
-    const bg = this.data.background
-      ?? (
-        // (Toxen.playlist &&Toxen.playlist.applyBackground && Toxen.playlist.getBackgroundPath()) ||
-        ((
-          Toxen.playlist &&
-          (this.state.song.getPlaylistSettings(Toxen.playlist.name)?.paths?.background
-          || Toxen.playlist.getBackgroundPath())
-        )
-        ) ||
-        (this.state.song && this.state.song.paths.background)
-        || null
-      );
-    
-    if (full) {
-      return bg ? this.state.song.dirname(bg) : null;
-    }
-    return bg;
+    const background = SettingsResolver.resolveBackground(this.getContext());
+    return full ? background.url : background.value;
   }
 
   public getFloatingTitle() {
-    return this.data.floatingTitle ?? (this.state.song && this.getEffectiveSongSettings().floatingTitle || false);
+    return SettingsResolver.resolve("floatingTitle", this.getContext());
   }
   public getFloatingTitleText() {
+    const ctx = this.getContext();
     if (this.getFloatingSubtitles()) {
       return (
         Toxen.subtitles.currentText
           ? stripHtml(Toxen.subtitles.currentText)
-          : (this.data.floatingTitleText ?? (this.state.song && this.getEffectiveSongSettings().floatingTitleText || ""))
+          : SettingsResolver.resolve("floatingTitleText", ctx)
       );
     }
-    return this.data.floatingTitleText ?? (this.state.song && this.getEffectiveSongSettings().floatingTitleText || this.state.song?.title);
+    const text = SettingsResolver.explain("floatingTitleText", ctx);
+    // Only a storyboard may blank the text; otherwise an empty text shows the song title.
+    return text.level === SettingsResolver.Level.Storyboard || text.value ? text.value : this.state.song?.title;
   }
   public getFloatingTitleUnderline() {
-    return this.data.floatingTitleUnderline ?? (this.state.song && this.getEffectiveSongSettings().floatingTitleUnderline || false);
+    return SettingsResolver.resolve("floatingTitleUnderline", this.getContext());
   }
   public getFloatingTitleReactive() {
-    return this.data.floatingTitleReactive ?? (this.state.song && this.getEffectiveSongSettings().floatingTitleReactive || false);
+    return SettingsResolver.resolve("floatingTitleReactive", this.getContext());
   }
   public getFloatingTitleOverrideVisualizer() {
-    return this.data.floatingTitleOverrideVisualizer ?? (this.state.song && this.getEffectiveSongSettings().floatingTitleOverrideVisualizer || false);
+    return SettingsResolver.resolve("floatingTitleOverrideVisualizer", this.getContext());
   }
   public getFloatingTitlePosition(): ISong["floatingTitlePosition"] {
-    return this.data.floatingTitlePosition ?? (this.state.song && this.getEffectiveSongSettings().floatingTitlePosition || "center");
+    return SettingsResolver.resolve("floatingTitlePosition", this.getContext()) as ISong["floatingTitlePosition"];
   }
   public getFloatingTitleOutlineColor() {
-    return this.data.floatingTitleOutlineColor ?? (this.state.song && this.getEffectiveSongSettings().floatingTitleOutlineColor || "white");
+    return SettingsResolver.resolve("floatingTitleOutlineColor", this.getContext());
   }
 
   // Star rush effect settings
   public getStarRushEffect() {
-    return this.data.starRushEffect ?? (
-      (this.state.song && this.getEffectiveSongSettings().starRushEffect)
-      ?? Settings.get("starRushEffect")
-      ?? false
-    );
+    return SettingsResolver.resolve("starRushEffect", this.getContext());
   }
 
   public getStarRushIntensity() {
-    return this.data.starRushIntensity ?? (
-      (this.state.song && this.getEffectiveSongSettings().starRushIntensity)
-      ?? Settings.get("starRushIntensity")
-      ?? 1
-    );
+    return SettingsResolver.resolve("starRushIntensity", this.getContext());
   }
 
   // Rainfall effect settings
   public getRainfallEffect() {
-    return this.data.rainfallEffect ?? (
-      (this.state.song && this.getEffectiveSongSettings().rainfallEffect)
-      ?? Settings.get("rainfallEffect")
-      ?? false
-    );
+    return SettingsResolver.resolve("rainfallEffect", this.getContext());
   }
 
   public getRainfallFrequency() {
-    return this.data.rainfallFrequency ?? (
-      (this.state.song && this.getEffectiveSongSettings().rainfallFrequency)
-      ?? Settings.get("rainfallFrequency")
-      ?? 1
-    );
+    return SettingsResolver.resolve("rainfallFrequency", this.getContext());
   }
 
   public getRainfallSpeed() {
-    return this.data.rainfallSpeed ?? (
-      (this.state.song && this.getEffectiveSongSettings().rainfallSpeed)
-      ?? Settings.get("rainfallSpeed")
-      ?? 1
-    );
+    return SettingsResolver.resolve("rainfallSpeed", this.getContext());
   }
 
   /**
@@ -335,38 +233,26 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
    * Per-song (or storyboard) images take priority over the global image.
    */
   public getRainfallImage(): string | null {
-    // Storyboard/per-song image is stored relative to the song directory.
-    const songImage = this.data.rainfallImage ?? (this.state.song && this.getEffectiveSongSettings().rainfallImage);
-    if (songImage) {
-      return this.state.song ? this.state.song.dirname(songImage) : null;
-    }
-    // Fall back to the global image (an absolute path).
-    return Settings.get("rainfallImage") || null;
+    const image = SettingsResolver.explain("rainfallImage", this.getContext());
+    if (!image.value) return null;
+    // The global image is an absolute path, storyboard/per-song images are stored relative to the song directory.
+    if (image.level === SettingsResolver.Level.Global) return image.value;
+    return this.state.song ? this.state.song.dirname(image.value) : null;
   }
 
   public getRainfallImageScale() {
-    return this.data.rainfallImageScale ?? (
-      (this.state.song && this.getEffectiveSongSettings().rainfallImageScale)
-      ?? Settings.get("rainfallImageScale")
-      ?? 1
-    );
+    return SettingsResolver.resolve("rainfallImageScale", this.getContext());
   }
 
   /**
    * Colour of the default rain drops. Custom drop images are drawn as-is and ignore this.
    */
   public getRainfallColor() {
-    return this.data.rainfallColor ?? (
-      (this.state.song && this.getEffectiveSongSettings().rainfallColor)
-      || Settings.get("rainfallColor")
-      || DEFAULT_RAINFALL_COLOR
-    );
+    return SettingsResolver.resolve("rainfallColor", this.getContext());
   }
 
   public getAutogeneratedTheme() {
-    return (this.state.song && this.getEffectiveSongSettings().autogeneratedTheme)
-      ?? Settings.get("autogeneratedTheme")
-      ?? false;
+    return SettingsResolver.resolve("autogeneratedTheme", this.getContext());
   }
 
 
