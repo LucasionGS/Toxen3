@@ -2,7 +2,6 @@ import React from "react";
 import { modals } from "@mantine/modals";
 import { Toxen } from "../../ToxenApp";
 import type Song from "../../toxen/Song";
-import { SongLibrary } from "../../toxen/SongLibrary";
 import SyncEngine from "../../toxen/sync/SyncEngine";
 import User from "../../toxen/User";
 import { getSongLocation } from "./useSync";
@@ -80,18 +79,6 @@ export async function uploadToCloud(songs: Song[]): Promise<void> {
 }
 
 /**
- * Whether a song has changes the cloud doesn't have yet, according to the engine.
- */
-function hasUnsyncedChanges(song: Song): boolean {
-  try {
-    const { status } = SyncEngine.getSongStatus(song.uid);
-    return status !== SyncEngine.Status.Synced && status !== SyncEngine.Status.CloudOnly;
-  } catch {
-    return false;
-  }
-}
-
-/**
  * Delete the downloaded copy and keep the cloud copy. Songs with changes that haven't been uploaded yet ask first,
  * since removing the download would lose those changes.
  */
@@ -99,9 +86,15 @@ export async function removeDownload(songs: Song[]): Promise<void> {
   const targets = removable(songs);
   if (targets.length === 0) return;
 
-  const unsynced = targets.filter(hasUnsyncedChanges);
-  const safe = targets.filter(song => !unsynced.includes(song));
-  await runForSongs(safe, song => SyncEngine.removeDownload(song), "remove the download of");
+  const unsynced: Song[] = [];
+  await runForSongs(targets, async song => {
+    try {
+      await SyncEngine.removeDownload(song);
+    } catch (error) {
+      if (!(error instanceof SyncEngine.UnsyncedChangesError)) throw error;
+      unsynced.push(song);
+    }
+  }, "remove the download of");
   if (unsynced.length === 0) return;
 
   modals.openConfirmModal({
@@ -114,6 +107,6 @@ export async function removeDownload(songs: Song[]): Promise<void> {
     ),
     labels: { confirm: "Remove anyway", cancel: "Cancel" },
     confirmProps: { className: "sync-danger-button" },
-    onConfirm: () => runForSongs(unsynced, song => SongLibrary.delete(song, "device"), "remove the download of"),
+    onConfirm: () => runForSongs(unsynced, song => SyncEngine.removeDownload(song, true), "remove the download of"),
   });
 }

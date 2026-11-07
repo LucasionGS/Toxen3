@@ -705,20 +705,6 @@ export class Toxen {
   }
 
   /**
-   * Sync the given songs (or the whole library) now.
-   * @deprecated Use `SyncEngine.syncNow()` for the library, `SyncEngine.syncSong(song)` per song.
-   */
-  public static async syncSongs(songs?: Song[]) {
-    try {
-      if (!songs) await SyncEngine.syncNow();
-      else await Promise.all(songs.map(song => SyncEngine.syncSong(song)));
-      Toxen.log("Synced.", 2500);
-    } catch (error) {
-      Toxen.error(`Sync failed: ${error?.message ?? error}`);
-    }
-  }
-
-  /**
    * Initialize image cache and set up periodic cleanup
    */
   public static initializeImageCache() {
@@ -862,7 +848,7 @@ export default class ToxenAppRenderer extends React.Component {
                     <Button.Group>
                       {
                         Settings.getUser() && (
-                          <Button color="green" onClick={() => Toxen.syncSongs()}>Sync</Button>
+                          <Button color="green" onClick={() => SyncEngine.syncNow().then(() => Toxen.log("Synced.", 2500)).catch(error => Toxen.error(`Sync failed: ${error?.message ?? error}`))}>Sync</Button>
                         )
                       }
 

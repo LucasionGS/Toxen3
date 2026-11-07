@@ -13,7 +13,7 @@ import { SyncEngine } from "./toxen/sync/SyncEngine";
 import { SyncV2 } from "./toxen/sync/SyncApi";
 import TButton from "./components/Button/Button";
 import LoginForm from "./components/LoginForm/LoginForm";
-import { showConflictNotice, showMissingSongsNotice } from "./toxen/syncNotices";
+import { initSyncNotifications } from "./components/Sync/SyncNotifications";
 
 //#region Steps
 /**
@@ -214,8 +214,8 @@ const pendingMediaChanges = new Set<string>();
 const mediaBeforeChange = new Map<string, string | null>();
 
 /**
- * Turns sync engine events into song list updates, notifications and live updates of the playing song, and feeds
- * socket events into the engine. Runs once.
+ * Turns sync engine events into song list updates, notifications (`initSyncNotifications`) and live updates of the
+ * playing song, and feeds socket events into the engine. Runs once.
  */
 function wireSync() {
   const events = SyncEngine.events;
@@ -251,30 +251,7 @@ function wireSync() {
     if (Settings.get("repeat") || Toxen.getPlayableSongs().length === 1) setTimeout(() => current.play(), 0);
   });
 
-  events.on("conflict", record => showConflictNotice(record));
-
-  events.on("kept", kept => {
-    Toxen.log(kept.kept === "local"
-      ? `Kept your edited copy of "${kept.songName}". It was deleted on another device.`
-      : `Kept the edited copy of "${kept.songName}" from another device. It was deleted here.`, 6000);
-  });
-
-  events.on("error", failure => {
-    if (failure.code === "server-outdated") {
-      Toxen.warn("Your server needs an update to sync. Your library keeps working on this device.", 10000);
-      return;
-    }
-    if (failure.code === SyncV2.ErrorCode.QuotaExceeded) {
-      Toxen.warn(failure.message, 10000);
-      return;
-    }
-    if (failure.code === "missing-songs") {
-      showMissingSongsNotice(failure.message);
-      return;
-    }
-    const song = failure.uid ? SongLibrary.getSong(failure.uid) : null;
-    Toxen.error(song ? `Sync of "${song.getDisplayName()}" failed: ${failure.message}` : `Sync failed: ${failure.message}`, 8000);
-  });
+  initSyncNotifications();
 
   friendSocket.on(SyncV2.SocketEvent.TrackChanged, event => SyncEngine.handleRemoteEvent(event));
   friendSocket.on("connected", reconnect => {

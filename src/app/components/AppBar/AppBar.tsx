@@ -8,7 +8,6 @@ import txnLogo from "../../../icons/tox128.png";
 import "./AppBar.scss";
 import User from "../../toxen/User";
 import LoginForm from "../LoginForm/LoginForm";
-import { SyncNotifier } from "../Sync/SyncNotifications";
 
 interface AppBarProps { }
 interface AppBarState { }
@@ -22,7 +21,6 @@ export default class AppBar extends Component<AppBarProps, AppBarState> {
   render() {
     return (
       <div className="appBar">
-        <SyncNotifier />
         <AppBarTitle />
         {/* User manage */}
         <UserManage />

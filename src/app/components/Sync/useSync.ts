@@ -1,23 +1,17 @@
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import type Song from "../../toxen/Song";
 import Settings from "../../toxen/Settings";
-import type { ISettings } from "../../toxen/Settings";
-import { SongStorage } from "../../toxen/storage/SongStorage";
-import { StorageSelector } from "../../toxen/storage/StorageSelector";
+import type { SongStorage } from "../../toxen/storage/SongStorage";
 import SyncEngine from "../../toxen/sync/SyncEngine";
 import type { Merge } from "../../toxen/sync/Merge";
 
 //#region Song location
 
 /**
- * Which copies of a song exist. Uses `song.location` once the unified library sets it, and the song's storage kind
- * until then.
+ * Which copies of a song exist. A song that isn't in the library (no `location` yet) has none.
  */
 export function getSongLocation(song: Song): SongStorage.Location {
-  const location = (song as Song & { location?: SongStorage.Location }).location;
-  if (location) return location;
-  const isLocal = StorageSelector.isLocal(song);
-  return { local: isLocal, cloud: !isLocal };
+  return song.location ?? { local: false, cloud: false };
 }
 
 //#endregion
@@ -121,11 +115,16 @@ export function countConflictItems(record: Merge.ConflictRecord): number {
 
 const EMPTY_SUMMARY: SyncEngine.Summary = {
   state: "disabled",
+  disabledReason: null,
+  autoSync: false,
   pending: 0,
   lastSyncAt: null,
   storageUsed: null,
   storageQuota: null,
+  tier: null,
   readOnly: false,
+  uploadsBlockedReason: null,
+  deletesBlocked: 0,
   conflicts: 0,
   errors: 0,
 };
@@ -161,20 +160,15 @@ function readConflicts(uid?: string): Merge.ConflictRecord[] {
 }
 
 /**
- * Open conflicts, optionally of one song. Refreshes when a conflict is found or the summary changes (a resolved
- * conflict lowers the count).
+ * Open conflicts, optionally of one song. Refreshes whenever the engine's list of open conflicts changes.
  */
 export function useSyncConflicts(uid?: string): Merge.ConflictRecord[] {
   const [records, setRecords] = useState<Merge.ConflictRecord[]>(() => readConflicts(uid));
   useEffect(() => {
     const refresh = () => setRecords(readConflicts(uid));
     refresh();
-    SyncEngine.events.on("conflict", refresh);
-    SyncEngine.events.on("summary", refresh);
-    return () => {
-      SyncEngine.events.off("conflict", refresh);
-      SyncEngine.events.off("summary", refresh);
-    };
+    SyncEngine.events.on("conflicts", refresh);
+    return () => { SyncEngine.events.off("conflicts", refresh); };
   }, [uid]);
   return records;
 }
@@ -184,17 +178,11 @@ export function useSyncConflicts(uid?: string): Merge.ConflictRecord[] {
 //#region Settings
 
 /**
- * Auto-sync preference (synced setting). On unless the user turned it off.
+ * The saved auto-sync preference (on unless the user turned it off). The running engine reports its own state in
+ * `Summary.autoSync`; change it with `SyncEngine.setAutoSync`.
  */
-export function getSyncAuto(): boolean {
-  return (Settings.data as unknown as Record<string, unknown>).syncAuto !== false;
-}
-
-/**
- * Save the auto-sync preference.
- */
-export function setSyncAuto(enabled: boolean): Promise<void> {
-  return Settings.apply({ syncAuto: enabled } as unknown as Partial<ISettings>, true);
+export function getAutoSyncSetting(): boolean {
+  return Settings.get("autoSync") !== false;
 }
 
 /**

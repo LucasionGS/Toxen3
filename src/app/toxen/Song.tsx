@@ -13,7 +13,6 @@ import { SongStorage } from "./storage/SongStorage";
 import { StorageSelector } from "./storage/StorageSelector";
 import { LocalSongStorage } from "./storage/LocalSongStorage";
 import { SongLibrary } from "./SongLibrary";
-import { SyncEngine } from "./sync/SyncEngine";
 
 export const SONG_INFO_KEYS = [
   // Metadata
@@ -626,31 +625,6 @@ export default class Song implements ISong {
   public inQueue: boolean = false;
 
   /**
-   * Download this cloud song and keep it on this device.
-   * @deprecated Use `SyncEngine.makeAvailableOffline(song)`. The folder argument is ignored: the sync engine picks it.
-   */
-  public async downloadRemoteToLocal(_localDir?: string | Song): Promise<void> {
-    return SyncEngine.makeAvailableOffline(this);
-  }
-
-  /**
-   * Download every cloud-only song of `remoteSongs` (default: the whole library).
-   * @deprecated Use `SyncEngine.makeAvailableOffline(song)` per song.
-   */
-  public static async downloadAllMissingRemoteToLocal(remoteSongs?: Song[]) {
-    const cloudOnly = (remoteSongs ?? Toxen.songList).filter(song => !StorageSelector.isLocal(song));
-    for (const song of cloudOnly) await SyncEngine.makeAvailableOffline(song);
-  }
-
-  /**
-   * Sync this song now: upload it if it is local only, otherwise merge it with the cloud.
-   * @deprecated Use `SyncEngine.syncSong(song)` or `SyncEngine.uploadToCloud(song)`.
-   */
-  public async sync(): Promise<void> {
-    return SyncEngine.syncSong(this);
-  }
-
-  /**
    * Controller for this song's row in the song list, set by the `SongElement`
    * view while it is mounted. `null` when the song has no rendered row.
    */
@@ -709,14 +683,6 @@ export default class Song implements ISong {
    */
   public static async getSongs(reload?: boolean, forEach?: (song: Song) => void): Promise<Song[]> {
     return SongLibrary.load(forEach);
-  }
-
-  /**
-   * The songs of the library that have a local copy.
-   * @deprecated Filter `Toxen.songList` with `StorageSelector.isLocal(song)`.
-   */
-  public static async loadLocalSongs(): Promise<Song[]> {
-    return (Toxen.songList ?? []).filter(song => StorageSelector.isLocal(song));
   }
 
   /**

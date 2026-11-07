@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Alert, Button, Checkbox, Group, Menu, Progress, Stack, Text } from "@mantine/core";
 import { IconAlertTriangle, IconArrowUpCircle, IconChevronDown, IconRefresh } from "@tabler/icons-react";
 import { Toxen } from "../../ToxenApp";
@@ -7,7 +7,7 @@ import User from "../../toxen/User";
 import { openSyncConflictModal } from "../SyncConflicts/SyncConflictModal";
 import { STORAGE_TIERS, openUpgradeCheckout } from "./billing";
 import { formatAgo, formatBytes } from "./format";
-import { countConflictItems, getSyncAuto, readAutoDownload, setSyncAuto, useSyncConflicts, useSyncSummary } from "./useSync";
+import { countConflictItems, getAutoSyncSetting, readAutoDownload, useSyncConflicts, useSyncSummary } from "./useSync";
 import "./SyncSettings.scss";
 
 /**
@@ -51,8 +51,14 @@ export default function SyncSettings() {
 }
 
 function SyncToggles() {
-  const [auto, setAuto] = useState(getSyncAuto);
+  const summary = useSyncSummary();
+  const [auto, setAuto] = useState(getAutoSyncSetting);
   const [autoDownload, setAutoDownload] = useState(readAutoDownload);
+
+  // A running engine is the source of truth; while it is off, the saved setting is
+  useEffect(() => {
+    if (summary.state !== "disabled") setAuto(summary.autoSync);
+  }, [summary.state, summary.autoSync]);
 
   return (
     <div>
@@ -61,7 +67,7 @@ function SyncToggles() {
         onChange={e => {
           const enabled = e.currentTarget.checked;
           setAuto(enabled);
-          setSyncAuto(enabled).catch(error => Toxen.error(`Couldn't save the setting: ${error instanceof Error ? error.message : String(error)}`));
+          SyncEngine.setAutoSync(enabled).catch(error => Toxen.error(`Couldn't save the setting: ${error instanceof Error ? error.message : String(error)}`));
         }}
         label="Auto-sync"
       />
@@ -114,6 +120,7 @@ function SyncStatus() {
       <Group justify="space-between" align="flex-start" wrap="nowrap">
         <Stack gap={2} className="sync-settings__status-text">
           <Text size="sm" fw={600}>{STATE_TEXT[summary.state]}</Text>
+          {summary.disabledReason && <Text size="xs" c="dimmed">{summary.disabledReason}</Text>}
           <Text size="xs" c="dimmed">
             Last sync: {summary.lastSyncAt === null ? "never" : formatAgo(summary.lastSyncAt)}
           </Text>

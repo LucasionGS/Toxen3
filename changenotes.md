@@ -7,7 +7,7 @@ This file contains the change logs for Toxen.
 
 ## New Features
 
-- **Cloud library** - Your songs now live in one library. Songs on this device and songs in your cloud show up together, and you can switch between **All**, **On this device** and **Cloud only** above the song list.
+- **Cloud library** - Your songs now live in one library. Songs on this device and songs in your cloud show up together, and you can switch between **All**, **On this device** and **In the cloud** above the song list.
 - **Song statuses** - Every song shows where it is: a cloud icon for songs that are only in the cloud, a checked cloud once a song is in sync, arrows while it uploads or downloads, and a warning if something went wrong. Hover a status for details.
 - **Offline downloads** - Right-click a cloud song and pick `Make available offline` to keep a copy on this device, or `Remove download` to free up space while keeping it in the cloud. `Upload to cloud` sends a song that only exists on this device.
 - **Automatic sync** - Changes to your songs sync in the background, so there's no more syncing by hand. Edits you make while offline are sent once you're back online.
@@ -18,6 +18,8 @@ This file contains the change logs for Toxen.
 - **Per-device auto-download** - Choose whether new cloud songs are downloaded automatically on each computer, so a laptop can stay light while your desktop keeps everything.
   - This can be found in `Settings > Sync > Automatically download new cloud songs on this device`.
 - **Choose where to delete** - Deleting a song now asks if it should be removed from this device, from the cloud, or everywhere.
+- **Live updates between devices** - Changes you make on one device show up on your other devices within seconds while Toxen is open.
+- **Safer syncing** - If many synced songs suddenly go missing from your library folder (a drive that isn't connected, a moved folder), Toxen asks before deleting them from the cloud. If a song was deleted on one device but edited on another, the edited copy is kept and you're told about it. `Remove download` warns you before it throws away changes that haven't been uploaded yet.
 
 ## Changes
 

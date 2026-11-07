@@ -5,7 +5,7 @@ import type { LibraryFilter as Filter } from "../Sync/libraryFilter";
 import "./LibraryFilter.scss";
 
 /**
- * Compact All / On this device / Cloud only switch above the song list. Desktop only, since the web library is all cloud.
+ * Compact All / On this device / In the cloud switch above the song list. Desktop only, since the web library is all cloud.
  */
 export default function LibraryFilter() {
   const filter = useLibraryFilter();
@@ -19,8 +19,8 @@ export default function LibraryFilter() {
         onChange={value => setLibraryFilter(value as Filter)}
         data={[
           { value: "all", label: "All" },
-          { value: "device", label: "On this device" },
-          { value: "cloud", label: "Cloud only" },
+          { value: "local", label: "On this device" },
+          { value: "cloud", label: "In the cloud" },
         ]}
       />
     </div>
