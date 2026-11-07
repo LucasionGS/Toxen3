@@ -2,6 +2,14 @@
 
 This file contains the change logs for Toxen.
 
+<!-- UPCOMING: 2.13.0 -->
+## 2.13.0 - TBD
+
+## Bug Fixes
+
+- **Switching songs quickly** - Skipping through songs fast no longer mixes up the lyrics, storyboard or background of one song with the audio of another.
+- **Song queue order** - Songs you add to the queue now play in the order you added them instead of being sorted by artist.
+
 <!-- UPCOMING: 2.12.3 -->
 ## 2.12.3 - TBD
 
