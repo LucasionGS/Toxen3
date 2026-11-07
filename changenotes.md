@@ -2,8 +2,8 @@
 
 This file contains the change logs for Toxen.
 
-<!-- UPCOMING: 2.14.0 -->
-## 2.14.0 - TBD
+<!-- VERSION: 2.13.0 -->
+## 2.13.0 - 08-11-2026
 
 ## New Features
 
@@ -20,22 +20,13 @@ This file contains the change logs for Toxen.
 - **Choose where to delete** - Deleting a song now asks if it should be removed from this device, from the cloud, or everywhere.
 - **Live updates between devices** - Changes you make on one device show up on your other devices within seconds while Toxen is open.
 - **Safer syncing** - If many synced songs suddenly go missing from your library folder (a drive that isn't connected, a moved folder), Toxen asks before deleting them from the cloud. If a song was deleted on one device but edited on another, the edited copy is kept and you're told about it. `Remove download` warns you before it throws away changes that haven't been uploaded yet.
-
-## Changes
-
-- **One library instead of Local and Remote** - The Local/Remote switch is gone. Your local and cloud songs now show in one library.
-- **Sync settings moved** - `Sync on startup` and `Sync on edit` are replaced by the new `Settings > Sync` tab.
-
-<!-- UPCOMING: 2.13.0 -->
-## 2.13.0 - TBD
-
-## New Features
-
 - **Reset to global** - Visualizer style options you've set for a song or a playlist now have a reset button that makes them follow the global setting again.
   - This can be found next to each option in `Edit Song > Visualizer`.
 
 ## Changes
 
+- **One library instead of Local and Remote** - The Local/Remote switch is gone. Your local and cloud songs now show in one library.
+- **Sync settings moved** - `Sync on startup` and `Sync on edit` are replaced by the new `Settings > Sync` tab.
 - **Song settings always win** - Turning a setting off or setting it to 0 for a song (or a song in a playlist) now overrides your global settings, instead of being ignored. Force Rainbow Mode is the exception: unchecked still means "follow the global setting".
 - **Faster library loading** - Large local libraries load noticeably faster at startup.
 
@@ -47,16 +38,7 @@ This file contains the change logs for Toxen.
 - **Unreadable song folders** - A song folder Toxen can't read is now skipped and listed in a notification, instead of leaving the whole library empty. Your playlists keep those songs in the meantime.
 - **Damaged statistics** - A damaged statistics file no longer stops Toxen from starting. Toxen restores the last backup, or starts the statistics over.
 - **Crossfading into a song that loads slowly** - The background, title and song info now always match the song you hear, even when you skip ahead while the next song is still loading.
-- **Unsaved song details** - Edits in `Edit Song` text fields are now saved when you switch songs, close the panel or close Toxen without leaving the field first.
-- **Whisper transcription on Windows** - Transcribing lyrics with Whisper now works on Windows.
-
-<!-- UPCOMING: 2.12.3 -->
-## 2.12.3 - TBD
-
-## Bug Fixes
-
 - **Playlists no longer wiped when offline** - If the server can't be reached, your cloud playlists are left untouched instead of being replaced with an empty list.
-- **Deleting a local song** - Deleting a song in Local mode no longer also removes its cloud copy.
 - **Settings no longer get corrupted** - Settings and statistics are now saved safely, and Toxen falls back to defaults if the settings file is damaged.
 - **Starting Toxen offline** - Toxen now finishes starting up even when there's no internet connection.
 - **Faster typing in Edit Song** - Text fields are saved when you finish editing instead of on every keystroke.
