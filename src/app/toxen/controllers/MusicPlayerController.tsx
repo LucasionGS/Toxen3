@@ -46,6 +46,14 @@ export default class MusicPlayerController extends Controller {
   private _interval: NodeJS.Timeout | null = null;
   private crossfadeInProgress = false;
   private tempCrossfadeElement: HTMLAudioElement | null = null;
+  /**
+   * The source the temporary crossfade element plays (the outgoing song's).
+   */
+  private _tempCrossfadeSrc: MediaSourceInfo = null;
+  /**
+   * The outgoing song's transcoded blob URL, revoked once the temporary crossfade element stops playing it.
+   */
+  private _tempCrossfadeBlobUrl: string = null;
   private crossfadeTriggered = false; // Track if crossfade has been triggered for current song
   private activeFadeInterval: NodeJS.Timeout | null = null; // Track the active fade interval
   private isSeeking = false;
@@ -224,15 +232,39 @@ export default class MusicPlayerController extends Controller {
       this.activeFadeInterval = null;
     }
 
-    // Clean up temporary element
+    this.disposeTempCrossfadeElement();
+
+    // Reset flags
+    this.crossfadeInProgress = false;
+  }
+
+  /**
+   * Stops the temporary element playing the outgoing song of a crossfade and releases the blob URL it was playing.
+   */
+  private disposeTempCrossfadeElement() {
     if (this.tempCrossfadeElement) {
       this.tempCrossfadeElement.pause();
       this.tempCrossfadeElement.src = '';
       this.tempCrossfadeElement = null;
     }
+    if (this._tempCrossfadeBlobUrl) URL.revokeObjectURL(this._tempCrossfadeBlobUrl);
+    this._tempCrossfadeBlobUrl = null;
+    this._tempCrossfadeSrc = null;
+  }
 
-    // Reset flags
-    this.crossfadeInProgress = false;
+  /**
+   * Revoke a blob URL of the song that stopped playing, unless the crossfade element is still fading it out; then it is
+   * revoked when that element is disposed.
+   */
+  private releasePlayingBlobUrl(url: string) {
+    if (!url) return;
+    if (this.tempCrossfadeElement && this._tempCrossfadeSrc === url) {
+      if (this._tempCrossfadeBlobUrl && this._tempCrossfadeBlobUrl !== url) URL.revokeObjectURL(this._tempCrossfadeBlobUrl);
+      this._tempCrossfadeBlobUrl = url;
+    }
+    else {
+      URL.revokeObjectURL(url);
+    }
   }
 
   /**
@@ -269,6 +301,7 @@ export default class MusicPlayerController extends Controller {
       this.tempCrossfadeElement = document.createElement('audio');
       if (this._crossOrigin) this.tempCrossfadeElement.crossOrigin = this._crossOrigin;
       this.tempCrossfadeElement.src = this._src;
+      this._tempCrossfadeSrc = this._src;
       this.tempCrossfadeElement.currentTime = this.media.currentTime;
       this.tempCrossfadeElement.volume = this.media.volume;
 
@@ -314,12 +347,7 @@ export default class MusicPlayerController extends Controller {
                 this.activeFadeInterval = null;
               }
 
-              // Clean up temporary element
-              if (this.tempCrossfadeElement) {
-                this.tempCrossfadeElement.pause();
-                this.tempCrossfadeElement.src = '';
-                this.tempCrossfadeElement = null;
-              }
+              this.disposeTempCrossfadeElement();
 
               // Ensure final volume is correct (get current setting in case it changed)
               const finalVolume = Settings.get('volume', 50) / 100;
@@ -411,8 +439,11 @@ export default class MusicPlayerController extends Controller {
    * background, then update the visuals, media session and integrations.
    *
    * Every call takes a new play token. Loading takes several `await`s, so when songs are switched quickly an older call
-   * can finish after a newer one started. Each call checks its token after every `await` and stops once superseded,
-   * releasing any blob URL it created, so one song's audio is never mixed with another song's subtitles or background.
+   * can finish after a newer one started. Until its source reaches the player, a call checks its token after every
+   * `await` and stops once superseded, releasing any blob URL it created. Once its source is on the player it owns the
+   * player and always finishes the song state (background, current song, title, storyboard, colours, integrations),
+   * stopping only when a newer call has actually replaced the source. A newer call that is still loading, or fails,
+   * can't leave this song's audio playing under the previous song's background and title.
    */
   public async playSong(song: Song, options?: PlaySongOptions): Promise<void> {
     if (Toxen.isMode("StoryboardEditor") && Toxen.editingSong && Toxen.editingSong.uid !== song.uid) {
@@ -504,18 +535,21 @@ export default class MusicPlayerController extends Controller {
     }
 
     // Superseded while crossfading and the source never reached the player (or was already replaced)
-    if (isStale() && this._src !== src) return release();
+    if (this._src !== src) return release();
 
-    // The previous song's blob URLs are no longer playing, so they can be released now
-    if (this._playingAudioBlobUrl) URL.revokeObjectURL(this._playingAudioBlobUrl);
+    // From here this call's source is on the player. Only a newer call that replaced it makes the rest obsolete;
+    // a newer call that is still loading (or fails) must not leave this song half applied.
+    const replaced = () => this._src !== src;
+
+    // The previous song's blob URLs are no longer needed (a crossfade releases the audio once its fade ends)
+    if (this._playingAudioBlobUrl !== audioBlobUrl) this.releasePlayingBlobUrl(this._playingAudioBlobUrl);
     if (this._playingArtworkBlobUrl) URL.revokeObjectURL(this._playingArtworkBlobUrl);
     this._playingAudioBlobUrl = audioBlobUrl;
     this._playingArtworkBlobUrl = null;
-    if (isStale()) return;
 
     // If song has a background, force it. Otherwise, let Background component resolve defaults/shuffle
     await Toxen.background.setBackground(bg ? (bg + "?h=" + song.hash) : null);
-    if (isStale()) return;
+    if (replaced()) return;
     Stats.set("songsPlayed", (Stats.get("songsPlayed") ?? 0) + 1);
 
     // Apply playlist-specific settings if playing from a playlist
@@ -539,7 +573,7 @@ export default class MusicPlayerController extends Controller {
     song.setProgressBar(0);
     song.setAppTitle();
     const addToMetadata = (blob?: Blob) => {
-      if (song !== Song.getCurrent() || isStale()) {
+      if (song !== Song.getCurrent() || replaced()) {
         return;
       }
 
