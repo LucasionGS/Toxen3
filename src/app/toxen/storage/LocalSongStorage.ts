@@ -43,12 +43,19 @@ export class LocalSongStorage extends EventEmitter implements SongStorage {
 
   /**
    * Absolute path of the song folder: `<libraryDirectory>/<song.paths.dirname>`.
-   * @throws If the song has no `paths.dirname`.
+   * @throws If the song has no `paths.dirname`, or it doesn't point to a folder strictly inside the library directory
+   * (`"."`, `".."` or an absolute path would make writes and `deleteSong` hit the library root or a folder outside it).
    */
   public songDir(song: Song): string {
     const api = LocalSongStorage._api("songDir");
     if (!song.paths?.dirname) throw new Error(`The song "${song.uid}" has no folder. Set \`paths.dirname\` before reading or writing its files.`);
-    return api.path.resolve(Settings.get("libraryDirectory"), song.paths.dirname);
+    const library = api.path.resolve(Settings.get("libraryDirectory"));
+    const dir = api.path.resolve(library, song.paths.dirname);
+    const prefix = library.endsWith(api.path.sep) ? library : library + api.path.sep; // A drive root already ends with one
+    if (!dir.startsWith(prefix) || dir === library) {
+      throw new Error(`The folder "${song.paths.dirname}" of the song "${song.uid}" is not inside the library directory. Its \`paths.dirname\` must be the name of a folder in the library.`);
+    }
+    return dir;
   }
 
   /**
