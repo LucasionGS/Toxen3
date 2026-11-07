@@ -229,6 +229,10 @@ export class LocalSongStorage extends EventEmitter implements SongStorage {
     }
 
     if (changed) {
+      // The same v1 sync bookkeeping `Song.saveInfo` does, so the old sync sees the repaired info as changed
+      if (!info.files || typeof info.files !== "object") info.files = {};
+      info.files[SongStorage.INFO_FILE] = { action: "u", time: Date.now() };
+      info.hash = rules.newHash();
       await api.atomicWriteFile(infoPath, JSON.stringify(info)).catch(error => {
         console.error(`Failed to save repaired info.json in song: ${dir}`, error);
       });
@@ -292,6 +296,10 @@ export namespace LocalSongStorage {
      * Whether a file can be picked as the media of a song that lost it. Matches extensions case-insensitively.
      */
     isAudioFile(relPath: string): boolean;
+    /**
+     * A fresh info hash for a repaired `info.json` (today `Song.randomFileHash`).
+     */
+    newHash(): string;
   }
 }
 

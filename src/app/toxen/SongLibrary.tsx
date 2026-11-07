@@ -263,6 +263,7 @@ export namespace SongLibrary {
 LocalSongStorage.instance.setLibraryRules({
   buildInfo: folderPath => Song.buildInfo(folderPath),
   isAudioFile: relPath => Toxen.getSupportedAudioFiles().includes(toxenapi.getFileExtension(relPath).toLowerCase()),
+  newHash: () => Song.randomFileHash(),
 });
 
 export default SongLibrary;
