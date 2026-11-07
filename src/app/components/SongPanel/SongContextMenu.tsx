@@ -90,7 +90,7 @@ export function openSongContextMenu(song: Song, modals: ModalsContextProps) {
             {song.inQueue ? "Remove from queue" : "Add to queue"}
           </Button>
           <CloudActions songs={[song]} close={close} />
-          <Button color="red" variant="light" onClick={() => {
+          <Button className="sync-danger-button" onClick={() => {
             close();
             openDeleteSongDialog([song]);
           }}>
@@ -186,7 +186,7 @@ export function openSongContextMenu(song: Song, modals: ModalsContextProps) {
             Remove all from queue
           </Button>
           <CloudActions songs={selectedSongs} close={close} />
-          <Button color="red" variant="light" onClick={() => {
+          <Button className="sync-danger-button" onClick={() => {
             close();
             openDeleteSongDialog(selectedSongs);
           }}>

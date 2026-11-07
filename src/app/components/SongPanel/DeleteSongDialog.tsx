@@ -115,7 +115,7 @@ export default function DeleteSongDialog(props: DeleteSongDialogProps) {
               className={`delete-song-dialog__option${option.value === "everywhere" ? " delete-song-dialog__option--danger" : ""}`}
             >
               <Group wrap="nowrap" align="flex-start" gap="sm">
-                <Radio.Indicator />
+                <Radio.Indicator color="var(--accent-color)" />
                 <div>
                   <Text fw={600} size="sm">{option.label}</Text>
                   <Text size="xs" c="dimmed">{option.description}</Text>
@@ -127,7 +127,7 @@ export default function DeleteSongDialog(props: DeleteSongDialogProps) {
       </Radio.Group>
       <Group justify="flex-end">
         <Button variant="default" onClick={onClose} disabled={deleting}>Cancel</Button>
-        <Button color="red" leftSection={<IconTrash size="1em" />} loading={deleting} onClick={confirm}>Delete</Button>
+        <Button className="sync-danger-button" leftSection={<IconTrash size="1em" />} loading={deleting} onClick={confirm}>Delete</Button>
       </Group>
     </Stack>
   );

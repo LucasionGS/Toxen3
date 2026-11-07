@@ -20,3 +20,15 @@
     }
   }
 }
+
+// Modal buttons are all accent-styled by the global modal rules, so destructive ones need the same specificity
+.mantine-Modal-root .mantine-Modal-content .mantine-Modal-body .mantine-Button-root.sync-danger-button {
+  background: color-mix(in srgb, var(--error-color) 75%, transparent);
+  border-color: var(--error-color);
+  color: var(--text-primary);
+
+  &:hover {
+    background: var(--error-color);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--error-color) 40%, transparent);
+  }
+}
