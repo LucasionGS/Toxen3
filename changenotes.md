@@ -42,7 +42,8 @@ This file contains the change logs for Toxen.
 - **Song loading** - Songs with uppercase file extensions (like `.MP3`) are now recognized, and no more false "missing media file" warnings for songs that were found.
 - **Memory usage** - Converted audio and artwork from previous songs are released properly.
 - **Safer imports** - Safer handling of imported themes, song packages and extensions.
-- **Whisper transcription** - Fixed transcription failing on files with special characters in their names.
+- **Whisper transcription** - Fixed transcription failing on files with special characters in their names, and not starting at all on Windows.
+- **Edit Song** - Changes you typed are no longer lost if you switch songs, close the panel or close Toxen before leaving the field.
 
 <!-- VERSION: 2.12.2 -->
 ## 2.12.2 - 23-09-2026
