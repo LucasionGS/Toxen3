@@ -9,6 +9,7 @@ import type { Toxen } from "../app/ToxenApp";
 import type User from "../app/toxen/User";
 import type { SongDiff, ISong } from "../app/toxen/Song";
 import type { ToxenFile } from "../app/toxen/System";
+import type { DesktopIO } from "./DesktopIO";
 import { showNotification } from "@mantine/notifications";
 
 /**
@@ -251,6 +252,48 @@ export default class ToxenController {
   }> {
     this.throwDesktopOnly("fetchRemoteSongsData");
   }
+
+  //#region Storage and sync IO (desktop only, implemented in DesktopController)
+
+  /**
+   * Write a file atomically: write `<path>.tmp-<random>`, then rename over `path`, so readers never see a partial file.
+   * Used for `.toxen/sync.json`, `info.json` and other small files written by `LocalSongStorage` and `SyncState`.
+   */
+  public async atomicWriteFile(filePath: string, data: string | Uint8Array): Promise<void> {
+    this.throwDesktopOnly("atomicWriteFile");
+  }
+
+  /**
+   * Stream a file through sha256 (`node:crypto`) and return its hash, size and mtime.
+   */
+  public async hashFile(filePath: string): Promise<DesktopIO.FileHash> {
+    this.throwDesktopOnly("hashFile");
+  }
+
+  /**
+   * List every file below `dir` with size and mtime. Skips anything under a `.toxen` folder.
+   */
+  public async listFilesRecursive(dir: string): Promise<DesktopIO.FileStat[]> {
+    this.throwDesktopOnly("listFilesRecursive");
+  }
+
+  /**
+   * Upload a file from disk as a streamed request body with `Content-Length` (`node:http(s)`).
+   * Chromium's `fetch` only streams request bodies over HTTP/2, so desktop uploads go through Node instead.
+   */
+  public async uploadFile(opts: DesktopIO.UploadOptions): Promise<DesktopIO.HttpResult> {
+    this.throwDesktopOnly("uploadFile");
+  }
+
+  /**
+   * Download to a temp file next to `destPath`, verify `expectedSha256` if given, then rename into place.
+   * @throws If the response isn't 2xx or the hash doesn't match. The temp file is removed.
+   */
+  public async downloadFile(opts: DesktopIO.DownloadOptions): Promise<DesktopIO.FileHash> {
+    this.throwDesktopOnly("downloadFile");
+  }
+
+  //#endregion
 
   /**
    * Export a theme as a downloadable .theme.json file

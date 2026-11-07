@@ -1,0 +1,155 @@
+import type Song from "../Song";
+import type { ISong } from "../Song";
+
+/**
+ * Where a song's files live and how to reach them. Replaces the `Settings.isRemote()` branches in `Song` and friends
+ * (plan §2.2). Two implementations, both stateless singletons that take the song as an argument:
+ * - `LocalSongStorage` (desktop only): the song folder in the library directory, through `toxenapi`.
+ * - `CloudSongStorage` (web and desktop): the server. v1 endpoints in Phase 1, `/v2` (`SyncApi`) from Phase 4.
+ *
+ * Pick one with `StorageSelector.forSong(song)` (exposed as `song.storage`), never by checking settings yourself.
+ * Paths are relative to the song folder and use `/`.
+ */
+export interface SongStorage {
+  readonly kind: SongStorage.Kind;
+
+  //#region Per song
+
+  /**
+   * A source the renderer can load directly (`<audio src>`, `<img src>`, `new Image()`), or `""` when `relPath` is empty.
+   * Local: the absolute disk path, as `Song.mediaFile()` returns today (wrap with `file://` for CSS `url()`).
+   * Cloud: the authenticated URL (`?token=` in Phase 1, a signed `?u=&exp=&sig=` URL from Phase 4), so callers no longer
+   * call `User.appendAuth` themselves.
+   */
+  fileUrl(song: Song, relPath: string): string;
+
+  /**
+   * Read a text file (subtitles, storyboard).
+   * @returns The text, or `null` if the file doesn't exist. Never hangs: network and disk errors reject.
+   */
+  readText(song: Song, relPath: string): Promise<string | null>;
+
+  /**
+   * Read a binary file (copying images between songs, exporting).
+   * @returns The bytes, or `null` if the file doesn't exist.
+   */
+  readBlob(song: Song, relPath: string): Promise<Blob | null>;
+
+  /**
+   * Create or replace a file. Local writes are atomic for strings and bytes, and copy from disk for `DiskFile`.
+   * Local writes emit a `change` event so the sync engine picks them up (this replaces `Song.setFile`).
+   */
+  writeFile(song: Song, relPath: string, data: SongStorage.WriteData): Promise<void>;
+
+  /**
+   * Delete a file. Missing files are not an error.
+   */
+  deleteFile(song: Song, relPath: string): Promise<void>;
+
+  /**
+   * Every file of the song except `info.json`.
+   */
+  list(song: Song): Promise<SongStorage.FileEntry[]>;
+
+  /**
+   * Persist `song.toISong()` as the song's info (local `info.json`, cloud info).
+   * @throws If it couldn't be saved. Callers decide how to notify (`Toxen.error`).
+   */
+  saveInfo(song: Song): Promise<void>;
+
+  /**
+   * Delete the song's copy in this storage only. "Delete everywhere" is `SongLibrary.delete(song, "everywhere")`.
+   */
+  deleteSong(song: Song): Promise<void>;
+
+  //#endregion
+
+  //#region Library
+
+  /**
+   * Every song info in this storage. Local: the library directory (today `toxenapi.loadLocalSongs`). Cloud: the
+   * server's track list.
+   * @param onEach Called per song as it loads, for the loading screen.
+   */
+  listSongs(onEach?: (info: ISong) => void): Promise<ISong[]>;
+
+  /**
+   * Number of songs, cheaper than `listSongs` where possible (loading screen total).
+   */
+  countSongs(): Promise<number>;
+
+  //#endregion
+}
+
+export namespace SongStorage {
+  export enum Kind {
+    Local = "local",
+    Cloud = "cloud",
+  }
+
+  /**
+   * The song's info file. Never part of `list()` or a sync manifest; it travels as `info`.
+   */
+  export const INFO_FILE = "info.json";
+
+  export interface FileEntry {
+    /**
+     * Relative path with `/` separators.
+     */
+    relPath: string;
+    /**
+     * Unit is in bytes.
+     */
+    size: number;
+    /**
+     * Local: file mtime. Cloud: server `receivedAt`. Unix ms.
+     */
+    mtimeMs: number;
+    /**
+     * Known for cloud files (from the manifest) and for local files with a cached hash.
+     */
+    sha256?: string;
+  }
+
+  /**
+   * A file already on disk, copied (local) or streamed (cloud) without reading it into memory. Desktop only.
+   */
+  export interface DiskFile {
+    diskPath: string;
+  }
+
+  /**
+   * What `writeFile` accepts.
+   */
+  export type WriteData = string | Uint8Array | Blob | DiskFile;
+
+  /**
+   * Which copies of a song exist (Phase 4). `local` = a folder in the library directory, `cloud` = a live server track.
+   * Set by `SongLibrary` when it merges both listings.
+   */
+  export interface Location {
+    local: boolean;
+    cloud: boolean;
+  }
+
+  /**
+   * A local write, delete or info save, emitted by `LocalSongStorage`.
+   */
+  export interface ChangeEvent {
+    uid: string;
+    /**
+     * `null` for info saves and whole-song deletes.
+     */
+    relPath: string | null;
+    action: "write" | "delete" | "info" | "song-deleted";
+  }
+
+  /**
+   * Type guard for `DiskFile`.
+   */
+  export function isDiskFile(data: WriteData): data is DiskFile {
+    throw new Error("Not implemented.");
+  }
+}
+
+export default SongStorage;
