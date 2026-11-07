@@ -234,10 +234,11 @@ export class CloudSongStorage implements SongStorage {
   }
 
   /**
-   * A server manifest as a song info for the library (`uid` from the manifest, `paths` always present).
+   * A server manifest as a song info for the library (`uid` from the manifest, `paths` always present, the rev as the
+   * cache-busting `hash`, so images reload when the track changes).
    */
   public static toSongInfo(manifest: SyncV2.TrackManifest): ISong {
-    const info = { ...(manifest.info as Partial<ISong>), uid: manifest.uid } as ISong;
+    const info = { ...(manifest.info as Partial<ISong>), uid: manifest.uid, hash: `r${manifest.rev}` } as ISong;
     const paths = (info.paths && typeof info.paths === "object" ? info.paths : {}) as ISong["paths"];
     info.paths = { media: null, background: null, subtitles: null, storyboard: null, ...paths, dirname: manifest.uid };
     return info;

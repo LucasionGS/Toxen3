@@ -376,6 +376,7 @@ export class SyncEngine {
       SyncEngine._enqueue(uid, reason);
       SyncEngine._pump();
     }, SyncEngine.DEBOUNCE_MS));
+    if (!previous) SyncEngine._emitStatus(uid);
   }
 
   /**
@@ -577,6 +578,7 @@ export class SyncEngine {
     }
     const local = SyncEngine._isLocal(uid);
     const remoteLive = Boolean(state?.remote && !state.remote.deleted);
+    if (SyncEngine._debounce.has(uid)) return { status: SyncEngine.Status.Queued, progress: null, error: null, conflicts };
     if (state?.lastError) return { status: SyncEngine.Status.Error, progress: null, error: state.lastError.message, conflicts };
     if (SyncEngine._running && SyncState.data.pending.some(job => job.uid === uid)) return { status: SyncEngine.Status.Queued, progress: null, error: null, conflicts };
     if (conflicts > 0) return { status: SyncEngine.Status.Conflict, progress: null, error: null, conflicts };
@@ -685,7 +687,10 @@ export class SyncEngine {
       SyncEngine._waiters.set(uid, list);
     });
     SyncEngine._emitStatus(uid);
-    SyncEngine._pump();
+    // Persist the job before it starts: a long transfer killed halfway must resume on the next start
+    SyncState.flush()
+      .catch(error => console.error("Unable to save the sync state.", error))
+      .then(() => SyncEngine._pump());
     return done;
   }
 
@@ -1324,6 +1329,7 @@ export class SyncEngine {
   private static async _download(uid: string, dir: string, downloads: Merge.Download[], cache: Record<string, SyncState.HashCacheEntry>, resume: boolean, signal: AbortSignal): Promise<void> {
     if (!toxenapi.isDesktop() || downloads.length === 0) return;
     const api = toxenapi;
+    await SyncState.flush();
     SyncEngine._startActive(uid, "down", downloads.reduce((sum, download) => sum + download.size, 0));
     try {
       for (const download of downloads) {
