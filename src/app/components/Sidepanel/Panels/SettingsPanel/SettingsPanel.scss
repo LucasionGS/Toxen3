@@ -1,3 +1,15 @@
 .settingsPanel {
   
 }
+
+// A per-song or per-playlist visualizer style option with its reset-to-inherit button beside it
+.visualizer-style-option {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+
+  &__control {
+    flex: 1;
+    min-width: 0; // Lets the slider shrink instead of pushing the button out
+  }
+}

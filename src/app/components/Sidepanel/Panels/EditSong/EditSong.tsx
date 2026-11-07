@@ -23,6 +23,7 @@ import { useForceUpdate } from "@mantine/hooks";
 import { hideNotification, updateNotification } from "@mantine/notifications";
 import ProviderManager from "../../../../toxen/providers/ProviderManager";
 import { StorageSelector } from "../../../../toxen/storage/StorageSelector";
+import SettingsResolver from "../../../../toxen/SettingsResolver";
 
 interface EditSongProps { }
 
@@ -575,6 +576,12 @@ export default function EditSong(props: EditSongProps) {
             forceUpdate();
           }}
           song={Toxen.editingSong}
+          // Playlist settings inherit from the song, song settings from the global settings
+          getInheritedValue={(key) => SettingsResolver.explainVisualizerOption(getValue('visualizerStyle'), key, {
+            song: isPlaylistMode ? Toxen.editingSong : null,
+            playlist: null,
+          }).value}
+          resetLabel={isPlaylistMode ? "Use the song's setting" : "Use global setting"}
         />
 
         {/* Visualizer Glow */}

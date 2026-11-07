@@ -1,5 +1,5 @@
-import { Checkbox, Tabs, TextInput, NumberInput, Select, Button, ColorInput, RangeSlider, Slider, Text, Alert } from "@mantine/core";
-import { IconFolder, IconFolderOpen, IconRefresh, IconPalette, IconPhoto, IconWaveSquare, IconWand, IconBrush, IconDownload, IconTrash, IconX } from "@tabler/icons-react";
+import { Checkbox, Tabs, TextInput, NumberInput, Select, Button, ColorInput, RangeSlider, Slider, Text, Alert, ActionIcon, Tooltip } from "@mantine/core";
+import { IconFolder, IconFolderOpen, IconRefresh, IconPalette, IconPhoto, IconWaveSquare, IconWand, IconBrush, IconDownload, IconTrash, IconX, IconArrowBackUp } from "@tabler/icons-react";
 // import * as remote from "@electron/remote";
 import React, { useEffect } from "react";
 import Converter from "../../../../toxen/Converter";
@@ -1136,27 +1136,69 @@ export default function SettingsPanel(props: SettingsPanelProps) {
   )
 }
 
-export function VisualizerStyleOptions(props: {
+export interface VisualizerStyleOptionsProps {
   style: VisualizerStyle | string,
   allOptions: ISettings["visualizerStyleOptions"],
   onSave: (allOptions: ISettings["visualizerStyleOptions"]) => void,
   onSaveEnd?: (allOptions: ISettings["visualizerStyleOptions"]) => void,
   song?: Song,
-}) {
-  const { style, allOptions = {}, onSave, onSaveEnd = onSave, song } = props;
+  /**
+   * Set when editing one level of an override hierarchy (a song, or a song in a playlist): returns the value an option
+   * inherits from the levels above when it isn't set here. Each option set at this level then gets a reset button that
+   * removes it, so it inherits again. Omit it for the global settings.
+   */
+  getInheritedValue?: (key: string) => unknown,
+  /**
+   * Tooltip of the reset button. Default is "Use global setting".
+   */
+  resetLabel?: string,
+}
+
+export function VisualizerStyleOptions(props: VisualizerStyleOptionsProps) {
+  const { style, allOptions = {}, onSave, onSaveEnd = onSave, song, getInheritedValue, resetLabel = "Use global setting" } = props;
+  // Remounts the uncontrolled controls after a reset, so they show the inherited value
+  const [resetCount, setResetCount] = React.useState(0);
 
   // Get options from built-in styles or extension styles
   const styleOptions = visualizerStyleOptions[style] ?? ExtensionManager.getVisualizerOptions(style as string) ?? [];
 
+  const resetOption = (key: string) => {
+    const options = allOptions[style] ?? {};
+    delete options[key];
+    if (Object.keys(options).length === 0) delete allOptions[style];
+    else allOptions[style] = options;
+    onSaveEnd(allOptions);
+    setResetCount(count => count + 1);
+  };
+
   return styleOptions.map((option) => {
     const options = allOptions[style] ?? {};
+    const isSetHere = options[option.key] !== undefined && options[option.key] !== null;
+    // What the control shows when this level doesn't set the option
+    const fallback = getInheritedValue ? getInheritedValue(option.key) ?? option.defaultValue : option.defaultValue;
+    const key = `${option.key}-${resetCount}`;
+    const withReset = (control: React.ReactNode) => {
+      if (!getInheritedValue) return control;
+      return (
+        <div key={key} className="visualizer-style-option">
+          <div className="visualizer-style-option__control">{control}</div>
+          {isSetHere && (
+            <Tooltip label={resetLabel}>
+              <ActionIcon variant="subtle" aria-label={resetLabel} onClick={() => resetOption(option.key)}>
+                <IconArrowBackUp size="1em" />
+              </ActionIcon>
+            </Tooltip>
+          )}
+        </div>
+      );
+    };
     switch (option.type) {
       default:
         return null;
 
       case "range":
-        return (
-          <React.Fragment key={option.key}>
+        return withReset(
+          <React.Fragment key={key}>
             <Text>{option.name}</Text>
             <Slider
               onChange={v => {
@@ -1170,7 +1212,7 @@ export function VisualizerStyleOptions(props: {
                 onSaveEnd(allOptions);
               }}
 
-              defaultValue={options[option.key] ?? option.defaultValue}
+              defaultValue={options[option.key] ?? fallback}
               name={option.key}
               label={(v) => v == option.defaultValue ? "Default" : v}
               min={option.min}
@@ -1181,8 +1223,8 @@ export function VisualizerStyleOptions(props: {
         );
 
       case "boolean":
-        return (
-        <Select key={option.key}
+        return withReset(
+        <Select key={key}
           allowDeselect={false}
           onChange={(value) => {
             if (value === "") {
@@ -1194,7 +1236,7 @@ export function VisualizerStyleOptions(props: {
             allOptions[style] = options;
             onSaveEnd(allOptions);
           }}
-          defaultValue={typeof options[option.key] === "boolean" ? options[option.key].toString() : (option.defaultValue ?? "").toString()}
+          defaultValue={typeof options[option.key] === "boolean" ? options[option.key].toString() : (fallback ?? "").toString()}
           name={option.key}
           label={option.name}
           data={[
@@ -1215,15 +1257,15 @@ export function VisualizerStyleOptions(props: {
       );
 
       case "select":
-        return (
-        <Select key={option.key}
+        return withReset(
+        <Select key={key}
           allowDeselect={false}
           onChange={(value) => {
             options[option.key] = value;
             allOptions[style] = options;
             onSaveEnd(allOptions);
           }}
-          defaultValue={options[option.key] ?? option.defaultValue}
+          defaultValue={options[option.key] ?? fallback}
           name={option.key}
           label={option.name}
           data={option.options}
@@ -1232,9 +1274,10 @@ export function VisualizerStyleOptions(props: {
 
       case "songImage": {
         const sourceSong = song ?? Song.getCurrent();
-        return (
+        // A song image is relative to the song folder, so an inherited value from another level can't be shown here
+        return withReset(
           <BackgroundFileSelector
-            key={option.key}
+            key={key}
             label={option.name}
             defaultValue={options[option.key] ?? option.defaultValue}
             song={sourceSong}
