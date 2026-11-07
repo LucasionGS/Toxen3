@@ -1,19 +1,18 @@
 import type Song from "../Song";
 import type { ISong } from "../Song";
-import Settings from "../Settings";
 import User from "../User";
 import { SongStorage } from "./SongStorage";
-import type { SyncV2 } from "../sync/SyncApi";
+import { SyncApi, SyncV2 } from "../sync/SyncApi";
+import { Merge } from "../sync/Merge";
 import type ToxenController from "../../../ToxenControllers/ToxenController";
 
 /**
- * Song files on the server. Works on web and desktop (`fetch`, plus `toxenapi.uploadFile` for `DiskFile` on desktop).
+ * Song files on the server, through the `/v2` API (`SyncApi`). Works on web and desktop.
  *
- * Phase 1: today's v1 endpoints (`User.getCollectionPath()`, `?token=` media URLs), with every promise settling.
- * Phase 4: `/v2` through `SyncApi`. Writes become blob PUT + commit against the rev from `setManifestProvider`,
- * media URLs use signed tokens from `ensureMediaTokens`.
- * Until the old sync is removed (Phase 4), writes and deletes also call `song.setFile()`, as the remote code paths did.
- * Must not import `SyncEngine` or `Toxen` (UI). May import `sync/SyncApi` (a leaf).
+ * Reads go to `GET /tracks/:uid/files/:path`. Writes upload the blob and commit it against the rev of the song's
+ * current manifest (kept by the `ManifestStore`: `SyncState` through `SyncEngine`), re-merging the info and retrying on
+ * a stale base. URLs the renderer loads directly (`<audio>`, images) carry short-lived signed media tokens.
+ * Must not import `SyncEngine` or `Toxen` (UI). May import the leaves `sync/SyncApi` and `sync/Merge`.
  */
 export class CloudSongStorage implements SongStorage {
   /**
@@ -24,112 +23,164 @@ export class CloudSongStorage implements SongStorage {
   public readonly kind = SongStorage.Kind.Cloud;
 
   /**
-   * Cached media tokens by uid (Phase 4).
+   * Commit attempts for one write before a stale base is reported as an error.
+   */
+  public static readonly MAX_COMMIT_ATTEMPTS = 3;
+
+  /**
+   * Media tokens are fetched again when they expire within this window. Unit is in ms.
+   */
+  public static readonly TOKEN_REFRESH_MARGIN_MS = 60 * 60 * 1000;
+
+  /**
+   * A token this close to expiry is not handed out anymore. Unit is in ms.
+   */
+  public static readonly TOKEN_MIN_LIFETIME_MS = 5 * 60 * 1000;
+
+  /**
+   * How long a `listSongs` result is reused (the loading screen counts, then lists). Unit is in ms.
+   */
+  public static readonly LISTING_CACHE_MS = 10 * 1000;
+
+  /**
+   * Cached media tokens by uid.
    */
   private _mediaTokens = new Map<string, SyncV2.MediaToken>();
+  private _tokenUserId: number | null = null;
+  private _tokenRequest: Promise<void> | null = null;
+  private _tokenTimer: ReturnType<typeof setInterval> | null = null;
+  private _listing: { at: number; result: Promise<ISong[]> } | null = null;
 
   /**
-   * Where to get a song's current server manifest (Phase 4). Set by `SyncEngine.init` (desktop) or `SongLibrary` (web).
+   * Where the songs' current server manifests live. Defaults to an in-memory map until `SyncEngine` sets its store.
    */
-  private _manifestProvider: ((uid: string) => SyncV2.TrackManifest | null) | null = null;
+  private _store: CloudSongStorage.ManifestStore = CloudSongStorage._memoryStore();
 
   /**
-   * Base URL of the server's track collection, as `User.getCollectionPath()` returns it.
+   * Set where the current server manifest of a song comes from and goes to. Set by `SyncEngine.configure`.
    */
-  public collectionUrl(): string {
-    return `${Settings.getServer()}/track`;
+  public setManifestStore(store: CloudSongStorage.ManifestStore): void {
+    this._store = store;
   }
 
   /**
-   * Base URL of the song on the server (`<server>/track/<uid>` in Phase 1).
+   * The latest server manifest of a song, or `null` if it has none (or it is a tombstone).
    */
-  public songUrl(song: Song): string {
-    return `${this.collectionUrl()}/${song.uid}`;
+  public getManifest(uid: string): SyncV2.TrackManifest | null {
+    const manifest = this._store.get(uid);
+    return manifest && !manifest.deleted ? manifest : null;
   }
 
   public fileUrl(song: Song, relPath: string): string {
     if (!relPath) return "";
+    const user = User.getCurrentUser();
+    if (user && this._tokenUserId !== user.id) this._resetTokens(user.id);
+    const token = this._mediaTokens.get(song.uid);
+    if (user && token && token.exp * 1000 - Date.now() > CloudSongStorage.TOKEN_MIN_LIFETIME_MS) {
+      return SyncApi.fileUrl(song.uid, relPath, token, user.id);
+    }
+    // No token yet: fetch one for next time, and use the session token meanwhile (the v2 file route accepts it)
+    if (user) this.ensureMediaTokens([song.uid]).catch(error => console.warn("Unable to get media tokens.", error));
     return User.appendAuth(this.fileLocation(song, relPath));
   }
 
   public fileLocation(song: Song, relPath?: string): string {
-    return relPath ? `${this.songUrl(song)}/${relPath}` : this.songUrl(song);
+    if (relPath) return SyncApi.fileUrl(song.uid, relPath);
+    return `${SyncApi.getBaseUrl()}/tracks/${encodeURIComponent(song.uid)}`;
   }
 
   public async readText(song: Song, relPath: string): Promise<string | null> {
-    const res = await CloudSongStorage._fetch(this.fileLocation(song, relPath));
-    if (res.status === 404) return null;
-    await CloudSongStorage._ensureOk(res, `Reading ${relPath}`);
-    return res.text();
+    const res = await this._get(song, relPath);
+    return res ? res.text() : null;
   }
 
   public async readBlob(song: Song, relPath: string): Promise<Blob | null> {
-    const res = await CloudSongStorage._fetch(this.fileLocation(song, relPath));
-    if (res.status === 404) return null;
-    await CloudSongStorage._ensureOk(res, `Reading ${relPath}`);
-    return res.blob();
+    const res = await this._get(song, relPath);
+    return res ? res.blob() : null;
   }
 
   /**
-   * Upload a file (v1 `PUT /track/<uid>/<relPath>`). `DiskFile` is read into memory first in Phase 1 (desktop only);
-   * Phase 4 streams it with `toxenapi.uploadFile`.
+   * Upload a file and commit it into the song's manifest. `DiskFile` streams from disk (desktop only).
    */
   public async writeFile(song: Song, relPath: string, data: SongStorage.WriteData): Promise<void> {
     CloudSongStorage._requireUser();
-    const body = await CloudSongStorage._toBody(data);
-    const res = await CloudSongStorage._fetch(this.fileLocation(song, relPath), { method: "PUT", body });
-    await CloudSongStorage._ensureOk(res, `Uploading ${relPath}`);
-    song.setFile(relPath, "u");
+    CloudSongStorage._requireSyncablePath(relPath);
+    const entry = await this._uploadBlob(data);
+    await this._commit(song, () => ({ files: { [relPath]: entry } }));
   }
 
   public async deleteFile(song: Song, relPath: string): Promise<void> {
     CloudSongStorage._requireUser();
-    const res = await CloudSongStorage._fetch(this.fileLocation(song, relPath), { method: "DELETE" });
-    if (res.status !== 404) await CloudSongStorage._ensureOk(res, `Deleting ${relPath}`);
-    song.setFile(relPath, "d");
+    await this._commit(song, manifest => {
+      if (!manifest || !Object.prototype.hasOwnProperty.call(manifest.files, relPath)) return null;
+      return { deletes: [relPath] };
+    });
   }
 
   /**
-   * Files of the song from the v1 listing (`GET /track/<uid>`), which only has names: `size` and `mtimeMs` are `0`.
+   * Files of the song from its manifest.
    */
   public async list(song: Song): Promise<SongStorage.FileEntry[]> {
-    const res = await CloudSongStorage._fetch(this.songUrl(song));
-    if (res.status === 404) return [];
-    await CloudSongStorage._ensureOk(res, "Listing the song's files");
-    const raw = await res.json() as (string | { name: string })[];
-    return raw
-      .map(file => typeof file === "string" ? file : file?.name)
-      .filter(relPath => relPath && relPath !== SongStorage.INFO_FILE)
-      .map(relPath => ({ relPath, size: 0, mtimeMs: 0 }));
-  }
-
-  public async saveInfo(song: Song): Promise<void> {
-    CloudSongStorage._requireUser();
-    const res = await CloudSongStorage._fetch(`${this.songUrl(song)}/${SongStorage.INFO_FILE}`, {
-      method: "PUT",
-      body: JSON.stringify(song.toISong()),
-      headers: { "Content-Type": "application/json" },
-    });
-    await CloudSongStorage._ensureOk(res, "Saving the song info");
-  }
-
-  public async deleteSong(song: Song): Promise<void> {
-    CloudSongStorage._requireUser();
-    const res = await CloudSongStorage._fetch(this.songUrl(song), { method: "DELETE" });
-    await CloudSongStorage._ensureOk(res, "Deleting the song");
+    const manifest = this.getManifest(song.uid);
+    if (!manifest) return [];
+    return Object.entries(manifest.files).map(([relPath, file]) => ({
+      relPath,
+      size: file.size,
+      mtimeMs: file.receivedAt,
+      sha256: file.sha256,
+    }));
   }
 
   /**
-   * Today's `Song.loadRemoteSongs` (v1 `GET /track`). Phase 4 on web: `changes?since=0`.
+   * Commit `song.toISong()` as the song's info. On a stale base the info is merged per field against the version
+   * this device last saw, so a concurrent edit of another field on another device is kept.
+   */
+  public async saveInfo(song: Song): Promise<void> {
+    CloudSongStorage._requireUser();
+    const ours = CloudSongStorage.toCloudInfo(song.toISong());
+    const now = Date.now();
+    const seen = this.getManifest(song.uid);
+    await this._commit(song, current => {
+      let info = ours;
+      if (current && seen && current.rev !== seen.rev) {
+        info = Merge.mergeInfo(CloudSongStorage.toCloudInfo(seen.info), ours, now, CloudSongStorage.toCloudInfo(current.info), current.infoUpdatedAt).merged;
+      }
+      return { info, infoUpdatedAt: now };
+    });
+  }
+
+  /**
+   * Tombstone the track. A change made in between by another device doesn't stop the delete: the user asked for it.
+   */
+  public async deleteSong(song: Song): Promise<void> {
+    CloudSongStorage._requireUser();
+    let baseRev = this.getManifest(song.uid)?.rev;
+    for (let attempt = 0; attempt < CloudSongStorage.MAX_COMMIT_ATTEMPTS; attempt++) {
+      const result = await SyncApi.deleteTrack(song.uid, baseRev);
+      if (result.ok === true) {
+        const previous = this._store.get(song.uid);
+        if (previous) this._store.set({ ...previous, rev: result.value.rev, files: {}, deleted: true, deletedAt: Date.now() });
+        return;
+      }
+      if (!result.body.current || result.body.current.deleted) return;
+      this._store.set(result.body.current);
+      baseRev = result.body.current.rev;
+    }
+    throw new Error(`Deleting "${song.getDisplayName()}" from the cloud kept conflicting with changes from another device. Try again.`);
+  }
+
+  /**
+   * Every live track (`changes?since=0`, all pages), stored in the manifest store. Web uses this as its library.
    * @returns `[]` when nobody is logged in.
    * @throws If the server can't be reached or answers with an error (`Toxen.loadSongs` falls back to the local library).
    */
   public async listSongs(onEach?: (info: ISong) => void): Promise<ISong[]> {
-    if (!Settings.getUser()) return [];
-    const res = await CloudSongStorage._fetch(this.collectionUrl());
-    await CloudSongStorage._ensureOk(res, "Loading the cloud library");
-    const infos = await res.json() as ISong[];
-    if (!Array.isArray(infos)) throw new Error("The server sent an invalid track list.");
+    if (!User.getCurrentUser()) return [];
+    const cached = this._listing && Date.now() - this._listing.at < CloudSongStorage.LISTING_CACHE_MS ? this._listing : null;
+    const listing = cached?.result ?? this._fetchListing();
+    if (!cached) this._listing = { at: Date.now(), result: listing };
+    listing.catch(() => { this._listing = null; });
+    const infos = await listing;
     if (onEach) infos.forEach(info => onEach(info));
     return infos;
   }
@@ -139,55 +190,220 @@ export class CloudSongStorage implements SongStorage {
   }
 
   /**
-   * Fetch media tokens for songs that have none or whose token expires within the hour (Phase 4).
+   * Fetch media tokens for songs that have none or whose token expires within `TOKEN_REFRESH_MARGIN_MS`, and keep
+   * them fresh from then on. Concurrent calls share one request per batch.
    */
   public async ensureMediaTokens(uids: string[]): Promise<void> {
-    throw new Error("Not implemented.");
+    const user = User.getCurrentUser();
+    if (!user) return;
+    if (this._tokenUserId !== user.id) this._resetTokens(user.id);
+    const due = (uid: string) => {
+      const token = this._mediaTokens.get(uid);
+      return !token || token.exp * 1000 - Date.now() < CloudSongStorage.TOKEN_REFRESH_MARGIN_MS;
+    };
+    // Join the running request first, then ask for whatever it didn't cover
+    if (this._tokenRequest) await this._tokenRequest.catch(() => { });
+    const needed = [...new Set(uids)].filter(due);
+    if (needed.length > 0) {
+      const request = SyncApi.getMediaTokens(needed).then(tokens => {
+        for (const [uid, token] of Object.entries(tokens)) this._mediaTokens.set(uid, token);
+      });
+      this._tokenRequest = request.finally(() => {
+        if (this._tokenRequest === request) this._tokenRequest = null;
+      });
+      await request;
+    }
+    this._tokenTimer ??= setInterval(() => {
+      this.ensureMediaTokens([...this._mediaTokens.keys()]).catch(error => console.warn("Unable to refresh media tokens.", error));
+    }, CloudSongStorage.TOKEN_REFRESH_MARGIN_MS / 4);
   }
 
   /**
-   * Set where the current server manifest of a song comes from (Phase 4).
+   * Info as the server keeps it: without `IGNORED_INFO_FIELDS` and without `paths.dirname`, which names this device's
+   * folder and differs between devices.
    */
-  public setManifestProvider(provider: (uid: string) => SyncV2.TrackManifest | null): void {
-    this._manifestProvider = provider;
+  public static toCloudInfo(info: Partial<ISong> | SyncV2.SongInfo): SyncV2.SongInfo {
+    const stripped = Merge.stripInfo(info as SyncV2.SongInfo);
+    const paths = stripped.paths;
+    if (paths && typeof paths === "object" && !Array.isArray(paths) && "dirname" in paths) {
+      const rest = { ...(paths as Record<string, unknown>) };
+      delete rest.dirname;
+      stripped.paths = rest;
+    }
+    return stripped;
   }
 
   /**
-   * `fetch` with the logged-in user's bearer token, like `Toxen.fetch` (which storage can't import).
+   * A server manifest as a song info for the library (`uid` from the manifest, `paths` always present).
    */
-  private static _fetch(url: string, init?: RequestInit): Promise<Response> {
-    const token = User.getCurrentUser()?.token;
-    return fetch(url.replace(/^tx(s)?:\/\//, (_: string, $1: string) => `http${$1 || ""}://`), {
-      credentials: "include",
-      ...init,
-      headers: {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(init?.headers as Record<string, string> ?? {}),
-      },
-    });
+  public static toSongInfo(manifest: SyncV2.TrackManifest): ISong {
+    const info = { ...(manifest.info as Partial<ISong>), uid: manifest.uid } as ISong;
+    const paths = (info.paths && typeof info.paths === "object" ? info.paths : {}) as ISong["paths"];
+    info.paths = { media: null, background: null, subtitles: null, storyboard: null, ...paths, dirname: manifest.uid };
+    return info;
+  }
+
+  private async _fetchListing(): Promise<ISong[]> {
+    const live = new Map<string, SyncV2.TrackManifest>();
+    let since = 0;
+    for (;;) {
+      const page = await SyncApi.getChanges({ since });
+      for (const change of page.changes) {
+        if (change.kind !== "track") continue;
+        this._store.set(change.manifest);
+        if (change.manifest.deleted) live.delete(change.uid);
+        else live.set(change.uid, change.manifest);
+      }
+      since = page.nextSince;
+      if (!page.hasMore) break;
+    }
+    this._store.listed(since);
+    return [...live.values()].map(manifest => CloudSongStorage.toSongInfo(manifest));
   }
 
   /**
-   * Throw a readable error for a non-2xx response, using the server's `{ error }` body when there is one.
+   * Commit a change built from the song's current manifest, re-building it from the server's manifest on a stale
+   * base. `build` returns `null` when there is nothing to commit.
    */
-  private static async _ensureOk(res: Response, action: string): Promise<void> {
-    if (res.ok) return;
-    const body = await res.json().catch((): null => null) as { error?: string } | null;
-    throw new Error(`${action} failed: ${body?.error ?? `${res.status} ${res.statusText}`}`);
+  private async _commit(song: Song, build: (manifest: SyncV2.TrackManifest | null) => Omit<SyncV2.CommitRequest, "baseRev"> | null): Promise<void> {
+    let manifest = this.getManifest(song.uid);
+    for (let attempt = 0; attempt < CloudSongStorage.MAX_COMMIT_ATTEMPTS; attempt++) {
+      const change = build(manifest);
+      if (!change) return;
+      const result = await SyncApi.commit(song.uid, { baseRev: manifest?.rev ?? null, ...change });
+      if (result.ok === true) {
+        this._store.set(result.value.manifest);
+        return;
+      }
+      const failure = result.body;
+      switch (failure.code) {
+        case SyncV2.ErrorCode.StaleBase:
+          manifest = failure.current && !failure.current.deleted ? failure.current : null;
+          if (failure.current) this._store.set(failure.current);
+          break;
+        case SyncV2.ErrorCode.QuotaExceeded:
+          throw new Error(`Your cloud storage is full (${CloudSongStorage._formatBytes(failure.storageUsed)} of ${CloudSongStorage._formatBytes(failure.storageQuota)}). Free up space or upgrade to save this change.`);
+        case SyncV2.ErrorCode.MissingBlobs:
+          throw new Error("The server lost an uploaded file before it was saved. Try again.");
+        default:
+          throw new Error((failure as SyncV2.ErrorResponse).error); // A code newer than this client
+      }
+    }
+    throw new Error(`Saving "${song.getDisplayName()}" kept conflicting with changes from another device. Try again.`);
+  }
+
+  /**
+   * Hash and upload one file's content unless the server already has it.
+   */
+  private async _uploadBlob(data: SongStorage.WriteData): Promise<SyncV2.FileEntry> {
+    if (SongStorage.isDiskFile(data)) {
+      if (!toxenapi.isDesktop()) return (toxenapi as ToxenController).throwDesktopOnly("Uploading a file from disk");
+      const { sha256, size } = await toxenapi.hashFile(data.diskPath);
+      if (await SyncApi.headBlob(sha256) === null) {
+        const res = await toxenapi.uploadFile({ url: SyncApi.blobUrl(sha256), filePath: data.diskPath, headers: SyncApi.getHeaders() })
+          .catch(error => { throw new SyncApi.HttpError(`Can't reach the sync server: ${error?.message ?? error}`, 0); });
+        CloudSongStorage._ensureUploaded(res.status, res.body);
+      }
+      return { sha256, size };
+    }
+
+    const blob = typeof data === "string"
+      ? new Blob([data], { type: "text/plain" })
+      : data instanceof Blob ? data : new Blob([new Uint8Array(data)]);
+    const sha256 = await CloudSongStorage._sha256(blob);
+    if (await SyncApi.headBlob(sha256) === null) {
+      const result = await SyncApi.putBlob(sha256, blob);
+      if (result.ok === false) CloudSongStorage._ensureUploaded(result.status, result.body);
+    }
+    return { sha256, size: blob.size };
+  }
+
+  private async _get(song: Song, relPath: string): Promise<Response | null> {
+    let res: Response;
+    try {
+      res = await fetch(SyncApi.fileUrl(song.uid, relPath), { headers: SyncApi.getHeaders() });
+    } catch (error) {
+      throw new Error(`Reading ${relPath} failed: can't reach the server (${error?.message ?? error}).`);
+    }
+    if (res.status === 404) return null;
+    if (!res.ok) {
+      const body = await res.json().catch((): null => null) as { error?: string } | null;
+      throw new Error(`Reading ${relPath} failed: ${body?.error ?? `${res.status} ${res.statusText}`}`);
+    }
+    return res;
+  }
+
+  private _resetTokens(userId: number): void {
+    this._mediaTokens.clear();
+    this._tokenUserId = userId;
+  }
+
+  private static _ensureUploaded(status: number, body: unknown): void {
+    if (status >= 200 && status < 300) return;
+    const error = body as SyncV2.ErrorResponse | SyncV2.QuotaExceededErrorResponse | null;
+    if (error?.code === SyncV2.ErrorCode.QuotaExceeded) {
+      const quota = error as SyncV2.QuotaExceededErrorResponse;
+      throw new Error(`Your cloud storage is full (${CloudSongStorage._formatBytes(quota.storageUsed)} of ${CloudSongStorage._formatBytes(quota.storageQuota)}). Free up space or upgrade to upload this file.`);
+    }
+    throw new Error(`Uploading the file failed: ${error?.error ?? `status ${status}`}`);
+  }
+
+  private static async _sha256(blob: Blob): Promise<string> {
+    if (typeof crypto === "undefined" || !crypto.subtle) {
+      throw new Error("This browser can't hash files here. Open Toxen over HTTPS to upload files.");
+    }
+    const digest = await crypto.subtle.digest("SHA-256", await blob.arrayBuffer());
+    return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
+  }
+
+  private static _formatBytes(bytes: number): string {
+    if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
+    if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+    return `${Math.round(bytes / 1024)} KB`;
   }
 
   private static _requireUser(): void {
-    if (!Settings.getUser()) throw new Error("You are not logged in. Log in to change songs in your cloud library.");
+    if (!User.getCurrentUser()) throw new Error("You are not logged in. Log in to change songs in your cloud library.");
   }
 
+  private static _requireSyncablePath(relPath: string): void {
+    const lower = relPath.toLowerCase();
+    if (!relPath || relPath.length > SyncV2.PATH_MAX_LENGTH || relPath.includes("\\") || relPath.split("/").some(s => s === "" || s === "." || s === "..")
+      || (SyncV2.RESERVED_PATHS as readonly string[]).includes(lower) || SyncV2.RESERVED_PREFIXES.some(prefix => lower.startsWith(prefix))) {
+      throw new Error(`"${relPath}" can't be stored in the cloud. Use a relative path with "/" separators, at most ${SyncV2.PATH_MAX_LENGTH} characters.`);
+    }
+  }
+
+  private static _memoryStore(): CloudSongStorage.ManifestStore {
+    const manifests = new Map<string, SyncV2.TrackManifest>();
+    return {
+      get: uid => manifests.get(uid) ?? null,
+      set: manifest => {
+        const previous = manifests.get(manifest.uid);
+        if (!previous || previous.rev <= manifest.rev) manifests.set(manifest.uid, manifest);
+      },
+      listed: () => { },
+    };
+  }
+}
+
+export namespace CloudSongStorage {
   /**
-   * Turn `WriteData` into a request body. Strings are sent as `text/plain` so the server never parses them as JSON.
+   * Where `CloudSongStorage` reads and writes the songs' server manifests.
    */
-  private static async _toBody(data: SongStorage.WriteData): Promise<BodyInit> {
-    if (data instanceof Uint8Array) return new Uint8Array(data);
-    if (!SongStorage.isDiskFile(data)) return data;
-    if (toxenapi.isDesktop()) return new Blob([new Uint8Array(await toxenapi.fs.promises.readFile(data.diskPath))]);
-    return (toxenapi as ToxenController).throwDesktopOnly("Uploading a file from disk");
+  export interface ManifestStore {
+    /**
+     * The newest manifest seen for `uid` (tombstones included), or `null`.
+     */
+    get(uid: string): SyncV2.TrackManifest | null;
+    /**
+     * A manifest from the server (commit response, stale-base answer, listing). Older revs than the stored one are ignored.
+     */
+    set(manifest: SyncV2.TrackManifest): void;
+    /**
+     * A full listing was read up to `rev` (web uses it as its pull cursor, so the engine doesn't list everything twice).
+     */
+    listed(rev: number): void;
   }
 }
 

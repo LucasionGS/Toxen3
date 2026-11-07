@@ -12,17 +12,30 @@ import { Toxen } from "../ToxenApp";
 import { SongStorage } from "./storage/SongStorage";
 import { StorageSelector } from "./storage/StorageSelector";
 import { LocalSongStorage } from "./storage/LocalSongStorage";
+import { CloudSongStorage } from "./storage/CloudSongStorage";
+import { SyncEngine } from "./sync/SyncEngine";
+import { SyncState } from "./sync/SyncState";
+import User from "./User";
 
 /**
- * Loading, importing and deleting songs (moved out of `Song.tsx`: `getSongs`, `getSongCount`, `loadLocalSongs`,
- * `loadRemoteSongs`, `importSong`, `importSongRemote`, `delete`). Works through `StorageSelector`, never `Settings.isRemote()`.
+ * Loading, importing and deleting songs. Works through `StorageSelector`, never `Settings.isRemote()`.
  *
- * Phase 1: `load()` lists `StorageSelector.forLibrary()` only, exactly as today.
- * Phase 4: `load()` lists both storages on desktop, merges by uid and sets `song.location`; cloud-only songs are built
- * from `SyncState` bases. Web lists the cloud only.
+ * The unified library: on desktop `load()` lists the library folder and adds the cloud-only songs `SyncState` knows
+ * (union by uid), setting `song.location` on every song. Web lists the cloud only. Afterwards `SyncEngine` keeps the
+ * list current through `applySyncChange` (downloads, removed downloads, new and changed cloud songs, deletes).
  */
 export class SongLibrary {
   private constructor() { }
+
+  /**
+   * How long song list refreshes from sync are batched. Unit is in ms.
+   */
+  public static readonly PANEL_UPDATE_DELAY_MS = 250;
+
+  private static _index = new Map<string, Song>();
+  private static _indexedList: Song[] | null = null;
+  private static _indexedLength = -1;
+  private static _panelTimer: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * `true` when the last `load()` left songs out: the library couldn't be listed, a song folder couldn't be read, or a
@@ -38,18 +51,104 @@ export class SongLibrary {
    * @throws If the cloud library can't be loaded, so `Toxen.loadSongs` can fall back to the local library.
    */
   public static async load(onEach?: (song: Song | null) => void): Promise<Song[]> {
-    const result = await SongLibrary._load(StorageSelector.forLibrary(), onEach);
+    const storage = StorageSelector.forLibrary();
+    const result = await SongLibrary._load(storage, onEach);
     SongLibrary.lastLoadIncomplete = result.incomplete;
-    return result.songs;
+
+    const location: SongStorage.Location = { local: storage.kind === SongStorage.Kind.Local, cloud: storage.kind === SongStorage.Kind.Cloud };
+    for (const song of result.songs) {
+      song.location = { ...location, cloud: location.cloud || SongLibrary._isInCloud(song.uid) };
+    }
+    const songs = storage.kind === SongStorage.Kind.Local
+      ? Song.sortSongs([...result.songs, ...SongLibrary._cloudOnlySongs(result.songs, onEach)])
+      : result.songs;
+
+    const cloudUids = songs.filter(song => song.location.cloud && !song.location.local).map(song => song.uid);
+    if (cloudUids.length > 0) {
+      // Not awaited: until the tokens arrive, cloud files load with the session token
+      CloudSongStorage.instance.ensureMediaTokens(cloudUids).catch(error => console.warn("Unable to get media tokens.", error));
+    }
+    return songs;
   }
 
   /**
-   * Load every song of one storage. `load()` uses the library storage; the old sync uses this to list the local
-   * library while browsing the cloud (removed with it in Phase 4).
-   * @param onEach See `load`.
+   * The library's song with this uid, or `null`.
    */
-  public static async loadFrom(storage: SongStorage, onEach?: (song: Song | null) => void): Promise<Song[]> {
-    return (await SongLibrary._load(storage, onEach)).songs;
+  public static getSong(uid: string): Song | null {
+    const list = Toxen.songList ?? [];
+    if (SongLibrary._indexedList !== list || SongLibrary._indexedLength !== list.length) {
+      SongLibrary._index = new Map(list.map(song => [song.uid, song]));
+      SongLibrary._indexedList = list;
+      SongLibrary._indexedLength = list.length;
+    }
+    return SongLibrary._index.get(uid) ?? null;
+  }
+
+  /**
+   * Bring the song list in line with a sync change: add new cloud and downloaded songs, update changed ones in place
+   * (playlists and the player keep their references), drop deleted ones.
+   */
+  public static applySyncChange(change: SyncEngine.SongChange): void {
+    const existing = SongLibrary.getSong(change.uid);
+    if (!change.local && !change.remote) {
+      if (!existing) return;
+      if (Song.getCurrent() === existing) Toxen.musicPlayer?.playNext();
+      Toxen.songList = (Toxen.songList ?? []).filter(song => song !== existing);
+      SongLibrary._schedulePanelUpdate();
+      return;
+    }
+
+    const info = change.local ? change.local.info : CloudSongStorage.toSongInfo(change.remote);
+    const location: SongStorage.Location = { local: Boolean(change.local), cloud: Boolean(change.remote) };
+    if (existing) {
+      existing.applyInfo(info);
+      existing.location = location;
+    }
+    else {
+      const song = Song.create(info);
+      song.location = location;
+      if (!SongLibrary._isPlayable(song)) return;
+      (Toxen.songList ??= []).push(song);
+      Song.sortSongs(Toxen.songList);
+    }
+    if (!change.local && change.remote) {
+      CloudSongStorage.instance.ensureMediaTokens([change.uid]).catch(error => console.warn("Unable to get media tokens.", error));
+    }
+    SongLibrary._schedulePanelUpdate();
+  }
+
+  /**
+   * Whether `SyncState` knows a live cloud track for `uid`.
+   */
+  private static _isInCloud(uid: string): boolean {
+    const remote = SyncState.peekSong(uid)?.remote;
+    return Boolean(remote && !remote.deleted);
+  }
+
+  /**
+   * Songs that exist only in the cloud, from the manifests in `SyncState` (desktop; the engine refreshes them).
+   */
+  private static _cloudOnlySongs(localSongs: Song[], onEach?: (song: Song | null) => void): Song[] {
+    if (!User.getCurrentUser()) return [];
+    const localUids = new Set(localSongs.map(song => song.uid));
+    const songs: Song[] = [];
+    for (const [uid, state] of Object.entries(SyncState.data.songs)) {
+      if (localUids.has(uid) || !state.remote || state.remote.deleted) continue;
+      const song = Song.create(CloudSongStorage.toSongInfo(state.remote));
+      song.location = { local: false, cloud: true };
+      if (!SongLibrary._isPlayable(song)) continue;
+      onEach?.(song);
+      songs.push(song);
+    }
+    return songs;
+  }
+
+  private static _schedulePanelUpdate(): void {
+    if (SongLibrary._panelTimer) return;
+    SongLibrary._panelTimer = setTimeout(() => {
+      SongLibrary._panelTimer = null;
+      Toxen.songPanel?.update();
+    }, SongLibrary.PANEL_UPDATE_DELAY_MS);
   }
 
   private static async _load(storage: SongStorage, onEach?: (song: Song | null) => void): Promise<{ songs: Song[], incomplete: boolean }> {
@@ -88,10 +187,14 @@ export class SongLibrary {
    * Total for the loading screen. `0` if it can't be counted.
    */
   public static async count(): Promise<number> {
-    return StorageSelector.forLibrary().countSongs().catch(error => {
+    const storage = StorageSelector.forLibrary();
+    const count = await storage.countSongs().catch(error => {
       console.error("Unable to count songs", error);
       return 0;
     });
+    if (storage.kind !== SongStorage.Kind.Local || !User.getCurrentUser()) return count;
+    // Cloud-only songs aren't folders; counting every live manifest overcounts synced songs only on the loading screen
+    return count + Object.values(SyncState.data.songs).filter(state => state.remote && !state.remote.deleted && state.baseFiles === null).length;
   }
 
   /**
@@ -113,26 +216,41 @@ export class SongLibrary {
   }
 
   /**
-   * Delete a song. Phase 1 only supports `"auto"`: the song's own storage, so a local delete never touches the cloud.
-   * Phase 4 adds the explicit scopes of the Delete dialog (plan §2.1).
+   * Delete a song from this device, the cloud, or both (the Delete dialog, plan §2.1). `auto` is the copy the song
+   * plays from: the local copy when there is one (a synced song stays in the cloud), otherwise the cloud copy.
    */
   public static async delete(song: Song, scope: SongLibrary.DeleteScope = "auto"): Promise<void> {
-    if (scope !== "auto") throw new Error(`Deleting a song with the "${scope}" scope needs sync v2. Use "auto" until then.`);
+    const resolved: Exclude<SongLibrary.DeleteScope, "auto"> = scope !== "auto" ? scope : (StorageSelector.isLocal(song) ? "device" : "cloud");
+    const keepsCloud = resolved === "device" && Boolean(song.location?.cloud);
+    const keepsLocal = resolved === "cloud" && StorageSelector.isLocal(song);
 
-    // Play the next song if this is the current song
+    // Play the next song if this one disappears from the list
     const current = Song.getCurrent();
-    if (current && current.uid === song.uid) {
+    if (current && current.uid === song.uid && !keepsCloud && !keepsLocal) {
       await Toxen.musicPlayer.playNext();
     }
 
     try {
-      await song.storage.deleteSong(song);
+      if (User.getCurrentUser() && (song.location?.cloud || SongLibrary._isInCloud(song.uid))) {
+        // The sync engine keeps the sync state right (a removed download must not read as a deletion)
+        await SyncEngine.deleteFrom(song, resolved);
+      }
+      else if (resolved !== "cloud") {
+        await song.storage.deleteSong(song);
+        if (User.getCurrentUser()) SyncState.removeSong(song.uid);
+      }
     } catch (error) {
       console.error(error);
-      Toxen.error("Failed to delete song: " + song.getDisplayName());
+      Toxen.error(`Failed to delete ${song.getDisplayName()}: ${error?.message ?? error}`);
+      return;
     }
 
-    Toxen.songList = Toxen.songList.filter(s => s !== song);
+    if (keepsCloud || keepsLocal) {
+      song.location = { local: keepsLocal, cloud: keepsCloud };
+    }
+    else {
+      Toxen.songList = Toxen.songList.filter(s => s !== song);
+    }
     Toxen.songPanel.update();
   }
 
@@ -213,8 +331,11 @@ export class SongLibrary {
     await LocalSongStorage.instance.writeFile(draft, ensureValidName(file.name), System.toWriteData(file, toxenapi.getFilePath(file)));
 
     const info = await Song.buildInfo(LocalSongStorage.instance.songDir(draft));
-    const song = Song.create({ ...info, files: draft.files });
+    const song = Song.create(info);
+    song.location = { local: true, cloud: false };
     await song.saveInfo();
+    // New imports go up to the cloud when auto-sync is on (existing local-only songs stay local until uploaded)
+    if (User.getCurrentUser() && Settings.get("autoSync") !== false) SyncEngine.markForUpload(song.uid);
     return new Success(song);
   }
 
@@ -247,6 +368,7 @@ export class SongLibrary {
 
     await storage.writeFile(song, fileName, data);
     await song.saveInfo();
+    song.location = { local: false, cloud: true };
     return new Success(song);
   }
 }
@@ -264,6 +386,13 @@ LocalSongStorage.instance.setLibraryRules({
   buildInfo: folderPath => Song.buildInfo(folderPath),
   isAudioFile: relPath => Toxen.getSupportedAudioFiles().includes(toxenapi.getFileExtension(relPath).toLowerCase()),
   newHash: () => Song.randomFileHash(),
+});
+
+// The sync engine reads the library through this, since it can't import `Toxen`
+SyncEngine.setLibrary({
+  getSongs: () => Toxen.songList ?? [],
+  getSong: uid => SongLibrary.getSong(uid),
+  isComplete: () => !SongLibrary.lastLoadIncomplete,
 });
 
 export default SongLibrary;

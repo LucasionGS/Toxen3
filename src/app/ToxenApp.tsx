@@ -19,6 +19,7 @@ import Song from "./toxen/Song";
 import SongLibrary from "./toxen/SongLibrary";
 import SongStorage from "./toxen/storage/SongStorage";
 import StorageSelector from "./toxen/storage/StorageSelector";
+import SyncEngine from "./toxen/sync/SyncEngine";
 import "./ToxenApp.scss";
 import "./tx.scss";
 import System from "./toxen/System";
@@ -60,8 +61,8 @@ import ImportPanel from "./components/Sidepanel/Panels/ImportPanel/ImportPanel";
 import StoryboardEditor, { StoryboardEditorController } from "./components/StoryboardEditor/StoryboardEditor";
 import SubtitleEditor from "./components/SubtitleEditor/SubtitleEditor";
 import SubtitleEditorController from "./components/SubtitleEditor/SubtitleEditorController";
-import { modals } from "@mantine/modals";
-import ExtensionManager from "./toxen/extensions/ExtensionManager";
+import ExtensionManager
+ from "./toxen/extensions/ExtensionManager";
 import AudioEffects from "./toxen/AudioEffects";
 import ImageCache from "./toxen/ImageCache";
 import FriendsPanel, { FriendsIconBadge } from "./components/FriendsPanel/FriendsPanel";
@@ -540,26 +541,19 @@ export class Toxen {
         ref.setMax(totalSongCount);
       }
     };
+    let songList: Song[];
     try {
-      var songList = await SongLibrary.load(loadingCallback);
+      songList = await SongLibrary.load(loadingCallback);
     } catch (error) {
-      Settings.set("isRemote", false);
-      var songList = await SongLibrary.load(loadingCallback);
+      console.error(error);
+      Toxen.error(`Unable to load your cloud library: ${error?.message ?? error}`);
+      SongLibrary.lastLoadIncomplete = true;
+      songList = [];
+
     }
 
-    // Check to ensure all songs have an MD5 hash
-    if (StorageSelector.forLibrary().kind === SongStorage.Kind.Local) {
-      for (const song of songList) {
-        if (!song.hash) {
-          console.warn("Song \"" + song.title + "\" does not have an MD5 hash. Generating one now...", 1000);
-          song.hash = Song.randomFileHash();
-          await song.saveInfo({
-            callSync: false
-          });
-          console.warn("MD5 hash generated for \"" + song.title + "\": " + song.hash, 1000);
-        }
-      }
-    }
+    // Songs without a cache-busting hash get one in memory; it is saved with their next info save
+    for (const song of songList) song.hash ||= Song.randomFileHash();
 
     Toxen.setSongList(songList);
 
@@ -710,72 +704,17 @@ export class Toxen {
     return toxenapi.isDesktop() ? toxenapi.getHueInstance() : null;
   }
 
+  /**
+   * Sync the given songs (or the whole library) now.
+   * @deprecated Use `SyncEngine.syncNow()` for the library, `SyncEngine.syncSong(song)` per song.
+   */
   public static async syncSongs(songs?: Song[]) {
-    // If not logged in, return
-    if (!toxenapi.isDesktop()) {
-      return toxenapi.throwDesktopOnly();
-    }
-    const browser = toxenapi.remote.getCurrentWindow();
-
-    const songData = await Song.compareSongsAgainstRemote(songs);
-    
-    console.log("Syncing songs...", songData);
-    
-    // Detect server-only songs (new remote songs not yet on this client)
-    const localUids = new Set((songs ?? Toxen.songList).map(s => s.uid));
-    const serverOnlyUids = Object.keys(songData.result).filter(uid => !localUids.has(uid));
-
-    // Fetch metadata for server-only songs and create local Song objects
-    if (serverOnlyUids.length > 0) {
-      const user = Settings.getUser();
-      if (user) {
-        for (const uid of serverOnlyUids) {
-          try {
-            const res = await Toxen.fetch(`${user.getCollectionPath()}/${uid}/info.json`);
-            if (res.ok) {
-              const metadata = await res.json();
-              const newSong = Song.create(metadata);
-              Toxen.songList.push(newSong);
-            }
-          } catch (err) {
-            console.error(`Failed to fetch metadata for server-only song ${uid}:`, err);
-          }
-        }
-      }
-    }
-
-    const currentQueue = [...(songs ?? Toxen.songList)];
-    const total = currentQueue.length;
-    // 5 songs at a time
-    let untilFinished = 5;
-    const startingQueue = currentQueue.splice(0, untilFinished);
-
-    function syncSong(song: Song) {
-      song.sync(songData.result[song.uid]).then(() => {
-        const next = currentQueue.shift();
-        if (next) {
-          syncSong(next);
-        }
-        else {
-          untilFinished--;
-        }
-        
-        browser.setProgressBar((total - currentQueue.length) / total);
-
-        if (untilFinished <= 0) {
-          Toxen.log("✅ Synced all songs.", 2500);
-          browser.setProgressBar(-1);
-          Song.sortSongs(Toxen.songList);
-          Toxen.songPanel?.update();
-        }
-        
-      }).catch(err => {
-        Toxen.error(`Error syncing ${song.getDisplayName()}: ${err.message}`);
-      });
-    }
-    
-    for (let i = 0; i < startingQueue.length; i++) {
-      syncSong(startingQueue[i]);
+    try {
+      if (!songs) await SyncEngine.syncNow();
+      else await Promise.all(songs.map(song => SyncEngine.syncSong(song)));
+      Toxen.log("Synced.", 2500);
+    } catch (error) {
+      Toxen.error(`Sync failed: ${error?.message ?? error}`);
     }
   }
 
@@ -921,42 +860,12 @@ export default class ToxenAppRenderer extends React.Component {
                       height: 8
                     }}></div>
                     <Button.Group>
-                      {toxenapi.isDesktop() && Settings.getUser()?.premium && typeof Settings.get("isRemote") === "boolean" && (
-                        <Button color={Settings.get("isRemote") ? "blue" : "gray"}
-                          onClick={() => {
-                            Settings.apply({isRemote: !Settings.get("isRemote")}, true).then(() => {
-                              Toxen.reloadSection();
-                            });
-                          }}
-
-                          onContextMenu={() => {
-                            // Song.downloadAllMissingRemoteToLocal();
-                            modals.openConfirmModal({
-                              title: "Download all missing songs",
-                              content: "Are you sure you want to download all missing songs?",
-                              onConfirm: () => {
-                                Song.downloadAllMissingRemoteToLocal().then(async () => {
-                                  await Toxen.loadSongs();
-                                  Toxen.reloadSection();
-                                });
-                              },
-                              labels: {
-                                confirm: "Download",
-                                cancel: "Cancel",
-                              },
-                              confirmProps: {
-                                color: "green",
-                              },
-                            }); 
-                          }}
-                            
-                        >☁</Button>
-                      )}
                       {
-                        !Settings.isRemote() && toxenapi.isDesktop() && Settings.getUser()?.premium && (
+                        Settings.getUser() && (
                           <Button color="green" onClick={() => Toxen.syncSongs()}>Sync</Button>
                         )
                       }
+
                       <Button color="green" onClick={() => Toxen.sidePanel.setSectionId("playlist")}>Change Playlist</Button>
                       <Button
                         leftSection={<IconRefresh size="1em" />}

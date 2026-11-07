@@ -178,7 +178,6 @@ export default class Ffmpeg {
           .output(fileDirname + "/trimmed." + filename)
           .on("end", async () => {
             song.paths.media = "trimmed." + filename;
-            song.setFile(song.paths.media);
             await song.saveInfo();
 
             if (Song.getCurrent() === song) {

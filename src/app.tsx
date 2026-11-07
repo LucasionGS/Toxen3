@@ -6,8 +6,6 @@ import Settings from "./app/toxen/Settings";
 import Song from "./app/toxen/Song";
 import Stats from "./app/toxen/Statistics";
 // import navigator from "./navigator";
-import User from "./app/toxen/User";
-import Playlist from "./app/toxen/Playlist";
 import { MantineProvider } from "@mantine/core";
 import { ModalsProvider } from "@mantine/modals";
 import { showWhatsNewIfNeeded } from "./app/components/WhatsNewModal";
@@ -240,11 +238,6 @@ Toxen.whenReady().then(async () => {
 
   // Save Stats
   setInterval(() => Stats.save(), 30000);
-
-  if (Settings.get("remoteSyncOnStartup") && (await User.refreshUser())?.premium) {
-    Toxen.syncSongs();
-    Playlist.syncPlaylists();
-  }
 
   Toxen.reloadSection(); // Reload the section in case of load time changes
 

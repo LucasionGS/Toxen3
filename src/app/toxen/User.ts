@@ -2,6 +2,7 @@ import { Toxen } from "../ToxenApp";
 import Settings from "./Settings";
 import type { IFriendship } from "./FriendSocket";
 import { friendSocket } from "./FriendSocket";
+import { SyncEngine } from "./sync/SyncEngine";
 
 export default class User {
   constructor() { }
@@ -115,14 +116,17 @@ export default class User {
     Toxen.setAppBarUser(user);
     window.localStorage.setItem("user", JSON.stringify(user));
     Toxen.appRenderer?.forceUpdate();
+    SyncEngine.handleUserChanged().catch(error => console.error("Unable to restart sync for the new user.", error));
   }
   
   public static logout() {
     Toxen.setAppBarUser(null);
     window.localStorage.removeItem("user");
     friendSocket.disconnect();
+    SyncEngine.handleUserChanged().catch(error => console.error("Unable to stop sync.", error));
     Toxen.fetch(Settings.getServer() + "/logout");
     Toxen.appRenderer?.forceUpdate();
+
   }
 
   public static async refreshUser() {

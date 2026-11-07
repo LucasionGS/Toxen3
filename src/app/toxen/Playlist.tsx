@@ -205,8 +205,8 @@ export default class Playlist {
         } catch (error) {
           Toxen.error(error);
         }
-        // Sync on edit: push playlist changes to remote server
-        if (Settings.get("remoteSyncOnSongEdit") && User.getCurrentUser()?.premium) {
+        // Auto-sync: push playlist changes to the server (playlists still use the v1 sync)
+        if (Settings.get("autoSync") !== false && User.getCurrentUser()) {
           Playlist.syncPlaylists();
         }
       }

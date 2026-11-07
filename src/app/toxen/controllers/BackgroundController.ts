@@ -27,8 +27,8 @@ export default class BackgroundController extends Controller {
   }
 
   public setBackground(source: string) {
-    // Append auth token for remote URLs so the browser can load them
-    if (source && Settings.isRemote()) {
+    // Append the auth token to server URLs (cloud songs) so the browser can load them; local paths stay as they are
+    if (source && BackgroundController._isServerUrl(source)) {
       source = User.appendAuth(source);
     }
     this._image = source;
@@ -64,7 +64,7 @@ export default class BackgroundController extends Controller {
         bg = list[0];
       }
       // Append auth for remote/web URLs
-      if (bg && Settings.isRemote()) {
+      if (bg && BackgroundController._isServerUrl(bg)) {
         bg = User.appendAuth(bg);
       }
       return bg;
@@ -75,5 +75,12 @@ export default class BackgroundController extends Controller {
     if (themeBgUrl) return themeBgUrl;
 
     return null;
+  }
+
+  /**
+   * Whether a background source is a server URL (which needs authentication), not a local path or blob/data URL.
+   */
+  private static _isServerUrl(source: string): boolean {
+    return /^(https?|txs?):\/\//i.test(source);
   }
 }

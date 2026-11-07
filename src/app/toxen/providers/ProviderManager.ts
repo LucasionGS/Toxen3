@@ -75,8 +75,7 @@ export default class ProviderManager {
     });
 
     await ProviderManager.trySaveArtwork(song, result.artworkUrl);
-    song.setFile("info.json", "u");
-    await song.saveInfo({ callSync: false });
+    await song.saveInfo();
 
     if (!Toxen.songList) Toxen.songList = [];
     Toxen.songList.push(song);

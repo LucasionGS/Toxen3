@@ -42,8 +42,34 @@ export default class Settings {
    */
   public static async load(): Promise<ISettings> {
     return Promise.resolve().then(async () => {
-      return toxenapi.loadSettings(Settings);
+      const data = await toxenapi.loadSettings(Settings);
+      if (Settings.migrateSyncSettings()) await Settings.save({ suppressNotification: true });
+      return data;
     });
+  }
+
+  /**
+   * One-time migration from the v1 sync settings to the unified library (sync v2). Runs whenever one of the legacy
+   * keys is present, then removes them:
+   * - `isRemote: true` (browsing the cloud library on desktop) becomes `libraryFilter: "cloud"`, so the user keeps
+   *   seeing their cloud songs first. On web the key is just dropped: web is always cloud only.
+   * - `remoteSyncOnStartup` / `remoteSyncOnSongEdit` become `autoSync`. Both defaulted to `false`, so `false` says
+   *   nothing about what the user wants, and auto-sync is on by default for everyone logged in: `autoSync` is `true`
+   *   unless the user already set it.
+   * @returns Whether anything changed (the caller saves).
+   */
+  public static migrateSyncSettings(): boolean {
+    const data = Settings.data as ISettings & LegacySyncSettings;
+    if (!data) return false;
+    const hasLegacy = ["isRemote", "remoteSyncOnStartup", "remoteSyncOnSongEdit"].some(key => Object.prototype.hasOwnProperty.call(data, key));
+    if (!hasLegacy) return false;
+
+    if (data.isRemote === true && toxenapi.isDesktop() && data.libraryFilter === undefined) data.libraryFilter = "cloud";
+    data.autoSync ??= true;
+    delete data.isRemote;
+    delete data.remoteSyncOnStartup;
+    delete data.remoteSyncOnSongEdit;
+    return true;
   }
 
   public static async applyDefaultSettings(overrideDefault?: Partial<ISettings>, forceReset?: boolean) {
@@ -51,7 +77,8 @@ export default class Settings {
     const defaultSettings: Partial<ISettings> = {
       showAdvancedSettings: false,
       remoteServer: null,
-      isRemote: !toxenapi.isDesktop(),
+      autoSync: true,
+      libraryFilter: "all",
       volume: 50,
       exposePanelIcons: true,
       backgroundDynamicLighting: true,
@@ -71,8 +98,6 @@ export default class Settings {
       visualizerGlow: false,
       acceptedResponsibility: false,
       visualizerStyleOptions: {},
-      remoteSyncOnStartup: false,
-      remoteSyncOnSongEdit: false,
       hideOffScreenSongElements: true,
       lowPerformanceMode: false,
       songWheelEffect: false,
@@ -152,26 +177,18 @@ export default class Settings {
   }
 
   /**
-   * Returns whether the current music folder is remote. For web, it will always return `true`.
+   * Whether playlists and user assets live on the server only. Since the unified library (sync v2) this is `true` on
+   * web and `false` on desktop, where songs choose their storage through `StorageSelector`. Kept for playlists and
+   * default backgrounds until they move onto sync v2.
    */
   public static isRemote(): boolean;
   /**
-   * If the current music folder is a remote folder, return what is parsed, otherwise return `null`.  
-   * Do not pass `null` to the function, as it would return `null` in both cases, rendering it useless.  
-   * For web, it will always act as `true`.
+   * Return `toReturn` on web, `null` on desktop (see the overload above).  
+   * Do not pass `null` to the function, as it would return `null` in both cases, rendering it useless.
    */
   public static isRemote<T>(toReturn: T): T;
   public static isRemote<T>(toReturn?: T): T | boolean {
-    // const isRemote = Boolean(
-    //   Settings.data
-    //   && Settings.data.libraryDirectory
-    //   && (
-    //     Settings.data.libraryDirectory.toLowerCase().startsWith("http://")
-    //     || Settings.data.libraryDirectory.toLowerCase().startsWith("https://")
-    //     || Settings.data.libraryDirectory.toLowerCase().startsWith("tx://")
-    //     || Settings.data.libraryDirectory.toLowerCase().startsWith("txs://")
-    //   ));
-    const isRemote = Settings.get("isRemote", false) || !toxenapi.isDesktop();
+    const isRemote = !toxenapi.isDesktop();
     if (toReturn === undefined) return isRemote;
     return isRemote ? toReturn : null;
   }
@@ -217,7 +234,7 @@ export default class Settings {
         // Special cases
         if (useSpecialCases ?? true) {
           if (value !== preValue) {
-            if (key === "libraryDirectory" || key === "isRemote") {
+            if (key === "libraryDirectory") {
               await Toxen.loadSongs();
               setTimeout(() => {
                 const cur = Song.getCurrent();
@@ -334,7 +351,11 @@ export default class Settings {
 export interface ISettings {
   // General settings
   libraryDirectory: string;
-  isRemote: boolean;
+  /**
+   * @deprecated Retired by the unified library and removed by `Settings.migrateSyncSettings`. Desktop shows local and
+   * cloud songs together; web is always cloud only.
+   */
+  isRemote?: boolean;
   volume: number;
   repeat: boolean;
   shuffle: boolean;
@@ -415,8 +436,24 @@ export interface ISettings {
   acceptedResponsibility: boolean;
 
   // Syncing
-  remoteSyncOnStartup: boolean;
-  remoteSyncOnSongEdit: boolean;
+  /**
+   * Sync the library with the cloud in the background (sync v2): on startup, after local edits, on changes from other
+   * devices and every few minutes. On by default for anyone logged in, free tier included.
+   */
+  autoSync: boolean;
+  /**
+   * Which songs the song list shows: `all`, `local` (songs with a copy on this device, synced or not) or `cloud` (songs
+   * with a cloud copy, downloaded or not: what the old "remote library" mode showed).
+   */
+  libraryFilter: "all" | "local" | "cloud";
+  /**
+   * @deprecated Migrated to `autoSync` by `Settings.migrateSyncSettings`.
+   */
+  remoteSyncOnStartup?: boolean;
+  /**
+   * @deprecated Migrated to `autoSync` by `Settings.migrateSyncSettings`.
+   */
+  remoteSyncOnSongEdit?: boolean;
 
   // Performance
   hideOffScreenSongElements: boolean;
@@ -925,4 +962,13 @@ for (const key in visualizerStyleOptions) {
     }
     visualizerStyleOptionsMap[key as VisualizerStyle] = map;
   }
+}
+
+/**
+ * Settings of the v1 sync that `Settings.migrateSyncSettings` reads once and removes.
+ */
+interface LegacySyncSettings {
+  isRemote?: boolean;
+  remoteSyncOnStartup?: boolean;
+  remoteSyncOnSongEdit?: boolean;
 }

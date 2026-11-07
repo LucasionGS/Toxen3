@@ -1,13 +1,19 @@
 import React from "react";
 import { modals } from "@mantine/modals";
-import { Toxen } from "./ToxenApp";
+import { Toxen, ToxenEvent } from "./ToxenApp";
 import Settings from "./toxen/Settings";
 import Stats from "./toxen/Statistics";
 import User from "./toxen/User";
+import Song from "./toxen/Song";
+import Playlist from "./toxen/Playlist";
+import { SongLibrary } from "./toxen/SongLibrary";
 import ExtensionManager from "./toxen/extensions/ExtensionManager";
 import { friendSocket } from "./toxen/FriendSocket";
+import { SyncEngine } from "./toxen/sync/SyncEngine";
+import { SyncV2 } from "./toxen/sync/SyncApi";
 import TButton from "./components/Button/Button";
 import LoginForm from "./components/LoginForm/LoginForm";
+import { showConflictNotice, showMissingSongsNotice } from "./toxen/syncNotices";
 
 //#region Steps
 /**
@@ -15,6 +21,14 @@ import LoginForm from "./components/LoginForm/LoginForm";
  */
 async function loadSettings() {
   await Settings.load();
+}
+
+/**
+ * Points the sync API at the server and loads the library's sync state, so the library can list cloud-only songs.
+ * Nothing here talks to the server.
+ */
+async function prepareSync() {
+  await SyncEngine.prepare();
 }
 
 /**
@@ -189,6 +203,106 @@ async function connectFriendSocket() {
 }
 
 /**
+ * Song uids whose media changed while they were playing. The new media is used from the next play, and a repeating
+ * song switches to it when it ends, never mid-play.
+ */
+const pendingMediaChanges = new Set<string>();
+
+/**
+ * Media path of each song before a sync change replaced its info, to tell when `applied` changed the media.
+ */
+const mediaBeforeChange = new Map<string, string | null>();
+
+/**
+ * Turns sync engine events into song list updates, notifications and live updates of the playing song, and feeds
+ * socket events into the engine. Runs once.
+ */
+function wireSync() {
+  const events = SyncEngine.events;
+
+  events.on("song", change => {
+    mediaBeforeChange.set(change.uid, SongLibrary.getSong(change.uid)?.paths?.media ?? null);
+    SongLibrary.applySyncChange(change);
+  });
+
+  events.on("applied", applied => {
+    const current = Song.getCurrent();
+    if (!current || current.uid !== applied.uid) return;
+    const mediaBefore = mediaBeforeChange.get(applied.uid);
+    mediaBeforeChange.delete(applied.uid);
+    const touched = (relPath?: string | null) => Boolean(relPath) && applied.paths.includes(relPath);
+
+    if (applied.infoChanged || touched(current.paths?.background)) {
+      const bg = current.backgroundFile();
+      Toxen.background.setBackground(bg ? `${bg}?h=${current.hash}` : null);
+    }
+    if (applied.infoChanged || touched(current.paths?.subtitles)) current.applySubtitles();
+    if (applied.infoChanged || touched(current.paths?.storyboard)) current.applyStoryboard();
+    if (applied.infoChanged) current.setAppTitle();
+    if (touched(current.paths?.media) || (mediaBefore !== undefined && mediaBefore !== (current.paths?.media ?? null))) {
+      pendingMediaChanges.add(current.uid);
+    }
+  });
+
+  ToxenEvent.on("songEnded", () => {
+    const current = Song.getCurrent();
+    if (!current || !pendingMediaChanges.delete(current.uid)) return;
+    // The player restarts a repeating song on the old media element; load the new media instead
+    if (Settings.get("repeat") || Toxen.getPlayableSongs().length === 1) setTimeout(() => current.play(), 0);
+  });
+
+  events.on("conflict", record => showConflictNotice(record));
+
+  events.on("kept", kept => {
+    Toxen.log(kept.kept === "local"
+      ? `Kept your edited copy of "${kept.songName}". It was deleted on another device.`
+      : `Kept the edited copy of "${kept.songName}" from another device. It was deleted here.`, 6000);
+  });
+
+  events.on("error", failure => {
+    if (failure.code === "server-outdated") {
+      Toxen.warn("Your server needs an update to sync. Your library keeps working on this device.", 10000);
+      return;
+    }
+    if (failure.code === SyncV2.ErrorCode.QuotaExceeded) {
+      Toxen.warn(failure.message, 10000);
+      return;
+    }
+    if (failure.code === "missing-songs") {
+      showMissingSongsNotice(failure.message);
+      return;
+    }
+    const song = failure.uid ? SongLibrary.getSong(failure.uid) : null;
+    Toxen.error(song ? `Sync of "${song.getDisplayName()}" failed: ${failure.message}` : `Sync failed: ${failure.message}`, 8000);
+  });
+
+  friendSocket.on(SyncV2.SocketEvent.TrackChanged, event => SyncEngine.handleRemoteEvent(event));
+  friendSocket.on("connected", reconnect => {
+    if (reconnect) SyncEngine.handleReconnect();
+  });
+
+  // Flush the sync state when the window closes; pending jobs resume on the next start
+  window.addEventListener("beforeunload", () => {
+    SyncEngine.stop();
+  });
+}
+
+/**
+ * Starts background sync for the logged-in user (and the v1 playlist sync, which playlists keep until they move to
+ * sync v2). Not awaited: it needs the network and must never block startup.
+ */
+async function startSync() {
+  wireSync();
+  SyncEngine.init().catch(error => {
+    console.error(error);
+    Toxen.error(`Unable to start sync: ${error?.message ?? error}`);
+  });
+  if (toxenapi.isDesktop() && User.getCurrentUser() && Settings.get("autoSync") !== false) {
+    Playlist.syncPlaylists();
+  }
+}
+
+/**
  * Checks for a newer Media Downloader (yt-dlp) and updates it (desktop only).
  * Not awaited: this needs the network and must never block startup.
  */
@@ -216,6 +330,7 @@ async function checkMediaDownloader() {
  */
 const STEPS: [name: string, run: () => Promise<void>][] = [
   ["load settings", loadSettings],
+  ["prepare sync", prepareSync],
   ["load statistics", loadStatistics],
   ["apply settings", applySettings],
   ["restore window", restoreWindow],
@@ -229,6 +344,7 @@ const STEPS: [name: string, run: () => Promise<void>][] = [
   ["start playback or login", startPlaybackOrLogin],
   ["connect Discord", connectDiscord],
   ["connect friend socket", connectFriendSocket],
+  ["start sync", startSync],
   ["check Media Downloader", checkMediaDownloader],
 ];
 

@@ -17,8 +17,7 @@ const LIST_CONCURRENCY = 24;
  * `toxenapi.fs` / `toxenapi.path` / `toxenapi.atomicWriteFile`, never `node:` imports.
  *
  * Every write goes through here, so this is where the sync engine learns that a song changed: each write, delete and
- * info save emits `change`. That replaces the hand-kept `Song.setFile` / `song.files` bookkeeping.
- * Until the old sync is removed (Phase 4), writes and deletes also call `song.setFile()` so `song.files` stays correct.
+ * info save emits `change`, which `SyncEngine` turns into a debounced sync of that song.
  * Must not import `SyncEngine` or `Toxen` (UI); errors are thrown, callers notify.
  */
 export class LocalSongStorage extends EventEmitter implements SongStorage {
@@ -47,13 +46,22 @@ export class LocalSongStorage extends EventEmitter implements SongStorage {
    * (`"."`, `".."` or an absolute path would make writes and `deleteSong` hit the library root or a folder outside it).
    */
   public songDir(song: Song): string {
-    const api = LocalSongStorage._api("songDir");
     if (!song.paths?.dirname) throw new Error(`The song "${song.uid}" has no folder. Set \`paths.dirname\` before reading or writing its files.`);
+    return this.folderPath(song.paths.dirname, song.uid);
+  }
+
+  /**
+   * Absolute path of a song folder in the library directory by its name.
+   * @param uid Only for the error message.
+   * @throws If `dirname` doesn't name a folder strictly inside the library directory.
+   */
+  public folderPath(dirname: string, uid?: string): string {
+    const api = LocalSongStorage._api("folderPath");
     const library = api.path.resolve(Settings.get("libraryDirectory"));
-    const dir = api.path.resolve(library, song.paths.dirname);
+    const dir = api.path.resolve(library, dirname);
     const prefix = library.endsWith(api.path.sep) ? library : library + api.path.sep; // A drive root already ends with one
     if (!dir.startsWith(prefix) || dir === library) {
-      throw new Error(`The folder "${song.paths.dirname}" of the song "${song.uid}" is not inside the library directory. Its \`paths.dirname\` must be the name of a folder in the library.`);
+      throw new Error(`The folder "${dirname}"${uid ? ` of the song "${uid}"` : ""} is not inside the library directory. Its \`paths.dirname\` must be the name of a folder in the library.`);
     }
     return dir;
   }
@@ -104,14 +112,12 @@ export class LocalSongStorage extends EventEmitter implements SongStorage {
       const bytes = data instanceof Blob ? new Uint8Array(await data.arrayBuffer()) : data;
       await api.atomicWriteFile(target, bytes);
     }
-    song.setFile(relPath, "u");
     this.emit("change", { uid: song.uid, relPath, action: "write" });
   }
 
   public async deleteFile(song: Song, relPath: string): Promise<void> {
     const api = LocalSongStorage._api("deleteFile");
     await api.fs.promises.rm(this.filePath(song, relPath), { force: true });
-    song.setFile(relPath, "d");
     this.emit("change", { uid: song.uid, relPath, action: "delete" });
   }
 
@@ -236,9 +242,7 @@ export class LocalSongStorage extends EventEmitter implements SongStorage {
     }
 
     if (changed) {
-      // The same v1 sync bookkeeping `Song.saveInfo` does, so the old sync sees the repaired info as changed
-      if (!info.files || typeof info.files !== "object") info.files = {};
-      info.files[SongStorage.INFO_FILE] = { action: "u", time: Date.now() };
+      // A new cache-busting hash, as `Song.saveInfo` sets on every save
       info.hash = rules.newHash();
       await api.atomicWriteFile(infoPath, JSON.stringify(info)).catch(error => {
         console.error(`Failed to save repaired info.json in song: ${dir}`, error);
@@ -291,7 +295,7 @@ export interface LocalSongStorage {
 export namespace LocalSongStorage {
   /**
    * Library knowledge `listSongs` needs but can't import, because media formats and uid generation live in `Song` and
-   * `Toxen` (the UI layer). `SongLibrary` sets them once, the same way `CloudSongStorage.setManifestProvider` works.
+   * `Toxen` (the UI layer). `SongLibrary` sets them once, the same way `CloudSongStorage.setManifestStore` works.
    */
   export interface LibraryRules {
     /**
@@ -304,7 +308,7 @@ export namespace LocalSongStorage {
      */
     isAudioFile(relPath: string): boolean;
     /**
-     * A fresh info hash for a repaired `info.json` (today `Song.randomFileHash`).
+     * A fresh cache-busting hash for a repaired `info.json` (`Song.randomFileHash`).
      */
     newHash(): string;
   }

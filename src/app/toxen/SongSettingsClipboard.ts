@@ -22,7 +22,7 @@ export class SongSettingsClipboard {
   private static readonly EXCLUDED_KEYS: (keyof ISong)[] = [
     "uid", "artist", "title", "coArtists", "album", "genre",
     "source", "tags", "year", "language",
-    "duration", "hash", "files", "playlistSettings", "provider",
+    "duration", "hash", "playlistSettings", "provider",
   ];
 
   /**
@@ -241,7 +241,7 @@ export class SongSettingsClipboard {
         }
       }
 
-      await target.saveInfo({ callSync: true, touch: true });
+      await target.saveInfo();
     }
   }
 }

@@ -1,5 +1,6 @@
 import { io, Socket } from "socket.io-client";
 import Settings from "./Settings";
+import { SyncV2 } from "./sync/SyncApi";
 
 export interface PresenceNowPlaying {
   title?: string;
@@ -34,6 +35,10 @@ type SocketEventMap = {
   friends_presence: (presences: FriendPresence[]) => void;
   friend_request: (friendship: IFriendship) => void;
   friend_accepted: (friendship: IFriendship) => void;
+  // Sync v2: a track of this user changed on the server (from any device, this one included)
+  [SyncV2.SocketEvent.TrackChanged]: (event: SyncV2.TrackChangedEvent) => void;
+  // The socket (re)connected; `reconnect` is `false` for the first connection
+  connected: (reconnect: boolean) => void;
 };
 
 class FriendSocket {
@@ -67,14 +72,23 @@ class FriendSocket {
     // Strip /api suffix from server URL to get the socket root
     const serverUrl = Settings.getServer().replace(/\/api\/?$/, "");
 
+    // Websocket first: the server is websocket only. Reconnects never give up, because sync relies on the socket
+    // to hear about changes from other devices (with a slow backoff, so a server that is down isn't hammered).
     this.socket = io(serverUrl, {
       auth: { token },
-      reconnectionAttempts: 5,
+      reconnectionDelayMax: 60 * 1000,
       transports: ["websocket", "polling"],
     });
 
+    let connectedBefore = false;
     this.socket.on("connect", () => {
       console.log("[FriendSocket] Connected");
+      this._emit("connected", connectedBefore);
+      connectedBefore = true;
+    });
+
+    this.socket.on(SyncV2.SocketEvent.TrackChanged, (event: SyncV2.TrackChangedEvent) => {
+      this._emit(SyncV2.SocketEvent.TrackChanged, event);
     });
 
     this.socket.on("connect_error", (err) => {
@@ -106,11 +120,13 @@ class FriendSocket {
     });
   }
 
+  /**
+   * Disconnect (logout). Subscriptions stay, so they keep working after the next `connect`.
+   */
   public disconnect() {
     this.socket?.disconnect();
     this.socket = null;
     this._presences.clear();
-    this._listeners.clear();
   }
 
   public isConnected() {
