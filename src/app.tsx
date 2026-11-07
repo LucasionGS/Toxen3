@@ -225,6 +225,9 @@ navigator.mediaSession.setActionHandler('nexttrack', () => {
 });
 
 Toxen.whenReady().then(async () => {
+  // A critical startup step failed: settings and statistics may not be loaded, so nothing may save them
+  if (Toxen.startupFailed) return;
+
   // Count toxen times opened
   Stats.set("timesOpened", (Stats.get("timesOpened") ?? 0) + 1);
   Stats.save(); // Store when ready

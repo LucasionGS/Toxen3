@@ -204,9 +204,19 @@ export class Toxen {
     return url.replace(/^tx(s)?:\/\//, (_: string, $1: string) => `http${$1 || ""}://`);
   }
 
+  /**
+   * Resolves once the startup sequence has ended, also when it was aborted. Check `Toxen.startupFailed` before doing
+   * anything that reads or saves user data.
+   */
   public static whenReady() {
     return this.resolvedOnReady;
   }
+
+  /**
+   * `true` when a critical startup step failed and the startup sequence stopped early (see `bootstrap.ts`). The app
+   * is then only partly set up, so nothing may save settings or statistics over the user's files.
+   */
+  public static startupFailed = false;
 
   public static _resolveWhenReady: () => void;
   private static resolvedOnReady = new Promise<void>(resolve => Toxen._resolveWhenReady = resolve);
