@@ -153,8 +153,11 @@ export class LocalSongStorage extends EventEmitter implements SongStorage {
     const libraryDirectory = Settings.get("libraryDirectory");
     if (!libraryDirectory) return [];
 
-    const entries = await api.fs.promises.readdir(libraryDirectory, { withFileTypes: true });
-    const folders = entries.filter(ent => ent.isDirectory() && !ent.name.startsWith(".")).map(ent => ent.name);
+    // `opendir` keeps the directory's own order (`readdir` sorts by name), which the song list order has always followed
+    const folders: string[] = [];
+    for await (const ent of await api.fs.promises.opendir(libraryDirectory)) {
+      if (ent.isDirectory() && !ent.name.startsWith(".")) folders.push(ent.name);
+    }
     return LocalSongStorage._mapLimit(folders, LIST_CONCURRENCY, async folder => {
       const info = await this._loadFolder(libraryDirectory, folder);
       onEach?.(info);
