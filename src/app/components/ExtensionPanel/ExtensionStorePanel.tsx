@@ -118,6 +118,7 @@ function BrowseTab() {
       return;
     }
 
+    const desktop = toxenapi;
     setInstalling(ext.id);
     try {
       const url = `${Settings.getServer()}/extensions/store/${ext.id}/download`;
@@ -153,13 +154,19 @@ function BrowseTab() {
             } else {
               zipfile.openReadStream(entry, async (err: Error | null, readStream: any) => {
                 if (err) return reject(err);
-                const outPath = Path.resolve(targetDir, entry.fileName);
-                const outDir = Path.dirname(outPath);
-                await fsp.mkdir(outDir, { recursive: true });
-                const writeStream = fs.createWriteStream(outPath);
-                readStream.pipe(writeStream);
-                writeStream.on("close", () => zipfile.readEntry());
-                writeStream.on("error", reject);
+                try {
+                  const outPath = desktop.safeJoinInside(targetDir, entry.fileName);
+                  const outDir = Path.dirname(outPath);
+                  await fsp.mkdir(outDir, { recursive: true });
+                  const writeStream = fs.createWriteStream(outPath);
+                  readStream.pipe(writeStream);
+                  writeStream.on("close", () => zipfile.readEntry());
+                  writeStream.on("error", reject);
+                } catch (error) {
+                  readStream.destroy();
+                  zipfile.close();
+                  reject(error);
+                }
               });
             }
           });
