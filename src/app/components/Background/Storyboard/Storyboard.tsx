@@ -237,7 +237,8 @@ export default class Storyboard extends Component<StoryboardProps, StoryboardSta
     if (!image.value) return null;
     // The global image is an absolute path, storyboard/per-song images are stored relative to the song directory.
     if (image.level === SettingsResolver.Level.Global) return image.value;
-    return this.state.song ? this.state.song.dirname(image.value) : null;
+    const song = this.state.song;
+    return song ? song.storage.fileUrl(song, image.value) : null; // Loadable URL, authenticated for cloud songs
   }
 
   public getRainfallImageScale() {

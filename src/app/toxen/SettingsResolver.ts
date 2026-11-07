@@ -95,8 +95,8 @@ export class SettingsResolver {
 
     let level = resolved.level;
     if (level !== SettingsResolver.Level.Storyboard && level !== SettingsResolver.Level.Playlist && playlist) {
-      // Playlist.getBackgroundPath returns the auth token on remote URLs, which would end up in the URL twice.
-      const playlistUrl = playlist.getBackgroundPath(true)?.replace(/([?&])token=[^&]*$/, "");
+      // Without auth: the caller appends it once (getBackgroundPath would add it here as well).
+      const playlistUrl = playlist.getBackgroundLocation();
       if (playlistUrl) return { value: playlistUrl, url: playlistUrl, level: SettingsResolver.Level.Playlist };
     }
 

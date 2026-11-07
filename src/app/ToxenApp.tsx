@@ -16,6 +16,9 @@ import SidepanelSection from "./components/Sidepanel/SidepanelSection";
 import SongPanel from "./components/SongPanel/SongPanel";
 import Settings, { VisualizerStyle } from "./toxen/Settings";
 import Song from "./toxen/Song";
+import SongLibrary from "./toxen/SongLibrary";
+import SongStorage from "./toxen/storage/SongStorage";
+import StorageSelector from "./toxen/storage/StorageSelector";
 import "./ToxenApp.scss";
 import "./tx.scss";
 import System from "./toxen/System";
@@ -263,7 +266,8 @@ export class Toxen {
   }
 
   public static async filterSupportedFiles(path: string, supported: string[]) {
-    const raw = Settings.isRemote()
+    // Theme folders are either a server URL (cloud) or a disk path, so pick by the path itself
+    const raw = /^https?:\/\//.test(path)
       ? await Toxen.fetch(path).then(res => res.json()) as (string | { name: string })[]
       : await System.recursive(path);
 
@@ -506,7 +510,7 @@ export class Toxen {
     const cur = Song.getCurrent();
     Toxen.loadingScreen.toggleVisible(true);
     let songCount = 0;
-    let totalSongCount = await Song.getSongCount();
+    let totalSongCount = await SongLibrary.count();
     const loadingCallback = () => {
       let ref: ProgressBar;
       let content = (
@@ -527,14 +531,14 @@ export class Toxen {
       }
     };
     try {
-      var songList = await Song.getSongs(true, loadingCallback);
+      var songList = await SongLibrary.load(loadingCallback);
     } catch (error) {
       Settings.set("isRemote", false);
-      var songList = await Song.getSongs(true, loadingCallback);
+      var songList = await SongLibrary.load(loadingCallback);
     }
 
     // Check to ensure all songs have an MD5 hash
-    if (!Settings.isRemote()) {
+    if (StorageSelector.forLibrary().kind === SongStorage.Kind.Local) {
       for (const song of songList) {
         if (!song.hash) {
           console.warn("Song \"" + song.title + "\" does not have an MD5 hash. Generating one now...", 1000);
@@ -898,7 +902,7 @@ export default class ToxenAppRenderer extends React.Component {
                   }
                   <div>
                     <h1 className="song-panel-title">
-                      {((Settings.isRemote() ?  "☁ " : "") + (Toxen.playlist ? Toxen.playlist.name : ("All Tracks")))}
+                      {((StorageSelector.forLibrary().kind === SongStorage.Kind.Cloud ?  "☁ " : "") + (Toxen.playlist ? Toxen.playlist.name : ("All Tracks")))}
                     </h1>
                     <SearchField />
                     <div style={{

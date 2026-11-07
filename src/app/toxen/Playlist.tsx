@@ -456,6 +456,17 @@ export default class Playlist {
     return remote ? Playlist.getRemotePlaylistBackgroundsDir() : Playlist.getLocalPlaylistBackgroundsDir(ensureExisting);
   }
 
+  /**
+   * The playlist's own background as a disk path or plain server URL, without the auth token.
+   * `null` when the playlist has no background or doesn't apply it.
+   */
+  public getBackgroundLocation(): string | null {
+    if (!this.applyBackground || !this.background) return null;
+    if (Settings.isRemote()) return `${Playlist.getPlaylistBackgroundsDir()}/${this.background}`;
+    if (!toxenapi.isDesktop()) return null;
+    return toxenapi.path.resolve(Playlist.getPlaylistBackgroundsDir(), this.background).replace(/\\/g, "/");
+  }
+
   private _cachedBackgroundPath: string;
   private _cachedBackgroundName: string;
   public getBackgroundPath(onlyGlobal = false, ignoreApply = false) {

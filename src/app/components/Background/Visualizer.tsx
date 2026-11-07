@@ -8,8 +8,6 @@ import { ThemeStyleTemplate } from '../../toxen/Theme';
 import ExtensionManager, { VisualizerRenderContext, VisualizerRendererFn } from '../../toxen/extensions/ExtensionManager';
 import User from '../../toxen/User';
 import FrameProfiler from '../../toxen/FrameProfiler';
-import { SongStorage } from "../../toxen/storage/SongStorage";
-import { StorageSelector } from "../../toxen/storage/StorageSelector";
 import AudioAnalyser, { DEFAULT_FFTSIZE } from './AudioAnalyser';
 import VisualizerImages from './VisualizerImages';
 import Frame from './visualizers/frame';
@@ -238,12 +236,8 @@ export default class Visualizer extends Component<VisualizerProps, VisualizerSta
       : null;
 
     if (storyboard.getRainfallEffect()) {
-      const imagePath = storyboard.getRainfallImage();
-      // A per-song image comes back as the song's file location, which needs auth when the song is in the cloud
-      const rainfallStorage = storyboard.getSong()?.storage ?? StorageSelector.forLibrary();
-      const src = imagePath
-        ? (rainfallStorage.kind === SongStorage.Kind.Cloud ? User.appendAuth(imagePath) : imagePath)
-        : null;
+      // Per-song images already come back as a loadable (authenticated) URL from the song's storage
+      const src = storyboard.getRainfallImage();
       payload.rainfall = {
         frequency: storyboard.getRainfallFrequency(),
         speed: storyboard.getRainfallSpeed(),
