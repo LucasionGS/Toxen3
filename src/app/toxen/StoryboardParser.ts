@@ -1,6 +1,6 @@
 import { hexToRgb, hexToRgbArray, rgbArrayToHex, rgbToHex } from "../components/Form/FormInputFields/FormInputColorPicker";
 import { Toxen } from "../ToxenApp";
-import Settings, { VisualizerStyle } from "./Settings";
+import { VisualizerStyle } from "./Settings";
 import Time from "./Time";
 // js-yaml 5 dropped its default export in favour of flat named exports.
 import * as yaml from "js-yaml";
@@ -216,7 +216,12 @@ namespace StoryboardParser {
     variables?: { [key: string]: any };
   }
 
-  export async function save(path: string, config: StoryboardConfig, song: Song) {
+  /**
+   * Save a storyboard into the song's folder through its storage, make it the song's storyboard and save the info.
+   * @param relPath File name relative to the song folder, for example `song.paths.storyboard || "storyboard.tsb"`.
+   * @throws If the file or the info couldn't be written.
+   */
+  export async function save(song: Song, relPath: string, config: StoryboardConfig) {
     const cData = {
       bpm: config.bpm,
       bpmOffset: config.bpmOffset,
@@ -234,35 +239,9 @@ namespace StoryboardParser {
 
     const data = yaml.dump(cData);
 
-    let filetime = Date.now();
-    const storyboardName = path.slice(song.dirname().length + 1);
-    if (Settings.isRemote()) {
-      const user = Settings.getUser();
-      if (!user) throw new Error("Cannot save storyboard. User is not logged in.");
-      console.log("Saving to", path);
-      return Toxen.fetch(`${path}`, {
-        method: "PUT",
-        body: data,
-        headers: {
-          "Content-Type": "application/json"
-        }
-      }).then(res => {
-        if (!res.ok) throw new Error(`Failed to save storyboard. Status: ${res.status} ${res.statusText}`);
-        song.setFile(storyboardName, "u", filetime);
-        song.saveInfo();
-      });
-    }
-    else {
-      if (toxenapi.isDesktop()) {
-        await toxenapi.fs.promises.writeFile(path, data);
-        song.setFile(storyboardName, "u", filetime);
-        await song.saveInfo();
-        return
-      }
-      else {
-        toxenapi.throwDesktopOnly("saveStoryboard");
-      }
-    }
+    await song.storage.writeFile(song, relPath, data);
+    song.paths.storyboard = relPath;
+    await song.saveInfo();
   }
 
   let eventIndex = 0;

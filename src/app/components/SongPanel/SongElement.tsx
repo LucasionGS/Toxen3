@@ -9,6 +9,8 @@ import Converter from '../../toxen/Converter';
 import ImageCache from '../../toxen/ImageCache';
 import SongElementController from '../../toxen/controllers/SongElementController';
 import { useController } from '../../lib/useController';
+import { SongStorage } from "../../toxen/storage/SongStorage";
+import { StorageSelector } from "../../toxen/storage/StorageSelector";
 
 /**
  * Loads the cached thumbnail for a song's background, if thumbnail caching is
@@ -198,7 +200,7 @@ export default function SongElement({ song }: SongElementProps) {
     };
   }, [song, controller]);
 
-  const virtualize = Settings.isRemote() || Settings.get("hideOffScreenSongElements");
+  const virtualize = StorageSelector.forLibrary().kind === SongStorage.Kind.Cloud || Settings.get("hideOffScreenSongElements");
 
   return (
     <div className="song-element-permadiv" ref={ref => { controller.divPermanentElement = ref; }}>

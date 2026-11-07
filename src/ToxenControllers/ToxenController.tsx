@@ -23,6 +23,7 @@ export default class ToxenController {
   /**
    * Alias for `!$settings.isRemote() && this.isDesktop()`.
    * @returns True if the ToxenController is the desktop version and not remote using remote libraries.
+   * @deprecated Use `StorageSelector.isLocal(song)` for per-song checks, or `StorageSelector.forLibrary().kind` for the library.
    */
   public isLocal($settings: typeof Settings): this is DesktopController {
     return !$settings.isRemote() && this.isDesktop();

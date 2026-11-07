@@ -1,5 +1,8 @@
 import type Song from "../Song";
-import type { SongStorage } from "./SongStorage";
+import Settings from "../Settings";
+import { SongStorage } from "./SongStorage";
+import { LocalSongStorage } from "./LocalSongStorage";
+import { CloudSongStorage } from "./CloudSongStorage";
 
 /**
  * The one place that decides which storage a song uses. `Song` exposes it as `public get storage()`.
@@ -18,15 +21,17 @@ export namespace StorageSelector {
   /**
    * Storage of an existing song.
    */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Phase 4 decides per song from `song.location`
   export function forSong(song: Song): SongStorage {
-    throw new Error("Not implemented.");
+    // Phase 1: every song lives where the library lives
+    return forLibrary();
   }
 
   /**
    * Storage for library-level operations: listing, counting, importing new songs.
    */
   export function forLibrary(): SongStorage {
-    throw new Error("Not implemented.");
+    return Settings.isRemote() ? CloudSongStorage.instance : LocalSongStorage.instance;
   }
 
   /**
@@ -34,7 +39,7 @@ export namespace StorageSelector {
    * (trim, convert, transcode, open in file explorer) instead of `!Settings.isRemote()`.
    */
   export function isLocal(song: Song): boolean {
-    throw new Error("Not implemented.");
+    return forSong(song).kind === SongStorage.Kind.Local;
   }
 }
 

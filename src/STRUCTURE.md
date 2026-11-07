@@ -19,7 +19,8 @@ src/
     toxen/
       storage/
         SongStorage.ts       interface + namespace (Kind, FileEntry, WriteData, DiskFile, Location, ChangeEvent)
-        LocalSongStorage.ts  song folders on disk via toxenapi; emits `change` on every write
+        LocalSongStorage.ts  song folders on disk via toxenapi; emits `change` on every write. `LibraryRules`
+                             (buildInfo, audio formats) are injected by SongLibrary so storage never imports Toxen
         CloudSongStorage.ts  server: v1 endpoints (Phase 1), /v2 via SyncApi (Phase 4)
         StorageSelector.ts   the only place that picks Local vs Cloud (song.storage)
       sync/                  (Phase 4, skeletons now)
@@ -29,7 +30,7 @@ src/
         Manifest.ts          local folder scan (hash via toxenapi) / remote manifest -> merge input
         Transfer.ts          streamed upload/download with progress
         SyncEngine.ts        static manager: queue, triggers, typed events
-      SongLibrary.ts         load / count / import / delete songs (out of Song.tsx)
+      SongLibrary.tsx        load / count / import / delete songs (out of Song.tsx). .tsx for the missing-media notification
       SettingsResolver.ts    storyboard -> playlist -> song -> global -> default
       PlayQueue.ts           (Phase 1) history + queue (out of Song.tsx)
       SongSettingsClipboard.ts (Phase 1) copy/paste settings (out of Song.tsx)
@@ -47,9 +48,11 @@ src/
 
 | From | Code | To |
 |---|---|---|
-| Song.tsx | `dirname`, `mediaFile`, `backgroundFile`, `subtitleFile`, `storyboardFile`, `rainfallImageFile`, `getMediaSource` auth | stay on Song as one-liners over `this.storage.fileUrl` |
+| Song.tsx | `dirname`, `mediaFile`, `backgroundFile`, `subtitleFile`, `storyboardFile`, `rainfallImageFile` | stay on Song as one-liners over `this.storage.fileLocation` (unauthenticated: callers compare them, append `?h=` and read extensions from them) |
+| Song.tsx | `getMediaSource` auth | `this.storage.fileUrl` (authenticated) |
 | Song.tsx | `readSubtitleFile`, `readStoryboardFile`, `writeSubtitleFile`, `saveInfo` I/O | `this.storage.readText / writeFile / saveInfo` (subtitle text clean-up stays in Song) |
-| Song.tsx | `getSongs`, `getSongCount`, `loadLocalSongs`, `loadRemoteSongs`, `importSong(Remote)`, `delete`, `reload` | `SongLibrary` (+ `LocalSongStorage.listSongs` gets `DesktopController.loadLocalSongs`) |
+| Song.tsx | `getSongs`, `getSongCount`, `loadLocalSongs`, `loadRemoteSongs`, `importSong(Remote)`, `delete` | `SongLibrary` (+ `LocalSongStorage.listSongs` gets `DesktopController.loadLocalSongs`). `getSongs`/`getSongCount` stay as `@deprecated` wrappers until ToxenApp calls `SongLibrary`; `loadLocalSongs`/`loadRemoteSongs` stay for the old sync (`SongLibrary.loadFrom(storage)`) |
+| Song.tsx | `reload` | stays on Song, reads `info.json` through `this.storage.readText` |
 | Song.tsx | `contextMenuModal`, `createTrimSongModal`, `createManagePlaylists`, `createManageMultiSongsPlaylists` | `components/SongPanel/SongContextMenu.tsx` |
 | Song.tsx | `SETTINGS_*`, `buildSettingsPayload`, `copyImageFile`, `copy/paste*`, `_applySettingsPayload` | `SongSettingsClipboard.ts` (`copyImageFile` via `readBlob` + `writeFile`) |
 | Song.tsx | `history*`, `clearQueue`, `addToQueue`, `removeFromQueue` | `PlayQueue.ts` (fix: `addToQueue` must not sort) |
@@ -85,15 +88,15 @@ Rules:
 
 | Category | Sites | Becomes | Phase |
 |---|---|---|---|
-| A. Paths and URLs | Song 173-174, 182, 201, 216, 232, 243, 252, 329; Visualizer 241; StoryboardEditorPanel 78 | `song.storage.fileUrl(song, rel)` (already authenticated, drop `appendAuth`); `dirname()` stays as a wrapper | 1 |
+| A. Paths and URLs | Song 173-174, 182, 201, 216, 232, 243, 252, 329; Visualizer 241; StoryboardEditorPanel 78 | getters: `song.storage.fileLocation(song, rel)`; things the renderer loads: `song.storage.fileUrl(song, rel)` (already authenticated, drop `appendAuth`); `dirname()` stays as a wrapper. Visualizer 241 keeps `appendAuth` for cloud songs until `Storyboard.getRainfallImage` returns `fileUrl` | 1 |
 | B. Read text | Song 264, 340; EditSong 853, 885, 912 | `song.storage.readText` / `readBlob` (settles on errors: fixes C9) | 1 |
 | C. Writes | Song 305, 966, 1786; StoryboardParser 239; BackgroundFileSelector 207; EditSong 862, 894, 927 | `song.storage.writeFile` / `saveInfo` (`StoryboardParser.save(song, relPath, config)`) | 1 |
-| D. Library | Song 1670, 1686, 1715, 1738, 1754, 1850; ToxenApp 304; System 74, 406; ImportPanel 66; ProviderManager 46, 88, 132; DesktopController 841 | `SongLibrary` + `StorageSelector.forLibrary()`; `filterSupportedFiles` takes a Song and uses `storage.list` | 1 |
+| D. Library | Song 1670, 1686, 1715, 1738, 1754, 1850; ToxenApp 304; System 74, 406; ImportPanel 66; ProviderManager 46, 88, 132; DesktopController 841 | `SongLibrary` + `StorageSelector.forLibrary()`; song file lists use `song.listFiles(supported)` (over `storage.list`); `filterSupportedFiles` stays for non-song folders (theme images) and picks fetch vs disk by the path being a URL | 1 |
 | E. Capability checks | Song 606, 612, 756, 1267, 1962; EditSong 104, 941-942; MusicPlayerController 459, 476; ToxenApp 765 | `StorageSelector.isLocal(song)` or `song.storage.kind === SongStorage.Kind.Cloud` | 1 |
 | F. Old sync UI and code | Song 1276, 1286, 1452, 1462, 1481, 1555, 2045, 2079, 2095; ToxenApp 1301 | unchanged in Phase 1, deleted with the old sync in Phase 4 | 4 |
 | G. Library mode in UI | ToxenApp 1262; LoginForm 34; SongElement 201 | `StorageSelector.forLibrary().kind === SongStorage.Kind.Cloud` | 1 |
 | H. Playlists and user assets | Playlist.tsx 77, 170, 198, 406, 455, 462; PlaylistPanel 146, 182, 259, 342; PlaylistManager 144; SettingsPanel 352; BackgroundController 31, 67 | stay on `Settings.isRemote()` (playlists and default backgrounds aren't songs). `appendAuth` is idempotent, so BackgroundController keeps it | 5 |
-| Definitions | Settings 157; ToxenController 27 (`isLocal($settings)` -> `@deprecated`, delegates to `StorageSelector`); Legacy 63 (comment) | kept until Phase 4 removes the setting | — |
+| Definitions | Settings 157; ToxenController 27 (`isLocal($settings)` -> `@deprecated`, no callers left; it doesn't delegate because importing `StorageSelector` into the controller would pull Settings/Song into it); Legacy 63 (comment) | kept until Phase 4 removes the setting | — |
 
 ## Phase 1 checklist
 
@@ -136,6 +139,7 @@ xvfb + CDP; pause audio). Play a song, edit info, open subtitles and storyboard.
 | New… | Goes in |
 |---|---|
 | Per-song file operation | A method on `SongStorage`, implemented in both storages; call it through `song.storage` |
+| Library knowledge the storage needs (formats, uid rules) | `LocalSongStorage.LibraryRules`, set in `SongLibrary.tsx` |
 | Storage backend | `storage/<Name>SongStorage.ts` implementing `SongStorage`, chosen in `StorageSelector` |
 | Overridable setting | `ISettings` + `ISong` field + `SettingsResolver.Values` + `DEFINITIONS`; read with `SettingsResolver.resolve` |
 | Desktop-only IO | `toxenapi` method: throwing stub in `ToxenController.tsx`, implementation in `DesktopController.tsx`, types in `DesktopIO.ts` |

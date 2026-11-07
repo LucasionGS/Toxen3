@@ -4,6 +4,8 @@ import Settings from "../../toxen/Settings";
 import User from "../../toxen/User";
 import { Toxen } from "../../ToxenApp";
 import { friendSocket } from "../../toxen/FriendSocket";
+import { SongStorage } from "../../toxen/storage/SongStorage";
+import { StorageSelector } from "../../toxen/storage/StorageSelector";
 
 let attemptedInitialLogin = false;
 export default function LoginForm(props: { onSuccessfulLogin?: () => void }) {
@@ -31,7 +33,7 @@ export default function LoginForm(props: { onSuccessfulLogin?: () => void }) {
         setError(null);
         setLoggedIn(true);
         Toxen.sidePanel.reloadSection();
-        if (Settings.isRemote()) Toxen.loadSongs();
+        if (StorageSelector.forLibrary().kind === SongStorage.Kind.Cloud) Toxen.loadSongs();
         // Connect real-time friends socket after login
         friendSocket.connect();
 

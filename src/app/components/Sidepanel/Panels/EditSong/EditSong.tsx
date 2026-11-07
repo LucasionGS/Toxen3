@@ -22,6 +22,7 @@ import { VisualizerStyleOptions } from "../SettingsPanel/SettingsPanel";
 import { useForceUpdate } from "@mantine/hooks";
 import { hideNotification, updateNotification } from "@mantine/notifications";
 import ProviderManager from "../../../../toxen/providers/ProviderManager";
+import { StorageSelector } from "../../../../toxen/storage/StorageSelector";
 
 interface EditSongProps { }
 
@@ -101,7 +102,7 @@ export default function EditSong(props: EditSongProps) {
             </Button>
           )}
           {
-            !Settings.isRemote() && toxenapi.isDesktop() && (
+            StorageSelector.isLocal(Toxen.editingSong) && toxenapi.isDesktop() && (
             <Button onClick={() => toxenapi.remote.shell.openPath(Toxen.editingSong.dirname())} leftSection={<IconFolderOpen size="1em" />}>
               Open music folder
             </Button>
@@ -243,10 +244,8 @@ export default function EditSong(props: EditSongProps) {
               let song = Toxen.editingSong;
               if (!song)
                 return [];
-              let path = song.dirname();
 
-              let supported = Toxen.getSupportedMediaFiles();
-              return await Toxen.filterSupportedFiles(path, supported);
+              return await song.listFiles(Toxen.getSupportedMediaFiles());
             })}
             onChange={(v) => {
               if (isPlaylistMode && currentPlaylist) {
@@ -267,7 +266,7 @@ export default function EditSong(props: EditSongProps) {
         <BackgroundFileSelector
           label="Background file"
           defaultValue={getValue('paths.background')}
-          sourceDir={Toxen.editingSong.dirname()}
+          song={Toxen.editingSong}
           onChange={(v) => {
             // Invalidate cache for old background before changing
             Toxen.invalidateSongBackgroundCache(Toxen.editingSong);
@@ -297,12 +296,9 @@ export default function EditSong(props: EditSongProps) {
             let song = Toxen.editingSong;
             if (!song)
               return [];
-            let path = song.dirname();
-
-            let supported = Toxen.getSupportedSubtitleFiles();
             return [
               "<Empty>",
-              ...(await Toxen.filterSupportedFiles(path, supported))
+              ...(await song.listFiles(Toxen.getSupportedSubtitleFiles()))
             ];
           })}
           onChange={(v) => {
@@ -406,12 +402,9 @@ export default function EditSong(props: EditSongProps) {
             let song = Toxen.editingSong;
             if (!song)
               return [];
-            let path = song.dirname();
-
-            let supported = Toxen.getSupportedStoryboardFiles();
             return [
               "<Empty>",
-              ...(await Toxen.filterSupportedFiles(path, supported))
+              ...(await song.listFiles(Toxen.getSupportedStoryboardFiles()))
             ];
           })}
           onChange={(v) => {
@@ -705,7 +698,7 @@ export default function EditSong(props: EditSongProps) {
         <BackgroundFileSelector
           label="Rainfall Custom Image"
           defaultValue={getValue('rainfallImage')}
-          sourceDir={Toxen.editingSong.dirname()}
+          song={Toxen.editingSong}
           description="Optionally use a custom image for each rain drop instead of the default streak."
           onChange={(v) => {
             saveSettings('rainfallImage', v || null);
@@ -842,24 +835,20 @@ export default function EditSong(props: EditSongProps) {
         <Tabs.Panel value="export" pt="md">
       {!isProviderSong && <Button onClick={async () => {
         if (toxenapi.isDesktop()) {
+          const song = Toxen.editingSong;
           toxenapi.remote.Menu.buildFromTemplate(
-            (await Toxen.filterSupportedFiles(Toxen.editingSong.dirname(), Toxen.getSupportedMediaFiles())).map(file => {
-              file = Toxen.editingSong.dirname(file);
+            (await song.listFiles(Toxen.getSupportedMediaFiles())).map(relPath => {
+              const file = song.dirname(relPath);
               return {
-                label: (Toxen.editingSong.mediaFile() === file ? "(Current) " : "") + "Export " + file,
+                label: (song.mediaFile() === file ? "(Current) " : "") + "Export " + file,
                 click: async () => {
                   let fileData: Buffer;
                   try {
-                    if (Settings.isRemote()) {
-                      fileData = Buffer.from(await Toxen.fetch(file).then(res => res.arrayBuffer()));
-                    }
-                    else {
-                      fileData = await toxenapi.fs.promises.readFile(file);
-                    }
+                    fileData = await readSongFile(song, relPath);
                   } catch (error) {
                     return Toxen.error(error);
                   }
-                  System.exportFile(Settings.isRemote() ? toxenapi.path.basename(file) : file, fileData, [{ name: "", extensions: [file.split(".").pop()] }]);
+                  System.exportFile(exportDefaultPath(song, relPath), fileData, [{ name: "", extensions: [file.split(".").pop()] }]);
                 }
               };
             })
@@ -874,24 +863,20 @@ export default function EditSong(props: EditSongProps) {
 
       <Button onClick={async () => {
         if (toxenapi.isDesktop()) {
+          const song = Toxen.editingSong;
           toxenapi.remote.Menu.buildFromTemplate(
-            (await Toxen.filterSupportedFiles(Toxen.editingSong.dirname(), Toxen.getSupportedImageFiles())).map(file => {
-              file = Toxen.editingSong.dirname(file);
+            (await song.listFiles(Toxen.getSupportedImageFiles())).map(relPath => {
+              const file = song.dirname(relPath);
               return {
-                label: (Toxen.editingSong.backgroundFile() === file ? "(Current) " : "") + "Export " + file,
+                label: (song.backgroundFile() === file ? "(Current) " : "") + "Export " + file,
                 click: async () => {
                   let fileData: Buffer;
                   try {
-                    if (Settings.isRemote()) {
-                      fileData = Buffer.from(await Toxen.fetch(file).then(res => res.arrayBuffer()));
-                    }
-                    else {
-                      fileData = await toxenapi.fs.promises.readFile(file);
-                    }
+                    fileData = await readSongFile(song, relPath);
                   } catch (error) {
                     return Toxen.error(error);
                   }
-                  System.exportFile(Settings.isRemote() ? toxenapi.path.basename(file) : file, fileData, [{ name: "", extensions: [file.split(".").pop()] }]);
+                  System.exportFile(exportDefaultPath(song, relPath), fileData, [{ name: "", extensions: [file.split(".").pop()] }]);
                 }
               };
             })
@@ -901,20 +886,16 @@ export default function EditSong(props: EditSongProps) {
 
       <Button onClick={async () => {
         if (toxenapi.isDesktop()) {
+          const song = Toxen.editingSong;
           toxenapi.remote.Menu.buildFromTemplate(
-            (await Toxen.filterSupportedFiles(Toxen.editingSong.dirname(), Toxen.getSupportedSubtitleFiles())).map(file => {
-              file = Toxen.editingSong.dirname(file);
+            (await song.listFiles(Toxen.getSupportedSubtitleFiles())).map(relPath => {
+              const file = song.dirname(relPath);
               return {
-                label: (Toxen.editingSong.subtitleFile() === file ? "(Current) " : "") + "Export " + file,
+                label: (song.subtitleFile() === file ? "(Current) " : "") + "Export " + file,
                 click: async () => {
                   let fileData: Buffer;
                   try {
-                    if (Settings.isRemote()) {
-                      fileData = Buffer.from(await Toxen.fetch(file).then(res => res.arrayBuffer()));
-                    }
-                    else {
-                      fileData = await toxenapi.fs.promises.readFile(file);
-                    }
+                    fileData = await readSongFile(song, relPath);
                   } catch (error) {
                     return Toxen.error(error);
                   }
@@ -924,7 +905,8 @@ export default function EditSong(props: EditSongProps) {
                         label: (toxenapi.path.extname(file) === ext ? "(Current) " : "") + `Export as ${ext} format`,
                         click: () => {
                           fileData = Buffer.from(SubtitleParser.exportByExtension(SubtitleParser.parseByExtension(fileData.toString(), toxenapi.path.extname(file)), ext));
-                          System.exportFile((Settings.isRemote() ? "" : toxenapi.path.dirname(file) + "/") + toxenapi.path.basename(file, toxenapi.path.extname(file)), fileData, [{ name: "", extensions: [ext.replace(/^\.+/g, "")] }]);
+                          const defaultPath = exportDefaultPath(song, relPath);
+                          System.exportFile(defaultPath.slice(0, defaultPath.length - toxenapi.path.extname(defaultPath).length), fileData, [{ name: "", extensions: [ext.replace(/^\.+/g, "")] }]);
                         }
                       };
                     })
@@ -938,8 +920,8 @@ export default function EditSong(props: EditSongProps) {
 
       <br />
 
-      <Button disabled={(!toxenapi.isDesktop() || Settings.isRemote())} onClick={async () => {
-        if (!toxenapi.isDesktop() || Settings.isRemote()) {
+      <Button disabled={(!toxenapi.isDesktop() || !StorageSelector.isLocal(Toxen.editingSong))} onClick={async () => {
+        if (!toxenapi.isDesktop() || !StorageSelector.isLocal(Toxen.editingSong)) {
           return Toxen.error("Song package export is only available on the desktop version when not using remote libraries.");
         }
         const song = Toxen.editingSong;
@@ -976,4 +958,21 @@ export default function EditSong(props: EditSongProps) {
       </Tabs>
     </div>
   )
+}
+
+/**
+ * Read a file of the song through its storage, for exporting.
+ * @throws If the file doesn't exist or can't be read.
+ */
+async function readSongFile(song: Song, relPath: string): Promise<Buffer> {
+  const blob = await song.storage.readBlob(song, relPath);
+  if (!blob) throw new Error(`"${relPath}" doesn't exist anymore.`);
+  return Buffer.from(await blob.arrayBuffer());
+}
+
+/**
+ * Where the export dialog starts: next to the file for local songs, just the file name for cloud songs.
+ */
+function exportDefaultPath(song: Song, relPath: string): string {
+  return StorageSelector.isLocal(song) ? song.dirname(relPath) : toxenapi.getBasename(relPath);
 }
