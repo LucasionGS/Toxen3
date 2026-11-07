@@ -1,5 +1,37 @@
 # Toxen client: structure for the sync rewrite
 
+## Phase 4 API changes (engine branch `feature/sync-client-engine`, reconcile with the UI branch at merge)
+
+Everything in the skeleton's `SyncEngine` public API is kept with the same signatures. Additions and changes:
+
+- `SyncEngine.removeDownload(song, force?)`: new optional `force`. Without it, unsynced local changes throw
+  `SyncEngine.UnsyncedChangesError` (ask the user, then call again with `force: true`).
+- New actions: `SyncEngine.deleteFrom(song, scope: "device" | "cloud" | "everywhere")` (the Delete dialog;
+  `SongLibrary.delete(song, scope)` calls it, `"auto"` = device if local, else cloud), `SyncEngine.syncSong(song)`,
+  `SyncEngine.setAutoSync(enabled)` (saves `autoSync` and starts/stops triggers; use it from Settings > Sync instead of
+  `Settings.apply`), `SyncEngine.confirmMissingDeletes()` (see `Summary.deletesBlocked`), `SyncEngine.markForUpload(uid)`.
+- Lifecycle (bootstrap/User only): `configure()`, `prepare()`, `prepareLibrary()`, `handleUserChanged()`,
+  `handleReconnect()`, `setLibrary(library)`.
+- New events: `"conflicts"` (full open list whenever it changes), `"kept"` (`SyncEngine.Kept`: delete-vs-modify, the
+  edit was kept; bootstrap shows "Kept your edited copy of X"), `"song"` (`SyncEngine.SongChange`; bootstrap feeds it to
+  `SongLibrary.applySyncChange`, components don't need it). Emit order for a pull: `song` then `applied`.
+- `Summary` gained `disabledReason`, `autoSync`, `tier`, `uploadsBlockedReason`, `deletesBlocked`. `readOnly` is also
+  `true` while uploads are paused after a 413.
+- `Failure.code` gained `"server-outdated"` (no `/api/v2`; bootstrap shows the one-time warning) and `"missing-songs"`.
+- `Song.location: SongStorage.Location | null` is set on every library song (`local`, `cloud`). Row badges read
+  `SyncEngine.getSongStatus(uid)`; a song in its 3 s debounce reports `Queued`.
+- Settings: `autoSync` and `libraryFilter: "all" | "local" | "cloud"` (`local` = has a local copy, `cloud` = has a
+  cloud copy) are new `ISettings` keys; `isRemote`, `remoteSyncOnStartup`, `remoteSyncOnSongEdit` are `@deprecated`
+  optional and removed by `Settings.migrateSyncSettings()`. The Local/Remote switch and the two old checkboxes in the
+  settings panel should go (they still compile, but do nothing). `Settings.isRemote()` is now `!toxenapi.isDesktop()`.
+- Per-machine settings moved out of `sync.json`: `SyncState.machine` (`deviceId`, `autoDownload`) lives in
+  `<app data>/machine.json` (web: `localStorage["toxen.machine"]`). `getAutoDownload`/`setAutoDownload` are unchanged.
+- `CloudSongStorage.setManifestProvider` became `setManifestStore(store)` (set by `SyncEngine.configure`).
+- Kept as `@deprecated` forwards to `SyncEngine` so the current context menu compiles: `song.sync()`,
+  `song.downloadRemoteToLocal()`, `Song.downloadAllMissingRemoteToLocal()`, `Song.loadLocalSongs()`, `Toxen.syncSongs()`.
+  Delete them once the new context menu (Make available offline / Remove download / Upload to cloud / Delete…) lands.
+- `syncNotices.tsx` (bootstrap's conflict and missing-songs notifications) calls `openSyncConflictModal(uid)`.
+
 Target layout for Phase 1 (2.13: `SongStorage`, Song split, settings resolver) and Phase 4 (2.14: unified library,
 `SyncEngine`). Spec: `docs/plans/sync-v2-and-cleanup.md` §2.2, §2.6, §2.9, §5. The full app layout is in `CLAUDE.md`;
 this file only covers what changes. Skeletons are marked `throw new Error("Not implemented.")` / `TODO(builder)`.
@@ -71,7 +103,7 @@ src/
 |---|---|---|
 | `sync/SyncApi.ts`, `sync/Merge.ts` | each other (types) | anything else in the app (they're leaves; Merge is tested from a scratch script) |
 | `sync/*` (rest) | `storage/`, `sync/`, `Song` (types), `Settings`, `User`, `toxenapi` | React components, `Toxen` (ToxenApp), `@mantine/*`. User-facing output goes out as `SyncEngine.events` |
-| `storage/*` | `Song` (types), `Settings`, `User`, `sync/SyncApi`, `toxenapi` | `SyncEngine`, `Toxen`, React. Errors are thrown; callers notify with `Toxen.error` |
+| `storage/*` | `Song` (types), `Settings`, `User`, `sync/SyncApi`, `sync/Merge` (leaves), `toxenapi` | `SyncEngine`, `Toxen`, React. Errors are thrown; callers notify with `Toxen.error` |
 | `SettingsResolver` | `Settings`, `Song`/`Playlist` (types), `ExtensionManager` | React, `Toxen` UI helpers (the default context reads `Toxen.playlist` / current song through a getter passed in by bootstrap, not an import) |
 | shared code (anything not in `desktop/` or a Controller) | `toxenapi.*` | `node:*`, `fs`, `path`, `crypto`, `electron` directly |
 | `app/bootstrap.ts` | everything | — (it's the wiring layer) |
