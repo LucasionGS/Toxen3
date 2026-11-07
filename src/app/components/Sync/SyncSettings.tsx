@@ -54,6 +54,7 @@ function SyncToggles() {
   const summary = useSyncSummary();
   const [auto, setAuto] = useState(getAutoSyncSetting);
   const [autoDownload, setAutoDownload] = useState(readAutoDownload);
+  const [syncSettings, setSyncSettings] = useState(readSyncSettings);
 
   // A running engine is the source of truth; while it is off, the saved setting is
   useEffect(() => {
@@ -96,8 +97,34 @@ function SyncToggles() {
           </sup>
         </>
       )}
+      <Checkbox
+        mt="sm"
+        checked={syncSettings}
+        onChange={e => {
+          const enabled = e.currentTarget.checked;
+          try {
+            SyncEngine.setSyncSettings(enabled);
+            setSyncSettings(enabled);
+          } catch (error) {
+            Toxen.error(`Couldn't save the setting: ${error instanceof Error ? error.message : String(error)}`);
+          }
+        }}
+        label="Sync settings, themes and extensions between devices"
+      />
+      <sup>
+        Your look, visualizer, effects, custom themes and installed extensions follow you to your other devices.
+        This setting only applies to this device: turn it off to keep this device's setup to itself.
+      </sup>
     </div>
   );
+}
+
+function readSyncSettings(): boolean {
+  try {
+    return SyncEngine.getSyncSettings();
+  } catch {
+    return true;
+  }
 }
 
 function SyncStatus() {

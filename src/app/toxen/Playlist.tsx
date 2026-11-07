@@ -10,6 +10,9 @@ import { Button, Stack } from "@mantine/core";
 import { IconFileImport, IconTrash } from "@tabler/icons-react";
 import System, { ToxenFile } from "./System";
 import User from "./User";
+import { SongLibrary } from "./SongLibrary";
+import { SyncState } from "./sync/SyncState";
+import type { ItemMerge } from "./sync/ItemMerge";
 // import * as remote from "@electron/remote";
 
 export default class Playlist {
@@ -78,180 +81,124 @@ export default class Playlist {
   }
 
   /**
-   * `true` when the last remote `Playlist.load()` failed. While set, remote saves are skipped so the empty in-memory list can't overwrite the server's playlists.
+   * `true` when the playlists couldn't be read (web: the cloud library didn't load). While set, sync never pushes
+   * deletions or emptied playlists from this device, so a failed load can't wipe the account's playlists.
    */
   public static remoteLoadFailed = false;
 
-  public static async saveRemote() {
-    await Toxen.fetch(Settings.getUser().getPlaylistsPath(), {
-      method: "PUT",
-      body: Playlist.toString(),
-      headers: {
-        "Content-Type": "application/json"
-      }
-    });
-  }
+  /**
+   * `true` when `playlists.json` couldn't be read and the backup (or nothing) was used instead. Same protection as
+   * `remoteLoadFailed`, for the local file.
+   */
+  public static localLoadFailed = false;
+
+  /**
+   * Called after every `save()` (set by the playlist sync, which pushes the change).
+   */
+  public static onSaved: (() => void) | null = null;
 
   public touch() {
     this.lastModified = Date.now();
   }
 
-  public static async syncPlaylists() {
-    if (Settings.isRemote()) return;
+  /**
+   * The playlist as the sync merge sees it.
+   */
+  public toSyncVersion(): ItemMerge.PlaylistVersion {
+    return {
+      name: this.name ?? "",
+      songs: this.getSongUids(),
+      background: this.background || null,
+      applyBackground: this.applyBackground ?? false,
+      songBackground: { ...(this.songBackground ?? {}) },
+      updatedAt: this.lastModified ?? 0,
+    };
+  }
+
+  /**
+   * Take over a version from sync. Uids of songs that aren't in the library (yet) are kept, so saving the playlist
+   * never drops them.
+   */
+  public applySyncVersion(version: ItemMerge.PlaylistVersion): void {
+    this.name = version.name;
+    this.background = version.background ?? undefined;
+    this.applyBackground = version.applyBackground;
+    this.songBackground = { ...version.songBackground };
+    this.lastModified = version.updatedAt;
+    const byUid = new Map((Toxen.songList ?? []).map(song => [song.uid, song]));
+    this.songList = version.songs.map(uid => byUid.get(uid)).filter(song => song);
+    const loaded = new Set(this.songList.map(song => song.uid));
+    this._missingSongUids = version.songs.filter(uid => !loaded.has(uid));
+  }
+
+  /**
+   * A playlist created from sync (a playlist from another device).
+   */
+  public static fromSyncVersion(id: string, version: ItemMerge.PlaylistVersion): Playlist {
+    const pl = Playlist.create({ id, name: version.name, songList: [] });
+    pl.applySyncVersion(version);
+    return pl;
+  }
+
+  /**
+   * Write the playlists locally without telling sync (sync writing what it pulled).
+   */
+  public static async saveLocal() {
+    localStorage.setItem("playlists-backup", Playlist.toString());
     if (!toxenapi.isDesktop()) return;
-
     try {
-      Toxen.log("Syncing playlists...", 2000);
-
-      // Collect local background filenames
-      const playlistBackgroundsDir = Playlist.getLocalPlaylistBackgroundsDir();
-      let localBackgrounds: string[];
-      try {
-        localBackgrounds = toxenapi.fs.readdirSync(playlistBackgroundsDir);
-      } catch {
-        localBackgrounds = [];
-      }
-
-      // Build sync input
-      const localPlaylists: IPlaylist[] = (Toxen.playlists ?? []).map(pl => ({
-        id: pl.id,
-        name: pl.name,
-        background: pl.background,
-        applyBackground: pl.applyBackground,
-        songBackground: pl.songBackground,
-        songList: pl.getSongUids(),
-        lastModified: pl.lastModified,
-      }));
-
-      // POST to sync endpoint
-      const syncUrl = `${Settings.getUser().getPlaylistsPath()}/sync`;
-      const res = await Toxen.fetch(syncUrl, {
-        method: "POST",
-        body: JSON.stringify({ playlists: localPlaylists, localBackgrounds }),
-        headers: { "Content-Type": "application/json" },
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ error: res.statusText }));
-        throw new Error(err.error || "Sync failed");
-      }
-
-      const result = await res.json();
-
-      // Upload backgrounds the server needs
-      const bgDir = Playlist.getLocalPlaylistBackgroundsDir();
-      for (const bg of result.backgroundsToUpload) {
-        const fileData = await toxenapi.fs.promises.readFile(toxenapi.path.join(bgDir, bg));
-        await Toxen.fetch(`${Settings.getUser().getPlaylistsPath()}/${bg}`, {
-          method: "PUT",
-          body: fileData,
-          headers: { "Content-Type": "application/octet-stream" },
-        });
-      }
-
-      // Download backgrounds the client needs
-      const ensuredBgDir = Playlist.getLocalPlaylistBackgroundsDir(true);
-      for (const bg of result.backgroundsToDownload) {
-        const bgRes = await Toxen.fetch(`${Settings.getUser().getPlaylistsPath()}/${bg}`);
-        if (bgRes.ok) {
-          const buffer = await bgRes.arrayBuffer();
-          await toxenapi.fs.promises.writeFile(
-            toxenapi.path.join(ensuredBgDir, bg),
-            Buffer.from(buffer)
-          );
-        }
-      }
-
-      // Apply merged playlists locally
-      const mergedPlaylists = (result.mergedPlaylists as IPlaylist[]).map(pl => Playlist.create(pl));
-      Toxen.playlists = mergedPlaylists.sort((a, b) => a.name.localeCompare(b.name));
-
-      // Save locally (without pushing back to remote, since server already has the merged result)
-      localStorage.setItem("playlists-backup", Playlist.toString());
-      if (toxenapi.isDesktop()) {
-        toxenapi.fs.writeFileSync(Playlist.filePath, Playlist.toString());
-      }
-
-      // Refresh UI
-      Toxen.playlistPanel?.update();
-
-      const uploaded = result.backgroundsToUpload.length;
-      const downloaded = result.backgroundsToDownload.length;
-      Toxen.log(`Playlists synced (${uploaded} bg uploaded, ${downloaded} bg downloaded)`, 3000);
+      await toxenapi.atomicWriteFile(Playlist.filePath, Playlist.toString());
     } catch (error) {
-      Toxen.error(`Failed to sync playlists: ${error.message}`, 5000);
+      Toxen.error(error);
     }
   }
-  
+
   /**
    * Save Toxen's current playlists.
    */
   public static async save() {
     console.log("Saving playlists...");
     localStorage.setItem("playlists-backup", Playlist.toString());
-
-    if (Settings.isRemote()) {
-      // Remote server
-      if (Playlist.remoteLoadFailed) {
-        console.warn("Skipping remote playlist save because the playlists failed to load.");
-        return;
-      }
-      await Playlist.saveRemote();
-    }
-    else {
-      if (toxenapi.isDesktop()) {
-        try {
-          toxenapi.fs.writeFileSync(Playlist.filePath, Playlist.toString());
-        } catch (error) {
-          Toxen.error(error);
-        }
-        // Auto-sync: push playlist changes to the server (playlists still use the v1 sync)
-        if (Settings.get("autoSync") !== false && User.getCurrentUser()) {
-          Playlist.syncPlaylists();
-        }
+    if (toxenapi.isDesktop()) {
+      try {
+        toxenapi.fs.writeFileSync(Playlist.filePath, Playlist.toString());
+      } catch (error) {
+        Toxen.error(error);
       }
     }
+    Playlist.onSaved?.();
   }
 
   /**
    * Save Toxen's playlists from `filePath`.
    */
+  /**
+   * `true` while `load()` runs. The playlist sync waits for it, so a half-loaded list never reads as deletions.
+   */
+  public static isLoading = false;
+
   public static async load(): Promise<Playlist[]> {
+    Playlist.isLoading = true;
     return Promise.resolve().then(async () => {
-      if (Settings.isRemote()) {
-        // Remote server
-        let res: Response;
-        try {
-          res = await Toxen.fetch(Settings.getUser().getPlaylistsPath());
-        } catch (error) {
+      if (!toxenapi.isDesktop()) {
+        // Web: the playlists come from the changelog, which the cloud library listing just read
+        if (SongLibrary.lastLoadIncomplete) {
           Playlist.remoteLoadFailed = true;
-          Toxen.error("Unable to load playlists from the server. Playlists will not be saved until they load successfully.");
+          Toxen.error("Unable to load playlists from the server. Playlist changes aren't synced until they load.");
           return [];
         }
-
-        if (res.status === 404) {
-          // No playlists file on the server yet
-          Playlist.remoteLoadFailed = false;
-          await Playlist.save();
-          return [];
-        }
-
-        if (!res.ok) {
-          Playlist.remoteLoadFailed = true;
-          Toxen.error(`Unable to load playlists from the server (${res.status}). Playlists will not be saved until they load successfully.`);
-          return [];
-        }
-
-        try {
-          let iPlaylists: IPlaylist[] = await res.json();
-          let playlists: Playlist[] = iPlaylists.map(pl => Playlist.create(pl));
-          Playlist.remoteLoadFailed = false;
-          return playlists;
-        } catch (error) {
-          Playlist.remoteLoadFailed = true;
-          Toxen.error("Unable to parse playlists from the server. Playlists will not be saved until they load successfully.");
-          return [];
-        }
+        Playlist.remoteLoadFailed = false;
+        const playlists = Object.entries(SyncState.data.playlists)
+          .filter(([, state]) => state.remote && !state.remote.deleted)
+          .map(([id, state]) => Playlist.fromSyncVersion(id, {
+            name: state.remote.name,
+            songs: state.remote.songs,
+            background: state.remote.background,
+            applyBackground: state.remote.applyBackground,
+            songBackground: state.remote.songBackground,
+            updatedAt: state.remote.updatedAt,
+          }));
+        return playlists.sort((a, b) => a.name.localeCompare(b.name));
       }
       else {
         if (toxenapi.isDesktop()) {
@@ -263,9 +210,11 @@ export default class Playlist {
             let data = await toxenapi.fs.promises.readFile(Playlist.filePath, "utf8");
             let iPlaylists: IPlaylist[] = JSON.parse(data);
             let playlists: Playlist[] = iPlaylists.map(pl => Playlist.create(pl));
+            Playlist.localLoadFailed = false;
             // Sort that shit
             return playlists.sort((a, b) => a.name.localeCompare(b.name));
           } catch (error) {
+            Playlist.localLoadFailed = true;
             // Use localStorage backup
             if (localStorage.getItem("playlists-backup")) {
               Toxen.warn("Using backup for playlists.", 2500);
@@ -288,11 +237,10 @@ export default class Playlist {
             }
           }
         }
-        else {
-          toxenapi.throwDesktopOnly("Loading playlists is not available on web version");
-        }
       }
-    })
+    }).finally(() => {
+      Playlist.isLoading = false;
+    });
   }
 
   public static getCurrent() {

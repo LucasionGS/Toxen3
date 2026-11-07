@@ -250,7 +250,10 @@ export class CloudSongStorage implements SongStorage {
     for (;;) {
       const page = await SyncApi.getChanges({ since });
       for (const change of page.changes) {
-        if (change.kind !== "track") continue;
+        if (change.kind !== "track") {
+          this._store.item?.(change);
+          continue;
+        }
         this._store.set(change.manifest);
         if (change.manifest.deleted) live.delete(change.uid);
         else live.set(change.uid, change.manifest);
@@ -405,6 +408,10 @@ export namespace CloudSongStorage {
      * A full listing was read up to `rev` (web uses it as its pull cursor, so the engine doesn't list everything twice).
      */
     listed(rev: number): void;
+    /**
+     * A changelog entry of another kind (playlists, settings…) seen while listing, so it isn't skipped by the cursor.
+     */
+    item?(change: SyncV2.Change): void;
   }
 }
 

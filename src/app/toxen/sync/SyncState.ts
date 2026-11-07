@@ -1,5 +1,6 @@
 import type { SyncV2 } from "./SyncApi";
 import { Merge } from "./Merge";
+import type { ItemMerge } from "./ItemMerge";
 import Settings from "../Settings";
 
 /**
@@ -45,7 +46,7 @@ export class SyncState {
   /**
    * This machine's preferences. Loaded by `loadMachine`.
    */
-  public static machine: SyncState.MachineSettings = { deviceId: "", autoDownload: false };
+  public static machine: SyncState.MachineSettings = { deviceId: "", autoDownload: false, syncSettings: true, items: SyncState.emptyItems(null, "") };
 
   /**
    * Absolute path of `sync.json`, or `null` when the state is kept in memory only (web, or no library directory).
@@ -75,7 +76,15 @@ export class SyncState {
       songs: {},
       pending: [],
       conflicts: [],
+      playlists: {},
     };
+  }
+
+  /**
+   * Fresh per-machine item state for an account.
+   */
+  public static emptyItems(userId: number | null, server: string): SyncState.MachineItems {
+    return { userId, server, settings: null, extensions: null, localExtensions: {}, themes: {} };
   }
 
   /**
@@ -100,6 +109,8 @@ export class SyncState {
     SyncState.machine = {
       deviceId: isNew ? SyncState._newDeviceId() : stored.deviceId,
       autoDownload: stored?.autoDownload === true,
+      syncSettings: stored?.syncSettings !== false,
+      items: stored?.items && typeof stored.items === "object" ? { ...SyncState.emptyItems(null, ""), ...stored.items } : SyncState.emptyItems(null, ""),
     };
     if (isNew) await SyncState.saveMachine();
     return SyncState.machine;
@@ -323,6 +334,7 @@ export class SyncState {
     data.lastPulledRev = Number.isFinite(data.lastPulledRev) ? data.lastPulledRev : 0;
     data.lastSyncAt ??= null;
     data.conflicts = Array.isArray(data.conflicts) ? data.conflicts : [];
+    data.playlists = data.playlists && typeof data.playlists === "object" ? data.playlists : {};
     for (const uid of Object.keys(data.songs)) {
       data.songs[uid] = { ...SyncState._emptySong(), ...data.songs[uid] };
     }
@@ -375,6 +387,59 @@ export namespace SyncState {
     songs: Record<string, SongState>;
     pending: PendingJob[];
     conflicts: Merge.ConflictRecord[];
+    /**
+     * Playlist id -> sync state. Playlists belong to the library (`playlists.json`), so their bases live here.
+     */
+    playlists: Record<string, PlaylistState>;
+  }
+
+  export interface PlaylistState {
+    /**
+     * The playlist at the last sync, `null` if never synced.
+     */
+    base: ItemMerge.PlaylistVersion | null;
+    baseRev: number | null;
+    /**
+     * Latest server manifest seen (tombstones included).
+     */
+    remote: SyncV2.PlaylistManifest | null;
+  }
+
+  /**
+   * Sync state of the items that belong to this machine rather than a library: settings, themes and extensions all
+   * live in Toxen's app data folder. Reset when the account or server changes.
+   */
+  export interface MachineItems {
+    userId: number | null;
+    server: string;
+    /**
+     * Latest settings record seen.
+     */
+    settings: SyncV2.SettingsManifest | null;
+    /**
+     * Latest extensions list seen.
+     */
+    extensions: SyncV2.ExtensionsManifest | null;
+    /**
+     * This device's extensions as last seen, with `updatedAt` = when they changed here (`removed` once uninstalled).
+     */
+    localExtensions: Record<string, SyncV2.ExtensionEntry>;
+    /**
+     * Theme id -> sync state.
+     */
+    themes: Record<string, ThemeState>;
+  }
+
+  export interface ThemeState {
+    remote: SyncV2.ThemeManifest | null;
+    /**
+     * Server rev the local copy matched at the last sync, `null` if never synced.
+     */
+    baseRev: number | null;
+    /**
+     * Fingerprint of the local theme (data + file hashes) at the last sync, to tell local edits apart.
+     */
+    baseHash: string | null;
   }
 
   /**
@@ -389,6 +454,12 @@ export namespace SyncState {
      * Download new cloud songs automatically on this device. Off by default. Pinned songs stay downloaded either way.
      */
     autoDownload: boolean;
+    /**
+     * Sync settings, themes and extensions on this device. On by default; off keeps this device's look and extensions
+     * to itself (it neither sends nor applies them).
+     */
+    syncSettings: boolean;
+    items: MachineItems;
   }
 
   /**

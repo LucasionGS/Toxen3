@@ -404,7 +404,7 @@ export class Toxen {
       document.body.classList.toggle("exposed-icons", Settings.get("exposePanelIcons") ?? false)
     );
     Toxen.setAllVisualColors(Toxen.background.storyboard.getVisualizerColor());
-    (Settings.get("visualizerStyle") || Settings.set("visualizerStyle", VisualizerStyle.ProgressBar /* Default */));
+    (Settings.get("visualizerStyle") || Settings.set("visualizerStyle", VisualizerStyle.ProgressBar /* Default */, { track: false }));
 
     Toxen.musicControls.setVolume(Settings.get("volume") ?? 50);
 
@@ -424,11 +424,17 @@ export class Toxen {
   public static themes: Theme[] = [];
   public static theme: Theme = null;
   
-  public static setTheme(theme: Theme) {
+  /**
+   * Show a theme and make it the selected one.
+   * @param persist Save it as the `theme` setting. `false` only shows it (a selected theme that isn't on this device
+   * yet keeps its name, so it applies once it arrives through sync).
+   */
+  public static setTheme(theme: Theme, persist = true) {
     Toxen.theme = theme;
     Toxen.themeContainer.setTheme(theme);
     Toxen.background?.notify();
     Toxen.sidePanel?.forceUpdate();
+    if (!persist) return;
     Settings.set("theme", theme?.name ?? null);
     Settings.save({
       suppressNotification: true,
@@ -438,7 +444,11 @@ export class Toxen {
   public static setThemeByName(name: string) {
     let theme = Toxen.themes.find(t => t.name === name);
     if (!theme && name) theme = ExtensionManager.getTheme(name);
-    if (!theme && name) Toxen.error(`Theme ${name} not found.`);
+    if (!theme && name) {
+      // Possibly a theme from another device that hasn't downloaded yet: keep the selection
+      Toxen.setTheme(null, false);
+      return;
+    }
     Toxen.setTheme(theme || null);
   }
 
@@ -585,11 +595,10 @@ export class Toxen {
     const themeName = Settings.get("theme");
     let theme = Toxen.themes.find(t => t.name === themeName);
     if (!theme && themeName) theme = ExtensionManager.getTheme(themeName);
-    if (!theme) {
-      Settings.set("theme", null);
-    }
-    Toxen.setTheme(theme ?? null);
+    // A selected theme that isn't here (yet) keeps its name: it may still arrive through sync
+    Toxen.setTheme(theme ?? null, Boolean(theme) || !themeName);
   }
+
 
   public static editingSong: Song = null;
   public static editSong(song: Song) {

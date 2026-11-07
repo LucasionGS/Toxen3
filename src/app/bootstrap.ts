@@ -10,7 +10,7 @@ import { SongLibrary } from "./toxen/SongLibrary";
 import ExtensionManager from "./toxen/extensions/ExtensionManager";
 import { friendSocket } from "./toxen/FriendSocket";
 import { SyncEngine } from "./toxen/sync/SyncEngine";
-import { SyncV2 } from "./toxen/sync/SyncApi";
+import { SyncedItems } from "./toxen/SyncedItems";
 import TButton from "./components/Button/Button";
 import LoginForm from "./components/LoginForm/LoginForm";
 import { initSyncNotifications } from "./components/Sync/SyncNotifications";
@@ -28,6 +28,7 @@ async function loadSettings() {
  * Nothing here talks to the server.
  */
 async function prepareSync() {
+  SyncedItems.install();
   await SyncEngine.prepare();
 }
 
@@ -253,7 +254,7 @@ function wireSync() {
 
   initSyncNotifications();
 
-  friendSocket.on(SyncV2.SocketEvent.TrackChanged, event => SyncEngine.handleRemoteEvent(event));
+  friendSocket.on("sync:changed", event => SyncEngine.handleRemoteEvent(event));
   friendSocket.on("connected", reconnect => {
     if (reconnect) SyncEngine.handleReconnect();
   });
@@ -265,8 +266,8 @@ function wireSync() {
 }
 
 /**
- * Starts background sync for the logged-in user (and the v1 playlist sync, which playlists keep until they move to
- * sync v2). Not awaited: it needs the network and must never block startup.
+ * Starts background sync for the logged-in user: songs, playlists, and (when this device syncs them) settings, themes
+ * and extensions. Not awaited: it needs the network and must never block startup.
  */
 async function startSync() {
   wireSync();
@@ -274,9 +275,6 @@ async function startSync() {
     console.error(error);
     Toxen.error(`Unable to start sync: ${error?.message ?? error}`);
   });
-  if (toxenapi.isDesktop() && User.getCurrentUser() && Settings.get("autoSync") !== false) {
-    Playlist.syncPlaylists();
-  }
 }
 
 /**

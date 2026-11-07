@@ -35,8 +35,9 @@ type SocketEventMap = {
   friends_presence: (presences: FriendPresence[]) => void;
   friend_request: (friendship: IFriendship) => void;
   friend_accepted: (friendship: IFriendship) => void;
-  // Sync v2: a track of this user changed on the server (from any device, this one included)
-  [SyncV2.SocketEvent.TrackChanged]: (event: SyncV2.TrackChangedEvent) => void;
+  // Sync v2: a track, playlist, the settings, a theme or the extensions of this user changed on the server (from any
+  // device, this one included)
+  "sync:changed": (event: SyncV2.ChangedEvent) => void;
   // The socket (re)connected; `reconnect` is `false` for the first connection
   connected: (reconnect: boolean) => void;
 };
@@ -89,9 +90,9 @@ class FriendSocket {
       connectedBefore = true;
     });
 
-    this.socket.on(SyncV2.SocketEvent.TrackChanged, (event: SyncV2.TrackChangedEvent) => {
-      this._emit(SyncV2.SocketEvent.TrackChanged, event);
-    });
+    for (const name of Object.values(SyncV2.SocketEvent)) {
+      this.socket.on(name, (event: SyncV2.ChangedEvent) => this._emit("sync:changed", event));
+    }
 
     this.socket.on("connect_error", (err) => {
       console.warn("[FriendSocket] Connection error:", err.message);

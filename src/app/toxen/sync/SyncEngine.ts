@@ -157,6 +157,7 @@ export class SyncEngine {
   //#region State
 
   private static _library: SyncEngine.Library | null = null;
+  private static _items: SyncEngine.ItemHandler | null = null;
   private static _prepared: { userId: number; server: string; library: string } | null = null;
   private static _running = false;
   /**
@@ -198,6 +199,13 @@ export class SyncEngine {
   }
 
   /**
+   * Set who syncs the changelog's other kinds (playlists, settings, themes, extensions). Called once by `SyncedItems`.
+   */
+  public static setItemHandler(handler: SyncEngine.ItemHandler): void {
+    SyncEngine._items = handler;
+  }
+
+  /**
    * Configure `SyncApi` and the cloud storage's manifest store. Cheap and idempotent; bootstrap calls it right after
    * the settings load, before anything talks to the server.
    */
@@ -214,6 +222,7 @@ export class SyncEngine {
         // Web has no local copies to apply changes to, so a full listing is as good as a pull
         if (!toxenapi.isDesktop()) SyncState.data.lastPulledRev = Math.max(SyncState.data.lastPulledRev, rev);
       },
+      item: change => SyncEngine._items?.store([change]),
     });
   }
 
@@ -302,9 +311,42 @@ export class SyncEngine {
     if (SyncEngine._auto) {
       SyncEngine._startPolling();
       await SyncEngine._startupPass();
+      SyncEngine._syncItems();
     }
     if (!toxenapi.isDesktop()) SyncEngine._refreshCloudSongs();
     SyncEngine._pump();
+  }
+
+  /**
+   * Whether this device syncs settings, themes and extensions (`SyncState.machine.syncSettings`, never synced).
+   */
+  public static getSyncSettings(): boolean {
+    return SyncState.machine.syncSettings;
+  }
+
+  /**
+   * Turn settings, themes and extensions sync on or off for this device. Turning it on catches up right away.
+   */
+  public static setSyncSettings(enabled: boolean): void {
+    SyncState.machine.syncSettings = enabled;
+    SyncState.saveMachine().catch(error => console.error("Unable to save this machine's sync settings.", error));
+    if (enabled && SyncEngine._running && SyncEngine._auto) SyncEngine._syncItems();
+    SyncEngine._emitSummary();
+  }
+
+  /**
+   * Let the item handler push and apply everything that's out of date (startup, "Sync now", auto-sync turned on).
+   */
+  private static _syncItems(): Promise<void> {
+    if (!SyncEngine._items || !SyncEngine._running) return Promise.resolve();
+    return SyncEngine._items.syncAll().catch(error => SyncEngine._reportBackgroundError(error));
+  }
+
+  /**
+   * Whether the item handler may talk to the server now (running with auto-sync, or for an explicit "Sync now").
+   */
+  public static canSyncItems(): boolean {
+    return SyncEngine._running && SyncEngine._auto;
   }
 
   /**
@@ -313,6 +355,7 @@ export class SyncEngine {
   public static async stop(): Promise<void> {
     if (!SyncEngine._running) return;
     SyncEngine._running = false;
+    SyncEngine._items?.stop();
     SyncEngine._abort.abort();
     SyncEngine._removeListeners();
     SyncEngine._stopPolling();
@@ -361,6 +404,7 @@ export class SyncEngine {
     if (enabled) {
       SyncEngine._startPolling();
       await SyncEngine._startupPass();
+      SyncEngine._syncItems();
       SyncEngine._pump();
     }
     else {
@@ -380,7 +424,7 @@ export class SyncEngine {
     for (const job of SyncState.data.pending) job.notBefore = Date.now();
     await SyncEngine._startupPass();
     SyncEngine._pump();
-    await SyncEngine._whenIdle();
+    await Promise.all([SyncEngine._whenIdle(), SyncEngine._syncItems()]);
   }
 
   /**
@@ -399,13 +443,15 @@ export class SyncEngine {
   }
 
   /**
-   * A `track:changed` event from the socket. Ignored when `origin` is this device.
+   * A `*:changed` event from the socket (any kind). Ignored when `origin` is this device; otherwise pulls.
    */
-  public static handleRemoteEvent(event: SyncV2.TrackChangedEvent): void {
+  public static handleRemoteEvent(event: SyncV2.ChangedEvent): void {
     if (!SyncEngine._running || !SyncEngine._auto) return;
     if (event.origin && event.origin === SyncState.machine.deviceId) return;
-    const known = SyncState.peekSong(event.uid)?.remote;
-    if (known && known.rev >= event.rev) return;
+    if (event.kind === "track" || (event as { kind?: string }).kind === undefined) {
+      const known = SyncState.peekSong((event as SyncV2.TrackChangedEvent).uid)?.remote;
+      if (known && known.rev >= event.rev) return;
+    }
     SyncEngine._schedulePull();
   }
 
@@ -885,12 +931,16 @@ export class SyncEngine {
     let fullResync = false;
     const seen = new Set<string>();
     const touched = new Set<string>();
+    const items: SyncV2.Change[] = [];
     for (;;) {
       const page = await SyncApi.getChanges({ since });
       SyncEngine._offline = false;
       fullResync ||= page.fullResync;
       for (const change of page.changes) {
-        if (change.kind !== "track") continue; // Playlists move onto the changelog later; unknown kinds are ignored
+        if (change.kind !== "track") {
+          items.push(change); // Unknown kinds are ignored by the handler
+          continue;
+        }
         seen.add(change.uid);
         if (SyncEngine._storeRemote(change.manifest)) touched.add(change.uid);
       }
@@ -912,6 +962,11 @@ export class SyncEngine {
     }
     data.lastSyncAt = Date.now();
     SyncState.save();
+
+    if (SyncEngine._items && (items.length > 0 || fullResync)) {
+      SyncEngine._items.store(items, fullResync);
+      SyncEngine._syncItems();
+    }
 
     const newCloudSongs: string[] = [];
     for (const uid of touched) {
@@ -1922,6 +1977,23 @@ export namespace SyncEngine {
     uid: string;
     local: { dirname: string; info: ISong } | null;
     remote: SyncV2.TrackManifest | null;
+  }
+
+  /**
+   * Syncs the changelog's other kinds. Lives in the app layer (`SyncedItems`), because applying them touches
+   * `Toxen`, playlists, themes and extensions, which the engine can't import.
+   */
+  export interface ItemHandler {
+    /**
+     * Keep manifests from the changelog (playlists, settings, themes, extensions; unknown kinds are ignored).
+     * `fullResync`: the list was complete, so items it didn't mention were deleted.
+     */
+    store(changes: SyncV2.Change[], fullResync?: boolean): void;
+    /**
+     * Push local changes and apply stored remote ones. Resolves when done; failures reject.
+     */
+    syncAll(): Promise<void>;
+    stop(): void;
   }
 
   /**

@@ -32,7 +32,6 @@ import {
   IconEyeOff,
   IconPlus,
   IconMusic,
-  IconUpload,
   IconX,
   IconSettings,
   IconPalette
@@ -142,18 +141,8 @@ export default class PlaylistPanel extends Component<PlaylistPanelProps, Playlis
                 Add Playlist
               </Button>
             </Group>
-            
-            {!Settings.isRemote() && Settings.getUser()?.premium && (
-              <Button
-                variant="light"
-                color="blue"
-                leftSection={<IconUpload size={16} />}
-                onClick={() => Playlist.syncPlaylists()}
-              >
-                Sync Playlists
-              </Button>
-            )}
           </Stack>
+
         )}
         
         <div className="playlist-list">

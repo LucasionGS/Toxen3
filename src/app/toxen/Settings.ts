@@ -5,6 +5,7 @@ import User from "./User";
 import Song from "./Song";
 import type { ProviderSettingsMap } from "./providers/Provider";
 import { DEFAULT_RAINFALL_COLOR } from "../components/Background/visualizers/particles/Rainfall";
+import { SyncV2 } from "./sync/SyncApi";
 
 export default class Settings {
   /**
@@ -44,6 +45,7 @@ export default class Settings {
     return Promise.resolve().then(async () => {
       const data = await toxenapi.loadSettings(Settings);
       if (Settings.migrateSyncSettings()) await Settings.save({ suppressNotification: true });
+      Settings._snapshotSyncedKeys();
       return data;
     });
   }
@@ -222,6 +224,77 @@ export default class Settings {
   /**
    * Applies the defined data to the ISettings.
    */
+  //#region Settings sync bookkeeping
+
+  /**
+   * Keys that sync between devices (`SyncV2.SYNCED_SETTINGS`).
+   */
+  public static readonly SYNCED_KEYS: ReadonlySet<string> = new Set(SyncV2.SYNCED_SETTINGS);
+
+  /**
+   * Called with the synced keys a local change touched (set by the settings sync). Not called for values applied from
+   * sync or for defaults.
+   */
+  public static onSyncedChange: ((keys: string[]) => void) | null = null;
+
+  /**
+   * Canonical JSON of each synced key as last seen, so in-place edits of objects (`visualizerStyleOptions`) count too.
+   */
+  private static _syncedSnapshot = new Map<string, string>();
+  private static _applyingSync = false;
+
+  private static _canonical(value: unknown): string {
+    return JSON.stringify(value, (_key, v: unknown) => {
+      if (!v || typeof v !== "object" || Array.isArray(v)) return v;
+      const sorted: Record<string, unknown> = {};
+      for (const k of Object.keys(v).sort()) sorted[k] = (v as Record<string, unknown>)[k];
+      return sorted;
+    }) ?? "undefined";
+  }
+
+  private static _snapshotSyncedKeys(): void {
+    Settings._syncedSnapshot.clear();
+    for (const key of Settings.SYNCED_KEYS) Settings._syncedSnapshot.set(key, Settings._canonical((Settings.data as unknown as Record<string, unknown>)?.[key]));
+  }
+
+  /**
+   * Record when synced keys got a new value on this device (`settingsUpdatedAt`) and tell the settings sync.
+   */
+  private static _trackSyncedChanges(keys: string[]): void {
+    const changed: string[] = [];
+    for (const key of keys) {
+      if (!Settings.SYNCED_KEYS.has(key)) continue;
+      const now = Settings._canonical((Settings.data as unknown as Record<string, unknown>)[key]);
+      if (Settings._syncedSnapshot.get(key) === now) continue;
+      Settings._syncedSnapshot.set(key, now);
+      if (Settings._applyingSync) continue;
+      (Settings.data.settingsUpdatedAt ??= {})[key] = Date.now();
+      changed.push(key);
+    }
+    if (changed.length > 0) Settings.onSyncedChange?.(changed);
+  }
+
+  /**
+   * Apply values from another device: set them live (with the usual side effects, like switching the theme) and keep
+   * their `updatedAt`, so they don't count as local changes.
+   */
+  public static async applyFromSync(entries: Record<string, SyncV2.SettingEntry>): Promise<void> {
+    const values: Record<string, unknown> = {};
+    for (const [key, entry] of Object.entries(entries)) {
+      if (!Settings.SYNCED_KEYS.has(key)) continue;
+      values[key] = entry.value;
+      (Settings.data.settingsUpdatedAt ??= {})[key] = entry.updatedAt;
+    }
+    Settings._applyingSync = true;
+    try {
+      await Settings.apply(values as Partial<ISettings>, true);
+    } finally {
+      Settings._applyingSync = false;
+    }
+  }
+
+  //#endregion
+
   public static async apply(data: Partial<ISettings>, save?: boolean, useSpecialCases?: boolean) {
     if (!Settings.data) Settings.data = {} as ISettings;
     let key: keyof ISettings;
@@ -258,6 +331,16 @@ export default class Settings {
       }
     }
 
+    // Defaults (`useSpecialCases === false`) are not changes the user made, so they never win a sync
+    if (useSpecialCases === false) {
+      for (const key of Object.keys(data)) {
+        if (Settings.SYNCED_KEYS.has(key)) Settings._syncedSnapshot.set(key, Settings._canonical((Settings.data as unknown as Record<string, unknown>)[key]));
+      }
+    }
+    else {
+      Settings._trackSyncedChanges(Object.keys(data));
+    }
+
     if (save) {
       await Settings.save({
         suppressNotification: true
@@ -280,11 +363,18 @@ export default class Settings {
     return JSONX.getObjectValue(Settings.data, key) ?? fallback;
   }
 
-  public static set<T extends keyof ISettings>(key: T, value: ISettings[T]): ISettings[T];
-  public static set<T extends string, ValueType = any>(key: T, value: ValueType): ValueType;
-  public static set<T extends keyof ISettings>(key: T, value: ISettings[T]): ISettings[T] {
-    // if (Settings.data && Settings.data.hasOwnProperty(key)) return Settings.data[key] = value;
+  /**
+   * Set a value. A synced key counts as a change of this device, unless `opts.track` is `false` (defaults and
+   * migrations, which must not override another device's choice).
+   */
+  public static set<T extends keyof ISettings>(key: T, value: ISettings[T], opts?: { track?: boolean }): ISettings[T];
+  public static set<T extends string, ValueType = any>(key: T, value: ValueType, opts?: { track?: boolean }): ValueType;
+  public static set<T extends keyof ISettings>(key: T, value: ISettings[T], opts?: { track?: boolean }): ISettings[T] {
     JSONX.setObjectValue(Settings.data, key, value);
+    if (Settings.SYNCED_KEYS.has(key)) {
+      if (opts?.track === false) Settings._syncedSnapshot.set(key, Settings._canonical(value));
+      else Settings._trackSyncedChanges([key]);
+    }
     return value;
   }
 
@@ -437,6 +527,11 @@ export interface ISettings {
   acceptedResponsibility: boolean;
 
   // Syncing
+  /**
+   * When this device last changed each synced setting (`SyncV2.SYNCED_SETTINGS`), Unix ms. Device bookkeeping for the
+   * settings sync, never synced itself. A key without an entry was never changed here.
+   */
+  settingsUpdatedAt?: Record<string, number>;
   /**
    * Sync the library with the cloud in the background (sync v2): on startup, after local edits, on changes from other
    * devices and every few minutes. On by default for anyone logged in, free tier included.

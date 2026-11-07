@@ -1,6 +1,7 @@
 import Settings, { VisualizerStyleOption } from "../Settings";
 import CrossPlatform from "../desktop/CrossPlatform";
 import Theme from "../Theme";
+import User from "../User";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -167,6 +168,11 @@ export default class ExtensionManager {
   public static visualizerNames: Map<string, string> = new Map();
   public static extensionThemes: Map<string, Theme> = new Map();
 
+  /**
+   * Called after the installed or enabled extensions changed (set by the settings sync, which records it).
+   */
+  public static onChange: (() => void) | null = null;
+
   public static getExtensionsDir(): string {
     return CrossPlatform.getToxenDataPath("extensions");
   }
@@ -235,6 +241,95 @@ export default class ExtensionManager {
     }
 
     console.log(`[Extensions] Discovered ${this.extensions.size} extension(s).`);
+    this.onChange?.();
+  }
+
+  /**
+   * Install (or replace) an extension from its store zip into `<extensions>/<extensionId>`. Doesn't load it: call
+   * `discover()` and `loadAll()` afterwards.
+   */
+  public static async installZip(extensionId: string, zip: ArrayBuffer): Promise<void> {
+    if (!toxenapi.isDesktop()) return toxenapi.throwDesktopOnly("Installing extensions");
+    const desktop = toxenapi;
+    const yauzl = await import("yauzl");
+    const fs = await import("fs");
+    const fsp = fs.promises;
+    const Path = await import("path");
+
+    const targetDir = desktop.safeJoinInside(this.getExtensionsDir(), extensionId);
+
+    // Remove old version if exists
+    await fsp.rm(targetDir, { recursive: true, force: true });
+    await fsp.mkdir(targetDir, { recursive: true });
+
+    // Extract zip to targetDir
+    await new Promise<void>((resolve, reject) => {
+      yauzl.fromBuffer(Buffer.from(zip), { lazyEntries: true }, (err: Error | null, zipfile: any) => {
+        if (err) return reject(err);
+
+        zipfile.readEntry();
+        zipfile.on("entry", (entry: any) => {
+          if (/\/$/.test(entry.fileName)) {
+            zipfile.readEntry();
+          } else {
+            zipfile.openReadStream(entry, async (err: Error | null, readStream: any) => {
+              if (err) return reject(err);
+              try {
+                const outPath = desktop.safeJoinInside(targetDir, entry.fileName);
+                const outDir = Path.dirname(outPath);
+                await fsp.mkdir(outDir, { recursive: true });
+                const writeStream = fs.createWriteStream(outPath);
+                readStream.pipe(writeStream);
+                writeStream.on("close", () => zipfile.readEntry());
+                writeStream.on("error", reject);
+              } catch (error) {
+                readStream.destroy();
+                zipfile.close();
+                reject(error);
+              }
+            });
+          }
+        });
+        zipfile.on("end", () => resolve());
+        zipfile.on("error", reject);
+      });
+    });
+  }
+
+  /**
+   * Install an extension from the extension store by its `extensionId` (the id in `extension.json`), then load it.
+   * @returns `false` when the store has no extension with that id.
+   * @throws If the store can't be reached or the download fails.
+   */
+  public static async installFromStore(extensionId: string): Promise<boolean> {
+    const server = Settings.getServer();
+    const headers: Record<string, string> = {};
+    const token = User.getCurrentUser()?.token;
+    if (token) headers.Authorization = `Bearer ${token}`;
+    const list = await fetch(`${server}/extensions/store?search=${encodeURIComponent(extensionId)}`, { headers });
+    if (!list.ok) throw new Error(`The extension store answered ${list.status}.`);
+    const found = (await list.json() as { id: number; extensionId: string }[]).find(ext => ext.extensionId === extensionId);
+    if (!found) return false;
+    const res = await fetch(`${server}/extensions/store/${found.id}/download`, { headers });
+    if (!res.ok) throw new Error(`Downloading the extension "${extensionId}" failed with ${res.status}.`);
+    await this.installZip(extensionId, await res.arrayBuffer());
+    await this.discover();
+    await this.loadAll();
+    return true;
+  }
+
+  /**
+   * Unload and delete an installed extension.
+   */
+  public static async uninstall(id: string): Promise<void> {
+    const ext = this.extensions.get(id);
+    if (!ext) return;
+    ext.unload();
+    this.unregisterThemesFromManifest(ext.manifest);
+    this.extensions.delete(id);
+    const fs = await import("fs");
+    await fs.promises.rm(ext.dirPath, { recursive: true, force: true });
+    this.onChange?.();
   }
 
   /**
@@ -297,7 +392,7 @@ export default class ExtensionManager {
     // Migrate legacy "whaleshark" style to "ext:whaleshark:whaleshark"
     const currentStyle = Settings.get("visualizerStyle");
     if (currentStyle === "whaleshark") {
-      Settings.set("visualizerStyle", "ext:whaleshark:whaleshark" as any);
+      Settings.set("visualizerStyle", "ext:whaleshark:whaleshark" as any, { track: false });
       Settings.save({ suppressNotification: true });
     }
 
@@ -323,6 +418,7 @@ export default class ExtensionManager {
     enabledMap[id] = true;
     Settings.set("enabledExtensions", enabledMap);
     await Settings.save({ suppressNotification: true });
+    this.onChange?.();
   }
 
   /**
@@ -340,6 +436,7 @@ export default class ExtensionManager {
     enabledMap[id] = false;
     Settings.set("enabledExtensions", enabledMap);
     await Settings.save({ suppressNotification: true });
+    this.onChange?.();
   }
 
   /**

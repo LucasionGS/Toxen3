@@ -6,8 +6,14 @@ export default class Theme implements ITheme {
     return toxenapi.loadThemes(Toxen, Theme);
   }
 
-  public save() {
-    return toxenapi.saveTheme(this);
+  /**
+   * Called after a theme was saved on this device (set by the settings sync, which uploads it).
+   */
+  public static onSaved: ((theme: Theme) => void) | null = null;
+
+  public async save() {
+    await toxenapi.saveTheme(this);
+    Theme.onSaved?.(this);
   }
 
   name: string;
