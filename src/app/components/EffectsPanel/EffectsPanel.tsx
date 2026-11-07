@@ -32,9 +32,13 @@ export default class EffectsPanel extends Component<EffectsPanelProps, EffectsPa
   };
 
   private handleEffectChange = (effectName: keyof typeof Settings.data, value: number) => {
+    // Applied live while dragging; saved to disk once the slider is released
     Settings.set(effectName as any, value);
-    Settings.save({ suppressNotification: true });
     Toxen.audioEffects?.updateEffects();
+  };
+
+  private saveSliderValue = () => {
+    Settings.save({ suppressNotification: true });
   };
 
   render() {
@@ -69,6 +73,7 @@ export default class EffectsPanel extends Component<EffectsPanelProps, EffectsPa
                 <Slider
                   defaultValue={Settings.get('audioReverbLevel', 0)}
                   onChange={(value) => this.handleEffectChange('audioReverbLevel', value)}
+                  onChangeEnd={this.saveSliderValue}
                   min={0}
                   max={100}
                   step={1}
@@ -82,6 +87,7 @@ export default class EffectsPanel extends Component<EffectsPanelProps, EffectsPa
                 <Slider
                   defaultValue={Settings.get('audioEchoLevel', 0)}
                   onChange={(value) => this.handleEffectChange('audioEchoLevel', value)}
+                  onChangeEnd={this.saveSliderValue}
                   min={0}
                   max={100}
                   step={1}
@@ -95,6 +101,7 @@ export default class EffectsPanel extends Component<EffectsPanelProps, EffectsPa
                 <Slider
                   defaultValue={Settings.get('audioBassBoostLevel', 0)}
                   onChange={(value) => this.handleEffectChange('audioBassBoostLevel', value)}
+                  onChangeEnd={this.saveSliderValue}
                   min={0}
                   max={20}
                   step={1}
@@ -108,6 +115,7 @@ export default class EffectsPanel extends Component<EffectsPanelProps, EffectsPa
                 <Slider
                   defaultValue={Settings.get('audio3DLevel', 0)}
                   onChange={(value) => this.handleEffectChange('audio3DLevel', value)}
+                  onChangeEnd={this.saveSliderValue}
                   min={0}
                   max={100}
                   step={1}
@@ -138,10 +146,8 @@ export default class EffectsPanel extends Component<EffectsPanelProps, EffectsPa
               <Text size="sm" mb={5}>Crossfade Duration</Text>
               <Slider
                 defaultValue={Settings.get('crossfadeDuration', 3)}
-                onChange={(value) => {
-                  Settings.set('crossfadeDuration', value);
-                  Settings.save({ suppressNotification: true });
-                }}
+                onChange={(value) => Settings.set('crossfadeDuration', value)}
+                onChangeEnd={this.saveSliderValue}
                 min={0.5}
                 max={10}
                 step={0.5}

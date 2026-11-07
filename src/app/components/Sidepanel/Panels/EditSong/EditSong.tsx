@@ -134,7 +134,7 @@ export default function EditSong(props: EditSongProps) {
             leftSection={<IconUser size="1em" />}
             label="Artist"
             name="artist"
-            onChange={(v) => saveSettings('artist', v.currentTarget.value)}
+            onChange={(v) => saveSettings('artist', v.currentTarget.value, false)}
             defaultValue={getValue('artist')}
             onBlur={() => Toxen.editingSong.saveInfo()}
             onKeyDown={textInputSaveOnEnter}
@@ -142,7 +142,7 @@ export default function EditSong(props: EditSongProps) {
           <TextInput
             leftSection={<IconHeading size="1em" />}
             label="Title"
-            onChange={(v) => saveSettings('title', v.currentTarget.value)}
+            onChange={(v) => saveSettings('title', v.currentTarget.value, false)}
             defaultValue={getValue('title')}
             onBlur={() => Toxen.editingSong.saveInfo()}
             onKeyDown={textInputSaveOnEnter}
@@ -157,7 +157,7 @@ export default function EditSong(props: EditSongProps) {
             leftSection={<IconDisc size="1em" />}
             label="Album"
             name="album"
-            onChange={(v) => saveSettings('album', v.currentTarget.value)}
+            onChange={(v) => saveSettings('album', v.currentTarget.value, false)}
             defaultValue={getValue('album')}
             onBlur={() => Toxen.editingSong.saveInfo()}
             onKeyDown={textInputSaveOnEnter}
@@ -166,7 +166,7 @@ export default function EditSong(props: EditSongProps) {
             leftSection={<IconGuitarPick size="1em" />}
             label="Genre"
             name="genre"
-            onChange={(v) => saveSettings('genre', v.currentTarget.value)}
+            onChange={(v) => saveSettings('genre', v.currentTarget.value, false)}
             defaultValue={getValue('genre')}
             onBlur={() => Toxen.editingSong.saveInfo()}
             onKeyDown={textInputSaveOnEnter}
@@ -175,7 +175,7 @@ export default function EditSong(props: EditSongProps) {
             leftSection={<IconLink size="1em" />}
             label="Source"
             name="source"
-            onChange={(v) => saveSettings('source', v.currentTarget.value)}
+            onChange={(v) => saveSettings('source', v.currentTarget.value, false)}
             defaultValue={getValue('source')}
             onBlur={() => Toxen.editingSong.saveInfo()}
             onKeyDown={textInputSaveOnEnter}
@@ -184,7 +184,7 @@ export default function EditSong(props: EditSongProps) {
             leftSection={<IconLink size="1em" />}
             label="URL"
             name="url"
-            onChange={(v) => saveSettings('url', v.currentTarget.value)}
+            onChange={(v) => saveSettings('url', v.currentTarget.value, false)}
             defaultValue={getValue('url')}
             onBlur={() => Toxen.editingSong.saveInfo()}
             onKeyDown={textInputSaveOnEnter}
@@ -193,7 +193,7 @@ export default function EditSong(props: EditSongProps) {
             leftSection={<IconLanguage size="1em" />}
             label="Language"
             name="language"
-            onChange={(v) => saveSettings('language', v.currentTarget.value)}
+            onChange={(v) => saveSettings('language', v.currentTarget.value, false)}
             defaultValue={getValue('language')}
             onBlur={() => Toxen.editingSong.saveInfo()}
             onKeyDown={textInputSaveOnEnter}
@@ -202,7 +202,7 @@ export default function EditSong(props: EditSongProps) {
             leftSection={<IconCalendar size="1em" />}
             label="Release Year"
             name="year"
-            onChange={(v) => saveSettings('year', +v)}
+            onChange={(v) => saveSettings('year', +v, false)}
             defaultValue={getValue('year')}
             onBlur={() => Toxen.editingSong.saveInfo()}
             onKeyDown={textInputSaveOnEnter}
@@ -329,7 +329,7 @@ export default function EditSong(props: EditSongProps) {
           name="subtitleDelay"
           defaultValue={getValue('subtitleDelay')}
           onChange={(v) => {
-            saveSettings('subtitleDelay', +v);
+            saveSettings('subtitleDelay', +v, false);
           }}
           onBlur={() => Toxen.editingSong.saveInfo()}
           onKeyDown={textInputSaveOnEnter}
@@ -765,7 +765,7 @@ export default function EditSong(props: EditSongProps) {
           label="Floating Title: Text"
           name="floatingTitleText"
           placeholder="<Default>"
-          onChange={(v) => saveSettings('floatingTitleText', v.currentTarget.value)}
+          onChange={(v) => saveSettings('floatingTitleText', v.currentTarget.value, false)}
           defaultValue={getValue('floatingTitleText')}
           onBlur={() => Toxen.editingSong.saveInfo()}
           onKeyDown={textInputSaveOnEnter}
