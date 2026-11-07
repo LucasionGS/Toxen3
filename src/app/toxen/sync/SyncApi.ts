@@ -89,6 +89,10 @@ export namespace SyncV2 {
     HashMismatch = "hash_mismatch",
     /** `PUT /blobs/:sha256` without a `Content-Length`. */
     LengthRequired = "length_required",
+    /** 429: too many requests. Retry after the `RateLimit-Reset` / `Retry-After` delay, with backoff. */
+    RateLimited = "rate_limited",
+    /** 5xx: a server fault. Retry later with backoff; the request may or may not have been applied. */
+    Internal = "internal",
   }
 
   /**
