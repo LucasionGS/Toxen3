@@ -54,6 +54,11 @@ export default class Playlist {
     }
   }
 
+  /**
+   * `true` when the last remote `Playlist.load()` failed. While set, remote saves are skipped so the empty in-memory list can't overwrite the server's playlists.
+   */
+  public static remoteLoadFailed = false;
+
   public static async saveRemote() {
     await Toxen.fetch(Settings.getUser().getPlaylistsPath(), {
       method: "PUT",
@@ -164,6 +169,10 @@ export default class Playlist {
 
     if (Settings.isRemote()) {
       // Remote server
+      if (Playlist.remoteLoadFailed) {
+        console.warn("Skipping remote playlist save because the playlists failed to load.");
+        return;
+      }
       await Playlist.saveRemote();
     }
     else {
@@ -188,17 +197,36 @@ export default class Playlist {
     return Promise.resolve().then(async () => {
       if (Settings.isRemote()) {
         // Remote server
-        if (!(await Toxen.fetch(Settings.getUser().getPlaylistsPath()
-        ).then((r) => r.ok).catch(() => false))) {
-          await Playlist.save();
-        }
+        let res: Response;
         try {
-          let iPlaylists: IPlaylist[] = await Toxen.fetch(Settings.getUser().getPlaylistsPath()).then(r => r.json()).catch(() => [] as any);
+          res = await Toxen.fetch(Settings.getUser().getPlaylistsPath());
+        } catch (error) {
+          Playlist.remoteLoadFailed = true;
+          Toxen.error("Unable to load playlists from the server. Playlists will not be saved until they load successfully.");
+          return [];
+        }
+
+        if (res.status === 404) {
+          // No playlists file on the server yet
+          Playlist.remoteLoadFailed = false;
+          await Playlist.save();
+          return [];
+        }
+
+        if (!res.ok) {
+          Playlist.remoteLoadFailed = true;
+          Toxen.error(`Unable to load playlists from the server (${res.status}). Playlists will not be saved until they load successfully.`);
+          return [];
+        }
+
+        try {
+          let iPlaylists: IPlaylist[] = await res.json();
           let playlists: Playlist[] = iPlaylists.map(pl => Playlist.create(pl));
+          Playlist.remoteLoadFailed = false;
           return playlists;
         } catch (error) {
-          Toxen.error("Unable to parse playlists file.\nPlaylists have been reset.");
-          Playlist.save();
+          Playlist.remoteLoadFailed = true;
+          Toxen.error("Unable to parse playlists from the server. Playlists will not be saved until they load successfully.");
           return [];
         }
       }
