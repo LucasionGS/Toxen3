@@ -20,21 +20,36 @@ export default class Stats {
     }
   }
   /**
-   * Load Toxen's statistics from the statistics's filepath.
+   * Load Toxen's statistics from the statistics's filepath. Never throws: if the file can't be read or is damaged, the
+   * last backup (kept in `localStorage` on every save) is used, or the statistics start over, and the user is warned.
+   * Unreadable statistics must not block startup.
    */
   public static async load(): Promise<IStatistics> {
-    return Promise.resolve().then(async () => {
-      try {
-        return toxenapi.loadStats(Stats);
-      } catch (error) {
-        const backup = localStorage.getItem("statistics-backup");
-        if (backup) {
-          console.log("Using backup statistics file.");
-          return Stats.data = JSON.parse(backup);
-        }
-        throw "Unable to parse statistics file.";
+    try {
+      return await toxenapi.loadStats(Stats);
+    } catch (error) {
+      console.error("Unable to load the statistics file.", error);
+      const reason = error?.message ?? String(error);
+      const backup = Stats._parseBackup();
+      if (backup) {
+        Toxen.warn(`${reason} Your statistics were restored from the last backup.`, 10000);
+        return Stats.data = backup;
       }
-    });
+      Toxen.warn(`${reason} Your statistics start over.`, 10000);
+      return Stats.data = {} as IStatistics;
+    }
+  }
+
+  /**
+   * The `localStorage` backup written by `save()`, or `null` if there is none or it can't be parsed.
+   */
+  private static _parseBackup(): IStatistics | null {
+    try {
+      const parsed: unknown = JSON.parse(localStorage.getItem("statistics-backup") ?? "null");
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed as IStatistics : null;
+    } catch {
+      return null;
+    }
   }
 
   public static data: IStatistics;

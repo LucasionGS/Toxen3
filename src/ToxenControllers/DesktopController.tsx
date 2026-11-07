@@ -219,17 +219,25 @@ export default class DesktopController extends ToxenController {
 
   /**
    * Load Toxen's statistics from the statistics's filepath.
+   * @throws If the file can't be read, or it is damaged (then a copy is kept as `statistics.json.corrupt`).
    */
   public async loadStats($stats: typeof Stats): Promise<IStatistics> {
     if (!(await fsp.stat(this.statisticsFilePath).then(() => true).catch(() => false))) {
       await $stats.save();
     }
+    const data = await fsp.readFile(this.statisticsFilePath, "utf8");
+    let parsed: unknown = null;
     try {
-      let data = await fsp.readFile(this.statisticsFilePath, "utf8");
-      return $stats.data = JSON.parse(data);
-    } catch (error) {
-      throw "Unable to parse statistics file";
+      parsed = JSON.parse(data);
+    } catch {
+      // Handled below like any other damaged file
     }
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      // Keep the broken file for inspection, the next save replaces it
+      await fsp.copyFile(this.statisticsFilePath, this.statisticsFilePath + ".corrupt");
+      throw new Error("The statistics file is damaged. A copy was kept as statistics.json.corrupt in the Toxen data folder.");
+    }
+    return $stats.data = parsed as IStatistics;
   }
 
   /**
