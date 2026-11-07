@@ -462,7 +462,7 @@ export namespace SyncApi {
      */
     getToken: () => string | null;
     /**
-     * This device's id (`SyncState.deviceId`), sent as `SyncV2.HEADER_DEVICE`. `null` on web.
+     * This device's id (`SyncState.machine.deviceId`), sent as `SyncV2.HEADER_DEVICE`.
      */
     getDeviceId: () => string | null;
   }
@@ -494,12 +494,17 @@ export namespace SyncApi {
      */
     public readonly status: number;
     public readonly body: SyncV2.ErrorResponse | null;
+    /**
+     * Delay the server asked for with `Retry-After` (429), or `null`. Unit is in ms.
+     */
+    public readonly retryAfterMs: number | null;
 
-    constructor(message: string, status: number, body: SyncV2.ErrorResponse | null = null) {
+    constructor(message: string, status: number, body: SyncV2.ErrorResponse | null = null, retryAfterMs: number | null = null) {
       super(message);
       this.name = "HttpError";
       this.status = status;
       this.body = body;
+      this.retryAfterMs = retryAfterMs;
     }
 
     /**
@@ -510,25 +515,139 @@ export namespace SyncApi {
     }
   }
 
+  let _config: Config | null = null;
+
   /**
    * Set the server and token getters. Must be called before any request.
    */
   export function configure(config: Config): void {
-    throw new Error("Not implemented.");
+    _config = config;
+  }
+
+  /**
+   * Whether `configure` has been called.
+   */
+  export function isConfigured(): boolean {
+    return _config !== null;
+  }
+
+  function requireConfig(): Config {
+    if (!_config) throw new Error("SyncApi is not configured. Call `SyncApi.configure()` at startup before syncing.");
+    return _config;
   }
 
   /**
    * Base URL of the v2 API (`<server>/v2`).
    */
   export function getBaseUrl(): string {
-    throw new Error("Not implemented.");
+    const server = requireConfig().getServer().replace(/^tx(s)?:\/\//, (_: string, secure: string) => `http${secure || ""}://`);
+    return `${server.replace(/\/+$/, "")}${SyncV2.VERSION_PREFIX}`;
   }
 
   /**
    * Request headers for a v2 call: `Authorization: Bearer`, `SyncV2.HEADER_DEVICE`. Used by `Transfer` for streamed uploads.
    */
   export function getHeaders(): Record<string, string> {
-    throw new Error("Not implemented.");
+    const config = requireConfig();
+    const headers: Record<string, string> = {};
+    const token = config.getToken();
+    const deviceId = config.getDeviceId();
+    if (token) headers.Authorization = `Bearer ${token}`;
+    if (deviceId) headers[SyncV2.HEADER_DEVICE] = deviceId;
+    return headers;
+  }
+
+  /**
+   * Fill a `SyncV2.ROUTES` pattern. `:path(*)` keeps its `/` separators, every segment is encoded.
+   */
+  function route(pattern: string, params: Record<string, string> = {}): string {
+    return pattern
+      .replace(":path(*)", () => (params.path ?? "").split("/").map(encodeURIComponent).join("/"))
+      .replace(/:([a-z0-9]+)/gi, (_: string, name: string) => encodeURIComponent(params[name] ?? ""));
+  }
+
+  interface SendOptions {
+    query?: Record<string, string | number | undefined>;
+    json?: unknown;
+    body?: BodyInit;
+    /**
+     * Statuses whose v2 error body is returned as a `Failure` instead of thrown.
+     */
+    expected?: number[];
+  }
+
+  /**
+   * One v2 request. Network errors become `HttpError` status `0`, unexpected statuses throw, `expected` statuses
+   * come back as a `Failure`.
+   */
+  async function send<T, E extends SyncV2.ErrorResponse = SyncV2.ErrorResponse>(method: string, path: string, opts?: SendOptions): Promise<Result<T, E>> {
+    opts ??= {};
+    let url = getBaseUrl() + path;
+    const query = Object.entries(opts.query ?? {}).filter(([, value]) => value !== undefined);
+    if (query.length > 0) url += "?" + query.map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`).join("&");
+
+    const headers = getHeaders();
+    let body = opts.body;
+    if (opts.json !== undefined) {
+      headers["Content-Type"] = "application/json";
+      body = JSON.stringify(opts.json);
+    }
+    else if (body !== undefined) {
+      headers["Content-Type"] = "application/octet-stream";
+    }
+
+    let res: Response;
+    try {
+      res = await fetch(url, { method, headers, body });
+    } catch (error) {
+      throw new HttpError(`Can't reach the sync server: ${error instanceof Error ? error.message : String(error)}`, 0);
+    }
+
+    const text = method === "HEAD" ? "" : await res.text().catch((): string => "");
+    let parsed: unknown = null;
+    let isJson = false;
+    if (text) {
+      try {
+        parsed = JSON.parse(text);
+        isJson = true;
+      } catch {
+        // Not JSON: an old server, a proxy error page, or the web client served for an unknown route
+      }
+    }
+
+    if (res.ok) {
+      if (method !== "HEAD" && !isJson) throw new HttpError(`The sync server sent a response that isn't JSON (${method} ${path}).`, res.status);
+      return { ok: true, value: parsed as T };
+    }
+
+    const errorBody = isJson && parsed && typeof (parsed as SyncV2.ErrorResponse).code === "string" ? parsed as SyncV2.ErrorResponse : null;
+    if (errorBody && opts.expected?.includes(res.status)) return { ok: false, status: res.status, body: errorBody as E };
+
+    const retryAfter = parseRetryAfter(res.headers.get("Retry-After") ?? res.headers.get("RateLimit-Reset"));
+    throw new HttpError(errorBody?.error ?? `${method} ${path} failed with ${res.status} ${res.statusText}`.trim(), res.status, errorBody, retryAfter);
+  }
+
+  /**
+   * `send` for routes without expected failures.
+   */
+  async function sendOk<T>(method: string, path: string, opts?: SendOptions): Promise<T> {
+    const result = await send<T>(method, path, opts);
+    if (result.ok === false) throw new HttpError(result.body.error, result.status, result.body);
+    return result.value;
+  }
+
+  function parseRetryAfter(value: string | null): number | null {
+    if (!value) return null;
+    const seconds = Number(value);
+    if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
+    const date = Date.parse(value);
+    return Number.isNaN(date) ? null : Math.max(0, date - Date.now());
+  }
+
+  function chunks<T>(items: T[], size: number): T[][] {
+    const result: T[][] = [];
+    for (let i = 0; i < items.length; i += size) result.push(items.slice(i, i + size));
+    return result;
   }
 
   /**
@@ -536,7 +655,7 @@ export namespace SyncApi {
    * @throws {HttpError}
    */
   export async function getChanges(query: SyncV2.ChangesQuery): Promise<SyncV2.ChangesResponse> {
-    throw new Error("Not implemented.");
+    return sendOk<SyncV2.ChangesResponse>("GET", route(SyncV2.ROUTES.CHANGES), { query: { since: query.since, limit: query.limit } });
   }
 
   /**
@@ -545,7 +664,16 @@ export namespace SyncApi {
    * @throws {HttpError}
    */
   export async function headBlob(sha256: string): Promise<number | null> {
-    throw new Error("Not implemented.");
+    let res: Response;
+    try {
+      res = await fetch(blobUrl(sha256), { method: "HEAD", headers: getHeaders() });
+    } catch (error) {
+      throw new HttpError(`Can't reach the sync server: ${error instanceof Error ? error.message : String(error)}`, 0);
+    }
+    if (res.status === 404) return null;
+    if (!res.ok) throw new HttpError(`HEAD blob failed with ${res.status} ${res.statusText}`.trim(), res.status);
+    const size = parseInt(res.headers.get(SyncV2.HEADER_BLOB_SIZE) ?? "", 10);
+    return Number.isFinite(size) ? size : 0;
   }
 
   /**
@@ -553,14 +681,20 @@ export namespace SyncApi {
    * @throws {HttpError}
    */
   export async function findMissingBlobs(sha256s: string[]): Promise<string[]> {
-    throw new Error("Not implemented.");
+    const missing: string[] = [];
+    for (const chunk of chunks([...new Set(sha256s)], SyncV2.MISSING_BLOBS_MAX)) {
+      const body: SyncV2.MissingBlobsRequest = { sha256: chunk };
+      const res = await sendOk<SyncV2.MissingBlobsResponse>("POST", route(SyncV2.ROUTES.BLOBS_MISSING), { json: body });
+      missing.push(...res.missing);
+    }
+    return missing;
   }
 
   /**
    * URL for `PUT /blobs/:sha256`. The upload itself goes through `Transfer` (streamed from disk on desktop).
    */
   export function blobUrl(sha256: string): string {
-    throw new Error("Not implemented.");
+    return getBaseUrl() + route(SyncV2.ROUTES.BLOB, { sha256 });
   }
 
   /**
@@ -568,7 +702,7 @@ export namespace SyncApi {
    * @throws {HttpError}
    */
   export async function putBlob(sha256: string, body: Blob): Promise<Result<SyncV2.BlobPutResponse, SyncV2.QuotaExceededErrorResponse | SyncV2.HashMismatchErrorResponse>> {
-    throw new Error("Not implemented.");
+    return send("PUT", route(SyncV2.ROUTES.BLOB, { sha256 }), { body, expected: [400, 413] });
   }
 
   /**
@@ -576,7 +710,7 @@ export namespace SyncApi {
    * @throws {HttpError}
    */
   export async function commit(uid: string, request: SyncV2.CommitRequest): Promise<Result<SyncV2.CommitResponse, CommitFailure>> {
-    throw new Error("Not implemented.");
+    return send("POST", route(SyncV2.ROUTES.TRACK_COMMIT, { uid }), { json: request, expected: [409, 413, 422] });
   }
 
   /**
@@ -584,15 +718,23 @@ export namespace SyncApi {
    * @throws {HttpError}
    */
   export async function deleteTrack(uid: string, baseRev?: number): Promise<Result<SyncV2.DeleteTrackResponse, SyncV2.StaleBaseErrorResponse>> {
-    throw new Error("Not implemented.");
+    return send("DELETE", route(SyncV2.ROUTES.TRACK, { uid }), { query: { baseRev }, expected: [409] });
   }
 
   /**
-   * `GET /me`.
+   * `GET /me`. A server without sync v2 answers 404 (or with its web client, which isn't JSON): both throw an
+   * `HttpError` with status `404`.
    * @throws {HttpError}
    */
   export async function getMe(): Promise<SyncV2.MeResponse> {
-    throw new Error("Not implemented.");
+    try {
+      return await sendOk<SyncV2.MeResponse>("GET", route(SyncV2.ROUTES.ME));
+    } catch (error) {
+      if (error instanceof HttpError && error.status >= 200 && error.status < 300) {
+        throw new HttpError("The server doesn't support sync v2.", 404);
+      }
+      throw error;
+    }
   }
 
   /**
@@ -600,7 +742,13 @@ export namespace SyncApi {
    * @throws {HttpError}
    */
   export async function getMediaTokens(uids: string[]): Promise<Record<string, SyncV2.MediaToken>> {
-    throw new Error("Not implemented.");
+    const tokens: Record<string, SyncV2.MediaToken> = {};
+    for (const chunk of chunks([...new Set(uids)], SyncV2.MEDIA_TOKENS_MAX)) {
+      const body: SyncV2.MediaTokensRequest = { uids: chunk };
+      const res = await sendOk<SyncV2.MediaTokensResponse>("POST", route(SyncV2.ROUTES.MEDIA_TOKENS), { json: body });
+      Object.assign(tokens, res.tokens);
+    }
+    return tokens;
   }
 
   /**
@@ -608,7 +756,9 @@ export namespace SyncApi {
    * `?u=&exp=&sig=` and works without headers (`<audio src>`, CSS).
    */
   export function fileUrl(uid: string, relPath: string, token?: SyncV2.MediaToken, userId?: number): string {
-    throw new Error("Not implemented.");
+    const url = getBaseUrl() + route(SyncV2.ROUTES.TRACK_FILE, { uid, path: relPath });
+    if (!token || userId === undefined) return url;
+    return `${url}?u=${userId}&exp=${token.exp}&sig=${encodeURIComponent(token.sig)}`;
   }
 }
 

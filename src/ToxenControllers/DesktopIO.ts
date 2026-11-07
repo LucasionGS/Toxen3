@@ -74,6 +74,22 @@ export namespace DesktopIO {
     status: number;
     body: unknown;
   }
+
+  /**
+   * What `downloadFile` and `uploadFile` reject with. Network failures are plain Node errors with a `code`
+   * (`ECONNREFUSED`, `ECONNRESET`…) and no `status`; a cancelled transfer has `name` `AbortError`.
+   */
+  export interface TransferError extends Error {
+    /**
+     * HTTP status of a non-2xx download, `0` for a hash mismatch, `undefined` for network errors.
+     */
+    status?: number;
+    /**
+     * The parsed JSON error body, or `null`.
+     */
+    body?: unknown;
+    code?: string;
+  }
 }
 
 export default DesktopIO;

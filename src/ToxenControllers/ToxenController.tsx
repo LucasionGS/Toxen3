@@ -6,8 +6,7 @@ import { IStatistics } from "../app/toxen/Statistics";
 import type Theme from "../app/toxen/Theme";
 import type Song from "../app/toxen/Song";
 import type { Toxen } from "../app/ToxenApp";
-import type User from "../app/toxen/User";
-import type { SongDiff, ISong } from "../app/toxen/Song";
+import type { ISong } from "../app/toxen/Song";
 import type { ToxenFile } from "../app/toxen/System";
 import type { DesktopIO } from "./DesktopIO";
 import { showNotification } from "@mantine/notifications";
@@ -240,19 +239,6 @@ export default class ToxenController {
     this.throwDesktopOnly("importTxzPackage");
   }
 
-  public async syncSong($toxen: typeof Toxen, user: User, song: Song, diff: SongDiff, { silenceValidated }: { silenceValidated?: boolean; }): Promise<void> {
-    this.throwDesktopOnly("syncSong");
-  }
-
-  public async validateSongAgainstRemote($toxen: Toxen, user: User, song: Song): Promise<boolean> {
-    this.throwDesktopOnly("validateSongAgainstRemote");
-  }
-
-  public async compareLocalSongsAgainstRemote($toxen: typeof Toxen, user: User, data: any): Promise<{
-    result: Record<string, SongDiff>
-  }> {
-    this.throwDesktopOnly("fetchRemoteSongsData");
-  }
 
   //#region Storage and sync IO (desktop only, implemented in DesktopController)
 
@@ -288,8 +274,10 @@ export default class ToxenController {
 
   /**
    * Download to a temp file next to `destPath`, verify `expectedSha256` if given, then rename into place.
-   * @throws If the response isn't 2xx or the hash doesn't match. The temp file is removed.
+   * @throws {DesktopIO.TransferError} If the response isn't 2xx, the network fails or the hash doesn't match. The temp
+   * file is removed.
    */
+
   public async downloadFile(opts: DesktopIO.DownloadOptions): Promise<DesktopIO.FileHash> {
     this.throwDesktopOnly("downloadFile");
   }

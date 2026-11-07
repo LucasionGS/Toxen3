@@ -2,6 +2,11 @@ import ToxenController from "./ToxenController";
 import Path from "path";
 import fs, { Dirent } from "fs";
 import fsp from "fs/promises";
+import http from "http";
+import https from "https";
+import crypto from "crypto";
+import { Transform, Writable } from "stream";
+import { pipeline } from "stream/promises";
 //@ts-ignore
 import os from "os";
 import * as remote from "@electron/remote";
@@ -17,16 +22,12 @@ import Ffmpeg from "../app/toxen/desktop/Ffmpeg";
 import ffmpegPath from "ffmpeg-static";
 import yazl from "yazl";
 import yauzl from "yauzl";
-import Song, { type SongDiff } from "../app/toxen/Song"; // can i import? I forgor 💀
+import Song from "../app/toxen/Song";
 import type { Toxen } from "../app/ToxenApp";
-import type User from "../app/toxen/User";
-import { hashElement } from "folder-hash";
 import { } from "buffer";
 import packageJson from "../../package.json";
 import { ISong } from "../app/toxen/Song";
-import System, { type ToxenFile } from "../app/toxen/System";
-import { Checkbox, Menu, RangeSlider, Progress, Stack } from "@mantine/core";
-import { updateNotification } from "@mantine/notifications";
+import type { ToxenFile } from "../app/toxen/System";
 import Discord from "../app/toxen/desktop/Discord";
 import HueManager from "../app/toxen/desktop/hue/HueManager";
 import TaskbarControls from "../app/toxen/desktop/TaskbarControls";
@@ -161,6 +162,163 @@ export default class DesktopController extends ToxenController {
     await walk(dir);
     return files;
   }
+
+  public async hashFile(filePath: string): Promise<DesktopIO.FileHash> {
+    const before = await fsp.stat(filePath);
+    const hash = crypto.createHash("sha256");
+    let size = 0;
+    await pipeline(fs.createReadStream(filePath), new Writable({
+      write(chunk: Buffer, _encoding, callback) {
+        hash.update(chunk);
+        size += chunk.length;
+        callback();
+      },
+    }));
+
+    const after = await fsp.stat(filePath);
+    if (size !== after.size || before.mtimeMs !== after.mtimeMs) {
+      throw new Error(`"${filePath}" changed while it was being hashed. It is hashed again on the next sync.`);
+    }
+    return { sha256: hash.digest("hex"), size, mtimeMs: after.mtimeMs };
+  }
+
+  public async uploadFile(opts: DesktopIO.UploadOptions): Promise<DesktopIO.HttpResult> {
+    const { size } = await fsp.stat(opts.filePath);
+    const url = new URL(DesktopController._toHttpUrl(opts.url));
+    const client = url.protocol === "https:" ? https : http;
+    if (opts.signal?.aborted) throw DesktopController._abortError();
+
+    return new Promise<DesktopIO.HttpResult>((resolve, reject) => {
+      let settled = false;
+      const settle = (fn: () => void) => {
+        if (settled) return;
+        settled = true;
+        opts.signal?.removeEventListener("abort", onAbort);
+        fn();
+      };
+      const stream = fs.createReadStream(opts.filePath);
+      const req = client.request(url, {
+        method: opts.method ?? "PUT",
+        headers: { "Content-Type": "application/octet-stream", ...opts.headers, "Content-Length": String(size) },
+      }, res => {
+        // The server may answer before reading the whole body (quota checked from `Content-Length`)
+        stream.unpipe(req);
+        stream.destroy();
+        const chunks: Buffer[] = [];
+        res.on("data", (chunk: Buffer) => chunks.push(chunk));
+        res.on("error", error => settle(() => reject(error)));
+        res.on("end", () => settle(() => resolve({ status: res.statusCode ?? 0, body: DesktopController._parseJson(Buffer.concat(chunks)) })));
+      });
+      const onAbort = () => {
+        stream.destroy();
+        req.destroy(DesktopController._abortError());
+      };
+      opts.signal?.addEventListener("abort", onAbort, { once: true });
+
+      let sent = 0;
+      stream.on("data", (chunk: Buffer) => {
+        sent += chunk.length;
+        opts.onProgress?.({ transferred: sent, total: size });
+      });
+      stream.on("error", error => {
+        req.destroy(error);
+        settle(() => reject(error));
+      });
+      req.on("error", error => settle(() => reject(error)));
+      stream.pipe(req);
+    });
+  }
+
+  public async downloadFile(opts: DesktopIO.DownloadOptions): Promise<DesktopIO.FileHash> {
+    const partPath = `${opts.destPath}.toxen-part`;
+    await fsp.mkdir(Path.dirname(opts.destPath), { recursive: true });
+    try {
+      const { sha256, size } = await this._downloadTo(DesktopController._toHttpUrl(opts.url), opts.headers ?? {}, partPath, opts, 0);
+      if (opts.expectedSha256 && sha256 !== opts.expectedSha256) {
+        throw Object.assign(new Error(`The downloaded file doesn't match its expected hash (expected ${opts.expectedSha256}, got ${sha256}). It is downloaded again on the next sync.`), { status: 0, body: null as unknown });
+      }
+      await fsp.rename(partPath, opts.destPath);
+      const stat = await fsp.stat(opts.destPath);
+      return { sha256, size, mtimeMs: stat.mtimeMs };
+    } catch (error) {
+      await fsp.rm(partPath, { force: true }).catch(() => { });
+      throw error;
+    }
+  }
+
+  /**
+   * Stream a GET response into `filePath`, hashing it on the way. Follows up to 5 redirects and drops the
+   * `Authorization` header when a redirect leaves the original host (presigned blob URLs).
+   */
+  private _downloadTo(url: string, headers: Record<string, string>, filePath: string, opts: DesktopIO.DownloadOptions, redirects: number): Promise<{ sha256: string; size: number }> {
+    if (opts.signal?.aborted) return Promise.reject(DesktopController._abortError());
+    const target = new URL(url);
+    const client = target.protocol === "https:" ? https : http;
+    return new Promise((resolve, reject) => {
+      const req = client.get(target, { headers }, res => {
+        const status = res.statusCode ?? 0;
+        if (status >= 300 && status < 400 && res.headers.location) {
+          res.resume();
+          if (redirects >= 5) return reject(Object.assign(new Error("Too many redirects while downloading a file."), { status, body: null as unknown }));
+          const next = new URL(res.headers.location, target);
+          const nextHeaders = { ...headers };
+          if (next.host !== target.host) delete nextHeaders.Authorization;
+          this._downloadTo(next.toString(), nextHeaders, filePath, opts, redirects + 1).then(resolve, reject);
+          return;
+        }
+        if (status < 200 || status >= 300) {
+          const chunks: Buffer[] = [];
+          res.on("data", (chunk: Buffer) => chunks.push(chunk));
+          res.on("end", () => {
+            const body = DesktopController._parseJson(Buffer.concat(chunks));
+            const message = (body as { error?: string } | null)?.error ?? `${status} ${res.statusMessage ?? ""}`.trim();
+            reject(Object.assign(new Error(`Download failed: ${message}`), { status, body }));
+          });
+          res.on("error", reject);
+          return;
+        }
+
+        const total = parseInt(res.headers["content-length"] ?? "0", 10) || 0;
+        const hash = crypto.createHash("sha256");
+        let received = 0;
+        const counter = new Transform({
+          transform(chunk: Buffer, _encoding, callback) {
+            hash.update(chunk);
+            received += chunk.length;
+            opts.onProgress?.({ transferred: received, total: Math.max(total, received) });
+            callback(null, chunk);
+          },
+        });
+        pipeline(res, counter, fs.createWriteStream(filePath), { signal: opts.signal })
+          .then(() => resolve({ sha256: hash.digest("hex"), size: received }), reject);
+      });
+      req.on("error", reject);
+      const onAbort = () => req.destroy(DesktopController._abortError());
+      opts.signal?.addEventListener("abort", onAbort, { once: true });
+      req.on("close", () => opts.signal?.removeEventListener("abort", onAbort));
+    });
+  }
+
+  /**
+   * `tx://` and `txs://` server addresses as `http://` and `https://`.
+   */
+  private static _toHttpUrl(url: string): string {
+    return url.replace(/^tx(s)?:\/\//, (_: string, secure: string) => `http${secure || ""}://`);
+  }
+
+  private static _parseJson(data: Buffer): unknown {
+    if (data.length === 0) return null;
+    try {
+      return JSON.parse(data.toString("utf8"));
+    } catch {
+      return null;
+    }
+  }
+
+  private static _abortError(): Error {
+    return Object.assign(new Error("The transfer was cancelled."), { name: "AbortError" });
+  }
+
 
   /**
    * Make sure Toxen's data folder exists.
@@ -637,258 +795,6 @@ export default class DesktopController extends ToxenController {
     $toxen.log(`Whisper transcription completed! Generated: ${generatedFile}`);
   }
 
-  public async syncSong($toxen: typeof Toxen, user: User, song: Song, diff: SongDiff, { silenceValidated }: { silenceValidated?: boolean; }): Promise<void> {
-    song.setProgressBar(0.10);
-
-    if (diff.download === "*") {
-      // Download entire song from remote (new server-only song)
-      const localDir = song.dirnameLocal();
-      song.setProgressBar(0.20);
-
-      // Fetch file listing from server
-      const fileList: string[] = await $toxen.fetch(`${user.getCollectionPath()}/${song.uid}`)
-        .then(res => res.ok ? res.json() : []);
-
-      if (fileList.length === 0) {
-        $toxen.error(`No files found on server for ${song.getDisplayName()}`);
-        song.setProgressBar(0);
-        return;
-      }
-
-      // Ensure local directory exists
-      await fsp.mkdir(localDir, { recursive: true });
-
-      let downloaded = 0;
-      for (const fileName of fileList) {
-        const filePath = Path.resolve(localDir, fileName);
-        await fsp.mkdir(Path.dirname(filePath), { recursive: true });
-
-        const res = await $toxen.fetch(`${user.getCollectionPath()}/${song.uid}/${fileName}`);
-        if (res.ok) {
-          await fsp.writeFile(filePath, (await res.blob()).stream());
-          console.log("Downloaded file:", fileName);
-        } else {
-          console.error("Failed to download file:", fileName);
-        }
-        downloaded++;
-        song.setProgressBar(0.20 + (downloaded / fileList.length) * 0.75);
-      }
-
-      // Reload song info from the downloaded info.json
-      await song.reload();
-      song.completeProgressBar();
-
-      if (!silenceValidated) {
-        $toxen.log(`Downloaded new track: ${song.getDisplayName()}`, 1500);
-      }
-      return;
-    }
-    
-    if (diff.upload === "*") {
-      // Sync from disk to remote (Using archiver to zip the folder in memory)
-      song.setProgressBar(0.25);
-      
-      // Before zipping, ensure ALL files have an md5 hash
-      const files = await System.recursive(song.dirname());
-      let madeChange = false;
-      await Promise.resolve(files.map(async (file) => {
-        file.name = file.name.replace(/\\/g, "/");
-
-        if (!song.files[file.name]) {
-          song.files[file.name] = {
-            action: "u",
-            time: Date.now()
-          };
-          madeChange = true;
-          console.log("⚠ Added hash to song file:", file.name);
-        };
-      }));
-
-      if (!song.hash) {
-        song.hash = Song.randomFileHash();
-        madeChange = true;
-        console.log("⚠ Added hash to song:", song.getDisplayName());
-      }
-      
-      if (madeChange) {
-        await song.saveInfo({
-          callSync: false,
-          forceLocal: true
-        });
-      }
-      
-      const zip = new yazl.ZipFile();
-      const zipPathTmp = Path.resolve(os.tmpdir(), "toxen-sync-" + Math.random().toString().substring(2) + ".zip");
-      const zipStream = fs.createWriteStream(zipPathTmp);
-  
-      const addFiles = async (dir: string, startingDir: string = dir) => {
-        const files = await fsp.readdir(dir);
-        for (const file of files) {
-          const filePath = Path.resolve(dir, file);
-          const stat = await fsp.stat(filePath);
-          const relativePath = Path.relative(startingDir, filePath);
-          if (stat.isDirectory()) {
-            zip.addEmptyDirectory(relativePath);
-            await addFiles(filePath, startingDir);
-          } else {
-            try {
-              zip.addReadStream(fs.createReadStream(filePath), relativePath);
-            } catch (error) {
-              $toxen.error(error.message);
-            }
-          }
-        }
-      };
-  
-      await addFiles(song.dirnameLocal());
-  
-      zip.outputStream.pipe(zipStream);
-  
-      zip.end();
-      song.setProgressBar(0.5);
-  
-      return await new Promise<void>((resolve, reject) => {
-        zipStream.on("finish", resolve);
-        zipStream.on("error", reject);
-      }).then(async () => {
-        const formData = new FormData();
-        // Insert as blob
-        formData.append("file", new Blob([await fsp.readFile(zipPathTmp)]), "sync.zip");
-        formData.append("data", JSON.stringify(song.toISong()));
-        formData.append("_method", "PUT");
-        return $toxen.fetch(`${user.getCollectionPath()}/${song.uid}`, {
-          method: "POST",
-          body: formData
-        });
-      }).then(async res => {
-        if (res.ok) {
-          song.completeProgressBar();
-          if (!silenceValidated) {
-            $toxen.notify({
-              title: "Synced",
-              content: song.getDisplayName(),
-              expiresIn: 5000
-            });
-          }
-          return fsp.unlink(zipPathTmp);
-        } else {
-          song.setProgressBar(0);
-          $toxen.notify({
-            title: "Sync failed",
-            content: await res.text(),
-            expiresIn: 5000,
-            type: "error"
-          });
-        }
-      }).catch(error => {
-        song.setProgressBar(0);
-        $toxen.error("Something went wrong writing the exported zip file.");
-        console.error(error);
-        return fsp.unlink(zipPathTmp);
-      });
-    }
-    else if (diff.localHash || diff.remoteHash) { // An empty array means no changes
-      let hash = diff.localHash;
-
-      if (diff.localHash && diff.remoteHash) {
-        hash = Song.randomFileHash();
-      }
-      
-      // Upload files
-      if (diff.localHash && !Array.isArray(diff.upload)) {
-        for (const fileKey of Object.keys(diff.upload)) {
-          const file = diff.upload[fileKey];
-          if (fileKey === "info.json") {
-
-            await $toxen.fetch(`${user.getCollectionPath()}/${song.uid}/info.json`, {
-              method: "PUT",
-              body: JSON.stringify(song.toISong()),
-              headers: {
-                "Content-Type": "application/json"
-              }
-            })
-          }
-          else {
-            let filePath = Path.resolve(song.dirname(), fileKey);
-            console.log("Uploading file:", filePath);
-            
-            // let formData = new FormData();
-            // formData.append("file", new Blob([await fsp.readFile(filePath)]), fileKey);
-            // formData.append("_method", "PUT");
-            await $toxen.fetch(`${user.getCollectionPath()}/${song.uid}/${fileKey}`, {
-              method: "PUT",
-              body: new Blob([await fsp.readFile(filePath)])
-            });
-          }
-        }
-        // diff.upload;
-      }
-
-      // Download files
-      if (diff.remoteHash && !Array.isArray(diff.download)) {
-        const preInfo = song.toISong();
-        for (const fileKey of Object.keys(diff.download)) {
-          let filePath = Path.resolve(song.dirname(), fileKey);
-          console.log("Downloading file:", filePath);
-          let res = await $toxen.fetch(`${user.getCollectionPath()}/${song.uid}/${fileKey}`);
-          if (res.ok) {
-            await fsp.writeFile(filePath, (await res.blob()).stream());
-            console.log("Downloaded file:", fileKey);
-          }
-          else {
-            console.error("Failed to download file:", fileKey);
-          }
-        }
-        await song.reload();
-        const postInfo = song.toISong();
-        // Check if the song has changed
-        if (song.uid == Song.getCurrent()?.uid) {
-          if (
-            preInfo.paths.background !== postInfo.paths.background
-            || preInfo.files[preInfo.paths.background]?.time !== postInfo.files[postInfo.paths.background]?.time
-          ) { $toxen.background.setBackground(
-            `${song.backgroundFile()}?h=${song.hash}`
-          ); }
-          if (
-            preInfo.paths.media !== postInfo.paths.media
-            || preInfo.files[preInfo.paths.media]?.time !== postInfo.files[postInfo.paths.media]?.time
-          ) { song.play(); }
-          if (
-            preInfo.paths.subtitles !== postInfo.paths.subtitles
-            || preInfo.files[preInfo.paths.subtitles]?.time !== postInfo.files[postInfo.paths.subtitles]?.time
-          ) { await song.applySubtitles(); }
-          if (
-            preInfo.paths.storyboard !== postInfo.paths.storyboard
-            || preInfo.files[preInfo.paths.storyboard]?.time !== postInfo.files[postInfo.paths.storyboard]?.time
-          ) { await song.applyStoryboard(); }
-        }
-      }
-
-      if (!silenceValidated) {
-        $toxen.log(`Synced track: ${song.getDisplayName()}`, 1500);
-      }
-
-      song.completeProgressBar();
-    }
-    else {
-      song.completeProgressBar();
-    }
-  }
-
-  public async validateSongAgainstRemote($toxen: typeof Toxen, user: User, song: Song): Promise<boolean> {
-    const { hash: localHash } = await hashElement(song.dirname(), {
-      folders: {
-        ignoreBasename: true,
-      }
-    });
-    console.log("Local hash", localHash);
-    const remoteHash: string = await $toxen.fetch(user.getCollectionPath() + "/" + song.uid, {
-      method: "OPTIONS"
-    }).then(res => res.json()).then(res => res.hash).catch((): string => null);
-    console.log("Remote hash", remoteHash);
-    return localHash === remoteHash;
-  }
-
   public async buildSongInfo($toxen: typeof Toxen, $song: typeof Song, fullPath: string) {
     return Promise.resolve().then(async () => {
       let info: Partial<ISong> = {
@@ -961,27 +867,6 @@ export default class DesktopController extends ToxenController {
 
   public getHueInstance() {
     return this._hue ??= new HueManager();
-  }
-
-  public async compareLocalSongsAgainstRemote($toxen: typeof Toxen, user: User, data: any): Promise<{
-    result: Record<string, SongDiff>
-  }> {
-    return $toxen.fetch(user.getCollectionPath(), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        data
-      })
-    }).then(async res => {
-      if (res.ok) {
-        return res.json();
-      }
-      else {
-        throw await res.text();
-      }
-    });
   }
 
   /**
@@ -1191,8 +1076,6 @@ export default class DesktopController extends ToxenController {
             if (info) {
               info.uid = newUid;
               info.paths.dirname = Path.basename(targetDir);
-              // Reset file tracking so sync doesn't get confused
-              info.files = {};
               info.hash = Song.randomFileHash();
             } else {
               // No info.json in the archive - build a minimal one
@@ -1215,8 +1098,8 @@ export default class DesktopController extends ToxenController {
                   storyboard: null,
                 },
                 hash: Song.randomFileHash(),
-                files: {},
               } as ISong;
+
             }
 
             // Write the updated info.json
