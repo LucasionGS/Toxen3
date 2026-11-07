@@ -45,6 +45,27 @@ export default function EditSong(props: EditSongProps) {
     return Toxen.editingSong;
   };
 
+  // Text fields change the song in memory while typing and save on blur or Enter. Edits that are still unsaved when
+  // another song is opened, the panel closes or the window unloads are saved then, so they aren't lost.
+  const pendingSong = React.useRef<Song | null>(null);
+  const saveEdits = () => {
+    pendingSong.current = null;
+    Toxen.editingSong.saveInfo();
+  };
+  React.useEffect(() => {
+    const song = Toxen.editingSong;
+    const flush = () => {
+      if (pendingSong.current !== song) return;
+      pendingSong.current = null;
+      song.saveInfo();
+    };
+    window.addEventListener("beforeunload", flush);
+    return () => {
+      window.removeEventListener("beforeunload", flush);
+      flush();
+    };
+  }, [Toxen.editingSong]);
+
   // Save settings to the appropriate location
   const saveSettings = (key: string, value: any, saveToFile: boolean = true) => {
     if (isPlaylistMode && currentPlaylist) {
@@ -55,9 +76,8 @@ export default function EditSong(props: EditSongProps) {
       (Toxen.editingSong as any)[key] = value;
     }
 
-    if (saveToFile) {
-      Toxen.editingSong.saveInfo();
-    }
+    if (saveToFile) saveEdits();
+    else pendingSong.current = Toxen.editingSong;
   };
 
   type ValidSettings = Partial<Omit<ISong, "uid" | "files" | "hash" | "duration" | "playlistSettings">>;
@@ -80,7 +100,7 @@ export default function EditSong(props: EditSongProps) {
   function textInputSaveOnEnter(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === "Enter") {
       e.preventDefault();
-      Toxen.editingSong.saveInfo();
+      saveEdits();
     }
   }
 
@@ -137,7 +157,7 @@ export default function EditSong(props: EditSongProps) {
             name="artist"
             onChange={(v) => saveSettings('artist', v.currentTarget.value, false)}
             defaultValue={getValue('artist')}
-            onBlur={() => Toxen.editingSong.saveInfo()}
+            onBlur={saveEdits}
             onKeyDown={textInputSaveOnEnter}
           />
           <TextInput
@@ -145,7 +165,7 @@ export default function EditSong(props: EditSongProps) {
             label="Title"
             onChange={(v) => saveSettings('title', v.currentTarget.value, false)}
             defaultValue={getValue('title')}
-            onBlur={() => Toxen.editingSong.saveInfo()}
+            onBlur={saveEdits}
             onKeyDown={textInputSaveOnEnter}
           />
           <ListInput
@@ -160,7 +180,7 @@ export default function EditSong(props: EditSongProps) {
             name="album"
             onChange={(v) => saveSettings('album', v.currentTarget.value, false)}
             defaultValue={getValue('album')}
-            onBlur={() => Toxen.editingSong.saveInfo()}
+            onBlur={saveEdits}
             onKeyDown={textInputSaveOnEnter}
           />
           <TextInput
@@ -169,7 +189,7 @@ export default function EditSong(props: EditSongProps) {
             name="genre"
             onChange={(v) => saveSettings('genre', v.currentTarget.value, false)}
             defaultValue={getValue('genre')}
-            onBlur={() => Toxen.editingSong.saveInfo()}
+            onBlur={saveEdits}
             onKeyDown={textInputSaveOnEnter}
           />
           <TextInput
@@ -178,7 +198,7 @@ export default function EditSong(props: EditSongProps) {
             name="source"
             onChange={(v) => saveSettings('source', v.currentTarget.value, false)}
             defaultValue={getValue('source')}
-            onBlur={() => Toxen.editingSong.saveInfo()}
+            onBlur={saveEdits}
             onKeyDown={textInputSaveOnEnter}
           />
           <TextInput
@@ -187,7 +207,7 @@ export default function EditSong(props: EditSongProps) {
             name="url"
             onChange={(v) => saveSettings('url', v.currentTarget.value, false)}
             defaultValue={getValue('url')}
-            onBlur={() => Toxen.editingSong.saveInfo()}
+            onBlur={saveEdits}
             onKeyDown={textInputSaveOnEnter}
           />
           <TextInput
@@ -196,7 +216,7 @@ export default function EditSong(props: EditSongProps) {
             name="language"
             onChange={(v) => saveSettings('language', v.currentTarget.value, false)}
             defaultValue={getValue('language')}
-            onBlur={() => Toxen.editingSong.saveInfo()}
+            onBlur={saveEdits}
             onKeyDown={textInputSaveOnEnter}
           />
           <NumberInput
@@ -205,7 +225,7 @@ export default function EditSong(props: EditSongProps) {
             name="year"
             onChange={(v) => saveSettings('year', +v, false)}
             defaultValue={getValue('year')}
-            onBlur={() => Toxen.editingSong.saveInfo()}
+            onBlur={saveEdits}
             onKeyDown={textInputSaveOnEnter}
           />
           <ListInput
@@ -254,7 +274,7 @@ export default function EditSong(props: EditSongProps) {
                 saveSettings('paths', { ...paths, media: v });
               } else {
                 Toxen.editingSong.paths.media = v;
-                Toxen.editingSong.saveInfo();
+                saveEdits();
               }
               let current = Song.getCurrent();
               if (Toxen.editingSong == current) {
@@ -277,7 +297,7 @@ export default function EditSong(props: EditSongProps) {
               saveSettings('paths', { ...paths, background: v });
             } else {
               Toxen.editingSong.paths.background = v;
-              Toxen.editingSong.saveInfo();
+              saveEdits();
             }
             let current = Song.getCurrent();
             if (Toxen.editingSong == current) {
@@ -311,7 +331,7 @@ export default function EditSong(props: EditSongProps) {
               saveSettings('paths', { ...paths, subtitles: v });
             } else {
               Toxen.editingSong.paths.subtitles = v;
-              Toxen.editingSong.saveInfo();
+              saveEdits();
             }
             let current = Song.getCurrent();
             if (Toxen.editingSong == current) {
@@ -327,7 +347,7 @@ export default function EditSong(props: EditSongProps) {
           onChange={(v) => {
             saveSettings('subtitleDelay', +v, false);
           }}
-          onBlur={() => Toxen.editingSong.saveInfo()}
+          onBlur={saveEdits}
           onKeyDown={textInputSaveOnEnter}
         />
 
@@ -418,7 +438,7 @@ export default function EditSong(props: EditSongProps) {
               saveSettings('paths', { ...paths, storyboard: v });
             } else {
               Toxen.editingSong.paths.storyboard = v;
-              Toxen.editingSong.saveInfo();
+              saveEdits();
             }
             let current = Song.getCurrent();
             if (Toxen.editingSong == current) {
@@ -449,7 +469,7 @@ export default function EditSong(props: EditSongProps) {
           }}
           onBlur={() => {
             Toxen.setAllVisualColors(getValue('visualizerColor'));
-            Toxen.editingSong.saveInfo();
+            saveEdits();
           }}
         />
         <Checkbox
@@ -737,7 +757,7 @@ export default function EditSong(props: EditSongProps) {
           onChangeEnd={(v) => {
             saveSettings('rainfallColor', v || null);
           }}
-          onBlur={() => Toxen.editingSong.saveInfo()}
+          onBlur={saveEdits}
         />
         <sup>Color of the rain drops for this song. Leave empty to use the color from settings.</sup>
         </Tabs.Panel>
@@ -760,7 +780,7 @@ export default function EditSong(props: EditSongProps) {
           placeholder="<Default>"
           onChange={(v) => saveSettings('floatingTitleText', v.currentTarget.value, false)}
           defaultValue={getValue('floatingTitleText')}
-          onBlur={() => Toxen.editingSong.saveInfo()}
+          onBlur={saveEdits}
           onKeyDown={textInputSaveOnEnter}
         />
         <sup>Set the text for the floating title. (Defaults to song title, if empty)</sup>
