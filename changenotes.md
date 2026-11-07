@@ -5,10 +5,26 @@ This file contains the change logs for Toxen.
 <!-- UPCOMING: 2.13.0 -->
 ## 2.13.0 - TBD
 
+## New Features
+
+- **Reset to global** - Visualizer style options you've set for a song or a playlist now have a reset button that makes them follow the global setting again.
+  - This can be found next to each option in `Edit Song > Visualizer`.
+
+## Changes
+
+- **Song settings always win** - Turning a setting off or setting it to 0 for a song (or a song in a playlist) now overrides your global settings, instead of being ignored. Force Rainbow Mode is the exception: unchecked still means "follow the global setting".
+- **Faster library loading** - Large local libraries load noticeably faster at startup.
+
 ## Bug Fixes
 
 - **Switching songs quickly** - Skipping through songs fast no longer mixes up the lyrics, storyboard or background of one song with the audio of another.
 - **Song queue order** - Songs you add to the queue now play in the order you added them instead of being sorted by artist.
+- **Playlist backgrounds in cloud mode** - Playlist backgrounds now show up when browsing your cloud library.
+- **Unreadable song folders** - A song folder Toxen can't read is now skipped and listed in a notification, instead of leaving the whole library empty. Your playlists keep those songs in the meantime.
+- **Damaged statistics** - A damaged statistics file no longer stops Toxen from starting. Toxen restores the last backup, or starts the statistics over.
+- **Crossfading into a song that loads slowly** - The background, title and song info now always match the song you hear, even when you skip ahead while the next song is still loading.
+- **Unsaved song details** - Edits in `Edit Song` text fields are now saved when you switch songs, close the panel or close Toxen without leaving the field first.
+- **Whisper transcription on Windows** - Transcribing lyrics with Whisper now works on Windows.
 
 <!-- UPCOMING: 2.12.3 -->
 ## 2.12.3 - TBD
