@@ -11,7 +11,6 @@ import MobilePlayer from "./components/MobileUI/MobilePlayer";
 import MusicPlayerController from "./toxen/controllers/MusicPlayerController";
 import ViewController from "./toxen/controllers/ViewController";
 import ProgressBar from "./components/ProgressBar";
-import Form from "./components/Form/Form";
 import Sidepanel from "./components/Sidepanel/Sidepanel";
 import SidepanelSection from "./components/Sidepanel/SidepanelSection";
 import SongPanel from "./components/SongPanel/SongPanel";
@@ -23,10 +22,11 @@ import System from "./toxen/System";
 import { attachShortcuts } from "./toxen/Shortcuts";
 import SidepanelSectionHeader from "./components/Sidepanel/SidepanelSectionHeader";
 import SearchField from "./components/SongPanel/SearchField";
-import Stats from "./toxen/Statistics";
 import StoryboardEditorPanel from "./components/StoryboardEditorPanel/StoryboardEditorPanel";
 import SubtitleEditorPanel from "./components/SubtitleEditor/SubtitleEditorPanel";
-import { MessageCardOptions } from "./components/MessageCard/MessageCards";
+import { Notify } from "./toxen/Notify";
+import { MediaFormats } from "./toxen/MediaFormats";
+import { bootstrap } from "./bootstrap";
 import ExternalUrl from "./components/ExternalUrl/ExternalUrl";
 import showdown from "showdown";
 import htmlToReactParser, { Element, Text } from "html-react-parser";
@@ -37,7 +37,6 @@ import SubtitlesController from "./toxen/controllers/SubtitlesController";
 import ToxenInteractionMode from "./toxen/ToxenInteractionMode";
 import Playlist from "./toxen/Playlist";
 import PlaylistPanel from "./components/PlaylistPanel/PlaylistPanel";
-import TButton from "./components/Button/Button";
 import type Discord from "./toxen/desktop/Discord";
 import ThemeContainer from "./components/ThemeContainer/ThemeContainer";
 import ThemeContainerController from "./toxen/controllers/ThemeContainerController";
@@ -46,7 +45,7 @@ import Theme from "./toxen/Theme";
 import AppBar from "./components/AppBar/AppBar";
 import EffectsPanel from "./components/EffectsPanel/EffectsPanel";
 import { Button } from "@mantine/core";
-import { Notifications, showNotification } from "@mantine/notifications";
+import { Notifications } from "@mantine/notifications";
 import SettingsPanel from "./components/Sidepanel/Panels/SettingsPanel/SettingsPanel";
 // import MigrationPanel from "./components/Sidepanel/Panels/MigrationPanel/MigrationPanel";
 import EditSong from "./components/Sidepanel/Panels/EditSong/EditSong";
@@ -59,31 +58,19 @@ import StoryboardEditor, { StoryboardEditorController } from "./components/Story
 import SubtitleEditor from "./components/SubtitleEditor/SubtitleEditor";
 import SubtitleEditorController from "./components/SubtitleEditor/SubtitleEditorController";
 import { modals } from "@mantine/modals";
-import LoginForm from "./components/LoginForm/LoginForm";
 import ExtensionManager from "./toxen/extensions/ExtensionManager";
 import AudioEffects from "./toxen/AudioEffects";
 import ImageCache from "./toxen/ImageCache";
 import FriendsPanel, { FriendsIconBadge } from "./components/FriendsPanel/FriendsPanel";
-import { friendSocket } from "./toxen/FriendSocket";
 
 //#region Define variables used all over the ToxenApp process.
 /**
  * Handler for events during runtime.
  */
 export class Toxen {
-  public static async getBlob(src: string) {
-    return fetch(src).then((r) => r.blob());
-  }
-
   public static setTitle(title: string) {
     Toxen.setAppBarText(title);
     document.title = title;
-  }
-
-  public static cleanPath(path: string) {
-    // Remove unsupported characters
-    const cleaner = /[*?"<>|]/g;
-    return path.replace(cleaner, "_")
   }
 
   // private static reloadables: Record<string, () => void> = {};
@@ -208,13 +195,6 @@ export class Toxen {
   private static changeLogs: string | React.JSX.Element | React.JSX.Element[];
 
   /**
-   * Converts a http(s) URL to a tx(s) URL.
-   */
-  public static httpToTx(url: string) {
-    return url.replace(/^http(s)?:\/\//, (_: string, $1: string) => `tx${$1 || ""}://`);
-  }
-
-  /**
    * Converts a tx(s) URL to a http(s) URL.
    */
   public static txToHttp(url: string) {
@@ -229,42 +209,24 @@ export class Toxen {
   private static resolvedOnReady = new Promise<void>(resolve => Toxen._resolveWhenReady = resolve);
 
 
+  /** @see Notify.log */
   public static log(message: React.ReactNode, expiresIn?: number) {
-    console.log(message);
-    return Toxen.notify({
-      title: "Info",
-      content: message,
-      expiresIn: expiresIn,
-      type: "normal",
-    });
-  }
-  public static warn(message: React.ReactNode, expiresIn?: number) {
-    console.warn(message);
-    Toxen.notify({
-      title: "Warning",
-      content: message,
-      expiresIn: expiresIn,
-      type: "warning",
-    });
-  }
-  public static error(message: React.ReactNode, expiresIn?: number) {
-    console.error(message);
-    Toxen.notify({
-      title: "Error",
-      content: message,
-      expiresIn: expiresIn,
-      type: "error",
-    });
+    return Notify.log(message, expiresIn);
   }
 
-  private static presetErrors = {
-    CURRENTLY_EDITING_SONG: ["You are currently editing a song. Please save or cancel your changes.", 5000],
-    CURRENTLY_EDITING_THEME: ["You are currently editing a theme. Please save or cancel your changes.", 5000],
-    CURRENTLY_EDITING_SUBTITLES: ["You are currently editing subtitles. Please save or cancel your changes.", 5000],
+  /** @see Notify.warn */
+  public static warn(message: React.ReactNode, expiresIn?: number) {
+    Notify.warn(message, expiresIn);
   }
-  public static sendError(error: keyof typeof Toxen.presetErrors) {
-    const [message, expiresIn] = Toxen.presetErrors[error] as [string, number];
-    return Toxen.error(message, expiresIn);
+
+  /** @see Notify.error */
+  public static error(message: React.ReactNode, expiresIn?: number) {
+    Notify.error(message, expiresIn);
+  }
+
+  /** @see Notify.sendError */
+  public static sendError(error: Notify.PresetError) {
+    return Notify.sendError(error);
   }
 
   public static sendModeError(mode: ToxenInteractionMode | keyof typeof ToxenInteractionMode) {
@@ -316,106 +278,62 @@ export class Toxen {
 
   /** @deprecated Use {@link getTranscodeAudioFiles} instead. */
   public static getSupportedConvertableAudioFiles() {
-    return Toxen.getTranscodeAudioFiles();
+    return MediaFormats.getTranscodeAudioFiles();
   }
 
-  /** Audio formats natively playable in Chromium/Electron — no FFmpeg required. */
+  /** @see MediaFormats.getWebNativeAudioFiles */
   public static getWebNativeAudioFiles() {
-    return [".mp3", ".flac", ".ogg", ".wav", ".aac", ".m4a", ".opus", ".webm"];
+    return MediaFormats.getWebNativeAudioFiles();
   }
 
-  /**
-   * Audio formats that need real-time FFmpeg transcoding on desktop.
-   * These are included in library scans but piped through the transcode server during playback.
-   */
+  /** @see MediaFormats.getTranscodeAudioFiles */
   public static getTranscodeAudioFiles() {
-    return [
-      ".wma",           // Windows Media Audio
-      ".aiff", ".aif",  // Apple Audio Interchange
-      ".ape",           // Monkey's Audio
-      ".mka",           // Matroska Audio
-      ".wv",            // WavPack
-      ".tta",           // True Audio
-      ".ac3",           // Dolby AC-3
-      ".dts",           // DTS Audio
-      ".mpc",           // Musepack
-      ".amr",           // Adaptive Multi-Rate
-      ".gsm",           // GSM Audio
-      ".ra",            // RealAudio
-      ".au",            // Sun/NeXT Audio
-      ".snd",           // NeXT Sound
-    ];
+    return MediaFormats.getTranscodeAudioFiles();
   }
 
+  /** @see MediaFormats.getSupportedAudioFiles */
   public static getSupportedAudioFiles() {
-    return [
-      ...Toxen.getWebNativeAudioFiles(),
-      ...Toxen.getTranscodeAudioFiles(),
-    ];
+    return MediaFormats.getSupportedAudioFiles();
   }
 
   /** @deprecated Use {@link getTranscodeVideoFiles} instead. */
   public static getSupportedConvertableVideoFiles() {
-    return Toxen.getTranscodeVideoFiles();
+    return MediaFormats.getTranscodeVideoFiles();
   }
 
-  /** Video formats natively playable in Chromium/Electron — no FFmpeg required. */
+  /** @see MediaFormats.getWebNativeVideoFiles */
   public static getWebNativeVideoFiles() {
-    return [".mp4", ".webm"];
+    return MediaFormats.getWebNativeVideoFiles();
   }
 
-  /**
-   * Video formats that need real-time FFmpeg transcoding on desktop.
-   */
+  /** @see MediaFormats.getTranscodeVideoFiles */
   public static getTranscodeVideoFiles() {
-    return [
-      ".mov",           // QuickTime
-      ".mkv",           // Matroska Video
-      ".avi",           // Audio Video Interleave
-      ".wmv",           // Windows Media Video
-      ".flv",           // Flash Video
-      ".ts",            // MPEG Transport Stream
-      ".m2ts", ".mts",  // Blu-ray / AVCHD
-      ".vob",           // DVD Video
-    ];
+    return MediaFormats.getTranscodeVideoFiles();
   }
 
+  /** @see MediaFormats.getSupportedVideoFiles */
   public static getSupportedVideoFiles() {
-    return [
-      ...Toxen.getWebNativeVideoFiles(),
-      ...Toxen.getTranscodeVideoFiles(),
-    ];
+    return MediaFormats.getSupportedVideoFiles();
   }
 
+  /** @see MediaFormats.getSupportedMediaFiles */
   public static getSupportedMediaFiles() {
-    return Toxen.getSupportedAudioFiles().concat(Toxen.getSupportedVideoFiles());
+    return MediaFormats.getSupportedMediaFiles();
   }
 
+  /** @see MediaFormats.getSupportedImageFiles */
   public static getSupportedImageFiles() {
-    return [
-      ".jpg",
-      ".jpeg",
-      ".png",
-      ".gif",
-      ".webm",
-      ".webp",
-      ".jfif",
-    ];
+    return MediaFormats.getSupportedImageFiles();
   }
 
+  /** @see MediaFormats.getSupportedSubtitleFiles */
   public static getSupportedSubtitleFiles() {
-    return [
-      ".srt",
-      ".tst",
-      ".lrc",
-      ".vtt"
-    ];
+    return MediaFormats.getSupportedSubtitleFiles();
   }
 
+  /** @see MediaFormats.getSupportedStoryboardFiles */
   public static getSupportedStoryboardFiles() {
-    return [
-      ".tsb",
-    ];
+    return MediaFormats.getSupportedStoryboardFiles();
   }
 
   public static async showCurrentSong() {
@@ -454,35 +372,10 @@ export class Toxen {
   }
   /**
    * Send a message to the Toxen message cards.
+   * @see Notify.notify
    */
-  public static notify(notification: Omit<Omit<MessageCardOptions, "createdAt">, "uniqueId">) {
-    // this.messageCards.addMessage(notification);
-    const id = Math.random().toString(36).substring(2);
-    showNotification({
-      id,
-      message: notification.content,
-      // disallowClose: notification.disableClose ?? false,
-      withCloseButton: !(notification.disableClose ?? false),
-      autoClose: notification.expiresIn ?? false,
-      title: notification.title,
-      color: notification.type == "error" ? "red" : notification.type == "warning" ? "yellow" : "green",
-    });
-    return id;
-  }
-
-  // Forms
-  public static settingsForm: Form;
-  public static editSongForm: Form;
-
-  public static saveSettings() {
-    setTimeout(() => {
-      try {
-        Toxen.settingsForm.submit();
-        Toxen.updateSettings();
-      } catch (error) {
-
-      }
-    }, 100);
+  public static notify(notification: Notify.Notification) {
+    return Notify.notify(notification);
   }
 
   /**
@@ -535,152 +428,31 @@ export class Toxen {
   }
 
   /**
-   * Creates an autogenerated theme based on the visualizer color
-   */
-  public static createAutogeneratedTheme(visualizerColor: string): Theme {
-    // Parse the visualizer color
-    const hexMatch = visualizerColor.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
-    if (!hexMatch) {
-      console.warn('Invalid visualizer color format:', visualizerColor);
-      return Theme.createDefaultTheme();
-    }
-
-    const r = parseInt(hexMatch[1], 16);
-    const g = parseInt(hexMatch[2], 16);
-    const b = parseInt(hexMatch[3], 16);
-
-    // Create a theme based on the current theme or default theme
-    const baseTheme = Toxen.theme || Theme.createDefaultTheme();
-    
-    const autogenTheme = Theme.create({
-      name: `Autogenerated (${visualizerColor})`,
-      displayName: `Autogenerated Theme`,
-      description: `Automatically generated theme based on visualizer color ${visualizerColor}`,
-      styles: { ...baseTheme.styles },
-      customCSS: baseTheme.customCSS
-    });
-
-    // Override the accent colors with the visualizer color
-    if (autogenTheme.styles['accentColor']) {
-      autogenTheme.styles['accentColor'].value = [r, g, b];
-    }
-    if (autogenTheme.styles['accentColorRgb']) {
-      autogenTheme.styles['accentColorRgb'].value = [r, g, b];
-    }
-    
-    // Also update related colors that should follow the accent
-    if (autogenTheme.styles['borderPrimary']) {
-      autogenTheme.styles['borderPrimary'].value = [r, g, b];
-    }
-    if (autogenTheme.styles['borderFocus']) {
-      autogenTheme.styles['borderFocus'].value = [r, g, b];
-    }
-    if (autogenTheme.styles['playerPlaying']) {
-      autogenTheme.styles['playerPlaying'].value = [r, g, b];
-    }
-
-    return autogenTheme;
-  }
-
-  /**
-   * Applies an autogenerated theme if enabled for the current song
+   * Applies an autogenerated theme if enabled for the current song.
    */
   public static applyAutogeneratedThemeIfEnabled() {
-    const currentSong = Song.getCurrent();
-    if (!currentSong || (
-      currentSong.getEffectiveSettings().autogeneratedTheme !== true
-      && !Settings.get("autogeneratedTheme", false)
-    )) {
-      Toxen.restoreOriginalTheme();
-      return;
-    }
-
-    // Check if autogenerated theme is enabled for this song
-    // First check song-specific setting, then fall back to global setting
-    const songAutogenEnabled = Toxen.background.storyboard.getAutogeneratedTheme();
-    const globalAutogenEnabled = Settings.get("autogeneratedTheme");
-    
-    // Song-specific setting takes precedence: 
-    // - If song has true/false explicitly set, use that
-    // - If song has null/undefined, use global setting
-    const autogenEnabled = songAutogenEnabled !== null && songAutogenEnabled !== undefined 
-      ? songAutogenEnabled 
-      : globalAutogenEnabled;
-
-    if (autogenEnabled) {
-      // Get the current visualizer color
-      const visualizerColor = Toxen.background.storyboard.getVisualizerColor();
-      
-      // Apply the autogenerated theme as an overlay, don't replace the main theme
-      Toxen.applyAutogeneratedThemeOverlay(visualizerColor);
-    } else {
-      // Remove the autogenerated theme overlay
-      Toxen.removeAutogeneratedThemeOverlay();
-    }
+    Theme.applyAutogeneratedThemeIfEnabled();
   }
 
   /**
-   * Applies an autogenerated theme as an overlay on top of the current theme
+   * Applies an autogenerated theme as an overlay on top of the current theme.
    */
   public static applyAutogeneratedThemeOverlay(visualizerColor: string) {
-    // Parse the visualizer color
-    const hexMatch = visualizerColor.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})?$/i);
-    if (!hexMatch) {
-      console.warn('Invalid visualizer color format:', visualizerColor);
-      return;
-    }
-
-    const r = parseInt(hexMatch[1], 16);
-    const g = parseInt(hexMatch[2], 16);
-    const b = parseInt(hexMatch[3], 16);
-    // alpha is not used here
-
-    // Create or update the autogenerated theme overlay
-    const overlayId = 'autogenerated-theme-overlay';
-    let overlayElement = document.getElementById(overlayId);
-    
-    if (!overlayElement) {
-      overlayElement = document.createElement('style');
-      overlayElement.id = overlayId;
-      document.head.appendChild(overlayElement);
-    }
-
-    // Create CSS variables for the autogenerated colors
-    const css = `
-      :root {
-        --accent-color: ${visualizerColor};
-        --accent-color-rgb: ${r}, ${g}, ${b};
-        --accent-color-dim: rgba(${r}, ${g}, ${b}, 0.15);
-        --accent-color-hover: rgba(${r}, ${g}, ${b}, 0.25);
-        --accent-color-active: rgba(${r}, ${g}, ${b}, 0.4);
-        --border-primary: rgba(${r}, ${g}, ${b}, 0.15);
-        --border-focus: ${visualizerColor};
-        --player-playing: ${visualizerColor};
-        --shadow-accent: rgba(${r}, ${g}, ${b}, 0.2);
-      }
-    `;
-
-    overlayElement.textContent = css;
+    Theme.applyAutogeneratedThemeOverlay(visualizerColor);
   }
 
   /**
-   * Removes the autogenerated theme overlay
+   * Removes the autogenerated theme overlay.
    */
   public static removeAutogeneratedThemeOverlay() {
-    const overlayId = 'autogenerated-theme-overlay';
-    const overlayElement = document.getElementById(overlayId);
-    
-    if (overlayElement) {
-      overlayElement.remove();
-    }
+    Theme.removeAutogeneratedThemeOverlay();
   }
 
   /**
-   * Restores the original theme if an autogenerated theme is currently applied
+   * Restores the original theme if an autogenerated theme is currently applied.
    */
   public static restoreOriginalTheme() {
-    // With the overlay approach, we just remove the overlay
-    Toxen.removeAutogeneratedThemeOverlay();
+    Theme.restoreOriginalTheme();
   }
 
   public static loadingScreen: LoadingScreenController;
@@ -1055,140 +827,7 @@ export default class ToxenAppRenderer extends React.Component {
     Toxen.appRenderer = this;
     this.detachShortcuts = attachShortcuts();
 
-    Promise.resolve()
-      .then(Settings.load) // Load settings and apply them.
-      .then(Stats.load) // Load stats and apply them.
-      .then(async () => {
-        Toxen.updateSettings();
-        if (toxenapi.isDesktop()) {
-          let win = toxenapi.remote.getCurrentWindow();
-          if (Settings.get("restoreWindowSize")) {
-            // Window initial size
-            win.setSize(
-              Settings.set("windowWidth", Settings.get("windowWidth") ?? 1280),
-              Settings.set("windowHeight", Settings.get("windowHeight") ?? 768)
-            );
-  
-            let display = toxenapi.remote.screen.getPrimaryDisplay();
-            let [winSizeWidth, winSizeheight] = win.getSize();
-            win.setPosition(
-              Math.floor(display.size.width / 2) - Math.floor(winSizeWidth / 2),
-              Math.floor(display.size.height / 2) - Math.floor(winSizeheight / 2),
-            );
-          }
-  
-          Toxen.toggleFullscreen(win.isFullScreen());
-
-          // Initialize taskbar controls
-          toxenapi.TaskbarControls.initialize();
-  
-          try {
-            toxenapi.remote.autoUpdater.on("update-available", () => {
-              Toxen.log("A new update available and is being installed in the background...", 5000)
-            });
-  
-            toxenapi.remote.autoUpdater.on("update-downloaded", (e, releaseNotes, releaseName, releaseDate, updateURL) => {
-              e.preventDefault();
-              if (!toxenapi.isDesktop()) return;
-              new toxenapi.remote.Notification({
-                title: "Update Downloaded",
-                body: `A new update is available: ${releaseName}`
-              }).show();
-              Toxen.log(<>
-                Update downloaded: <code>{releaseName}</code>
-                <br />
-                <TButton txStyle="action"
-                  onClick={() => {
-                    if (!toxenapi.isDesktop()) return;
-                    toxenapi.remote.autoUpdater.quitAndInstall();
-                  }}
-                >Update</TButton>
-              </>);
-            });
-  
-            toxenapi.remote.autoUpdater.on("error", (error) => {
-              console.error(error);
-              Toxen.error(`Error while updating: ${error.message}`);
-            });
-          } catch (error) {
-            Toxen.error("Error trying to listen to auto updater.", 5000);
-          }
-        }
-
-        // Load extensions (desktop only)
-        if (toxenapi.isDesktop()) {
-          await ExtensionManager.discover();
-          await ExtensionManager.loadAll();
-        }
-
-        await Toxen.loadThemes(); // Loads themes
-        await Toxen.loadSongs(); // Loads songs
-
-        // Initialize image cache for optimized background thumbnails
-        Toxen.initializeImageCache();
-
-        Toxen.songPanel.update();
-        // Toxen.sidePanel.show(true);
-        Toxen.sidePanel.setWidth(Settings.get("panelWidth"));
-        Toxen.loadingScreen.toggleVisible(false);
-
-        if (toxenapi.isDesktop()) {
-          Toxen.musicPlayer.playRandom();
-        }
-        else {
-          
-          if (User.getCurrentUser()) {
-            Toxen.sidePanel.setSectionId("songPanel");
-            Toxen.sidePanel.show(true);
-          }
-          else {
-            modals.open({
-              title: "Login",
-              children: (
-                <div>
-                  <h2>Not logged in</h2>
-                  <LoginForm />
-                </div>
-              ),
-              size: "md"
-            })
-          }
-        }
-
-        if (Settings.get("discordPresence")) Toxen.discord?.connect().then(() => {
-          Toxen.discord?.setPresence();
-        });
-
-        // Connect real-time friends socket if user is logged in
-        if (User.getCurrentUser()) {
-          friendSocket.connect();
-        }
-
-        if (toxenapi.isDesktop()) {
-          // Not awaited: this needs the network and must never block startup
-          const ytdlp = toxenapi.getYtdlp();
-          if (ytdlp.isYtdlpInstalled()) {
-            (async () => {
-              const ytd = await ytdlp.getYtdlpWrap();
-              const version = await ytd.getVersion();
-              console.log("ytdlp version:", version);
-              const latest = (await ytdlp.getGithubReleases()).pop()?.tag_name;
-              console.log("ytdlp latest:", latest);
-              if (latest?.trim() !== version?.trim()) {
-                Toxen.warn("Media Downloader is outdated. Updating...", 2500);
-                await ytdlp.installYtdlp(true);
-                Toxen.log("Media Downloader updated.", 2500);
-              }
-            })().catch(error => console.warn("Unable to check for Media Downloader updates:", error));
-          }
-        }
-
-      })
-      .catch(error => {
-        console.error(error);
-        Toxen.error(`Toxen failed to finish starting up: ${error?.message ?? error}`);
-      })
-      .finally(() => Toxen._resolveWhenReady());
+    bootstrap();
   }
 
   render = () => {
