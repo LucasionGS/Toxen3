@@ -1,3 +1,4 @@
+// eslint-disable-next-line import/no-unresolved -- Vite virtual module
 import DeviceWriterWorker from "./DeviceWriter.worker?worker&inline";
 import type { DeviceWriterRequest, DeviceWriterResponse } from "./DeviceWriter.worker";
 
