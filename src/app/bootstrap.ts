@@ -168,7 +168,8 @@ async function startPlaybackOrLogin() {
     return;
   }
 
-  if (User.getCurrentUser()) {
+  // Songs kept on this device play without an account; the login stays one tap away in the panel
+  if (User.getCurrentUser() || Toxen.songList?.length > 0) {
     Toxen.sidePanel.setSectionId("songPanel");
     Toxen.sidePanel.show(true);
   }

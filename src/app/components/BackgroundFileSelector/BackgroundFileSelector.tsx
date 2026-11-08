@@ -151,7 +151,7 @@ export default function BackgroundFileSelector({
 
       for (const file of files) {
         let imagePath: string | null;
-        if (song?.storage.kind === SongStorage.Kind.Cloud) {
+        if (song && song.storage.kind !== SongStorage.Kind.Local) {
           const url = song.storage.fileUrl(song, file);
           imagePath = `${url}${url.includes("?") ? "&" : "?"}h=${Math.random()}`; // Append random query to prevent caching
         } else if (workingDir.startsWith("http://") || workingDir.startsWith("https://")) {

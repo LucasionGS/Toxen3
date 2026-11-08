@@ -8,6 +8,7 @@ import { openSyncConflictModal } from "../SyncConflicts/SyncConflictModal";
 import { STORAGE_TIERS, openUpgradeCheckout } from "./billing";
 import { formatAgo, formatBytes } from "./format";
 import { countConflictItems, getAutoSyncSetting, readAutoDownload, useSyncConflicts, useSyncSummary } from "./useSync";
+import DeviceStorage from "./DeviceStorage";
 import "./SyncSettings.scss";
 
 /**
@@ -32,7 +33,10 @@ export default function SyncSettings() {
     return (
       <>
         <h2>Sync</h2>
-        <Alert color="blue">Log in from the Account tab to keep your library in the cloud and on all your devices.</Alert>
+        <Alert color="blue" className="sync-settings__login">Log in from the Account tab to keep your library in the cloud and on all your devices.</Alert>
+        <Stack gap="md" className="sync-settings" mt="md">
+          <DeviceStorage />
+        </Stack>
       </>
     );
   }
@@ -44,6 +48,7 @@ export default function SyncSettings() {
         <SyncToggles />
         <SyncStatus />
         <SyncStorage />
+        <DeviceStorage />
         <SyncConflictList />
       </Stack>
     </>

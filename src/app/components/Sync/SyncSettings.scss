@@ -1,6 +1,12 @@
+// The side panel doesn't wrap text by default
+.sync-settings__login .mantine-Alert-message {
+  white-space: normal;
+}
+
 .sync-settings {
   // The long per-device label has to wrap inside the narrow side panel
-  .mantine-Checkbox-label {
+  .mantine-Checkbox-label,
+  .mantine-Alert-message {
     white-space: normal;
   }
 

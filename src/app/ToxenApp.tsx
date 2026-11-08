@@ -19,6 +19,7 @@ import Song from "./toxen/Song";
 import SongLibrary from "./toxen/SongLibrary";
 import SongStorage from "./toxen/storage/SongStorage";
 import StorageSelector from "./toxen/storage/StorageSelector";
+import DeviceSongStorage from "./toxen/storage/DeviceSongStorage";
 import SyncEngine from "./toxen/sync/SyncEngine";
 import "./ToxenApp.scss";
 import "./tx.scss";
@@ -898,7 +899,7 @@ export default class ToxenAppRenderer extends React.Component {
           </SidepanelSection>
 
           {/* Import Panel */}
-          <SidepanelSection key="importSong" id="importSong" title="Import" icon={<IconFileImport size="1em" />} disabled={!toxenapi.isDesktop()}>
+          <SidepanelSection key="importSong" id="importSong" title="Import" icon={<IconFileImport size="1em" />} disabled={!toxenapi.isDesktop() && !DeviceSongStorage.isAvailable()}>
             <ImportPanel />
           </SidepanelSection>
 

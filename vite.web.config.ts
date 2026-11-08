@@ -65,6 +65,9 @@ export default defineConfig({
         globPatterns: ["**/*.{js,css,html,svg,woff,woff2,ttf}"],
         // SPA fallback so deep links resolve to the app shell when offline.
         navigateFallback: "/index.html",
+        navigateFallbackDenylist: [/^\/__device\//],
+        // Serves songs kept on this device from OPFS (see public/device-sw.js)
+        importScripts: ["/device-sw.js"],
         // The main renderer bundle is a few MB; raise the cap so the app shell
         // is fully precached rather than silently skipped.
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,

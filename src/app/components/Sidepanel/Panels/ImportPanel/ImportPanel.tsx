@@ -1,6 +1,6 @@
 import { Alert, Autocomplete, Button, Checkbox, Group, Image, Modal, Progress, TextInput, Card, Text, Badge, ActionIcon, Stack, Divider, Loader, Tooltip, Select } from '@mantine/core';
 import { updateNotification } from '@mantine/notifications';
-import { IconDownload, IconExternalLink, IconMusic, IconAlertTriangle, IconCheck, IconClock, IconLanguage, IconList } from '@tabler/icons-react';
+import { IconDownload, IconExternalLink, IconMusic, IconAlertTriangle, IconCheck, IconClock, IconLanguage, IconList, IconDeviceMobile, IconFolder } from '@tabler/icons-react';
 import React from 'react'
 import System, { ToxenFile } from '../../../../toxen/System';
 import { Toxen } from '../../../../ToxenApp';
@@ -10,6 +10,8 @@ import { SongStorage } from "../../../../toxen/storage/SongStorage";
 import { StorageSelector } from "../../../../toxen/storage/StorageSelector";
 import Playlist from '../../../../toxen/Playlist';
 import ExternalUrl from '../../../ExternalUrl/ExternalUrl';
+import { DeviceLibrary } from "../../../../toxen/DeviceLibrary";
+import User from "../../../../toxen/User";
 import './ImportPanel.scss';
 import type DesktopController from '../../../../../ToxenControllers/DesktopController';
 
@@ -57,11 +59,14 @@ function buildEntries(videos: VideoInfo[]): PlaylistVideoEntry[] {
 
 export default function ImportPanel() {
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const onDevice = !toxenapi.isDesktop() && DeviceLibrary.isAvailable();
+  // Signed out, a web import lands on the device anyway, so the device buttons are the only ones shown
+  const showUpload = !onDevice || Boolean(User.getCurrentUser());
 
   return (
     <div className="import-panel">
       <h1>Import music</h1>
-      <Button
+      {showUpload && <Button
         leftSection={<IconMusic size={16} />}
         variant="light"
         onClick={() => {
@@ -95,7 +100,8 @@ export default function ImportPanel() {
             fileInputRef.current?.click();
           }
         }}
-      >Import Files</Button>
+      >{onDevice ? "Upload to cloud" : "Import Files"}</Button>}
+      {onDevice && <DeviceImport />}
       <input
         ref={fileInputRef}
         type="file"
@@ -115,6 +121,36 @@ export default function ImportPanel() {
       
       <ImportOnlineMedia />
     </div>
+  );
+}
+
+/**
+ * Web: add songs that stay on this phone or computer and play offline.
+ */
+function DeviceImport() {
+  const [busy, setBusy] = React.useState(false);
+  const run = (action: () => void | Promise<unknown>) => async () => {
+    setBusy(true);
+    try {
+      await action();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Stack className="import-panel__device" gap="xs" mt="sm">
+      <Text fw={600}>On this device</Text>
+      <Text size="sm" c="dimmed">
+        Songs you add here are copied into Toxen on this {navigator.maxTouchPoints > 0 ? "phone or tablet" : "computer"} and play offline, without using cloud storage.
+      </Text>
+      <Group gap="xs">
+        <Button leftSection={<IconDeviceMobile size="1em" />} variant="light" disabled={busy} onClick={run(DeviceLibrary.pickFiles)}>Add files</Button>
+        {DeviceLibrary.canPickFolder() && (
+          <Button leftSection={<IconFolder size="1em" />} variant="light" loading={busy} onClick={run(DeviceLibrary.pickFolder)}>Add a folder</Button>
+        )}
+      </Group>
+    </Stack>
   );
 }
 

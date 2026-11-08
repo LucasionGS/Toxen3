@@ -13,6 +13,8 @@ import { SongStorage } from "./storage/SongStorage";
 import { StorageSelector } from "./storage/StorageSelector";
 import { LocalSongStorage } from "./storage/LocalSongStorage";
 import { CloudSongStorage } from "./storage/CloudSongStorage";
+import { DeviceSongStorage } from "./storage/DeviceSongStorage";
+import { DeviceFs } from "./storage/device/DeviceFs";
 import { SyncEngine } from "./sync/SyncEngine";
 import { SyncState } from "./sync/SyncState";
 import User from "./User";
@@ -21,8 +23,9 @@ import User from "./User";
  * Loading, importing and deleting songs. Works through `StorageSelector`, never `Settings.isRemote()`.
  *
  * The unified library: on desktop `load()` lists the library folder and adds the cloud-only songs `SyncState` knows
- * (union by uid), setting `song.location` on every song. Web lists the cloud only. Afterwards `SyncEngine` keeps the
- * list current through `applySyncChange` (downloads, removed downloads, new and changed cloud songs, deletes).
+ * (union by uid), setting `song.location` on every song. Web lists the songs kept on this device and the cloud (union by
+ * uid; a song on both plays from the device). Afterwards `SyncEngine` keeps the list current through `applySyncChange`
+ * (downloads, removed downloads, new and changed cloud songs, deletes).
  */
 export class SongLibrary {
   private constructor() { }
@@ -56,6 +59,13 @@ export class SongLibrary {
       console.error("Unable to load the sync state of the library.", error);
       return false;
     });
+    if (!toxenapi.isDesktop()) {
+      const songs = await SongLibrary._loadWeb(onEach);
+      SongLibrary._ensureCloudTokens(songs);
+      if (restartSync) setTimeout(() => SyncEngine.init().catch(error => console.error("Unable to restart sync.", error)), 0);
+      return songs;
+    }
+
     const storage = StorageSelector.forLibrary();
     const result = await SongLibrary._load(storage, onEach);
     SongLibrary.lastLoadIncomplete = result.incomplete;
@@ -68,11 +78,7 @@ export class SongLibrary {
       ? Song.sortSongs([...result.songs, ...SongLibrary._cloudOnlySongs(result.songs, onEach)])
       : result.songs;
 
-    const cloudUids = songs.filter(song => song.location.cloud && !song.location.local).map(song => song.uid);
-    if (cloudUids.length > 0) {
-      // Not awaited: until the tokens arrive, cloud files load with the session token
-      CloudSongStorage.instance.ensureMediaTokens(cloudUids).catch(error => console.warn("Unable to get media tokens.", error));
-    }
+    SongLibrary._ensureCloudTokens(songs);
     if (restartSync) setTimeout(() => SyncEngine.init().catch(error => console.error("Unable to restart sync.", error)), 0);
     return songs;
   }
@@ -96,6 +102,13 @@ export class SongLibrary {
    */
   public static applySyncChange(change: SyncEngine.SongChange): void {
     const existing = SongLibrary.getSong(change.uid);
+    if (!toxenapi.isDesktop() && existing?.location?.local) {
+      // Web: the engine only knows the cloud copy. A song kept on this device stays and keeps playing from it, also
+      // when its cloud copy is deleted
+      existing.location = { local: true, cloud: Boolean(change.remote) };
+      SongLibrary._schedulePanelUpdate();
+      return;
+    }
     if (!change.local && !change.remote) {
       if (!existing) return;
       if (Song.getCurrent() === existing) Toxen.musicPlayer?.playNext();
@@ -193,6 +206,13 @@ export class SongLibrary {
    * Total for the loading screen. `0` if it can't be counted.
    */
   public static async count(): Promise<number> {
+    if (!toxenapi.isDesktop()) {
+      const [device, cloud] = await Promise.all([
+        DeviceSongStorage.instance.countSongs().catch((): number => 0),
+        User.getCurrentUser() ? CloudSongStorage.instance.countSongs().catch((): number => 0) : 0,
+      ]);
+      return device + cloud;
+    }
     const storage = StorageSelector.forLibrary();
     const count = await storage.countSongs().catch(error => {
       console.error("Unable to count songs", error);
@@ -212,9 +232,24 @@ export class SongLibrary {
 
     const storage = StorageSelector.forLibrary();
     try {
-      return storage.kind === SongStorage.Kind.Local
-        ? await SongLibrary._importLocal(file)
-        : await SongLibrary._importCloud(storage, file);
+      if (storage.kind === SongStorage.Kind.Local) return await SongLibrary._importLocal(file);
+      if (storage.kind === SongStorage.Kind.Device) return await SongLibrary._importDevice(file);
+      return await SongLibrary._importCloud(storage, file);
+    } catch (error) {
+      console.error(error);
+      return new Failure(error?.message ?? `Unable to import ${file.name}`);
+    }
+  }
+
+  /**
+   * Import a picked file as a new song kept on this device (web). Signed in with auto-sync on, it is uploaded later
+   * by the device sync.
+   */
+  public static async importToDevice(file: File): Promise<Result<Song>> {
+    const ext = toxenapi.getFileExtension(file.name).toLowerCase();
+    if (!Toxen.getSupportedMediaFiles().includes(ext)) return new Failure(file.name + " isn't a valid file");
+    try {
+      return await SongLibrary._importDevice(file);
     } catch (error) {
       console.error(error);
       return new Failure(error?.message ?? `Unable to import ${file.name}`);
@@ -226,6 +261,7 @@ export class SongLibrary {
    * plays from: the local copy when there is one (a synced song stays in the cloud), otherwise the cloud copy.
    */
   public static async delete(song: Song, scope: SongLibrary.DeleteScope = "auto"): Promise<void> {
+    if (!toxenapi.isDesktop()) return SongLibrary._deleteWeb(song, scope);
     const resolved: Exclude<SongLibrary.DeleteScope, "auto"> = scope !== "auto" ? scope : (StorageSelector.isLocal(song) ? "device" : "cloud");
     const keepsCloud = resolved === "device" && Boolean(song.location?.cloud);
     const keepsLocal = resolved === "cloud" && StorageSelector.isLocal(song);
@@ -258,6 +294,85 @@ export class SongLibrary {
       Toxen.songList = Toxen.songList.filter(s => s !== song);
     }
     Toxen.songPanel.update();
+  }
+
+  /**
+   * Web: remove the device copy, the cloud copy or both. A song keeps whichever copy is left.
+   */
+  private static async _deleteWeb(song: Song, scope: SongLibrary.DeleteScope): Promise<void> {
+    const onDevice = Boolean(song.location?.local);
+    const inCloud = Boolean(song.location?.cloud) || SongLibrary._isInCloud(song.uid);
+    const resolved = scope !== "auto" ? scope : (onDevice ? "device" : "cloud");
+    const removeDevice = onDevice && resolved !== "cloud";
+    const removeCloud = inCloud && resolved !== "device";
+    const keepsDevice = onDevice && !removeDevice;
+    const keepsCloud = inCloud && !removeCloud;
+
+    const current = Song.getCurrent();
+    if (current && current.uid === song.uid && (removeDevice || !keepsDevice)) await Toxen.musicPlayer.playNext();
+
+    try {
+      if (removeCloud) {
+        if (User.getCurrentUser()) await SyncEngine.deleteFrom(song, "cloud");
+        else await CloudSongStorage.instance.deleteSong(song);
+      }
+      if (removeDevice) await DeviceSongStorage.instance.deleteSong(song);
+    } catch (error) {
+      console.error(error);
+      Toxen.error(`Failed to delete ${song.getDisplayName()}: ${error?.message ?? error}`);
+      return;
+    }
+
+    if (keepsDevice || keepsCloud) song.location = { local: keepsDevice, cloud: keepsCloud };
+    else Toxen.songList = Toxen.songList.filter(s => s !== song);
+    Toxen.songPanel.update();
+  }
+
+  /**
+   * Web: the songs on this device plus the cloud songs (when logged in), union by uid. A song in both plays from the
+   * device. Sets `lastLoadIncomplete`.
+   * @throws If the cloud library can't be loaded and there are no device songs to show instead.
+   */
+  private static async _loadWeb(onEach?: (song: Song | null) => void): Promise<Song[]> {
+    const device = DeviceSongStorage.isAvailable()
+      ? await SongLibrary._load(DeviceSongStorage.instance, onEach)
+      : { songs: [] as Song[], incomplete: false };
+    for (const song of device.songs) song.location = { local: true, cloud: SongLibrary._isInCloud(song.uid) };
+
+    let cloud = { songs: [] as Song[], incomplete: false };
+    if (User.getCurrentUser()) {
+      try {
+        cloud = await SongLibrary._load(CloudSongStorage.instance, onEach);
+      } catch (error) {
+        if (device.songs.length === 0) throw error;
+        console.error(error);
+        Toxen.error(`Unable to load your cloud library: ${error?.message ?? error}. Songs on this device still play.`);
+        cloud.incomplete = true;
+      }
+    }
+
+    const onDevice = new Map(device.songs.map(song => [song.uid, song]));
+    const cloudOnly: Song[] = [];
+    for (const song of cloud.songs) {
+      const local = onDevice.get(song.uid);
+      if (local) local.location = { local: true, cloud: true };
+      else {
+        song.location = { local: false, cloud: true };
+        cloudOnly.push(song);
+      }
+    }
+    SongLibrary.lastLoadIncomplete = device.incomplete || cloud.incomplete;
+    return Song.sortSongs([...device.songs, ...cloudOnly]);
+  }
+
+  /**
+   * Fetch media tokens for the songs that stream from the cloud. Not awaited: until the tokens arrive, cloud files
+   * load with the session token.
+   */
+  private static _ensureCloudTokens(songs: Song[]): void {
+    const cloudUids = songs.filter(song => song.location?.cloud && !song.location.local).map(song => song.uid);
+    if (cloudUids.length === 0) return;
+    CloudSongStorage.instance.ensureMediaTokens(cloudUids).catch(error => console.warn("Unable to get media tokens.", error));
   }
 
   private static _isPlayable(song: Song): boolean {
@@ -346,6 +461,30 @@ export class SongLibrary {
   }
 
   /**
+   * Copy a picked file into device storage as a new song. A failed copy (device full) leaves nothing behind.
+   */
+  private static async _importDevice(file: File | ToxenFile): Promise<Result<Song>> {
+    if (!DeviceSongStorage.isAvailable()) return new Failure("This browser can't keep songs on the device.");
+    if (typeof File === "undefined" || !(file instanceof File)) return new Failure(`Unable to read ${file.name}`);
+
+    const uid = Song.generateUID();
+    const fileName = file.name.replace(/[\\/]/g, "_");
+    const song = Song.create(newDeviceInfo(uid, fileName));
+    song.location = { local: true, cloud: false };
+    const storage = DeviceSongStorage.instance;
+    try {
+      await storage.writeFile(song, fileName, file);
+      await storage.saveInfo(song);
+    } catch (error) {
+      await storage.deleteSong(song).catch((): void => undefined);
+      throw error;
+    }
+    // Not awaited: the browser may ask the user, and the import is done either way
+    DeviceFs.persist().catch((): void => undefined);
+    return new Success(song);
+  }
+
+  /**
    * Upload the media file as a new track and save its info.
    */
   private static async _importCloud(storage: SongStorage, file: File | ToxenFile): Promise<Result<Song>> {
@@ -387,9 +526,33 @@ export namespace SongLibrary {
   export type DeleteScope = "auto" | "device" | "cloud" | "everywhere";
 }
 
+/**
+ * The info of a new device song that plays `mediaPath`, titled from the file name ("Artist - Title" is split).
+ */
+function newDeviceInfo(uid: string, mediaPath: string): ISong {
+  const fileName = mediaPath.split("/").pop() ?? mediaPath;
+  const nameNoExt = fileName.substring(0, fileName.lastIndexOf(".")) || fileName;
+  // "Artist - Title.mp3", the same rule as a desktop import
+  const prettify = (str: string) => str.replace(/[_ ]+/g, " ").trim();
+  const separator = nameNoExt.indexOf(" - ");
+  return {
+    uid,
+    ...(separator > -1
+      ? { artist: prettify(nameNoExt.slice(0, separator)), title: prettify(nameNoExt.slice(separator + 3)) }
+      : { title: nameNoExt }),
+    paths: { dirname: uid, media: mediaPath, background: "", subtitles: "", storyboard: "" },
+  } as ISong;
+}
+
 // Media formats and uid generation live in `Song` / `Toxen`, which the storage layer can't import
 LocalSongStorage.instance.setLibraryRules({
   buildInfo: folderPath => Song.buildInfo(folderPath),
+  isAudioFile: relPath => Toxen.getSupportedAudioFiles().includes(toxenapi.getFileExtension(relPath).toLowerCase()),
+  newHash: () => Song.randomFileHash(),
+});
+
+DeviceSongStorage.instance.setLibraryRules({
+  buildInfo: newDeviceInfo,
   isAudioFile: relPath => Toxen.getSupportedAudioFiles().includes(toxenapi.getFileExtension(relPath).toLowerCase()),
   newHash: () => Song.randomFileHash(),
 });

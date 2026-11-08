@@ -210,7 +210,12 @@ export default class Song implements ISong {
       return await ProviderManager.getAudioSource(this);
     }
 
-    return { url: this.storage.fileUrl(this, this.paths?.media) };
+    const storage = this.storage;
+    if (storage.mediaSource && this.paths?.media) {
+      const source = await storage.mediaSource(this, this.paths.media);
+      if (source) return source;
+    }
+    return { url: storage.fileUrl(this, this.paths?.media) };
   }
 
   /**

@@ -641,13 +641,14 @@ export class SyncEngine {
       const progress = active.total > 0 ? Math.min(1, (active.done + active.current) / active.total) : null;
       return { status: active.direction === "up" ? SyncEngine.Status.Uploading : SyncEngine.Status.Downloading, progress, error: null, conflicts };
     }
-    const local = SyncEngine._isLocal(uid);
+    // Web: a copy kept in device storage, which the library knows about and the engine doesn't
+    const local = toxenapi.isDesktop() ? SyncEngine._isLocal(uid) : Boolean(SyncEngine._library?.getSong(uid)?.location?.local);
     const remoteLive = Boolean(state?.remote && !state.remote.deleted);
     if (SyncEngine._debounce.has(uid)) return { status: SyncEngine.Status.Queued, progress: null, error: null, conflicts };
     if (state?.lastError) return { status: SyncEngine.Status.Error, progress: null, error: state.lastError.message, conflicts };
     if (SyncEngine._running && SyncState.data.pending.some(job => job.uid === uid)) return { status: SyncEngine.Status.Queued, progress: null, error: null, conflicts };
     if (conflicts > 0) return { status: SyncEngine.Status.Conflict, progress: null, error: null, conflicts };
-    if (local && remoteLive && state.baseFiles !== null) return { status: SyncEngine.Status.Synced, progress: null, error: null, conflicts };
+    if (local && remoteLive && (state.baseFiles !== null || !toxenapi.isDesktop())) return { status: SyncEngine.Status.Synced, progress: null, error: null, conflicts };
     if (!local && remoteLive) return { status: SyncEngine.Status.CloudOnly, progress: null, error: null, conflicts };
     return { status: SyncEngine.Status.LocalOnly, progress: null, error: null, conflicts };
   }

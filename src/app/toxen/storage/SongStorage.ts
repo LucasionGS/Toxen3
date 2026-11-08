@@ -3,9 +3,10 @@ import type { ISong } from "../Song";
 
 /**
  * Where a song's files live and how to reach them. Replaces the `Settings.isRemote()` branches in `Song` and friends
- * (plan §2.2). Two implementations, both stateless singletons that take the song as an argument:
+ * (plan §2.2). The implementations are stateless singletons that take the song as an argument:
  * - `LocalSongStorage` (desktop only): the song folder in the library directory, through `toxenapi`.
  * - `CloudSongStorage` (web and desktop): the server. v1 endpoints in Phase 1, `/v2` (`SyncApi`) from Phase 4.
+ * - `DeviceSongStorage` (web only): songs kept on the phone or computer in the browser's private storage.
  *
  * Pick one with `StorageSelector.forSong(song)` (exposed as `song.storage`), never by checking settings yourself.
  * Paths are relative to the song folder and use `/`.
@@ -44,6 +45,13 @@ export interface SongStorage {
    * @returns The bytes, or `null` if the file doesn't exist.
    */
   readBlob(song: Song, relPath: string): Promise<Blob | null>;
+
+  /**
+   * A media source the storage hands out itself instead of `fileUrl` (device storage: an object URL of the stored
+   * file). Call `revoke` once the player is done with it.
+   * @returns `null` if the file doesn't exist. Storages without it use `fileUrl`.
+   */
+  mediaSource?(song: Song, relPath: string): Promise<{ url: string; revoke: () => void } | null>;
 
   /**
    * Create or replace a file. Local writes are atomic for strings and bytes, and copy from disk for `DiskFile`.
@@ -98,6 +106,10 @@ export namespace SongStorage {
   export enum Kind {
     Local = "local",
     Cloud = "cloud",
+    /**
+     * Web only: stored in the browser on this device.
+     */
+    Device = "device",
   }
 
   /**
@@ -148,7 +160,8 @@ export namespace SongStorage {
   export type WriteData = string | Uint8Array | Blob | DiskFile;
 
   /**
-   * Which copies of a song exist (Phase 4). `local` = a folder in the library directory, `cloud` = a live server track.
+   * Which copies of a song exist (Phase 4). `local` = a copy on this device (a folder in the library directory on
+   * desktop, device storage on the web), `cloud` = a live server track.
    * Set by `SongLibrary` when it merges both listings.
    */
   export interface Location {
@@ -157,7 +170,7 @@ export namespace SongStorage {
   }
 
   /**
-   * A local write, delete or info save, emitted by `LocalSongStorage`.
+   * A local write, delete or info save, emitted by `LocalSongStorage` and `DeviceSongStorage`.
    */
   export interface ChangeEvent {
     uid: string;

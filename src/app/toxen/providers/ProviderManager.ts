@@ -45,7 +45,7 @@ export default class ProviderManager {
     const provider = ProviderManager.get(providerId);
     if (!provider) throw new Error(`Unknown provider: ${providerId}`);
     if (!provider.isEnabled()) throw new Error(`${provider.displayName} integration is disabled.`);
-    if (StorageSelector.forLibrary().kind === SongStorage.Kind.Cloud && !Settings.getUser()) throw new Error("Log in before adding provider songs to the remote library.");
+    if (StorageSelector.forLibrary().kind !== SongStorage.Kind.Local && !Settings.getUser()) throw new Error("Log in before adding provider songs to the remote library.");
 
     const uid = Song.generateUID();
     const dirname = await ProviderManager.createSongDirectory(uid, provider, result);
