@@ -14,6 +14,7 @@ import { SyncedItems } from "./toxen/SyncedItems";
 import TButton from "./components/Button/Button";
 import LoginForm from "./components/LoginForm/LoginForm";
 import { initSyncNotifications } from "./components/Sync/SyncNotifications";
+import { DeviceLibrary } from "./toxen/DeviceLibrary";
 
 //#region Steps
 /**
@@ -162,6 +163,15 @@ async function showLibrary() {
 /**
  * Starts playback on desktop. On web it opens the song panel, or asks the user to log in.
  */
+/**
+ * Imports files shared to the installed web app while it was closed (Android). Not awaited, since the import shows
+ * its own progress.
+ */
+async function importSharedFiles() {
+  if (toxenapi.isDesktop()) return;
+  DeviceLibrary.importInbox().catch(error => console.error("Unable to import the shared files.", error));
+}
+
 async function startPlaybackOrLogin() {
   if (toxenapi.isDesktop()) {
     Toxen.musicPlayer.playRandom();
@@ -318,6 +328,7 @@ const STEPS: [name: string, run: () => Promise<void>][] = [
   ["initialize image cache", initImageCache],
   ["show library", showLibrary],
   ["start playback or login", startPlaybackOrLogin],
+  ["import shared files", importSharedFiles],
   ["connect Discord", connectDiscord],
   ["connect friend socket", connectFriendSocket],
   ["start sync", startSync],

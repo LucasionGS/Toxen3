@@ -19,6 +19,12 @@ export namespace DeviceFs {
   export const LIBRARY_DIR = "library";
 
   /**
+   * Name of the folder in the OPFS root where the service worker stores files shared to the app (Android). Keep in
+   * sync with `public/device-sw.js`.
+   */
+  export const INBOX_DIR = "inbox";
+
+  /**
    * Prefix of the same-origin URLs the service worker answers from OPFS. Keep in sync with `public/device-sw.js`.
    */
   export const URL_PREFIX = "/__device/";
@@ -225,6 +231,30 @@ export namespace DeviceFs {
       if (handle.kind === "directory" && !name.startsWith(".")) uids.push(name);
     }
     return uids;
+  }
+
+  /**
+   * Files waiting in the share inbox, oldest first, with their entry names.
+   */
+  export async function listInbox(): Promise<{ name: string; file: File }[]> {
+    if (!isSupported()) return [];
+    const root = await navigator.storage.getDirectory();
+    const inbox = await root.getDirectoryHandle(INBOX_DIR).catch(_nullIfMissing);
+    if (!inbox) return [];
+    const entries: { name: string; file: File }[] = [];
+    for await (const [name, handle] of inbox.entries()) {
+      if (handle.kind === "file") entries.push({ name, file: await (handle as FileSystemFileHandle).getFile() });
+    }
+    return entries.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  }
+
+  /**
+   * Remove one file from the share inbox. A missing file is not an error.
+   */
+  export async function removeFromInbox(name: string): Promise<void> {
+    const root = await navigator.storage.getDirectory();
+    const inbox = await root.getDirectoryHandle(INBOX_DIR).catch(_nullIfMissing);
+    await inbox?.removeEntry(name).catch(_nullIfMissing);
   }
 
   /**

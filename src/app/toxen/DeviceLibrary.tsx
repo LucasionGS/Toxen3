@@ -244,6 +244,31 @@ export namespace DeviceLibrary {
 
 
   /**
+   * Import the files shared to the app (Android "Share to Toxen"), which the service worker left in the inbox. Each
+   * file leaves the inbox once it has been tried, so a file that can't be imported isn't retried on every start.
+   * The shared file names lose the inbox prefix the worker added.
+   */
+  export async function importInbox(): Promise<void> {
+    if (!isAvailable()) return;
+    const entries = await DeviceFs.listInbox().catch((error): { name: string; file: File }[] => {
+      console.error("Unable to read the shared files.", error);
+      return [];
+    });
+    if (entries.length > 0) {
+      // Example inbox name: 1762600000000-0-Artist - Title.mp3
+      const files = entries.map(entry => new File([entry.file], entry.name.replace(/^\d+-\d+-/, ""), { type: entry.file.type }));
+      await importFiles(files);
+      for (const entry of entries) await DeviceFs.removeFromInbox(entry.name).catch(error => console.warn("Unable to clear a shared file.", error));
+    }
+    // Drop `?shared=` so a reload doesn't look like a new share
+    const url = new URL(location.href);
+    if (url.searchParams.has("shared")) {
+      url.searchParams.delete("shared");
+      history.replaceState(history.state, "", url.pathname + url.search + url.hash);
+    }
+  }
+
+  /**
    * Tell the user once how safe songs on this device are. Not shown again on this device.
    */
   export async function showStorageNotice(): Promise<void> {

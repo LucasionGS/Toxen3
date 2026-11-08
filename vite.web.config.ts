@@ -51,6 +51,16 @@ export default defineConfig({
         orientation: "any",
         theme_color: "#1e2327",
         background_color: "#1e2327",
+        // Android: "Share to Toxen" from a file manager or another app. The service worker stores the files in the
+        // device inbox (public/device-sw.js) and the app imports them on open.
+        share_target: {
+          action: "/__share-target",
+          method: "POST",
+          enctype: "multipart/form-data",
+          params: {
+            files: [{ name: "media", accept: ["audio/*", "video/*"] }],
+          },
+        },
         icons: [
           { src: "/icons/192.png", sizes: "192x192", type: "image/png", purpose: "any" },
           { src: "/icons/512.png", sizes: "512x512", type: "image/png", purpose: "any" },

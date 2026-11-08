@@ -2,12 +2,18 @@
  * Service worker add-on (loaded through workbox `importScripts`): serves songs kept on this device.
  *
  * `GET /__device/<uid>/<path>` answers from the Origin Private File System at `library/<uid>/<path>`, the layout
- * `DeviceFs` writes. Byte ranges get a 206, so audio and video can seek. Keep the prefix and folder name in sync with
- * `src/app/toxen/storage/device/DeviceFs.ts`.
+ * `DeviceFs` writes. Byte ranges get a 206, so audio and video can seek.
+ *
+ * `POST /__share-target` receives files shared to the installed app (Android, `share_target` in the manifest), stores
+ * them in `inbox/` and opens the app, which imports them (`DeviceLibrary.importInbox`).
+ *
+ * Keep the prefixes and folder names in sync with `src/app/toxen/storage/device/DeviceFs.ts`.
  */
 
 const DEVICE_PREFIX = "/__device/";
 const DEVICE_LIBRARY_DIR = "library";
+const DEVICE_SHARE_TARGET = "/__share-target";
+const DEVICE_INBOX_DIR = "inbox";
 const DEVICE_TYPES = {
   ".mp3": "audio/mpeg",
   ".m4a": "audio/mp4",
@@ -40,7 +46,12 @@ const DEVICE_TYPES = {
 
 self.addEventListener("fetch", event => {
   const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin || !url.pathname.startsWith(DEVICE_PREFIX)) return;
+  if (url.origin !== self.location.origin) return;
+  if (url.pathname === DEVICE_SHARE_TARGET && event.request.method === "POST") {
+    event.respondWith(receiveShare(event.request));
+    return;
+  }
+  if (!url.pathname.startsWith(DEVICE_PREFIX)) return;
   if (event.request.method !== "GET" && event.request.method !== "HEAD") return;
   event.respondWith(serveDeviceFile(event.request, url).catch(error => {
     console.error("Unable to serve a device file.", error);
@@ -111,4 +122,24 @@ async function readDeviceFile(path) {
     if (error && (error.name === "NotFoundError" || error.name === "TypeMismatchError")) return null;
     throw error;
   }
+}
+
+async function receiveShare(request) {
+  let stored = 0;
+  try {
+    const form = await request.formData();
+    const inbox = await (await navigator.storage.getDirectory()).getDirectoryHandle(DEVICE_INBOX_DIR, { create: true });
+    for (const file of form.getAll("media")) {
+      if (!(file instanceof File) || !file.name) continue;
+      // A prefix keeps two shares of files with the same name apart
+      const name = `${Date.now()}-${stored}-${file.name.replace(/[\\/]/g, "_")}`;
+      const handle = await inbox.getFileHandle(name, { create: true });
+      const writable = await handle.createWritable();
+      await file.stream().pipeTo(writable);
+      stored++;
+    }
+  } catch (error) {
+    console.error("Unable to store the shared files.", error);
+  }
+  return Response.redirect(`/?shared=${stored}`, 303);
 }
