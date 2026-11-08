@@ -2,6 +2,21 @@
 
 This file contains the change logs for Toxen.
 
+<!-- UPCOMING: 2.14.0 -->
+## 2.14.0 - TBD
+
+## New Features
+
+- **Songs on your phone** - The web app can now keep songs on your phone or computer. They play offline, even without an account.
+  - Add them in `Import > On this device`, with `Add files` or `Add a folder` where your browser supports it.
+  - When you're logged in, new songs are uploaded to your cloud too, and `Make available offline` saves cloud songs on the device.
+- **Share to Toxen** - On Android, share audio files from your file manager or another app straight to the installed Toxen app.
+- **Device storage overview** - `Settings > Sync` shows how many songs are on this device, how much space they use, and whether the browser may clear them.
+
+## Bug Fixes
+
+- **Text in Sync settings** - Long messages in `Settings > Sync` now wrap on narrow screens instead of being cut off.
+
 <!-- VERSION: 2.13.0 -->
 ## 2.13.0 - 08-11-2026
 
