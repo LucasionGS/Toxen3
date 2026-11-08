@@ -51,6 +51,8 @@ const config: ForgeConfig = {
     asar: true,
     icon: './src/icons/sizes/icon.ico',
     executableName: 'toxen3',
+    // Registers toxen:// with macOS (Info.plist); Windows and Linux register it at runtime and in the installers.
+    protocols: [{ name: 'Toxen', schemes: ['toxen'] }],
     // Defining this ourselves stops the Vite plugin installing its own filter,
     // which keeps only `/.vite`. Same behaviour, plus the runtime-require'd
     // modules above. Paths always start with '/'.
@@ -70,7 +72,11 @@ const config: ForgeConfig = {
     description: 'Toxen Music Player',
     setupIcon: './src/icons/toxen.ico',
     exe: 'toxen3.exe',
-  }), new MakerZIP({}, ['darwin']), new MakerRpm({}), new MakerDeb({})],
+  }), new MakerZIP({}, ['darwin']), new MakerRpm({
+    options: { mimeType: ['x-scheme-handler/toxen'] },
+  }), new MakerDeb({
+    options: { mimeType: ['x-scheme-handler/toxen'] },
+  })],
   plugins: [
     new VitePlugin({
       // `build` can specify multiple entry builds, which can be Main process, Preload scripts, Worker process, etc.

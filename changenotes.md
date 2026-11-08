@@ -12,10 +12,14 @@ This file contains the change logs for Toxen.
   - When you're logged in, new songs are uploaded to your cloud too, and `Make available offline` saves cloud songs on the device.
 - **Share to Toxen** - On Android, share audio files from your file manager or another app straight to the installed Toxen app.
 - **Device storage overview** - `Settings > Sync` shows how many songs are on this device, how much space they use, and whether the browser may clear them.
+- **Open Toxen from the website** - Links from toxen.net can now open Toxen on your computer.
+  - `Install in Toxen` on an extension page asks you to confirm, then installs it. Nothing is installed without your OK.
+  - After upgrading your storage on the website, Toxen refreshes your account and shows your new storage.
 
 ## Bug Fixes
 
 - **Text in Sync settings** - Long messages in `Settings > Sync` now wrap on narrow screens instead of being cut off.
+- **Extension updates** - Updating an extension from the store now applies right away, and a failed or broken download no longer removes the version you already had.
 
 <!-- VERSION: 2.13.0 -->
 ## 2.13.0 - 08-11-2026

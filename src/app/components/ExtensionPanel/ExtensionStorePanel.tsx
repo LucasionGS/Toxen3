@@ -129,6 +129,7 @@ function BrowseTab() {
       }
 
       await ExtensionManager.installZip(ext.extensionId, await res.arrayBuffer());
+      await ExtensionManager.reloadInstalled(ext.extensionId);
 
       Toxen.log(`Extension "${ext.name}" installed successfully!`);
       forceUpdate();

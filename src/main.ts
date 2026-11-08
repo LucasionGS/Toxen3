@@ -1,4 +1,4 @@
-import { app, BrowserWindow, net, protocol } from 'electron';
+import { app, BrowserWindow, ipcMain, net, protocol } from 'electron';
 import Path from "path";
 import fs from "node:fs";
 import { Readable } from "node:stream";
@@ -27,6 +27,89 @@ if (squirrelStartup) {
   app.quit();
 }
 
+//#region toxen:// deep links
+// Links like toxen://extension/12 come from the website (or any other app), so they are untrusted input: main only
+// finds and forwards them, and the renderer (DeepLink.ts) validates and confirms before doing anything.
+const DEEP_LINK_SCHEME = "toxen";
+const DEEP_LINK_CHANNEL = "toxen:deep-link";
+const DEEP_LINK_READY_CHANNEL = "toxen:deep-link-ready";
+
+/**
+ * The main window, once created. The loading window is also in `BrowserWindow.getAllWindows()`, so it can't be used to find this one.
+ */
+let mainWindowRef: BrowserWindow | null = null;
+/**
+ * Whether the renderer has registered its deep link listener. Links arriving earlier wait in `pendingDeepLinks`.
+ */
+let deepLinkRendererReady = false;
+const pendingDeepLinks: string[] = [];
+
+/**
+ * Pick the `toxen://` URLs out of a command line.
+ */
+function findDeepLinks(argv: string[]): string[] {
+  const prefix = `${DEEP_LINK_SCHEME}://`;
+  return argv.filter(arg => arg.toLowerCase().startsWith(prefix));
+}
+
+/**
+ * Show and focus the main window, restoring it when minimized.
+ */
+function focusMainWindow(): void {
+  const win = mainWindowRef;
+  if (!win || win.isDestroyed()) return;
+  if (win.isMinimized()) win.restore();
+  if (!win.isVisible() && !win.webContents.isLoading()) win.show();
+  win.focus();
+}
+
+/**
+ * Send every queued link to the renderer, if it is listening.
+ */
+function flushDeepLinks(): void {
+  const win = mainWindowRef;
+  if (!deepLinkRendererReady || !win || win.isDestroyed()) return;
+  while (pendingDeepLinks.length > 0) {
+    win.webContents.send(DEEP_LINK_CHANNEL, pendingDeepLinks.shift());
+  }
+}
+
+/**
+ * Queue a link for the renderer and bring the window forward.
+ */
+function handleDeepLink(url: string): void {
+  pendingDeepLinks.push(url);
+  focusMainWindow();
+  flushDeepLinks();
+}
+
+/**
+ * Register Toxen as the handler for `toxen://`. Not done when running from source on Linux and macOS: it would make the
+ * stock Electron binary the system handler.
+ */
+function registerProtocolClient(): void {
+  if (process.defaultApp) {
+    if (process.platform === "win32" && process.argv.length >= 2) {
+      app.setAsDefaultProtocolClient(DEEP_LINK_SCHEME, process.execPath, [Path.resolve(process.argv[1])]);
+    }
+    return;
+  }
+  app.setAsDefaultProtocolClient(DEEP_LINK_SCHEME);
+}
+
+ipcMain.on(DEEP_LINK_READY_CHANNEL, (event) => {
+  if (event.sender !== mainWindowRef?.webContents) return;
+  deepLinkRendererReady = true;
+  flushDeepLinks();
+});
+
+// macOS delivers links through this event, including on a cold start, so it has to be registered before `ready`.
+app.on("open-url", (event, url) => {
+  event.preventDefault();
+  handleDeepLink(url);
+});
+//#endregion
+
 // Single instance lock - only allow one instance of the app to run at a time
 const gotTheLock = app.requestSingleInstanceLock();
 
@@ -36,16 +119,14 @@ if (!gotTheLock) {
 } else {
   // This is the first instance, set up the handler for when a second instance tries to launch
   app.on('second-instance', (event, commandLine, workingDirectory) => {
-    // Someone tried to run a second instance, focus our window instead
-    const windows = BrowserWindow.getAllWindows();
-    if (windows.length > 0) {
-      const mainWindow = windows[0];
-      if (mainWindow.isMinimized()) {
-        mainWindow.restore();
-      }
-      mainWindow.focus();
-    }
+    // Someone tried to run a second instance (on Windows and Linux a toxen:// link arrives this way), focus our window instead
+    const links = findDeepLinks(commandLine);
+    if (links.length > 0) links.forEach(handleDeepLink);
+    else focusMainWindow();
   });
+
+  registerProtocolClient();
+  findDeepLinks(process.argv).forEach(url => pendingDeepLinks.push(url));
 }
 
 const isDevServer = process.argv.includes('--dev');
@@ -85,6 +166,13 @@ const createWindow = (): void => {
     show: false
   });
   remote.enable(mainWindow.webContents);
+  mainWindowRef = mainWindow;
+  deepLinkRendererReady = false;
+  // A reload drops the renderer's listener; it announces itself again once it has started.
+  mainWindow.webContents.on("did-start-loading", () => { deepLinkRendererReady = false; });
+  mainWindow.on("closed", () => {
+    if (mainWindowRef === mainWindow) mainWindowRef = null;
+  });
 
   // mainWindow.webContents.openDevTools();
   

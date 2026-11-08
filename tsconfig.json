@@ -22,5 +22,7 @@
   // packages, so those would otherwise become startup failures rather than warnings.
   "ts-node": {
     "transpileOnly": true
-  }
+  },
+  // The website is its own Astro project with its own tsconfig and ambient types
+  "exclude": ["node_modules", "website"]
 }

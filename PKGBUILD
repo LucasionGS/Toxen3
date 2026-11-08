@@ -56,7 +56,7 @@ Exec=toxen3 %U
 Icon=toxen3
 Categories=AudioVideo;Audio;Player;
 StartupNotify=true
-MimeType=audio/mpeg;audio/mp4;audio/x-wav;audio/ogg;audio/flac;video/mp4;video/x-msvideo;video/quicktime;
+MimeType=audio/mpeg;audio/mp4;audio/x-wav;audio/ogg;audio/flac;video/mp4;video/x-msvideo;video/quicktime;x-scheme-handler/toxen;
 EOF
 
     # Install icon (if available)

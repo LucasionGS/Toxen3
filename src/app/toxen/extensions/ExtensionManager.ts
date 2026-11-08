@@ -169,6 +169,12 @@ export default class ExtensionManager {
   public static extensionThemes: Map<string, Theme> = new Map();
 
   /**
+   * Limits for an extension package, against zip bombs.
+   */
+  private static readonly MAX_ZIP_UNCOMPRESSED_SIZE = 200 * 1024 * 1024;
+  private static readonly MAX_ZIP_ENTRIES = 5000;
+
+  /**
    * Called after the installed or enabled extensions changed (set by the settings sync, which records it).
    */
   public static onChange: (() => void) | null = null;
@@ -183,7 +189,6 @@ export default class ExtensionManager {
   public static async discover(): Promise<void> {
     const fs = await import("fs");
     const fsp = fs.promises;
-    const Path = await import("path");
 
     const extDir = this.getExtensionsDir();
 
@@ -203,40 +208,14 @@ export default class ExtensionManager {
     const enabledMap = Settings.get("enabledExtensions") ?? {};
 
     for (const entry of entries) {
-      const extPath = Path.resolve(extDir, entry);
-      const manifestPath = Path.resolve(extPath, "extension.json");
-
-      let stat: import("fs").Stats;
-      try {
-        stat = await fsp.stat(extPath);
-      } catch { continue; }
-      if (!stat.isDirectory()) continue;
-
-      let manifestRaw: string;
-      try {
-        manifestRaw = await fsp.readFile(manifestPath, "utf-8");
-      } catch { continue; }
-
-      let manifest: ExtensionManifest;
-      try {
-        manifest = JSON.parse(manifestRaw);
-      } catch (e) {
-        console.error(`[Extensions] Invalid extension.json in "${entry}":`, e);
-        continue;
-      }
-
-      if (!manifest.id || !manifest.name) {
-        console.error(`[Extensions] Extension in "${entry}" missing required id/name fields.`);
-        continue;
-      }
-
-      const enabled = enabledMap[manifest.id] ?? true; // New extensions enabled by default
-      const ext = new Extension(manifest, extPath, enabled);
-      this.extensions.set(manifest.id, ext);
+      if (entry.startsWith(".")) continue; // Staging folders of installs in progress
+      const ext = await this._readExtensionDir(extDir, entry, enabledMap);
+      if (!ext) continue;
+      this.extensions.set(ext.manifest.id, ext);
 
       // Register themes from manifest (themes are data-driven, don't need JS)
-      if (enabled) {
-        this.registerThemesFromManifest(manifest);
+      if (ext.enabled) {
+        this.registerThemesFromManifest(ext.manifest);
       }
     }
 
@@ -245,53 +224,199 @@ export default class ExtensionManager {
   }
 
   /**
-   * Install (or replace) an extension from its store zip into `<extensions>/<extensionId>`. Doesn't load it: call
-   * `discover()` and `loadAll()` afterwards.
+   * Read the extension in `<extDir>/<entry>` without registering or loading it.
+   * @returns `null` when the folder isn't a valid extension.
+   */
+  private static async _readExtensionDir(extDir: string, entry: string, enabledMap: Record<string, boolean>): Promise<Extension | null> {
+    const fsp = (await import("fs")).promises;
+    const Path = await import("path");
+    const extPath = Path.resolve(extDir, entry);
+    const manifestPath = Path.resolve(extPath, "extension.json");
+
+    try {
+      if (!(await fsp.stat(extPath)).isDirectory()) return null;
+    } catch { return null; }
+
+    let manifestRaw: string;
+    try {
+      manifestRaw = await fsp.readFile(manifestPath, "utf-8");
+    } catch { return null; }
+
+    let manifest: ExtensionManifest;
+    try {
+      manifest = JSON.parse(manifestRaw);
+    } catch (e) {
+      console.error(`[Extensions] Invalid extension.json in "${entry}":`, e);
+      return null;
+    }
+
+    if (!manifest.id || !manifest.name) {
+      console.error(`[Extensions] Extension in "${entry}" missing required id/name fields.`);
+      return null;
+    }
+
+    return new Extension(manifest, extPath, enabledMap[manifest.id] ?? true); // New extensions enabled by default
+  }
+
+  /**
+   * Install (or replace) an extension from its store zip into `<extensions>/<extensionId>`. Doesn't load it: use
+   * `reloadInstalled()` afterwards. The zip must hold an `extension.json` with a matching `id` at its root. Whatever goes
+   * wrong, the previously installed version stays in place.
+   * @throws If the zip is invalid, too large, or can't be swapped in.
    */
   public static async installZip(extensionId: string, zip: ArrayBuffer): Promise<void> {
     if (!toxenapi.isDesktop()) return toxenapi.throwDesktopOnly("Installing extensions");
     const desktop = toxenapi;
     const yauzl = await import("yauzl");
+    const fsp = (await import("fs")).promises;
+    const Path = await import("path");
+
+    const extDir = this.getExtensionsDir();
+    const targetDir = desktop.safeJoinInside(extDir, extensionId);
+    // Extract next to the target and swap it in only once extraction succeeded, so a bad download keeps the old version.
+    // Dot-prefixed, so `discover()` skips leftover staging and backup folders.
+    const stagingDir = desktop.safeJoinInside(extDir, `.installing-${extensionId}`);
+    const backupDir = desktop.safeJoinInside(extDir, `.old-${extensionId}`);
+    await fsp.rm(stagingDir, { recursive: true, force: true });
+    await fsp.mkdir(stagingDir, { recursive: true });
+
+    try {
+      await this._extractZip(yauzl, zip, stagingDir);
+
+      let manifest: Partial<ExtensionManifest>;
+      try {
+        manifest = JSON.parse(await fsp.readFile(Path.join(stagingDir, "extension.json"), "utf-8"));
+      } catch (error) {
+        if (error?.code === "ENOENT") throw new Error("The extension package is missing extension.json at its root.");
+        throw new Error("The extension package has an invalid extension.json.");
+      }
+      if (manifest?.id !== extensionId) throw new Error("The package's extension id doesn't match the store entry.");
+    } catch (error) {
+      await fsp.rm(stagingDir, { recursive: true, force: true });
+      throw error;
+    }
+
+    // Move the old version aside instead of deleting it, so it can be put back if the new one can't be moved in.
+    await fsp.rm(backupDir, { recursive: true, force: true });
+    const hadOld = await fsp.stat(targetDir).then(() => true).catch(() => false);
+    try {
+      if (hadOld) await fsp.rename(targetDir, backupDir);
+    } catch (error) {
+      await fsp.rm(stagingDir, { recursive: true, force: true });
+      throw new Error(`Couldn't replace the installed extension (${error?.message ?? error}). Close anything using its files and try again.`);
+    }
+    try {
+      await fsp.rename(stagingDir, targetDir);
+    } catch (error) {
+      if (hadOld) await fsp.rename(backupDir, targetDir).catch(rollbackError => console.error("[Extensions] Couldn't restore the previous version:", rollbackError));
+      await fsp.rm(stagingDir, { recursive: true, force: true });
+      throw new Error(`Couldn't move the new extension into place (${error?.message ?? error}).`);
+    }
+    if (hadOld) await fsp.rm(backupDir, { recursive: true, force: true }).catch(error => console.warn("[Extensions] Couldn't remove the previous version:", error));
+  }
+
+  /**
+   * Re-read the installed extension `id` from disk: unload the running instance (if any) and load the new one. Other
+   * extensions are untouched.
+   * @returns `false` when there's no valid extension with that id on disk.
+   */
+  public static async reloadInstalled(id: string): Promise<boolean> {
+    if (!toxenapi.isDesktop()) return toxenapi.throwDesktopOnly("Installing extensions");
+    const existing = this.extensions.get(id);
+    if (existing) {
+      existing.unload();
+      this.unregisterThemesFromManifest(existing.manifest);
+      this.extensions.delete(id);
+    }
+
+    const enabledMap = Settings.get("enabledExtensions") ?? {};
+    if (existing) enabledMap[id] ??= existing.enabled; // Keep the state of a re-install
+    const ext = await this._readExtensionDir(this.getExtensionsDir(), id, enabledMap);
+    if (!ext || ext.manifest.id !== id) {
+      this.onChange?.();
+      return false;
+    }
+
+    this.extensions.set(id, ext);
+    if (ext.enabled) {
+      this.registerThemesFromManifest(ext.manifest);
+      await ext.load();
+    }
+    this.onChange?.();
+    return true;
+  }
+
+  /**
+   * Extract `zip` into `targetDir`, refusing entries that would land outside it.
+   */
+  private static async _extractZip(yauzl: typeof import("yauzl"), zip: ArrayBuffer, targetDir: string): Promise<void> {
+    if (!toxenapi.isDesktop()) return toxenapi.throwDesktopOnly("Installing extensions");
+    const desktop = toxenapi;
     const fs = await import("fs");
     const fsp = fs.promises;
     const Path = await import("path");
 
-    const targetDir = desktop.safeJoinInside(this.getExtensionsDir(), extensionId);
-
-    // Remove old version if exists
-    await fsp.rm(targetDir, { recursive: true, force: true });
-    await fsp.mkdir(targetDir, { recursive: true });
-
-    // Extract zip to targetDir
     await new Promise<void>((resolve, reject) => {
       yauzl.fromBuffer(Buffer.from(zip), { lazyEntries: true }, (err: Error | null, zipfile: any) => {
-        if (err) return reject(err);
+        if (err || !zipfile) return reject(err ?? new Error("The extension package couldn't be read."));
 
-        zipfile.readEntry();
+        // `fail` and `done` settle the promise exactly once; every error path below goes through `fail`.
+        let settled = false;
+        const fail = (error: Error) => {
+          if (settled) return;
+          settled = true;
+          zipfile.close();
+          reject(error);
+        };
+
+        if (zipfile.entryCount > ExtensionManager.MAX_ZIP_ENTRIES) {
+          return fail(new Error(`The extension package has too many files (limit ${ExtensionManager.MAX_ZIP_ENTRIES}).`));
+        }
+
+        // yauzl validates the real stream size against the declared one, so the declared sizes can be trusted.
+        let totalSize = 0;
         zipfile.on("entry", (entry: any) => {
-          if (/\/$/.test(entry.fileName)) {
-            zipfile.readEntry();
-          } else {
-            zipfile.openReadStream(entry, async (err: Error | null, readStream: any) => {
-              if (err) return reject(err);
-              try {
-                const outPath = desktop.safeJoinInside(targetDir, entry.fileName);
-                const outDir = Path.dirname(outPath);
-                await fsp.mkdir(outDir, { recursive: true });
-                const writeStream = fs.createWriteStream(outPath);
-                readStream.pipe(writeStream);
-                writeStream.on("close", () => zipfile.readEntry());
-                writeStream.on("error", reject);
-              } catch (error) {
-                readStream.destroy();
-                zipfile.close();
-                reject(error);
-              }
-            });
+          totalSize += entry.uncompressedSize;
+          if (totalSize > ExtensionManager.MAX_ZIP_UNCOMPRESSED_SIZE) {
+            return fail(new Error(`The extension package is too large once unpacked (limit ${ExtensionManager.MAX_ZIP_UNCOMPRESSED_SIZE / 1024 / 1024} MB).`));
           }
+          if (/\/$/.test(entry.fileName)) return zipfile.readEntry();
+
+          zipfile.openReadStream(entry, (err: Error | null, readStream: any) => {
+            if (err || !readStream) return fail(err ?? new Error(`Couldn't read "${entry.fileName}" from the extension package.`));
+            // Listen right away: an error before the output file is open would otherwise be unhandled.
+            let writeStream: import("fs").WriteStream | null = null;
+            readStream.on("error", (error: Error) => {
+              writeStream?.destroy();
+              fail(error);
+            });
+            (async () => {
+              const outPath = desktop.safeJoinInside(targetDir, entry.fileName);
+              await fsp.mkdir(Path.dirname(outPath), { recursive: true });
+              if (settled) return readStream.destroy();
+              writeStream = fs.createWriteStream(outPath);
+              writeStream.on("error", (error: Error) => {
+                readStream.destroy();
+                fail(error);
+              });
+              writeStream.on("close", () => {
+                if (!settled) zipfile.readEntry();
+              });
+              readStream.pipe(writeStream);
+            })().catch(error => {
+              readStream.destroy();
+              fail(error);
+            });
+          });
         });
-        zipfile.on("end", () => resolve());
-        zipfile.on("error", reject);
+        zipfile.on("end", () => {
+          if (settled) return;
+          settled = true;
+          resolve();
+        });
+        zipfile.on("error", fail);
+        zipfile.on("close", () => fail(new Error("The extension package ended unexpectedly.")));
+        zipfile.readEntry();
       });
     });
   }
@@ -302,20 +427,48 @@ export default class ExtensionManager {
    * @throws If the store can't be reached or the download fails.
    */
   public static async installFromStore(extensionId: string): Promise<boolean> {
-    const server = Settings.getServer();
-    const headers: Record<string, string> = {};
-    const token = User.getCurrentUser()?.token;
-    if (token) headers.Authorization = `Bearer ${token}`;
-    const list = await fetch(`${server}/extensions/store?search=${encodeURIComponent(extensionId)}`, { headers });
+    const headers = this.getStoreHeaders();
+    const list = await fetch(`${Settings.getServer()}/extensions/store?search=${encodeURIComponent(extensionId)}`, { headers });
     if (!list.ok) throw new Error(`The extension store answered ${list.status}.`);
     const found = (await list.json() as { id: number; extensionId: string }[]).find(ext => ext.extensionId === extensionId);
     if (!found) return false;
-    const res = await fetch(`${server}/extensions/store/${found.id}/download`, { headers });
+    return this.installFromStoreId(found.id, extensionId);
+  }
+
+  /**
+   * Install one specific store version by its numeric store record id (the `<id>` of `toxen://extension/<id>`), then load it.
+   * @param id Store record id (`Site.StoreExtension.id`).
+   * @param extensionId The `id` from the extension's `extension.json`. Looked up from the store when omitted.
+   * @returns `false` when the store has no approved extension with that id.
+   * @throws If the store can't be reached or the download fails.
+   */
+  public static async installFromStoreId(id: number, extensionId?: string): Promise<boolean> {
+    if (!Number.isInteger(id) || id < 0) throw new Error("That isn't a valid extension id.");
+    const server = Settings.getServer();
+    const headers = this.getStoreHeaders();
+    if (!extensionId) {
+      const detail = await fetch(`${server}/extensions/store/${id}`, { headers });
+      if (detail.status === 404) return false;
+      if (!detail.ok) throw new Error(`The extension store answered ${detail.status}.`);
+      extensionId = (await detail.json() as { extensionId: string }).extensionId;
+    }
+    const res = await fetch(`${server}/extensions/store/${id}/download`, { headers });
+    if (res.status === 404) return false;
     if (!res.ok) throw new Error(`Downloading the extension "${extensionId}" failed with ${res.status}.`);
     await this.installZip(extensionId, await res.arrayBuffer());
-    await this.discover();
-    await this.loadAll();
+    // Only after the new files are in place: a failed install above leaves the running extension alone.
+    if (!await this.reloadInstalled(extensionId)) throw new Error(`The installed package for "${extensionId}" isn't a valid extension.`);
     return true;
+  }
+
+  /**
+   * Request headers for the extension store: the logged in user's token, when there is one.
+   */
+  private static getStoreHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {};
+    const token = User.getCurrentUser()?.token;
+    if (token) headers.Authorization = `Bearer ${token}`;
+    return headers;
   }
 
   /**

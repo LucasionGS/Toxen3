@@ -15,6 +15,7 @@ import TButton from "./components/Button/Button";
 import LoginForm from "./components/LoginForm/LoginForm";
 import { initSyncNotifications } from "./components/Sync/SyncNotifications";
 import { DeviceLibrary } from "./toxen/DeviceLibrary";
+import { DeepLink } from "./toxen/desktop/DeepLink";
 
 //#region Steps
 /**
@@ -315,6 +316,9 @@ async function checkMediaDownloader() {
  * Startup steps in the order they run.
  */
 const STEPS: [name: string, run: () => Promise<void>][] = [
+  // First, and independent of the others: it only queues links until `Toxen.whenReady()`, so a later failing step can't
+  // leave links from the main process undelivered.
+  ["listen for deep links", async () => DeepLink.init()],
   ["load settings", loadSettings],
   ["prepare sync", prepareSync],
   ["load statistics", loadStatistics],
