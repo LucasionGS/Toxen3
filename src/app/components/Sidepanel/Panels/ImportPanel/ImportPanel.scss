@@ -1,4 +1,9 @@
 .import-panel {
+  // The side panel doesn't wrap text by default
+  &__device .mantine-Text-root {
+    white-space: normal;
+  }
+
   .media-downloader-modal {
     .video-results {
       max-height: 500px;

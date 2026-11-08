@@ -5,11 +5,18 @@ import Song from "./Song";
 import { SongLibrary } from "./SongLibrary";
 import { DeviceSongStorage } from "./storage/DeviceSongStorage";
 import { DeviceFs } from "./storage/device/DeviceFs";
+import { CloudSongStorage } from "./storage/CloudSongStorage";
+import { SongStorage } from "./storage/SongStorage";
+import Settings from "./Settings";
+import User from "./User";
 
 /**
- * Adding songs from the phone or computer to the web app's device storage: the file and folder pickers, the copy with
- * progress, and the one-time notice about how safe the browser keeps them. Web only; desktop imports into the library
- * folder through `System.handleImportedFiles`.
+ * The web app's songs on this device: adding them (file and folder pickers, the copy with progress, the one-time
+ * notice about how safe the browser keeps them) and linking them with the cloud (upload, save a cloud song on the
+ * device, refresh a saved copy when the cloud version changes). Web only; desktop imports into the library folder
+ * through `System.handleImportedFiles` and syncs through `SyncEngine`.
+ *
+ * Transfers for one song run one at a time, in the order they were asked for.
  */
 export namespace DeviceLibrary {
   /**
@@ -123,8 +130,118 @@ export namespace DeviceLibrary {
       withCloseButton: true,
     });
     if (added.length > 0) showStorageNotice();
+    // New songs go up to the cloud when auto-sync is on, like desktop imports
+    if (added.length > 0 && User.getCurrentUser() && Settings.get("autoSync") !== false) {
+      uploadAll(added).catch(error => console.error("Unable to upload the new songs.", error));
+    }
     return added;
   }
+
+  /**
+   * Upload a song that is only on this device, then keep both copies linked.
+   * @throws If nobody is logged in, or the upload fails (cloud storage full, offline).
+   */
+  export function upload(song: Song): Promise<void> {
+    return _queue(song.uid, async () => {
+      if (!User.getCurrentUser()) throw new Error("Log in to upload songs to the cloud.");
+      if (song.location?.cloud) return;
+      const device = DeviceSongStorage.instance;
+      for (const file of await device.list(song)) {
+        const blob = await device.readBlob(song, file.relPath);
+        if (blob) await CloudSongStorage.instance.writeFile(song, file.relPath, blob);
+      }
+      await CloudSongStorage.instance.saveInfo(song);
+      await device.recordCloudState(song.uid);
+      song.location = { local: true, cloud: true };
+      Toxen.updateSongPanels();
+    });
+  }
+
+  /**
+   * Upload several device songs one after another and report the result once.
+   */
+  export async function uploadAll(songs: Song[]): Promise<void> {
+    let failed = 0;
+    let lastError = "";
+    for (const song of songs) {
+      try {
+        await upload(song);
+      } catch (error) {
+        failed++;
+        lastError = error instanceof Error ? error.message : String(error);
+        console.error(error);
+      }
+    }
+    if (failed === 0) {
+      Toxen.log(songs.length === 1 ? `Uploaded ${songs[0].getDisplayName()} to the cloud.` : `Uploaded ${songs.length} songs to the cloud.`, 3000);
+    }
+    else {
+      Toxen.error(songs.length === 1 ? `Couldn't upload ${songs[0].getDisplayName()}: ${lastError}` : `Couldn't upload ${failed} of ${songs.length} songs: ${lastError}`);
+    }
+  }
+
+  /**
+   * Download a cloud song and keep it on this device, so it plays offline ("Make available offline").
+   * A failed download leaves nothing behind.
+   * @throws If the song isn't in the cloud, the device is full or the download fails.
+   */
+  export function saveOnDevice(song: Song): Promise<void> {
+    return _queue(song.uid, async () => {
+      if (!isAvailable()) throw new Error("This browser can't keep songs on the device.");
+      if (song.location?.local) return;
+      const manifest = CloudSongStorage.instance.getManifest(song.uid);
+      if (!manifest || manifest.deleted) throw new Error("The song isn't in the cloud anymore. Reload the library and try again.");
+      try {
+        await _download(song, Object.keys(manifest.files));
+        await DeviceSongStorage.instance.saveInfo(song);
+        await DeviceSongStorage.instance.recordCloudState(song.uid);
+      } catch (error) {
+        await DeviceFs.deleteSong(song.uid).catch((): void => undefined);
+        throw error;
+      }
+      song.location = { local: true, cloud: true };
+      Toxen.updateSongPanels();
+      showStorageNotice();
+    });
+  }
+
+  /**
+   * Bring the device copy of a song up to date with the cloud version this device knows: download changed files,
+   * delete removed ones and take the cloud info. Does nothing when the copy is current or the song has no cloud copy.
+   */
+  export function refresh(song: Song): Promise<void> {
+    return _queue(song.uid, async () => {
+      if (!song.location?.local || !User.getCurrentUser()) return;
+      const manifest = CloudSongStorage.instance.getManifest(song.uid);
+      if (!manifest || manifest.deleted) return;
+      const device = DeviceSongStorage.instance;
+      const state = await device.readState(song.uid);
+      if (state?.rev === manifest.rev) return;
+
+      const changed = Object.entries(manifest.files)
+        .filter(([relPath, file]) => state?.files[relPath] !== file.sha256)
+        .map(([relPath]) => relPath);
+      const removed = state ? Object.keys(state.files).filter(relPath => !Object.prototype.hasOwnProperty.call(manifest.files, relPath)) : [];
+      await _download(song, changed);
+      for (const relPath of removed) await DeviceFs.deleteFile(song.uid, relPath);
+      song.applyInfo(CloudSongStorage.toSongInfo(manifest));
+      await device.saveInfo(song);
+      await device.recordCloudState(song.uid);
+      Toxen.updateSongPanels();
+    });
+  }
+
+  /**
+   * Refresh every song that has both copies, one at a time (after the library loads). Failures are logged; the
+   * next load tries again.
+   */
+  export async function refreshAll(songs: Song[]): Promise<void> {
+    for (const song of songs) {
+      if (!song.location?.local || !song.location.cloud) continue;
+      await refresh(song).catch(error => console.warn(`Unable to refresh the device copy of ${song.getDisplayName()}.`, error));
+    }
+  }
+
 
   /**
    * Tell the user once how safe songs on this device are. Not shown again on this device.
@@ -149,6 +266,33 @@ export namespace DeviceLibrary {
    */
   export function isMedia(name: string): boolean {
     return Toxen.getSupportedMediaFiles().includes(toxenapi.getFileExtension(name).toLowerCase());
+  }
+
+  const _queues = new Map<string, Promise<unknown>>();
+
+  /**
+   * Run `task` after the transfers already queued for the song.
+   */
+  function _queue<T>(uid: string, task: () => Promise<T>): Promise<T> {
+    const previous = _queues.get(uid) ?? Promise.resolve();
+    const next = previous.catch((): void => undefined).then(task);
+    _queues.set(uid, next);
+    next.finally(() => {
+      if (_queues.get(uid) === next) _queues.delete(uid);
+    }).catch((): void => undefined);
+    return next;
+  }
+
+  /**
+   * Copy cloud files of a song into its device folder.
+   */
+  async function _download(song: Song, relPaths: string[]): Promise<void> {
+    for (const relPath of relPaths) {
+      if (relPath === SongStorage.INFO_FILE || relPath === DeviceSongStorage.STATE_FILE) continue;
+      const blob = await CloudSongStorage.instance.readBlob(song, relPath);
+      if (!blob) throw new Error(`"${relPath}" is missing from the cloud copy of ${song.getDisplayName()}.`);
+      await DeviceFs.writeFile(song.uid, relPath, blob);
+    }
   }
 
   function _read(key: string): string | null {

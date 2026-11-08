@@ -111,7 +111,8 @@ export default function ImportPanel() {
         onChange={(e) => {
           const fileList = e.target.files;
           if (!fileList || fileList.length === 0) return;
-          System.handleImportedFiles(fileList);
+          // Copy first: clearing the value below empties the live FileList before the import reads it
+          System.handleImportedFiles([...fileList]);
           // Reset so the same files can be selected again
           e.target.value = "";
         }}

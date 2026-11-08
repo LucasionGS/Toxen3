@@ -15,6 +15,7 @@ import { LocalSongStorage } from "./storage/LocalSongStorage";
 import { CloudSongStorage } from "./storage/CloudSongStorage";
 import { DeviceSongStorage } from "./storage/DeviceSongStorage";
 import { DeviceFs } from "./storage/device/DeviceFs";
+import { DeviceLibrary } from "./DeviceLibrary";
 import { SyncEngine } from "./sync/SyncEngine";
 import { SyncState } from "./sync/SyncState";
 import User from "./User";
@@ -104,8 +105,9 @@ export class SongLibrary {
     const existing = SongLibrary.getSong(change.uid);
     if (!toxenapi.isDesktop() && existing?.location?.local) {
       // Web: the engine only knows the cloud copy. A song kept on this device stays and keeps playing from it, also
-      // when its cloud copy is deleted
+      // when its cloud copy is deleted; a changed cloud copy is copied over
       existing.location = { local: true, cloud: Boolean(change.remote) };
+      if (change.remote) DeviceLibrary.refresh(existing).catch(error => console.warn(`Unable to refresh the device copy of ${existing.getDisplayName()}.`, error));
       SongLibrary._schedulePanelUpdate();
       return;
     }
@@ -308,8 +310,8 @@ export class SongLibrary {
     const keepsDevice = onDevice && !removeDevice;
     const keepsCloud = inCloud && !removeCloud;
 
-    const current = Song.getCurrent();
-    if (current && current.uid === song.uid && (removeDevice || !keepsDevice)) await Toxen.musicPlayer.playNext();
+    const isCurrent = Song.getCurrent()?.uid === song.uid;
+    if (isCurrent && !keepsDevice && !keepsCloud) await Toxen.musicPlayer.playNext();
 
     try {
       if (removeCloud) {
@@ -326,6 +328,25 @@ export class SongLibrary {
     if (keepsDevice || keepsCloud) song.location = { local: keepsDevice, cloud: keepsCloud };
     else Toxen.songList = Toxen.songList.filter(s => s !== song);
     Toxen.songPanel.update();
+    // The playing song lost its device copy but is still in the cloud: carry on streaming from the same spot
+    if (isCurrent && removeDevice && keepsCloud) await SongLibrary._resumeFromCloud(song);
+  }
+
+  /**
+   * Switch the playing song to its cloud copy at the same position, paused if it was paused.
+   */
+  private static async _resumeFromCloud(song: Song): Promise<void> {
+    const media = Toxen.musicPlayer.media;
+    const time = media?.currentTime ?? 0;
+    const paused = media?.paused ?? true;
+    await CloudSongStorage.instance.ensureMediaTokens([song.uid]).catch(error => console.warn("Unable to get media tokens.", error));
+    await Toxen.musicPlayer.playSong(song, { disableHistory: true });
+    const restore = () => {
+      Toxen.musicPlayer.media.currentTime = time;
+      if (paused) Toxen.musicPlayer.media.pause();
+    };
+    if (Toxen.musicPlayer.media.readyState >= 1) restore();
+    else Toxen.musicPlayer.media.addEventListener("loadedmetadata", restore, { once: true });
   }
 
   /**
@@ -362,6 +383,8 @@ export class SongLibrary {
       }
     }
     SongLibrary.lastLoadIncomplete = device.incomplete || cloud.incomplete;
+    // Saved copies of songs that changed in the cloud since the last visit catch up in the background
+    if (cloud.songs.length > 0) setTimeout(() => DeviceLibrary.refreshAll(device.songs), 0);
     return Song.sortSongs([...device.songs, ...cloudOnly]);
   }
 

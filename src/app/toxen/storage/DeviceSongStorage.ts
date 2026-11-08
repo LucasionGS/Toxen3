@@ -3,6 +3,7 @@ import type Song from "../Song";
 import type { ISong } from "../Song";
 import { SongStorage } from "./SongStorage";
 import { DeviceFs } from "./device/DeviceFs";
+import { CloudSongStorage } from "./CloudSongStorage";
 
 /**
  * How many song folders `listSongs` reads at the same time.
@@ -96,7 +97,7 @@ export class DeviceSongStorage extends EventEmitter implements SongStorage {
   public async list(song: Song): Promise<SongStorage.FileEntry[]> {
     const files = await DeviceFs.list(song.uid);
     return files
-      .filter(file => file.relPath !== SongStorage.INFO_FILE)
+      .filter(file => file.relPath !== SongStorage.INFO_FILE && file.relPath !== DeviceSongStorage.STATE_FILE)
       .map(file => ({ relPath: file.relPath, size: file.size, mtimeMs: file.mtimeMs }));
   }
 
@@ -110,6 +111,34 @@ export class DeviceSongStorage extends EventEmitter implements SongStorage {
   public async deleteSong(song: Song): Promise<void> {
     await DeviceFs.deleteSong(song.uid);
     this.emit("change", { uid: song.uid, relPath: null, action: "song-deleted" });
+  }
+
+  /**
+   * Which cloud version the device copy of a song matches.
+   * @returns `null` for a song that was never in the cloud, or whose state file is missing or unreadable.
+   */
+  public async readState(uid: string): Promise<DeviceSongStorage.CloudState | null> {
+    const file = await DeviceFs.readFile(uid, DeviceSongStorage.STATE_FILE).catch((): null => null);
+    if (!file) return null;
+    try {
+      const state = JSON.parse(await file.text());
+      return state && typeof state.rev === "number" && state.files && typeof state.files === "object" ? state : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Record that the device copy now matches the cloud manifest this device knows for the song.
+   */
+  public async recordCloudState(uid: string): Promise<void> {
+    const manifest = CloudSongStorage.instance.getManifest(uid);
+    if (!manifest || manifest.deleted) return;
+    const state: DeviceSongStorage.CloudState = {
+      rev: manifest.rev,
+      files: Object.fromEntries(Object.entries(manifest.files).map(([relPath, file]) => [relPath, file.sha256])),
+    };
+    await DeviceFs.writeFile(uid, DeviceSongStorage.STATE_FILE, JSON.stringify(state));
   }
 
   /**
@@ -220,6 +249,25 @@ export interface DeviceSongStorage {
 }
 
 export namespace DeviceSongStorage {
+  /**
+   * The file in a device song folder that records which cloud version the copy matches. Never listed or uploaded.
+   */
+  export const STATE_FILE = ".toxen-cloud.json";
+
+  /**
+   * Contents of `STATE_FILE`.
+   */
+  export interface CloudState {
+    /**
+     * The cloud revision the device copy matches.
+     */
+    rev: number;
+    /**
+     * sha256 of each file at that revision, by relative path.
+     */
+    files: Record<string, string>;
+  }
+
   /**
    * Library knowledge `listSongs` needs but can't import (media formats and uid generation live in `Song` and `Toxen`).
    * `SongLibrary` sets them once, like `LocalSongStorage.LibraryRules`.

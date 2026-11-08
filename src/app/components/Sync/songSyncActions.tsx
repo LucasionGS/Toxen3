@@ -4,6 +4,8 @@ import { Toxen } from "../../ToxenApp";
 import type Song from "../../toxen/Song";
 import SyncEngine from "../../toxen/sync/SyncEngine";
 import User from "../../toxen/User";
+import { DeviceLibrary } from "../../toxen/DeviceLibrary";
+import { SongLibrary } from "../../toxen/SongLibrary";
 import { getSongLocation } from "./useSync";
 
 function describeError(error: unknown): string {
@@ -18,17 +20,24 @@ export function canUseCloud(): boolean {
 }
 
 /**
+ * Whether this device can keep downloaded songs: the library folder on desktop, device storage on the web.
+ */
+function canKeepOnDevice(): boolean {
+  return toxenapi.isDesktop() || DeviceLibrary.isAvailable();
+}
+
+/**
  * Songs that are only in the cloud and can be downloaded.
  */
 export function downloadable(songs: Song[]): Song[] {
-  return toxenapi.isDesktop() ? songs.filter(song => !getSongLocation(song).local && getSongLocation(song).cloud) : [];
+  return canKeepOnDevice() ? songs.filter(song => !getSongLocation(song).local && getSongLocation(song).cloud) : [];
 }
 
 /**
  * Songs with a download that can be removed while the cloud copy stays.
  */
 export function removable(songs: Song[]): Song[] {
-  return toxenapi.isDesktop() ? songs.filter(song => getSongLocation(song).local && getSongLocation(song).cloud) : [];
+  return canKeepOnDevice() ? songs.filter(song => getSongLocation(song).local && getSongLocation(song).cloud) : [];
 }
 
 /**
@@ -65,7 +74,7 @@ export async function makeAvailableOffline(songs: Song[]): Promise<void> {
   const targets = downloadable(songs);
   if (targets.length === 0) return;
   Toxen.log(targets.length === 1 ? `Downloading ${targets[0].getDisplayName()}…` : `Downloading ${targets.length} songs…`, 2500);
-  await runForSongs(targets, song => SyncEngine.makeAvailableOffline(song), "download");
+  await runForSongs(targets, song => toxenapi.isDesktop() ? SyncEngine.makeAvailableOffline(song) : DeviceLibrary.saveOnDevice(song), "download");
 }
 
 /**
@@ -75,7 +84,7 @@ export async function uploadToCloud(songs: Song[]): Promise<void> {
   const targets = uploadable(songs);
   if (targets.length === 0) return;
   Toxen.log(targets.length === 1 ? `Uploading ${targets[0].getDisplayName()}…` : `Uploading ${targets.length} songs…`, 2500);
-  await runForSongs(targets, song => SyncEngine.uploadToCloud(song), "upload");
+  await runForSongs(targets, song => toxenapi.isDesktop() ? SyncEngine.uploadToCloud(song) : DeviceLibrary.upload(song), "upload");
 }
 
 /**
@@ -85,6 +94,8 @@ export async function uploadToCloud(songs: Song[]): Promise<void> {
 export async function removeDownload(songs: Song[]): Promise<void> {
   const targets = removable(songs);
   if (targets.length === 0) return;
+  // Web: the device copy never has changes the cloud lacks, since edits go to the cloud first
+  if (!toxenapi.isDesktop()) return runForSongs(targets, song => SongLibrary.delete(song, "device"), "remove the download of");
 
   const unsynced: Song[] = [];
   await runForSongs(targets, async song => {

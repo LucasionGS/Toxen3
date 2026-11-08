@@ -4,13 +4,15 @@ import { SongStorage } from "./SongStorage";
 import { LocalSongStorage } from "./LocalSongStorage";
 import { CloudSongStorage } from "./CloudSongStorage";
 import { DeviceSongStorage } from "./DeviceSongStorage";
+import { MirroredSongStorage } from "./MirroredSongStorage";
 
 /**
  * The one place that decides which storage a song uses. `Song` exposes it as `public get storage()`.
  *
  * Unified library (sync v2):
  *   forSong(song)  = desktop: song.location.local ? Local : Cloud          (a downloaded song plays from disk; cloud-only streams)
- *                    web:     song.location.local ? Device : Cloud         (a song kept on this device plays from it)
+ *                    web:     song.location.local ? (cloud too ? Mirrored : Device) : Cloud
+ *                             (a song kept on this device plays from it; one that is also in the cloud writes to both)
  *   forLibrary()   = desktop: Local                                        (new imports land on disk and sync up)
  *                    web:     Cloud when logged in, otherwise Device       (drops upload; signed out they stay on the device)
  *
@@ -22,7 +24,10 @@ export namespace StorageSelector {
    * Storage of an existing song.
    */
   export function forSong(song: Song): SongStorage {
-    if (!toxenapi.isDesktop()) return song.location?.local && DeviceSongStorage.isAvailable() ? DeviceSongStorage.instance : CloudSongStorage.instance;
+    if (!toxenapi.isDesktop()) {
+      if (!song.location?.local || !DeviceSongStorage.isAvailable()) return CloudSongStorage.instance;
+      return song.location.cloud && Settings.getUser() ? MirroredSongStorage.instance : DeviceSongStorage.instance;
+    }
     return song.location && !song.location.local ? CloudSongStorage.instance : LocalSongStorage.instance;
   }
 
