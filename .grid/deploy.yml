@@ -1,0 +1,15 @@
+# How Grid deploys Toxen (Grid's docs/deploys.md). Pushes to master redeploy stream.toxen.net (the
+# server and the web app) and toxen.net (the website) on hostion.
+#
+# The server, and its compose file, live in the private `server` submodule. `mini` isn't deployed,
+# so it isn't checked out.
+submodules: [server, website]
+compose: [server/docker-compose.yml]
+health:
+  url: http://127.0.0.1:8412/api/health
+  timeout: 180
+# Build the web app and the website into a staging folder. A failed build stops the deploy before
+# anything running changes.
+before: ["bash .grid/toxen.sh build"]
+# Publish them once the new server is healthy, so a rolled-back deploy keeps serving the old ones.
+after: ["bash .grid/toxen.sh publish"]
